@@ -130,3 +130,35 @@ test('SAVE_SETTING broadcasts free phone reuse setting updates for realtime side
     'expected SAVE_SETTING to broadcast free reuse switch updates'
   );
 });
+
+test('SAVE_SETTING broadcasts operation delay setting without background success log', async () => {
+  const source = fs.readFileSync('background/message-router.js', 'utf8');
+  const globalScope = { console };
+  const api = new Function('self', `${source}; return self.MultiPageBackgroundMessageRouter;`)(globalScope);
+  const broadcasts = [];
+  const logs = [];
+  let state = { operationDelayEnabled: true, plusModeEnabled: false, plusPaymentMethod: 'paypal' };
+
+  const router = api.createMessageRouter({
+    addLog: async (message, level = 'info') => logs.push({ message, level }),
+    buildLuckmailSessionSettingsPayload: () => ({}),
+    buildPersistentSettingsPayload: (input = {}) => Object.prototype.hasOwnProperty.call(input, 'operationDelayEnabled')
+      ? { operationDelayEnabled: input.operationDelayEnabled === false ? false : true }
+      : {},
+    broadcastDataUpdate: (payload) => broadcasts.push(payload),
+    getState: async () => ({ ...state }),
+    setPersistentSettings: async () => {},
+    setState: async (updates) => { state = { ...state, ...updates }; },
+  });
+
+  const response = await router.handleMessage({
+    type: 'SAVE_SETTING',
+    source: 'sidepanel',
+    payload: { operationDelayEnabled: false },
+  });
+
+  assert.equal(response.ok, true);
+  assert.equal(state.operationDelayEnabled, false);
+  assert.deepStrictEqual(broadcasts.at(-1), { operationDelayEnabled: false });
+  assert.equal(logs.length, 0);
+});

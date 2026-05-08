@@ -271,3 +271,140 @@ return {
     },
   ]);
 });
+
+test('step 5 routes fallback native consent checkbox click through operation delay', async () => {
+  const api = new Function(`
+const operationEvents = [];
+let activeOperationLabel = '';
+
+const nameInput = { value: '', hidden: false };
+const ageInput = { value: '', hidden: false };
+const completeButton = {
+  tagName: 'BUTTON',
+  textContent: '\\u5b8c\\u6210\\u8d26\\u6237\\u521b\\u5efa',
+  hidden: false,
+};
+const allConsentLabel = {
+  hidden: false,
+  textContent: '\\u6211\\u540c\\u610f\\u4ee5\\u4e0b\\u6240\\u6709\\u5404\\u9879',
+  closest() {
+    return null;
+  },
+};
+const allConsentCheckbox = {
+  checked: false,
+  hidden: true,
+  name: 'allCheckboxes',
+  type: 'checkbox',
+  click() {
+    operationEvents.push(\`native-click:\${activeOperationLabel || 'outside'}\`);
+    this.checked = true;
+  },
+  getAttribute(name) {
+    if (name === 'name') return this.name;
+    if (name === 'type') return this.type;
+    return '';
+  },
+  closest(selector) {
+    if (selector === 'label') return allConsentLabel;
+    return null;
+  },
+};
+
+const window = {
+  CodexOperationDelay: {
+    async performOperationWithDelay(metadata, operation) {
+      operationEvents.push(\`operation:\${metadata.label}:start\`);
+      activeOperationLabel = metadata.label;
+      const result = await operation();
+      activeOperationLabel = '';
+      operationEvents.push(\`operation:\${metadata.label}:end\`);
+      operationEvents.push(\`delay:\${metadata.label}:2000\`);
+      return result;
+    },
+  },
+};
+
+const document = {
+  querySelector(selector) {
+    switch (selector) {
+      case '[role="spinbutton"][data-type="year"]':
+      case '[role="spinbutton"][data-type="month"]':
+      case '[role="spinbutton"][data-type="day"]':
+      case 'input[name="birthday"]':
+        return null;
+      case 'input[name="age"]':
+        return ageInput;
+      case 'button[type="submit"]':
+        return completeButton;
+      default:
+        return null;
+    }
+  },
+  querySelectorAll(selector) {
+    if (selector === 'input[name="allCheckboxes"][type="checkbox"]') {
+      return [allConsentCheckbox];
+    }
+    if (selector === 'input[type="checkbox"]') {
+      return [allConsentCheckbox];
+    }
+    return [];
+  },
+  execCommand() {},
+};
+
+const location = { href: 'https://auth.openai.com/u/signup/profile' };
+function log() {}
+async function waitForElement() { return nameInput; }
+async function humanPause() {}
+async function sleep() {}
+function fillInput(input, value) { input.value = value; }
+function findBirthdayReactAriaSelect() { return null; }
+function isVisibleElement(el) { return Boolean(el) && !el.hidden; }
+async function setReactAriaBirthdaySelect() { throw new Error('setReactAriaBirthdaySelect should not run in age-mode test'); }
+async function waitForElementByText() { throw new Error('waitForElementByText should not run in this test'); }
+function simulateClick(el) {
+  operationEvents.push(\`simulate-click:\${activeOperationLabel || 'outside'}:\${el.textContent || el.tagName || 'element'}\`);
+}
+function reportComplete() {}
+function normalizeInlineText(text) { return String(text || '').replace(/\\s+/g, ' ').trim(); }
+
+${getStep5Bundle()}
+
+return {
+  async run(payload) {
+    return step5_fillNameBirthday(payload);
+  },
+  snapshot() {
+    return { operationEvents, consentChecked: allConsentCheckbox.checked };
+  },
+};
+`)();
+
+  await api.run({
+    firstName: 'Mia',
+    lastName: 'Harris',
+    age: 19,
+  });
+
+  const { operationEvents, consentChecked } = api.snapshot();
+  assert.equal(consentChecked, true);
+  assert.equal(operationEvents.includes('native-click:outside'), false);
+  assert.ok(
+    operationEvents.indexOf('delay:accept-profile-consent:2000')
+      < operationEvents.indexOf('operation:accept-profile-consent-fallback:start'),
+    'fallback click must be a separate delayed operation after the first consent attempt'
+  );
+  assert.deepStrictEqual(
+    operationEvents.slice(
+      operationEvents.indexOf('operation:accept-profile-consent-fallback:start'),
+      operationEvents.indexOf('delay:accept-profile-consent-fallback:2000') + 1
+    ),
+    [
+      'operation:accept-profile-consent-fallback:start',
+      'native-click:accept-profile-consent-fallback',
+      'operation:accept-profile-consent-fallback:end',
+      'delay:accept-profile-consent-fallback:2000',
+    ]
+  );
+});

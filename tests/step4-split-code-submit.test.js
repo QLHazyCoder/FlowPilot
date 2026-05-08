@@ -57,9 +57,24 @@ test('fillVerificationCode submits after split inputs are stably filled', async 
 const logs = [];
 const clicks = [];
 const filledValues = [];
+const splitCodeEvents = [];
+let activeOperationLabel = '';
 let submitClicked = false;
 const VERIFICATION_CODE_INPUT_SELECTOR = 'input[data-verification-code]';
 const location = { href: 'https://auth.openai.com/email-verification' };
+const window = {
+  CodexOperationDelay: {
+    async performOperationWithDelay(metadata, operation) {
+      splitCodeEvents.push(\`operation:\${metadata.label}:start\`);
+      activeOperationLabel = metadata.label;
+      const result = await operation();
+      activeOperationLabel = '';
+      splitCodeEvents.push(\`operation:\${metadata.label}:end\`);
+      splitCodeEvents.push(\`delay:\${metadata.label}:2000\`);
+      return result;
+    },
+  },
+};
 function KeyboardEvent(type, init = {}) {
   this.type = type;
   Object.assign(this, init);
@@ -113,8 +128,16 @@ async function handle405ResendError() {}
 function fillInput(el, value) {
   el.value = value;
   filledValues.push(value);
+  const splitIndex = inputs.indexOf(el);
+  if (splitIndex >= 0) {
+    splitCodeEvents.push(\`fill-code:\${splitIndex}\`);
+  }
 }
-async function sleep() {}
+async function sleep(ms) {
+  if (activeOperationLabel) {
+    splitCodeEvents.push(\`sleep:\${activeOperationLabel}:\${ms}\`);
+  }
+}
 async function waitForDocumentLoadComplete() {}
 function isStep5Ready() { return false; }
 function isStep8Ready() { return false; }
@@ -125,7 +148,7 @@ function isVisibleElement() { return true; }
 function isActionEnabled(el) { return Boolean(el) && !el.disabled; }
 function getActionText(el) { return el.textContent || ''; }
 async function humanPause() {}
-function simulateClick(el) { el.click(); clicks.push(el.textContent); }
+function simulateClick(el) { el.click(); clicks.push(el.textContent); splitCodeEvents.push('click:submit-code'); }
 async function waitForVerificationSubmitOutcome() { return { success: true }; }
 
 ${extractFunction('getVisibleSplitVerificationInputs')}
@@ -150,6 +173,7 @@ return {
       logs,
       clicks,
       filledValues,
+      splitCodeEvents,
       submitClicked,
       currentValue: inputs.map((input) => input.value).join(''),
     };
@@ -164,6 +188,22 @@ return {
   assert.equal(snapshot.currentValue, '123456');
   assert.equal(snapshot.submitClicked, true);
   assert.deepStrictEqual(snapshot.clicks, ['Continue']);
+  assert.deepStrictEqual(snapshot.splitCodeEvents, [
+    'operation:split-code:start',
+    'fill-code:0',
+    'fill-code:1',
+    'fill-code:2',
+    'fill-code:3',
+    'fill-code:4',
+    'fill-code:5',
+    'operation:split-code:end',
+    'delay:split-code:2000',
+    'operation:submit-code:start',
+    'click:submit-code',
+    'operation:submit-code:end',
+    'delay:submit-code:2000',
+  ]);
+  assert.equal(snapshot.splitCodeEvents.filter((event) => event.startsWith('delay:split-code')).length, 1);
 });
 
 test('fillVerificationCode does not short-circuit on mixed email-verification profile page before verification exits', async () => {
@@ -894,4 +934,296 @@ return {
   assert.match(result.error, /SIGNUP_PHONE_PASSWORD_MISMATCH::与此电话号码相关联的帐户已存在/);
   assert.equal(result.clicks.length, 0);
   assert.equal(result.logs.some(({ message }) => /检测到密码页报错/.test(message)), true);
+});
+
+test('fillSignupEmailAndContinue waits for submit operation delay before returning', async () => {
+  const api = new Function(`
+const events = [];
+let releaseSubmitDelay;
+const submitDelay = new Promise((resolve) => { releaseSubmitDelay = resolve; });
+const emailInput = { value: '' };
+const continueButton = { textContent: 'Continue' };
+const location = { href: 'https://auth.openai.com/u/signup' };
+const window = {
+  setTimeout(callback, ms) {
+    events.push(\`timer:\${ms}\`);
+    return 1;
+  },
+  CodexOperationDelay: {
+    async performOperationWithDelay(metadata, operation) {
+      events.push(\`operation:\${metadata.label}:start\`);
+      const result = await operation();
+      events.push(\`operation:\${metadata.label}:end\`);
+      if (metadata.kind === 'submit') {
+        events.push(\`delay:\${metadata.label}:pending\`);
+        await submitDelay;
+      }
+      events.push(\`delay:\${metadata.label}:2000\`);
+      return result;
+    },
+  },
+};
+
+function getOperationDelayRunner() { return window.CodexOperationDelay.performOperationWithDelay; }
+function throwIfStopped() {}
+function isStopError() { return false; }
+function log() {}
+async function humanPause() {}
+async function sleep(ms) { events.push(\`sleep:\${ms}\`); }
+function fillInput(input, value) { input.value = value; events.push(\`fill:\${value}\`); }
+function simulateClick(el) { events.push(\`click:\${el.textContent}\`); }
+async function waitForSignupEntryState() {
+  return { state: 'email_entry', emailInput, continueButton, url: location.href };
+}
+function getSignupEmailContinueButton() { return continueButton; }
+function isActionEnabled() { return true; }
+
+${extractFunction('fillSignupEmailAndContinue')}
+
+return {
+  events,
+  releaseSubmitDelay() { releaseSubmitDelay(); },
+  run() { return fillSignupEmailAndContinue('ada@example.com', 2); },
+};
+`)();
+
+  let settled = false;
+  const tracked = api.run().then((result) => {
+    settled = true;
+    api.events.push('run:resolved');
+    return result;
+  });
+
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(settled, false, 'email submit must not return before submit delay resolves');
+  assert.equal(api.events.includes('delay:submit-signup-email:pending'), true);
+  assert.equal(api.events.includes('run:resolved'), false);
+
+  api.releaseSubmitDelay();
+  const result = await tracked;
+  assert.equal(result.submitted, true);
+  assert.deepStrictEqual(api.events, [
+    'operation:signup-email:start',
+    'fill:ada@example.com',
+    'operation:signup-email:end',
+    'delay:signup-email:2000',
+    'sleep:120',
+    'operation:submit-signup-email:start',
+    'click:Continue',
+    'operation:submit-signup-email:end',
+    'delay:submit-signup-email:pending',
+    'delay:submit-signup-email:2000',
+    'run:resolved',
+  ]);
+});
+
+test('submitSignupPhoneNumberAndContinue waits for submit operation delay before returning', async () => {
+  const api = new Function(`
+const events = [];
+let releaseSubmitDelay;
+const submitDelay = new Promise((resolve) => { releaseSubmitDelay = resolve; });
+const phoneInput = { value: '' };
+const continueButton = { textContent: 'Continue' };
+const location = { href: 'https://auth.openai.com/u/signup/phone' };
+const window = {
+  setTimeout(callback, ms) {
+    events.push(\`timer:\${ms}\`);
+    return 1;
+  },
+  CodexOperationDelay: {
+    async performOperationWithDelay(metadata, operation) {
+      events.push(\`operation:\${metadata.label}:start\`);
+      const result = await operation();
+      events.push(\`operation:\${metadata.label}:end\`);
+      if (metadata.kind === 'submit') {
+        events.push(\`delay:\${metadata.label}:pending\`);
+        await submitDelay;
+      }
+      events.push(\`delay:\${metadata.label}:2000\`);
+      return result;
+    },
+  },
+};
+
+function getOperationDelayRunner() { return window.CodexOperationDelay.performOperationWithDelay; }
+function throwIfStopped() {}
+function isStopError() { return false; }
+function log() {}
+async function humanPause() {}
+async function sleep(ms) { events.push(\`sleep:\${ms}\`); }
+function fillInput(input, value) { input.value = value; events.push(\`fill:\${value}\`); }
+function simulateClick(el) { events.push(\`click:\${el.textContent}\`); }
+async function waitForSignupPhoneEntryState() {
+  return { state: 'phone_entry', phoneInput, url: location.href };
+}
+async function ensureSignupPhoneCountrySelected() {
+  return { hasCountryControl: false, matched: true, selectedOption: null };
+}
+function resolveSignupPhoneDialCode() { return '1'; }
+function toNationalPhoneNumber() { return '5551234567'; }
+function getSignupPhoneHiddenNumberInput() { return null; }
+function toE164PhoneNumber() { return '+15551234567'; }
+function getSignupEmailContinueButton() { return continueButton; }
+function isActionEnabled() { return true; }
+
+${extractFunction('submitSignupPhoneNumberAndContinue')}
+
+return {
+  events,
+  releaseSubmitDelay() { releaseSubmitDelay(); },
+  run() { return submitSignupPhoneNumberAndContinue({ phoneNumber: '+15551234567' }); },
+};
+`)();
+
+  let settled = false;
+  const tracked = api.run().then((result) => {
+    settled = true;
+    api.events.push('run:resolved');
+    return result;
+  });
+
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(settled, false, 'phone submit must not return before submit delay resolves');
+  assert.equal(api.events.includes('delay:submit-signup-phone:pending'), true);
+  assert.equal(api.events.includes('run:resolved'), false);
+
+  api.releaseSubmitDelay();
+  const result = await tracked;
+  assert.equal(result.submitted, true);
+  assert.deepStrictEqual(api.events, [
+    'operation:signup-phone-number:start',
+    'fill:5551234567',
+    'operation:signup-phone-number:end',
+    'delay:signup-phone-number:2000',
+    'sleep:120',
+    'operation:submit-signup-phone:start',
+    'click:Continue',
+    'operation:submit-signup-phone:end',
+    'delay:submit-signup-phone:pending',
+    'delay:submit-signup-phone:2000',
+    'run:resolved',
+  ]);
+});
+
+test('step3_fillEmailPassword reports complete before deferred submit while submit still waits for operation delay', async () => {
+  const api = new Function(`
+const events = [];
+const reports = [];
+const scheduled = [];
+let releaseSubmitDelay;
+const submitDelay = new Promise((resolve) => { releaseSubmitDelay = resolve; });
+const Date = { now: () => 12345 };
+const passwordInput = { value: '' };
+const submitButton = { textContent: 'Continue' };
+const location = { href: 'https://auth.openai.com/u/signup/password' };
+const window = {
+  setTimeout(callback, ms) {
+    events.push(\`timer:\${ms}\`);
+    scheduled.push(callback);
+    return scheduled.length;
+  },
+  CodexOperationDelay: {
+    async performOperationWithDelay(metadata, operation) {
+      events.push(\`operation:\${metadata.label}:start\`);
+      const result = await operation();
+      events.push(\`operation:\${metadata.label}:end\`);
+      if (metadata.kind === 'submit') {
+        events.push(\`delay:\${metadata.label}:pending\`);
+        await submitDelay;
+      }
+      events.push(\`delay:\${metadata.label}:2000\`);
+      return result;
+    },
+  },
+};
+
+function getOperationDelayRunner() { return window.CodexOperationDelay.performOperationWithDelay; }
+function throwIfStopped() {}
+function isStopError() { return false; }
+function log(message) { events.push(\`log:\${message}\`); }
+async function humanPause() {}
+async function sleep(ms) { events.push(\`sleep:\${ms}\`); }
+function fillInput(input, value) { input.value = value; events.push(\`fill-password:\${value}\`); }
+function simulateClick(el) { events.push(\`click:\${el.textContent}\`); }
+function inspectSignupEntryState() {
+  return { state: 'password_page', passwordInput, submitButton, displayedEmail: 'ada@example.com' };
+}
+function getSignupPasswordSubmitButton() { return submitButton; }
+async function waitForElementByText() { return null; }
+function logSignupPasswordDiagnostics() {}
+function reportComplete(step, payload) {
+  reports.push({ step, payload });
+  events.push(\`report:\${payload.deferredSubmit}\`);
+}
+
+${extractFunction('step3_fillEmailPassword')}
+
+return {
+  events,
+  reports,
+  scheduledCount() { return scheduled.length; },
+  async flushDeferredSubmit() {
+    if (!scheduled.length) throw new Error('missing deferred submit');
+    await scheduled[0]();
+  },
+  releaseSubmitDelay() { releaseSubmitDelay(); },
+  run() { return step3_fillEmailPassword({ email: 'ada@example.com', password: 'Secret123!' }); },
+};
+`)();
+
+  let settled = false;
+  const tracked = api.run().then((result) => {
+    settled = true;
+    api.events.push('run:resolved');
+    return result;
+  });
+
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(settled, true, 'step 3 must report and return before deferred submit can navigate');
+  const result = await tracked;
+  assert.equal(result.deferredSubmit, true);
+  assert.equal(api.reports.length, 1);
+  assert.equal(api.scheduledCount(), 1);
+  assert.equal(api.events.includes('operation:submit-signup-password:start'), false);
+  assert.deepStrictEqual(api.events, [
+    'operation:signup-password:start',
+    'fill-password:Secret123!',
+    'operation:signup-password:end',
+    'delay:signup-password:2000',
+    'log:步骤 3：密码已填写',
+    'report:true',
+    'timer:120',
+    'run:resolved',
+  ]);
+
+  let flushed = false;
+  const flush = api.flushDeferredSubmit().then(() => {
+    flushed = true;
+    api.events.push('flush:resolved');
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(api.events.includes('operation:submit-signup-password:start'), true);
+  assert.equal(api.events.includes('delay:submit-signup-password:pending'), true);
+  assert.equal(flushed, false, 'deferred submit callback must wait for submit delay before resolving');
+
+  api.releaseSubmitDelay();
+  await flush;
+  assert.deepStrictEqual(api.events, [
+    'operation:signup-password:start',
+    'fill-password:Secret123!',
+    'operation:signup-password:end',
+    'delay:signup-password:2000',
+    'log:步骤 3：密码已填写',
+    'report:true',
+    'timer:120',
+    'run:resolved',
+    'sleep:500',
+    'operation:submit-signup-password:start',
+    'click:Continue',
+    'operation:submit-signup-password:end',
+    'delay:submit-signup-password:pending',
+    'delay:submit-signup-password:2000',
+    'log:步骤 3：表单已提交',
+    'flush:resolved',
+  ]);
 });

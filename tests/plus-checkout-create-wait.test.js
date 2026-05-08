@@ -1,9 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const vm = require('node:vm');
 
 const source = fs.readFileSync('background/steps/create-plus-checkout.js', 'utf8');
 const gopayUtilsSource = fs.readFileSync('gopay-utils.js', 'utf8');
+const plusCheckoutSource = fs.readFileSync('content/plus-checkout.js', 'utf8');
 const globalScope = {};
 new Function('self', `${gopayUtilsSource};`)(globalScope);
 const api = new Function('self', `${source}; return self.MultiPageBackgroundPlusCheckoutCreate;`)(globalScope);
@@ -37,6 +39,152 @@ function createGpcTaskResponse(overrides = {}) {
       ...overrides,
     },
   };
+}
+
+function createCheckoutContentHarness() {
+  const checkoutEvents = [];
+  const attrs = new Map();
+  let listener = null;
+  const elements = [];
+
+  function createElement({ tagName = 'DIV', text = '', attrs: initialAttrs = {}, id = '', type = '', value = '' } = {}) {
+    const attrMap = new Map(Object.entries(initialAttrs));
+    if (id) attrMap.set('id', id);
+    if (type) attrMap.set('type', type);
+    const element = {
+      nodeType: 1,
+      tagName,
+      id,
+      type,
+      value,
+      textContent: text,
+      innerText: text,
+      className: initialAttrs.class || '',
+      checked: initialAttrs.checked === 'true',
+      disabled: false,
+      hidden: false,
+      dataset: {},
+      children: [],
+      parentElement: null,
+      style: { display: 'block', visibility: 'visible' },
+      getAttribute(name) {
+        if (name === 'class') return this.className;
+        if (name === 'id') return this.id || attrMap.get(name) || '';
+        if (name === 'type') return this.type || attrMap.get(name) || '';
+        return attrMap.has(name) ? attrMap.get(name) : '';
+      },
+      setAttribute(name, nextValue) {
+        attrMap.set(name, String(nextValue));
+      },
+      closest() {
+        return null;
+      },
+      querySelector() {
+        return null;
+      },
+      scrollIntoView() {},
+      focus() {},
+      dispatchEvent() {
+        return true;
+      },
+      click() {},
+      getBoundingClientRect() {
+        return { left: 10, top: 20, width: 180, height: 44 };
+      },
+    };
+    return element;
+  }
+
+  const paymentButton = createElement({ tagName: 'BUTTON', text: 'PayPal', attrs: { role: 'tab', 'aria-selected': '' } });
+  const fullNameInput = createElement({ tagName: 'INPUT', id: 'name', type: 'text', attrs: { name: 'billingName', placeholder: 'Full name' } });
+  const addressInput = createElement({ tagName: 'INPUT', id: 'address', type: 'text', attrs: { name: 'addressLine1', placeholder: 'Address line 1' } });
+  const cityInput = createElement({ tagName: 'INPUT', id: 'city', type: 'text', attrs: { name: 'locality', placeholder: 'City' } });
+  const postalInput = createElement({ tagName: 'INPUT', id: 'postal', type: 'text', attrs: { name: 'postalCode' } });
+  const suggestionOption = createElement({ tagName: 'LI', text: 'Unter den Linden 1, Berlin', attrs: { role: 'option', class: 'pac-item' } });
+  const subscribeButton = createElement({ tagName: 'BUTTON', text: 'Subscribe', attrs: { type: 'submit', 'aria-label': 'Subscribe' } });
+  subscribeButton.type = 'submit';
+  elements.push(paymentButton, fullNameInput, addressInput, cityInput, postalInput, suggestionOption, subscribeButton);
+
+  const context = {
+    console: { log() {}, warn() {}, error() {}, info() {} },
+    location: { href: 'https://chatgpt.com/checkout/openai_ie/cs_test' },
+    window: {},
+    CSS: { escape: (value) => String(value) },
+    Event: class TestEvent { constructor(type) { this.type = type; } },
+    MouseEvent: class TestMouseEvent { constructor(type) { this.type = type; } },
+    PointerEvent: class TestPointerEvent { constructor(type) { this.type = type; } },
+    document: {
+      readyState: 'complete',
+      body: {},
+      documentElement: {
+        getAttribute(name) {
+          return attrs.get(name) || null;
+        },
+        setAttribute(name, nextValue) {
+          attrs.set(name, String(nextValue));
+        },
+      },
+      getElementById() {
+        return null;
+      },
+      querySelectorAll(selector) {
+        const text = String(selector || '');
+        if (text.includes('label[for=')) return [];
+        if (text.includes('[role="option"]') || text.includes('.pac-item') || text === 'li') return [suggestionOption];
+        if (text === 'input, textarea') return elements.filter((element) => element.tagName === 'INPUT');
+        if (text.includes('button[type="submit"]')) return [subscribeButton];
+        if (text.includes('button') || text.includes('[role=') || text.includes('[tabindex]') || text.includes('[data-testid]')) {
+          return elements.filter((element) => element.tagName === 'BUTTON');
+        }
+        if (text.includes('select') || text.includes('[aria-haspopup="listbox"]')) return [];
+        return [];
+      },
+    },
+    chrome: {
+      runtime: {
+        onMessage: {
+          addListener(fn) {
+            listener = fn;
+          },
+        },
+      },
+    },
+    CodexOperationDelay: {
+      async performOperationWithDelay(metadata, operation) {
+        checkoutEvents.push({ type: 'operation', label: metadata.label, kind: metadata.kind });
+        const result = await operation();
+        checkoutEvents.push({ type: 'delay', label: metadata.label, ms: 2000 });
+        return result;
+      },
+    },
+    resetStopState() {},
+    isStopError() { return false; },
+    throwIfStopped() {},
+    sleep() { return Promise.resolve(); },
+    log() {},
+    fillInput(element, nextValue) {
+      element.value = nextValue;
+    },
+    simulateClick(element) {
+      if (element === paymentButton) {
+        paymentButton.setAttribute('aria-selected', 'true');
+      }
+    },
+  };
+  context.window = context;
+  context.window.getComputedStyle = (element) => element?.style || { display: 'block', visibility: 'visible' };
+
+  vm.createContext(context);
+  vm.runInContext(plusCheckoutSource, context);
+  assert.equal(typeof listener, 'function');
+
+  async function send(message) {
+    return await new Promise((resolve) => {
+      listener(message, {}, resolve);
+    });
+  }
+
+  return { checkoutEvents, send };
 }
 
 test('Plus checkout create does not wait 20 seconds after opening checkout page', async () => {
@@ -138,6 +286,74 @@ test('GoPay plus checkout create forwards gopay payment method to the checkout c
   await executor.executePlusCheckoutCreate({ plusPaymentMethod: 'gopay' });
 
   assert.deepStrictEqual(events[0]?.payload, { paymentMethod: 'gopay' });
+});
+
+test('Plus checkout content routes billing operations through the operation delay gate', async () => {
+  const { checkoutEvents, send } = createCheckoutContentHarness();
+
+  const result = await send({
+    type: 'FILL_PLUS_BILLING_AND_SUBMIT',
+    source: 'test',
+    payload: {
+      fullName: 'Ada Lovelace',
+      addressSeed: {
+        skipAutocomplete: true,
+        fallback: {
+          address1: 'Unter den Linden',
+          city: 'Berlin',
+          region: 'Berlin',
+          postalCode: '10117',
+        },
+      },
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepStrictEqual(checkoutEvents.filter((event) => event.type === 'operation').map((event) => event.label), [
+    'select-payment-method',
+    'fill-billing-address',
+    'click-subscribe',
+  ]);
+  assert.deepStrictEqual(checkoutEvents.filter((event) => event.type === 'delay').map((event) => event.ms), [2000, 2000, 2000]);
+});
+
+test('Plus checkout content routes same-frame autocomplete query and suggestion through separate operation delays', async () => {
+  const { checkoutEvents, send } = createCheckoutContentHarness();
+
+  const result = await send({
+    type: 'FILL_PLUS_BILLING_AND_SUBMIT',
+    source: 'test',
+    payload: {
+      fullName: 'Ada Lovelace',
+      addressSeed: {
+        query: 'Unter den Linden',
+        suggestionIndex: 0,
+        fallback: {
+          address1: 'Unter den Linden',
+          city: 'Berlin',
+          region: 'Berlin',
+          postalCode: '10117',
+        },
+      },
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepStrictEqual(checkoutEvents.filter((event) => event.type === 'operation').map((event) => event.label), [
+    'select-payment-method',
+    'fill-address-query',
+    'select-address-suggestion',
+    'fill-billing-address',
+    'click-subscribe',
+  ]);
+  assert.deepStrictEqual(checkoutEvents.filter((event) => event.type === 'delay').map((event) => event.label), [
+    'select-payment-method',
+    'fill-address-query',
+    'select-address-suggestion',
+    'fill-billing-address',
+    'click-subscribe',
+  ]);
+  assert.equal(checkoutEvents.some((event) => event.type === 'delay' && event.ms !== 2000), false);
 });
 
 test('GPC manual checkout injects Plus script before reading ChatGPT session token and sends X-API-Key', async () => {

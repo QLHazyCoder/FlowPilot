@@ -382,6 +382,7 @@ const inputStep6CookieCleanupEnabled = document.getElementById('input-step6-cook
 const inputAutoDelayEnabled = document.getElementById('input-auto-delay-enabled');
 const inputAutoDelayMinutes = document.getElementById('input-auto-delay-minutes');
 const inputAutoStepDelaySeconds = document.getElementById('input-auto-step-delay-seconds');
+const inputOperationDelayEnabled = document.getElementById('input-operation-delay-enabled');
 const inputOAuthFlowTimeoutEnabled = document.getElementById('input-oauth-flow-timeout-enabled');
 const inputVerificationResendCount = document.getElementById('input-verification-resend-count');
 const rowPhoneVerificationEnabled = document.getElementById('row-phone-verification-enabled');
@@ -522,6 +523,7 @@ const DEFAULT_SIGNUP_METHOD = SIGNUP_METHOD_EMAIL;
 let currentPlusModeEnabled = false;
 let currentPlusPaymentMethod = DEFAULT_PLUS_PAYMENT_METHOD;
 let currentSignupMethod = DEFAULT_SIGNUP_METHOD;
+let lastConfirmedOperationDelayEnabled = true;
 let heroSmsCountrySelectionOrder = [];
 let phoneSmsProviderOrderSelection = [];
 let heroSmsCountryMenuSearchKeyword = '';
@@ -2061,6 +2063,53 @@ function syncLatestState(nextState) {
   };
 
   renderAccountRecords(latestState);
+}
+
+function normalizeOperationDelayEnabled(value) {
+  return typeof value === 'boolean' ? value : true;
+}
+
+function appendOperationDelayLog(enabled, level = 'info', message = '') {
+  appendLog({
+    timestamp: Date.now(),
+    level,
+    message: message || (enabled
+      ? '操作间延迟已开启：页面输入、选择、点击、提交、继续、授权后等待 2 秒。'
+      : '操作间延迟已关闭：页面操作将连续执行。'),
+  });
+}
+
+function applyOperationDelayState(state = latestState, options = {}) {
+  const enabled = options.restoreFailed ? true : normalizeOperationDelayEnabled(state?.operationDelayEnabled);
+  lastConfirmedOperationDelayEnabled = enabled;
+  if (inputOperationDelayEnabled) inputOperationDelayEnabled.checked = enabled;
+  if (typeof syncLatestState === 'function') {
+    syncLatestState({ operationDelayEnabled: enabled });
+  }
+  if (options.restoreFailed) {
+    appendOperationDelayLog(true, 'warn', '操作间延迟设置读取失败，已回退为默认开启。');
+  }
+}
+
+async function persistOperationDelayToggle() {
+  const nextEnabled = normalizeOperationDelayEnabled(inputOperationDelayEnabled?.checked);
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: 'SAVE_SETTING',
+      source: 'sidepanel',
+      payload: { operationDelayEnabled: nextEnabled },
+    });
+    if (response?.error) throw new Error(response.error);
+    const confirmed = normalizeOperationDelayEnabled(response?.state?.operationDelayEnabled ?? nextEnabled);
+    lastConfirmedOperationDelayEnabled = confirmed;
+    if (inputOperationDelayEnabled) inputOperationDelayEnabled.checked = confirmed;
+    syncLatestState({ operationDelayEnabled: confirmed });
+    appendOperationDelayLog(confirmed);
+  } catch (error) {
+    if (inputOperationDelayEnabled) inputOperationDelayEnabled.checked = lastConfirmedOperationDelayEnabled;
+    appendOperationDelayLog(lastConfirmedOperationDelayEnabled, 'error', `操作间延迟设置保存失败，已恢复为上一次确认的状态：${error.message}`);
+    throw error;
+  }
 }
 
 function normalizePlusPaymentMethod(value = '') {
@@ -8186,6 +8235,9 @@ function applySettingsState(state) {
     return Math.max(1, Math.min(1440, numeric));
   };
   syncLatestState(state);
+  if (typeof applyOperationDelayState === 'function') {
+    applyOperationDelayState(state);
+  }
   syncAutoRunState(state);
   renderStepStatuses(latestState);
 
@@ -8695,6 +8747,9 @@ async function restoreState() {
     renderContributionMode();
   } catch (err) {
     console.error('Failed to restore state:', err);
+    if (typeof applyOperationDelayState === 'function') {
+      applyOperationDelayState(undefined, { restoreFailed: true });
+    }
   }
 }
 
@@ -11646,6 +11701,10 @@ inputPlusModeEnabled?.addEventListener('change', () => {
   saveSettings({ silent: true }).catch(() => { });
 });
 
+inputOperationDelayEnabled?.addEventListener('change', () => {
+  persistOperationDelayToggle().catch(() => { });
+});
+
 selectPlusPaymentMethod?.addEventListener('change', () => {
   selectPlusPaymentMethod.value = normalizePlusPaymentMethod(selectPlusPaymentMethod.value);
   updatePlusModeUI();
@@ -13411,6 +13470,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
     case 'DATA_UPDATED': {
       syncLatestState(message.payload);
+      if (message.payload.operationDelayEnabled !== undefined && typeof applyOperationDelayState === 'function') {
+        applyOperationDelayState(message.payload);
+      }
       if (message.payload.email !== undefined) {
         inputEmail.value = message.payload.email || '';
         queueCustomEmailPoolRefresh();

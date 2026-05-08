@@ -3,7 +3,7 @@
 })(typeof self !== 'undefined' ? self : globalThis, function createBackgroundPlusCheckoutCreateModule() {
   const PLUS_CHECKOUT_SOURCE = 'plus-checkout';
   const PLUS_CHECKOUT_ENTRY_URL = 'https://chatgpt.com/';
-  const PLUS_CHECKOUT_INJECT_FILES = ['content/utils.js', 'content/plus-checkout.js'];
+  const PLUS_CHECKOUT_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'content/plus-checkout.js'];
   const PLUS_PAYMENT_METHOD_PAYPAL = 'paypal';
   const PLUS_PAYMENT_METHOD_GOPAY = 'gopay';
   const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';

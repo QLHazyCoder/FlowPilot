@@ -50,6 +50,7 @@
       "js": [
         "content/activation-utils.js",
         "content/utils.js",
+        "content/operation-delay.js",
         "content/auth-page-recovery.js",
         "content/phone-country-utils.js",
         "content/phone-auth.js",
@@ -106,6 +107,7 @@
       "js": [
         "content/activation-utils.js",
         "content/utils.js",
+        "content/operation-delay.js",
         "content/duck-mail.js"
       ],
       "run_at": "document_idle"

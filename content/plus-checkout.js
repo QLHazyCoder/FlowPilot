@@ -60,6 +60,12 @@ const PAYMENT_METHOD_CONFIGS = {
   },
 };
 
+async function performOperationWithDelay(metadata, operation) {
+  const rootScope = typeof window !== 'undefined' ? window : globalThis;
+  const gate = rootScope?.CodexOperationDelay?.performOperationWithDelay;
+  return typeof gate === 'function' ? gate(metadata, operation) : operation();
+}
+
 if (document.documentElement.getAttribute(PLUS_CHECKOUT_LISTENER_SENTINEL) !== '1') {
   document.documentElement.setAttribute(PLUS_CHECKOUT_LISTENER_SENTINEL, '1');
 
@@ -688,7 +694,9 @@ async function selectPaymentMethod(method = PLUS_PAYMENT_METHOD_PAYPAL) {
     intervalMs: 250,
   });
   console.info(`[MultiPage:plus-checkout] ${config.label} target selected`, summarizeElementForDebug(target));
-  simulateClick(target);
+  await performOperationWithDelay({ stepKey: 'plus-checkout-billing', kind: 'select', label: 'select-payment-method' }, async () => {
+    simulateClick(target);
+  });
   log(`Plus Checkout：已点击 ${config.label} 付款方式，正在确认选中状态。`);
 
   if (!await waitForPaymentMethodActive(config.id)) {
@@ -1417,8 +1425,6 @@ async function fillPlusBillingAndSubmit(payload = {}) {
 
 async function fillPlusBillingAddress(payload = {}) {
   await waitForDocumentComplete();
-  await fillFullName(payload.fullName || '');
-
   const countryText = readCountryText();
   const seed = payload.addressSeed || {
     query: 'Berlin Mitte',
@@ -1434,10 +1440,21 @@ async function fillPlusBillingAddress(payload = {}) {
   const fields = getStructuredAddressFields();
   const useDirectStructuredBranch = Boolean(seed.skipAutocomplete || isDropdownStructuredAddressForm(fields));
   if (!useDirectStructuredBranch) {
-    selected = await selectAddressSuggestion(seed);
+    await performOperationWithDelay({ stepKey: 'plus-checkout-billing', kind: 'fill', label: 'fill-address-query' }, async () => {
+      await fillFullName(payload.fullName || '');
+      await fillAddressQuery(seed);
+    });
+    selected = await performOperationWithDelay({ stepKey: 'plus-checkout-billing', kind: 'select', label: 'select-address-suggestion' }, async () => (
+      clickAddressSuggestion(seed)
+    ));
   }
-  const structuredAddress = await ensureStructuredAddress(seed, {
-    overwrite: useDirectStructuredBranch,
+  const structuredAddress = await performOperationWithDelay({ stepKey: 'plus-checkout-billing', kind: 'fill', label: 'fill-billing-address' }, async () => {
+    if (useDirectStructuredBranch) {
+      await fillFullName(payload.fullName || '');
+    }
+    return ensureStructuredAddress(seed, {
+      overwrite: useDirectStructuredBranch,
+    });
   });
 
   return {
@@ -1449,9 +1466,11 @@ async function fillPlusBillingAddress(payload = {}) {
 
 async function fillPlusAddressQuery(payload = {}) {
   await waitForDocumentComplete();
-  await fillFullName(payload.fullName || '');
   const seed = payload.addressSeed || {};
-  await fillAddressQuery(seed);
+  await performOperationWithDelay({ stepKey: 'plus-checkout-billing', kind: 'fill', label: 'fill-address-query' }, async () => {
+    await fillFullName(payload.fullName || '');
+    await fillAddressQuery(seed);
+  });
   return {
     countryText: readCountryText(),
     queryFilled: true,
@@ -1460,7 +1479,9 @@ async function fillPlusAddressQuery(payload = {}) {
 
 async function selectPlusAddressSuggestion(payload = {}) {
   await waitForDocumentComplete();
-  const selected = await clickAddressSuggestion(payload.addressSeed || {});
+  const selected = await performOperationWithDelay({ stepKey: 'plus-checkout-billing', kind: 'select', label: 'select-address-suggestion' }, async () => (
+    clickAddressSuggestion(payload.addressSeed || {})
+  ));
   return {
     selectedAddressText: selected.selectedText,
     suggestionIndex: selected.suggestionIndex,
@@ -1469,9 +1490,11 @@ async function selectPlusAddressSuggestion(payload = {}) {
 
 async function ensurePlusStructuredBillingAddress(payload = {}) {
   await waitForDocumentComplete();
-  const structuredAddress = await ensureStructuredAddress(payload.addressSeed || {}, {
-    overwrite: Boolean(payload.overwriteStructuredAddress),
-  });
+  const structuredAddress = await performOperationWithDelay({ stepKey: 'plus-checkout-billing', kind: 'fill', label: 'fill-billing-address' }, async () => (
+    ensureStructuredAddress(payload.addressSeed || {}, {
+      overwrite: Boolean(payload.overwriteStructuredAddress),
+    })
+  ));
   return {
     countryText: readCountryText(),
     structuredAddress,
@@ -1494,7 +1517,9 @@ async function clickPlusSubscribe(payload = {}) {
   });
 
   await sleep(Math.max(0, Math.floor(Number(payload.beforeClickDelayMs) || 0)));
-  await humanLikeClick(subscribeButton);
+  await performOperationWithDelay({ stepKey: 'plus-checkout-billing', kind: 'submit', label: 'click-subscribe' }, async () => {
+    await humanLikeClick(subscribeButton);
+  });
   return {
     clicked: true,
   };

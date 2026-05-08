@@ -31,6 +31,12 @@ if (document.documentElement.getAttribute(PAYPAL_FLOW_LISTENER_SENTINEL) !== '1'
   console.log('[MultiPage:paypal-flow] 消息监听已存在，跳过重复注册');
 }
 
+async function performPayPalOperationWithDelay(metadata, operation) {
+  const rootScope = typeof window !== 'undefined' ? window : globalThis;
+  const gate = rootScope?.CodexOperationDelay?.performOperationWithDelay;
+  return typeof gate === 'function' ? gate(metadata, operation) : operation();
+}
+
 async function handlePayPalCommand(message) {
   switch (message.type) {
     case 'PAYPAL_GET_STATE':
@@ -142,15 +148,50 @@ function findInputByPatterns(patterns) {
 }
 
 function findEmailInput() {
-  return findInputByPatterns([
+  const isPasswordCandidate = (input) => {
+    const type = String(input?.getAttribute?.('type') || input?.type || '').trim().toLowerCase();
+    const metadataText = normalizeText([
+      input?.textContent,
+      input?.getAttribute?.('aria-label'),
+      input?.getAttribute?.('title'),
+      input?.getAttribute?.('placeholder'),
+      input?.getAttribute?.('name'),
+      input?.id,
+    ].filter(Boolean).join(' '));
+    return type === 'password' || /password|pass|密码/i.test(metadataText);
+  };
+  const inputs = getVisibleControls('input')
+    .filter((input) => {
+      const type = String(input.getAttribute('type') || input.type || '').trim().toLowerCase();
+      return isEnabledControl(input)
+        && !['hidden', 'checkbox', 'radio', 'submit', 'button', 'file'].includes(type)
+        && !isPasswordCandidate(input);
+    });
+  return inputs.find((input) => [
     /email|login|user|账号|邮箱/i,
-  ]) || getVisibleControls('input[type="email"]').find(isVisibleElement) || null;
+  ].some((pattern) => pattern.test(getActionText(input))))
+    || getVisibleControls('input[type="email"]').find((input) => isVisibleElement(input) && !isPasswordCandidate(input))
+    || null;
 }
 
 function findPasswordInput() {
-  return findInputByPatterns([
-    /password|pass|密码/i,
-  ]) || getVisibleControls('input[type="password"]').find(isVisibleElement) || null;
+  const inputs = getVisibleControls('input')
+    .filter((input) => {
+      const type = String(input.getAttribute('type') || input.type || '').trim().toLowerCase();
+      return isEnabledControl(input) && !['hidden', 'checkbox', 'radio', 'submit', 'button', 'file'].includes(type);
+    });
+  return inputs.find((input) => {
+    const type = String(input.getAttribute('type') || input.type || '').trim().toLowerCase();
+    const metadataText = normalizeText([
+      input?.textContent,
+      input?.getAttribute?.('aria-label'),
+      input?.getAttribute?.('title'),
+      input?.getAttribute?.('placeholder'),
+      input?.getAttribute?.('name'),
+      input?.id,
+    ].filter(Boolean).join(' '));
+    return type === 'password' || /password|pass|密码/i.test(metadataText);
+  }) || getVisibleControls('input[type="password"]').find(isVisibleElement) || null;
 }
 
 function findLoginNextButton() {
@@ -240,6 +281,13 @@ function refillPayPalEmailInput(emailInput, email) {
 }
 
 async function submitPayPalLogin(payload = {}) {
+  const delayOperation = typeof performPayPalOperationWithDelay === 'function'
+    ? performPayPalOperationWithDelay
+    : async (metadata, operation) => {
+        const rootScope = typeof window !== 'undefined' ? window : globalThis;
+        const gate = rootScope?.CodexOperationDelay?.performOperationWithDelay;
+        return typeof gate === 'function' ? gate(metadata, operation) : operation();
+      };
   await waitForDocumentComplete();
 
   const email = normalizeText(payload.email || '');
@@ -253,8 +301,10 @@ async function submitPayPalLogin(payload = {}) {
   const emailNextButton = findEmailNextButton();
 
   if (emailInput && emailNextButton && isEnabledControl(emailNextButton) && (!passwordInput || !findPasswordLoginButton())) {
-    refillPayPalEmailInput(emailInput, email);
-    simulateClick(emailNextButton);
+    await delayOperation({ stepKey: 'paypal-approve', kind: 'submit', label: 'paypal-email' }, async () => {
+      refillPayPalEmailInput(emailInput, email);
+      simulateClick(emailNextButton);
+    });
     return {
       submitted: false,
       phase: 'email_submitted',
@@ -263,16 +313,18 @@ async function submitPayPalLogin(payload = {}) {
   }
 
   if (!passwordInput && emailInput && email) {
-    refillPayPalEmailInput(emailInput, email);
-    const nextButton = await waitUntil(() => {
-      const button = findEmailNextButton() || findLoginNextButton();
-      return button && isEnabledControl(button) ? button : null;
-    }, {
-      intervalMs: 250,
-      timeoutMs: 8000,
-      timeoutMessage: 'PayPal email page did not expose a clickable next/continue button.',
+    await delayOperation({ stepKey: 'paypal-approve', kind: 'submit', label: 'paypal-email' }, async () => {
+      refillPayPalEmailInput(emailInput, email);
+      const nextButton = await waitUntil(() => {
+        const button = findEmailNextButton() || findLoginNextButton();
+        return button && isEnabledControl(button) ? button : null;
+      }, {
+        intervalMs: 250,
+        timeoutMs: 8000,
+        timeoutMessage: 'PayPal email page did not expose a clickable next/continue button.',
+      });
+      simulateClick(nextButton);
     });
-    simulateClick(nextButton);
     return {
       submitted: false,
       phase: 'email_submitted',
@@ -281,7 +333,9 @@ async function submitPayPalLogin(payload = {}) {
   } else if (!passwordInput && emailInput && !email) {
     throw new Error('PayPal 账号为空，请先在侧边栏配置。');
   } else if (emailInput && email) {
-    refillPayPalEmailInput(emailInput, email);
+    await delayOperation({ stepKey: 'paypal-approve', kind: 'fill', label: 'paypal-email' }, async () => {
+      refillPayPalEmailInput(emailInput, email);
+    });
   }
 
   passwordInput = passwordInput || await waitUntil(() => findPasswordInput(), {
@@ -289,22 +343,24 @@ async function submitPayPalLogin(payload = {}) {
     timeoutMs: 8000,
     timeoutMessage: 'PayPal password page did not expose a password input.',
   });
-  fillInput(passwordInput, password);
-  await sleep(1000);
+  await delayOperation({ stepKey: 'paypal-approve', kind: 'submit', label: 'paypal-password' }, async () => {
+    fillInput(passwordInput, password);
+    await sleep(1000);
 
-  const loginButton = await waitUntil(() => {
-    const button = findClickableByText([
-      /login|log\s*in|sign\s*in|continue/i,
-      /登录|登入|继续/i,
-    ]);
-    return button && isEnabledControl(button) ? button : null;
-  }, {
-    intervalMs: 250,
-    timeoutMs: 8000,
-    timeoutMessage: 'PayPal password page did not expose a clickable login/continue button.',
+    const loginButton = await waitUntil(() => {
+      const button = findClickableByText([
+        /login|log\s*in|sign\s*in|continue/i,
+        /登录|登入|继续/i,
+      ]);
+      return button && isEnabledControl(button) ? button : null;
+    }, {
+      intervalMs: 250,
+      timeoutMs: 8000,
+      timeoutMessage: 'PayPal password page did not expose a clickable login/continue button.',
+    });
+
+    simulateClick(loginButton);
   });
-
-  simulateClick(loginButton);
   return {
     submitted: true,
     phase: 'password_submitted',
@@ -313,6 +369,13 @@ async function submitPayPalLogin(payload = {}) {
 }
 
 async function dismissPayPalPrompts() {
+  const delayOperation = typeof performPayPalOperationWithDelay === 'function'
+    ? performPayPalOperationWithDelay
+    : async (metadata, operation) => {
+        const rootScope = typeof window !== 'undefined' ? window : globalThis;
+        const gate = rootScope?.CodexOperationDelay?.performOperationWithDelay;
+        return typeof gate === 'function' ? gate(metadata, operation) : operation();
+      };
   await waitForDocumentComplete();
   const buttons = findPasskeyPromptButtons();
   let clicked = 0;
@@ -320,7 +383,9 @@ async function dismissPayPalPrompts() {
     if (!isVisibleElement(button) || !isEnabledControl(button)) {
       continue;
     }
-    simulateClick(button);
+    await delayOperation({ stepKey: 'paypal-approve', kind: 'click', label: 'paypal-dismiss-prompt' }, async () => {
+      simulateClick(button);
+    });
     clicked += 1;
     await sleep(500);
   }
@@ -331,6 +396,13 @@ async function dismissPayPalPrompts() {
 }
 
 async function clickPayPalApprove() {
+  const delayOperation = typeof performPayPalOperationWithDelay === 'function'
+    ? performPayPalOperationWithDelay
+    : async (metadata, operation) => {
+        const rootScope = typeof window !== 'undefined' ? window : globalThis;
+        const gate = rootScope?.CodexOperationDelay?.performOperationWithDelay;
+        return typeof gate === 'function' ? gate(metadata, operation) : operation();
+      };
   await waitForDocumentComplete();
   await dismissPayPalPrompts().catch(() => ({ clicked: 0 }));
 
@@ -342,7 +414,9 @@ async function clickPayPalApprove() {
     };
   }
 
-  simulateClick(button);
+  await delayOperation({ stepKey: 'paypal-approve', kind: 'click', label: 'paypal-approve' }, async () => {
+    simulateClick(button);
+  });
   return {
     clicked: true,
     buttonText: getActionText(button),

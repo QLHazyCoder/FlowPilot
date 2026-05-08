@@ -678,6 +678,7 @@ const PERSISTED_SETTING_DEFAULTS = {
   autoRunFallbackThreadIntervalMinutes: 0,
   oauthFlowTimeoutEnabled: true,
   autoRunDelayEnabled: false,
+  operationDelayEnabled: true,
   autoRunDelayMinutes: 30,
   autoStepDelaySeconds: null,
   step6CookieCleanupEnabled: false,
@@ -2433,6 +2434,9 @@ function normalizePersistentSettingValue(key, value) {
     case 'gopayHelperLocalSmsHelperEnabled':
     case 'gopayHelperAutoModeEnabled':
     case 'autoRunDelayEnabled':
+      return Boolean(value);
+    case 'operationDelayEnabled':
+      return typeof value === 'boolean' ? value : true;
     case 'step6CookieCleanupEnabled':
     case 'phoneVerificationEnabled':
     case 'freePhoneReuseEnabled':
@@ -10765,7 +10769,7 @@ async function resumeAutoRun() {
 // ============================================================
 
 const SIGNUP_ENTRY_URL = 'https://chatgpt.com/';
-const SIGNUP_PAGE_INJECT_FILES = ['content/utils.js', 'content/auth-page-recovery.js', 'content/phone-country-utils.js', 'content/phone-auth.js', 'content/signup-page.js'];
+const SIGNUP_PAGE_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'content/auth-page-recovery.js', 'content/phone-country-utils.js', 'content/phone-auth.js', 'content/signup-page.js'];
 const panelBridge = self.MultiPageBackgroundPanelBridge?.createPanelBridge({
   chrome,
   addLog,
@@ -11448,7 +11452,7 @@ function getMailConfig(state) {
       source: 'mail-2925',
       url: 'https://2925.com/#/mailList',
       label: '2925 邮箱',
-      inject: ['content/utils.js', 'content/mail-2925.js'],
+      inject: ['content/utils.js', 'content/operation-delay.js', 'content/mail-2925.js'],
       injectSource: 'mail-2925',
     };
   }

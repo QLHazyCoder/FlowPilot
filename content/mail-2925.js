@@ -501,7 +501,9 @@ async function ensureAgreementChecked() {
     if (isCheckboxChecked(checkbox)) {
       continue;
     }
-    simulateClick(checkbox);
+    await performOperationWithDelay({ stepKey: 'fetch-signup-code', kind: 'click', label: 'mail2925-agreement-checkbox' }, async () => {
+      simulateClick(checkbox);
+    });
     changed = true;
     await sleep(120);
   }
@@ -1052,6 +1054,11 @@ async function waitForMail2925View(targetView, timeoutMs = 45000) {
   return detectMail2925ViewState();
 }
 
+async function performOperationWithDelay(metadata, operation) {
+  const gate = window.CodexOperationDelay?.performOperationWithDelay;
+  return typeof gate === 'function' ? gate(metadata, operation) : operation();
+}
+
 async function ensureMail2925Session(payload = {}) {
   const email = String(payload?.email || '').trim();
   const password = String(payload?.password || '');
@@ -1135,13 +1142,19 @@ async function ensureMail2925Session(payload = {}) {
   }
 
   await ensureAgreementChecked();
-  fillInput(emailInput, email);
+  await performOperationWithDelay({ stepKey: 'fetch-signup-code', kind: 'fill', label: 'mail2925-login-email' }, async () => {
+    fillInput(emailInput, email);
+  });
   await sleep(150);
-  fillInput(passwordInput, password);
+  await performOperationWithDelay({ stepKey: 'fetch-signup-code', kind: 'fill', label: 'mail2925-login-password' }, async () => {
+    fillInput(passwordInput, password);
+  });
   await sleep(200);
   await sleep(1000);
   log(`步骤 0：2925 已定位到登录表单，准备点击“登录”，当前地址 ${location.href}`, 'info');
-  simulateClick(loginButton);
+  await performOperationWithDelay({ stepKey: 'fetch-signup-code', kind: 'submit', label: 'mail2925-login-submit' }, async () => {
+    simulateClick(loginButton);
+  });
   log(`步骤 0：2925 已点击“登录”，点击后地址 ${location.href}`, 'info');
 
   const finalState = await waitForMail2925View('mailbox', 40000);

@@ -13,6 +13,7 @@
       isConsentReady,
       isPhoneVerificationPageReady,
       isVisibleElement,
+      performOperationWithDelay: injectedPerformOperationWithDelay,
       simulateClick,
       sleep,
       throwIfStopped,
@@ -33,6 +34,11 @@
     const phoneCountryUtils = rootScope?.MultiPagePhoneCountryUtils || globalThis?.MultiPagePhoneCountryUtils || {};
     let lastPhoneRoute405RecoveryFailedAt = 0;
     let activePhoneResendPromise = null;
+
+    async function performOperationWithDelay(metadata, operation) {
+      const gate = injectedPerformOperationWithDelay || rootScope?.CodexOperationDelay?.performOperationWithDelay;
+      return typeof gate === 'function' ? gate(metadata, operation) : operation();
+    }
 
     function dispatchInputEvents(element) {
       if (!element) return;
@@ -334,10 +340,15 @@
       }
       const selectedOption = getSelectedCountryOption();
       if (selectedOption && isSameCountryOption(selectedOption, targetOption)) {
+        await performOperationWithDelay({ stepKey: 'phone-auth', kind: 'select', label: 'phone-country-select' }, async () => {
+          dispatchInputEvents(select);
+        });
         return true;
       }
-      select.value = String(targetOption.value || '');
-      dispatchInputEvents(select);
+      await performOperationWithDelay({ stepKey: 'phone-auth', kind: 'select', label: 'phone-country-select' }, async () => {
+        select.value = String(targetOption.value || '');
+        dispatchInputEvents(select);
+      });
       await sleep(250);
       const nextSelectedOption = getSelectedCountryOption();
       return Boolean(nextSelectedOption && isSameCountryOption(nextSelectedOption, targetOption));
@@ -616,7 +627,9 @@
           }
           clicked += 1;
           await humanPause(200, 500);
-          simulateClick(retryButton);
+          await performOperationWithDelay({ stepKey: 'phone-auth', kind: 'click', label: 'phone-route-retry' }, async () => {
+            simulateClick(retryButton);
+          });
           await sleep(1000);
           continue;
         }
@@ -715,13 +728,19 @@
       }
 
       await humanPause(250, 700);
-      fillInput(phoneInput, nationalPhoneNumber);
+      await performOperationWithDelay({ stepKey: 'phone-auth', kind: 'fill', label: 'phone-number' }, async () => {
+        fillInput(phoneInput, nationalPhoneNumber);
+      });
       if (hiddenPhoneNumberInput) {
-        hiddenPhoneNumberInput.value = phoneNumber;
-        dispatchInputEvents(hiddenPhoneNumberInput);
+        await performOperationWithDelay({ stepKey: 'phone-auth', kind: 'hidden-sync', label: 'phone-number-hidden-sync' }, async () => {
+          hiddenPhoneNumberInput.value = phoneNumber;
+          dispatchInputEvents(hiddenPhoneNumberInput);
+        });
       }
       await sleep(250);
-      simulateClick(submitButton);
+      await performOperationWithDelay({ stepKey: 'phone-auth', kind: 'submit', label: 'phone-number-submit' }, async () => {
+        simulateClick(submitButton);
+      });
       return waitForPhoneVerificationReady();
     }
 
@@ -797,9 +816,13 @@
       }
 
       await humanPause(250, 700);
-      fillInput(codeInput, code);
+      await performOperationWithDelay({ stepKey: 'phone-auth', kind: 'fill', label: 'phone-verification-code' }, async () => {
+        fillInput(codeInput, code);
+      });
       await sleep(250);
-      simulateClick(submitButton);
+      await performOperationWithDelay({ stepKey: 'phone-auth', kind: 'submit', label: 'phone-verification-submit' }, async () => {
+        simulateClick(submitButton);
+      });
       if (is405MethodNotAllowedPage()) {
         await recoverPhoneRoute405(12000);
       }
@@ -850,7 +873,9 @@
           const resendButton = getPhoneVerificationResendButton({ allowDisabled: true });
           if (resendButton && isActionEnabled(resendButton)) {
             await humanPause(250, 700);
-            simulateClick(resendButton);
+            await performOperationWithDelay({ stepKey: 'phone-auth', kind: 'click', label: 'phone-verification-resend' }, async () => {
+              simulateClick(resendButton);
+            });
             await sleep(1000);
             if (is405MethodNotAllowedPage()) {
               await recoverRoute405WithinResend();
@@ -902,7 +927,9 @@
         throw new Error('The auth page is not currently on phone verification or add-phone page.');
       }
 
-      location.assign('/add-phone');
+      await performOperationWithDelay({ stepKey: 'phone-auth', kind: 'navigation', label: 'phone-return-add-phone' }, async () => {
+        location.assign('/add-phone');
+      });
       await waitForAddPhoneReady(timeout);
       return {
         addPhonePage: true,
