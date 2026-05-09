@@ -85,6 +85,7 @@ function createExecutorHarness({
   markCurrentRegistrationAccountUsed = async () => {},
   probeIpProxyExit = null,
   onSetState = null,
+  sleepWithStop = null,
   submitRedirectUrl = 'https://www.paypal.com/checkoutnow',
 }) {
   const api = loadPlusCheckoutBillingModule();
@@ -166,7 +167,7 @@ function createExecutorHarness({
         await onSetState(updates, events);
       }
     },
-    sleepWithStop: async (ms) => events.sleeps.push(ms),
+    sleepWithStop: sleepWithStop || (async (ms) => events.sleeps.push(ms)),
     waitForTabCompleteUntilStopped: async () => checkoutTab,
     waitForTabUrlMatchUntilStopped: async (tabId, matcher) => {
       events.waitedUrls.push({ tabId });
@@ -1014,6 +1015,70 @@ test('GPC billing logs checkout order stage in Chinese', async () => {
 
   assert.equal(events.logs.some((entry) => entry.message === '步骤 7：GPC 任务状态：创建订单'), true);
   assert.equal(events.logs.some((entry) => /checkout_order_start/.test(entry.message)), false);
+});
+
+test('GPC billing fails repeated checkout stage as stale so auto-run can recreate task', async () => {
+  const originalNow = Date.now;
+  let now = 1710000000000;
+  const fetchCalls = [];
+  const { events, executor } = createExecutorHarness({
+    frames: [],
+    stateByFrame: {},
+    sleepWithStop: async (ms) => {
+      events.sleeps.push(ms);
+      now += ms;
+    },
+    fetchImpl: async (url, options = {}) => {
+      fetchCalls.push({ url, options });
+      if (url === 'https://gpc.qlhazycoder.top/api/gp/tasks/task_stale') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => createGpcTaskResponse({
+            task_id: 'task_stale',
+            phone_mode: 'auto',
+            status: 'active',
+            status_text: '处理中',
+            remote_stage: 'checkout_order_start',
+            api_waiting_for: '',
+          }),
+        };
+      }
+      if (url.endsWith('/api/gp/tasks/task_stale/stop')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => createGpcTaskResponse({
+            task_id: 'task_stale',
+            status: 'discarded',
+            status_text: '已停止',
+          }),
+        };
+      }
+      throw new Error(`unexpected url: ${url}`);
+    },
+  });
+
+  Date.now = () => now;
+  try {
+    await assert.rejects(
+      () => executor.executePlusCheckoutBilling({
+        plusPaymentMethod: 'gpc-helper',
+        plusCheckoutSource: 'gpc-helper',
+        gopayHelperTaskId: 'task_stale',
+        gopayHelperPhoneMode: 'auto',
+        gopayHelperApiUrl: 'https://gpc.qlhazycoder.top/',
+        gopayHelperApiKey: 'gpc_auto',
+        gopayHelperTaskStaleSeconds: 15,
+      }),
+      /GPC_TASK_ENDED::GPC 任务状态超过 15 秒无进展（创建订单），请重新创建任务。/
+    );
+  } finally {
+    Date.now = originalNow;
+  }
+
+  assert.equal(fetchCalls.some((call) => call.url.endsWith('/api/gp/tasks/task_stale/stop')), true);
+  assert.equal(events.logs.some((entry) => entry.message === '步骤 7：GPC 任务状态：创建订单'), true);
 });
 
 test('GPC billing reads SMS OTP from local helper for sms_otp_wait', async () => {
