@@ -403,6 +403,33 @@
       }) || buttons.find((button) => isVisibleElement(button));
     }
 
+    function getPhoneVerificationResendActionText(button) {
+      if (!button) return '';
+      return [
+        button.getAttribute?.('value'),
+        button.getAttribute?.('aria-label'),
+        button.getAttribute?.('title'),
+        getActionText(button),
+        button.textContent,
+      ].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+    }
+
+    function isWhatsAppResendText(value) {
+      return /whats\s*app/i.test(String(value || ''));
+    }
+
+    function getPhoneVerificationResendActionInfo(button) {
+      const text = getPhoneVerificationResendActionText(button);
+      const channel = isWhatsAppResendText(text)
+        ? 'whatsapp'
+        : (/(?:sms|text\s+message|短信)/i.test(text) ? 'sms' : '');
+      return {
+        channel,
+        channelText: text,
+        text,
+      };
+    }
+
     function getPhoneVerificationResendButton(options = {}) {
       const { allowDisabled = false } = options;
       const form = getPhoneVerificationForm();
@@ -413,7 +440,7 @@
         if (!allowDisabled && !isActionEnabled(button)) return false;
         const intent = String(button.getAttribute('value') || '').trim().toLowerCase();
         if (intent === 'resend') return true;
-        return /resend/i.test(getActionText(button));
+        return /resend|重新发送|再次发送|whats\s*app/i.test(getPhoneVerificationResendActionText(button));
       }) || null;
     }
 
@@ -829,7 +856,7 @@
       return waitForPhoneVerificationOutcome();
     }
 
-    async function resendPhoneVerificationCode(timeout = 45000) {
+    async function resendPhoneVerificationCode(timeout = 45000, options = {}) {
       if (activePhoneResendPromise) {
         return activePhoneResendPromise;
       }
@@ -872,6 +899,26 @@
           }
           const resendButton = getPhoneVerificationResendButton({ allowDisabled: true });
           if (resendButton && isActionEnabled(resendButton)) {
+            const resendInfo = getPhoneVerificationResendActionInfo(resendButton);
+            if (resendInfo.channel === 'whatsapp') {
+              return {
+                resent: false,
+                channel: 'whatsapp',
+                channelText: resendInfo.channelText,
+                text: resendInfo.text,
+                url: location.href,
+              };
+            }
+            if (options?.probeOnly) {
+              return {
+                resent: false,
+                probed: true,
+                channel: resendInfo.channel || 'unknown',
+                channelText: resendInfo.channelText,
+                text: resendInfo.text,
+                url: location.href,
+              };
+            }
             await humanPause(250, 700);
             await performOperationWithDelay({ stepKey: 'phone-auth', kind: 'click', label: 'phone-verification-resend' }, async () => {
               simulateClick(resendButton);
@@ -891,6 +938,9 @@
             }
             return {
               resent: true,
+              channel: resendInfo.channel || 'sms',
+              channelText: resendInfo.channelText,
+              text: resendInfo.text,
               url: location.href,
             };
           }

@@ -2938,6 +2938,284 @@ test('phone verification helper immediately replaces number when page says the p
   );
 });
 
+test('phone verification helper rotates number when verification code cannot be sent from add-phone rejection', async () => {
+  const requests = [];
+  const messages = [];
+  const submittedNumbers = [];
+  const refusedText = '无法向此电话号码发送验证码。请稍后重试或使用其他号码。';
+  let currentState = {
+    heroSmsApiKey: 'demo-key',
+    verificationResendCount: 0,
+    phoneVerificationReplacementLimit: 2,
+    currentPhoneActivation: null,
+    reusablePhoneActivation: null,
+  };
+
+  const numbers = [
+    { activationId: '331111', phoneNumber: '66950003111' },
+    { activationId: '332222', phoneNumber: '66950003222' },
+  ];
+  let numberIndex = 0;
+
+  const helpers = api.createPhoneVerificationHelpers({
+    addLog: async () => {},
+    ensureStep8SignupPageReady: async () => {},
+    fetchImpl: async (url) => {
+      const parsedUrl = new URL(url);
+      requests.push(parsedUrl);
+      const action = parsedUrl.searchParams.get('action');
+      const id = parsedUrl.searchParams.get('id');
+
+      if (action === 'getPrices') {
+        return {
+          ok: true,
+          text: async () => buildHeroSmsPricesPayload(),
+        };
+      }
+      if (action === 'getNumber') {
+        const nextNumber = numbers[numberIndex];
+        numberIndex += 1;
+        return {
+          ok: true,
+          text: async () => `ACCESS_NUMBER:${nextNumber.activationId}:${nextNumber.phoneNumber}`,
+        };
+      }
+      if (action === 'getStatus') {
+        return {
+          ok: true,
+          text: async () => (id === '332222' ? 'STATUS_OK:654321' : 'STATUS_WAIT_CODE'),
+        };
+      }
+      if (action === 'setStatus') {
+        return {
+          ok: true,
+          text: async () => `STATUS_UPDATED:${id}`,
+        };
+      }
+      throw new Error(`Unexpected HeroSMS action: ${action}`);
+    },
+    getOAuthFlowStepTimeoutMs: async (defaultTimeoutMs) => defaultTimeoutMs,
+    getState: async () => ({ ...currentState }),
+    sendToContentScriptResilient: async (_source, message) => {
+      messages.push(message.type);
+      if (message.type === 'SUBMIT_PHONE_NUMBER') {
+        const phoneNumber = message.payload.phoneNumber;
+        submittedNumbers.push(phoneNumber);
+        if (phoneNumber === '66950003111') {
+          return {
+            addPhoneRejected: true,
+            addPhonePage: true,
+            errorText: refusedText,
+            url: 'https://auth.openai.com/add-phone',
+          };
+        }
+        return {
+          phoneVerificationPage: true,
+          url: 'https://auth.openai.com/phone-verification',
+        };
+      }
+      if (message.type === 'RETURN_TO_ADD_PHONE') {
+        return {
+          addPhonePage: true,
+          phoneVerificationPage: false,
+          url: 'https://auth.openai.com/add-phone',
+        };
+      }
+      if (message.type === 'STEP8_GET_STATE') {
+        return {
+          addPhonePage: true,
+          phoneVerificationPage: false,
+          url: 'https://auth.openai.com/add-phone',
+        };
+      }
+      if (message.type === 'SUBMIT_PHONE_VERIFICATION_CODE') {
+        return {
+          success: true,
+          consentReady: true,
+          url: 'https://auth.openai.com/authorize',
+        };
+      }
+      if (message.type === 'RESEND_PHONE_VERIFICATION_CODE') {
+        throw new Error('delivery-refused add-phone rejection should rotate before resend.');
+      }
+      throw new Error(`Unexpected content-script message: ${message.type}`);
+    },
+    setState: async (updates) => {
+      currentState = { ...currentState, ...updates };
+    },
+    sleepWithStop: async () => {},
+    throwIfStopped: () => {},
+  });
+
+  const result = await helpers.completePhoneVerificationFlow(1, {
+    addPhonePage: true,
+    phoneVerificationPage: false,
+    url: 'https://auth.openai.com/add-phone',
+  });
+
+  assert.deepStrictEqual(result, {
+    success: true,
+    consentReady: true,
+    url: 'https://auth.openai.com/authorize',
+  });
+  assert.deepStrictEqual(submittedNumbers, ['66950003111', '66950003222']);
+  assert.equal(numberIndex, 2);
+  assert.equal(messages.includes('RESEND_PHONE_VERIFICATION_CODE'), false);
+  assert.equal(
+    requests.filter((requestUrl) => requestUrl.searchParams.get('action') === 'getNumber').length,
+    2
+  );
+});
+
+test('phone verification helper keeps used-number cleanup when add-phone rejection asks to use a different phone number', async () => {
+  const messages = [];
+  const submittedNumbers = [];
+  const usedText = 'This phone number is already linked to the maximum number of accounts. Please use a different phone number.';
+  let currentState = {
+    heroSmsApiKey: 'demo-key',
+    verificationResendCount: 0,
+    phoneVerificationReplacementLimit: 2,
+    currentPhoneActivation: null,
+    reusablePhoneActivation: null,
+    phoneReusableActivationPool: [
+      {
+        activationId: 'pool-used-different-match',
+        phoneNumber: '+66 95 000 4111',
+        provider: 'hero-sms',
+        serviceCode: 'dr',
+        countryId: 52,
+        successfulUses: 1,
+        maxUses: 3,
+      },
+    ],
+    freeReusablePhoneActivation: {
+      activationId: 'free-used-different-match',
+      phoneNumber: '+66 95 000 4111',
+      provider: 'hero-sms',
+      serviceCode: 'dr',
+      countryId: 52,
+      countryLabel: 'Thailand',
+      successfulUses: 0,
+      maxUses: 3,
+      source: 'free-manual-reuse',
+    },
+  };
+
+  const numbers = [
+    { activationId: '341111', phoneNumber: '66950004111' },
+    { activationId: '342222', phoneNumber: '66950004222' },
+  ];
+  let numberIndex = 0;
+
+  const helpers = api.createPhoneVerificationHelpers({
+    addLog: async () => {},
+    ensureStep8SignupPageReady: async () => {},
+    fetchImpl: async (url) => {
+      const parsedUrl = new URL(url);
+      const action = parsedUrl.searchParams.get('action');
+      const id = parsedUrl.searchParams.get('id');
+
+      if (action === 'getPrices') {
+        return {
+          ok: true,
+          text: async () => buildHeroSmsPricesPayload(),
+        };
+      }
+      if (action === 'getNumber') {
+        const nextNumber = numbers[numberIndex];
+        numberIndex += 1;
+        return {
+          ok: true,
+          text: async () => `ACCESS_NUMBER:${nextNumber.activationId}:${nextNumber.phoneNumber}`,
+        };
+      }
+      if (action === 'getStatus') {
+        return {
+          ok: true,
+          text: async () => (id === '342222' ? 'STATUS_OK:654321' : 'STATUS_WAIT_CODE'),
+        };
+      }
+      if (action === 'setStatus') {
+        return {
+          ok: true,
+          text: async () => `STATUS_UPDATED:${id}`,
+        };
+      }
+      throw new Error(`Unexpected HeroSMS action: ${action}`);
+    },
+    getOAuthFlowStepTimeoutMs: async (defaultTimeoutMs) => defaultTimeoutMs,
+    getState: async () => ({ ...currentState }),
+    sendToContentScriptResilient: async (_source, message) => {
+      messages.push(message.type);
+      if (message.type === 'SUBMIT_PHONE_NUMBER') {
+        const phoneNumber = message.payload.phoneNumber;
+        submittedNumbers.push(phoneNumber);
+        if (phoneNumber === '66950004111') {
+          return {
+            addPhoneRejected: true,
+            addPhonePage: true,
+            errorText: usedText,
+            url: 'https://auth.openai.com/add-phone',
+          };
+        }
+        return {
+          phoneVerificationPage: true,
+          url: 'https://auth.openai.com/phone-verification',
+        };
+      }
+      if (message.type === 'RETURN_TO_ADD_PHONE') {
+        return {
+          addPhonePage: true,
+          phoneVerificationPage: false,
+          url: 'https://auth.openai.com/add-phone',
+        };
+      }
+      if (message.type === 'STEP8_GET_STATE') {
+        return {
+          addPhonePage: true,
+          phoneVerificationPage: false,
+          url: 'https://auth.openai.com/add-phone',
+        };
+      }
+      if (message.type === 'SUBMIT_PHONE_VERIFICATION_CODE') {
+        return {
+          success: true,
+          consentReady: true,
+          url: 'https://auth.openai.com/authorize',
+        };
+      }
+      if (message.type === 'RESEND_PHONE_VERIFICATION_CODE') {
+        throw new Error('used add-phone rejection should rotate before resend.');
+      }
+      throw new Error(`Unexpected content-script message: ${message.type}`);
+    },
+    setState: async (updates) => {
+      currentState = { ...currentState, ...updates };
+    },
+    sleepWithStop: async () => {},
+    throwIfStopped: () => {},
+  });
+
+  const result = await helpers.completePhoneVerificationFlow(1, {
+    addPhonePage: true,
+    phoneVerificationPage: false,
+    url: 'https://auth.openai.com/add-phone',
+  });
+
+  assert.deepStrictEqual(result, {
+    success: true,
+    consentReady: true,
+    url: 'https://auth.openai.com/authorize',
+  });
+  assert.deepStrictEqual(submittedNumbers, ['66950004111', '66950004222']);
+  assert.equal(currentState.freeReusablePhoneActivation, null);
+  assert.deepStrictEqual(
+    currentState.phoneReusableActivationPool.filter((activation) => activation.phoneNumber === '+66 95 000 4111'),
+    []
+  );
+  assert.equal(messages.includes('RESEND_PHONE_VERIFICATION_CODE'), false);
+});
+
 test('phone verification helper treats phone_max_usage_exceeded as used-number and rotates immediately', async () => {
   const requests = [];
   const messages = [];
@@ -5101,6 +5379,149 @@ test('phone verification helper skips page resend for 5sim timeouts and rotates 
     2,
     'first 5sim number should be polled across both timeout windows before replacement'
   );
+});
+
+test('phone verification helper rotates number when resend action is WhatsApp in SMS provider mode', async () => {
+  const requests = [];
+  const messages = [];
+  const submittedNumbers = [];
+  const statusCallsById = {};
+  const heroSmsResendStatusCalls = [];
+  let currentState = {
+    heroSmsApiKey: 'demo-key',
+    heroSmsCountryId: 52,
+    heroSmsCountryLabel: 'Thailand',
+    verificationResendCount: 1,
+    phoneVerificationReplacementLimit: 2,
+    phoneCodeWaitSeconds: 60,
+    phoneCodeTimeoutWindows: 2,
+    phoneCodePollIntervalSeconds: 1,
+    phoneCodePollMaxRounds: 1,
+    currentPhoneActivation: null,
+    reusablePhoneActivation: null,
+  };
+  const numbers = [
+    { activationId: '520001', phoneNumber: '66952220001' },
+    { activationId: '520002', phoneNumber: '66952220002' },
+  ];
+  let numberIndex = 0;
+  const realDateNow = Date.now;
+  let fakeNow = 0;
+  Date.now = () => fakeNow;
+
+  try {
+    const helpers = api.createPhoneVerificationHelpers({
+      addLog: async () => {},
+      ensureStep8SignupPageReady: async () => {},
+      fetchImpl: async (url) => {
+        const parsedUrl = new URL(url);
+        requests.push(parsedUrl);
+        const action = parsedUrl.searchParams.get('action');
+        const id = parsedUrl.searchParams.get('id');
+        const status = parsedUrl.searchParams.get('status');
+
+        if (action === 'getPrices') {
+          return {
+            ok: true,
+            text: async () => buildHeroSmsPricesPayload(),
+          };
+        }
+        if (action === 'getNumber') {
+          const nextNumber = numbers[numberIndex];
+          numberIndex += 1;
+          return {
+            ok: true,
+            text: async () => `ACCESS_NUMBER:${nextNumber.activationId}:${nextNumber.phoneNumber}`,
+          };
+        }
+        if (action === 'getStatus') {
+          statusCallsById[id] = (statusCallsById[id] || 0) + 1;
+          return {
+            ok: true,
+            text: async () => (id === '520001' ? 'STATUS_WAIT_CODE' : 'STATUS_OK:123456'),
+          };
+        }
+        if (action === 'setStatus') {
+          if (id === '520001' && status === '3') {
+            heroSmsResendStatusCalls.push(parsedUrl);
+          }
+          return {
+            ok: true,
+            text: async () => `STATUS_UPDATED:${id}`,
+          };
+        }
+        throw new Error(`Unexpected HeroSMS action: ${action}`);
+      },
+      getOAuthFlowStepTimeoutMs: async (defaultTimeoutMs) => defaultTimeoutMs,
+      getState: async () => ({ ...currentState }),
+      sendToContentScriptResilient: async (_source, message) => {
+        messages.push(message.type);
+        if (message.type === 'SUBMIT_PHONE_NUMBER') {
+          submittedNumbers.push(message.payload.phoneNumber);
+          return {
+            phoneVerificationPage: true,
+            url: 'https://auth.openai.com/phone-verification',
+          };
+        }
+        if (message.type === 'RESEND_PHONE_VERIFICATION_CODE') {
+          return {
+            resent: false,
+            channel: 'whatsapp',
+            channelText: '重新发送 WhatsApp 消息',
+            text: '重新发送 WhatsApp 消息',
+            url: 'https://auth.openai.com/phone-verification',
+          };
+        }
+        if (message.type === 'RETURN_TO_ADD_PHONE') {
+          return {
+            addPhonePage: true,
+            phoneVerificationPage: false,
+            url: 'https://auth.openai.com/add-phone',
+          };
+        }
+        if (message.type === 'STEP8_GET_STATE') {
+          return {
+            addPhonePage: true,
+            phoneVerificationPage: false,
+            url: 'https://auth.openai.com/add-phone',
+          };
+        }
+        if (message.type === 'SUBMIT_PHONE_VERIFICATION_CODE') {
+          return {
+            success: true,
+            consentReady: true,
+            url: 'https://auth.openai.com/authorize',
+          };
+        }
+        throw new Error(`Unexpected content-script message: ${message.type}`);
+      },
+      setState: async (updates) => {
+        currentState = { ...currentState, ...updates };
+      },
+      sleepWithStop: async () => {
+        fakeNow += 61000;
+      },
+      throwIfStopped: () => {},
+    });
+
+    const result = await helpers.completePhoneVerificationFlow(1, {
+      addPhonePage: true,
+      phoneVerificationPage: false,
+      url: 'https://auth.openai.com/add-phone',
+    });
+
+    assert.deepStrictEqual(result, {
+      success: true,
+      consentReady: true,
+      url: 'https://auth.openai.com/authorize',
+    });
+    assert.deepStrictEqual(submittedNumbers, ['66952220001', '66952220002']);
+    assert.equal(heroSmsResendStatusCalls.length, 0, 'WhatsApp resend must not call HeroSMS setStatus(3)');
+    assert.equal(statusCallsById['520001'], 1, 'WhatsApp resend should replace after the first SMS wait window');
+    assert.equal(messages.includes('RESEND_PHONE_VERIFICATION_CODE'), true);
+  } finally {
+    Date.now = realDateNow;
+  }
 });
 
 test('phone verification helper rotates number immediately when 5sim activation is missing (order not found)', async () => {

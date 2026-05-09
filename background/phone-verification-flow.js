@@ -406,6 +406,31 @@
       return /phone\s+number\s+is\s+not\s+valid|invalid\s+phone\s+number|invalid\s+phone|not\s+a\s+valid\s+phone|号码.*无效|手机号.*无效|电话号码.*无效/i.test(text);
     }
 
+    function isPhoneNumberDeliveryRefusedError(value) {
+      const text = String(value || '').trim();
+      if (!text) {
+        return false;
+      }
+      return /无法向此电话号码发送验证码|无法向.*(?:电话号码|手机号|号码).*发送(?:验证码|短信)|(?:不能|无法).*发送.*(?:验证码|短信).*(?:电话号码|手机号|号码)|(?:cannot|can't|could\s*not|couldn't|unable\s+to)\s+(?:send|deliver).{0,80}(?:verification\s+code|code|sms|text(?:\s+message)?).{0,80}(?:phone|number)|(?:verification\s+code|sms|text(?:\s+message)?).{0,80}(?:cannot|can't|could\s*not|couldn't|unable\s+to).{0,80}(?:send|deliver)/i.test(text);
+    }
+
+    function isWhatsAppPhoneResendResult(value) {
+      if (!value) {
+        return false;
+      }
+      const text = typeof value === 'string'
+        ? value
+        : [
+          value.channel,
+          value.channelText,
+          value.text,
+          value.buttonText,
+          value.label,
+          value.message,
+        ].filter(Boolean).join(' ');
+      return /whats\s*app/i.test(String(text || ''));
+    }
+
     function isRecoverableAddPhoneSubmitError(value) {
       const text = String(value || '').trim();
       if (!text) {
@@ -4080,7 +4105,7 @@
       return result || {};
     }
 
-    async function resendPhoneVerificationCode(tabId) {
+    async function resendPhoneVerificationCode(tabId, options = {}) {
       const visibleStep = normalizeLogStep(activePhoneVerificationLogStep) || 9;
       const timeoutMs = typeof getOAuthFlowStepTimeoutMs === 'function'
         ? await getOAuthFlowStepTimeoutMs(65000, { step: visibleStep, actionLabel: 'resend phone verification code' })
@@ -4088,7 +4113,7 @@
       const result = await sendToContentScriptResilient('signup-page', {
         type: 'RESEND_PHONE_VERIFICATION_CODE',
         source: 'background',
-        payload: {},
+        payload: options || {},
       }, {
         timeoutMs,
         responseTimeoutMs: timeoutMs,
@@ -5001,7 +5026,6 @@
               );
               continue;
             }
-            await requestAdditionalPhoneSms(state, normalizedActivation);
             if (resendTriggeredForCurrentNumber) {
               await addLog(
                 `步骤 9：号码 ${normalizedActivation.phoneNumber} 已触发过一次页面重发；为避免限流，将继续轮询不再点击重发。`,
@@ -5010,7 +5034,35 @@
               continue;
             }
             try {
-              await resendPhoneVerificationCode(tabId);
+              const resendProbeResult = await resendPhoneVerificationCode(tabId, { probeOnly: true });
+              if (isWhatsAppPhoneResendResult(resendProbeResult)) {
+                await addLog(
+                  `步骤 9：页面重发入口显示 WhatsApp 通道（${resendProbeResult.channelText || resendProbeResult.text || 'WhatsApp'}），当前接码平台无法读取 WhatsApp 消息，立即更换号码。`,
+                  'warn'
+                );
+                await clearPhoneRuntimeCountdown();
+                return {
+                  code: '',
+                  replaceNumber: true,
+                  reason: 'whatsapp_resend_channel',
+                };
+              }
+              await requestAdditionalPhoneSms(state, normalizedActivation);
+              if (resendProbeResult?.probed) {
+                const resendResult = await resendPhoneVerificationCode(tabId);
+                if (isWhatsAppPhoneResendResult(resendResult)) {
+                  await addLog(
+                    `步骤 9：页面重发入口切换为 WhatsApp 通道（${resendResult.channelText || resendResult.text || 'WhatsApp'}），当前接码平台无法读取 WhatsApp 消息，立即更换号码。`,
+                    'warn'
+                  );
+                  await clearPhoneRuntimeCountdown();
+                  return {
+                    code: '',
+                    replaceNumber: true,
+                    reason: 'whatsapp_resend_channel',
+                  };
+                }
+              }
               resendTriggeredForCurrentNumber = true;
               await addLog('步骤 9：已点击手机验证码页面的“重新发送短信”。', 'info');
             } catch (resendError) {
@@ -5982,10 +6034,10 @@
               submitResult = await submitPhoneNumber(tabId, activation.phoneNumber, activation);
             } catch (submitError) {
               const submitErrorText = String(submitError?.message || submitError || 'unknown error');
-              if (isRecoverableAddPhoneSubmitError(submitErrorText)) {
+              if (isPhoneNumberDeliveryRefusedError(submitErrorText) || isRecoverableAddPhoneSubmitError(submitErrorText)) {
                 await rotateActivationAfterAddPhoneFailure(
                   submitErrorText,
-                  'add_phone_submit_failed',
+                  isPhoneNumberDeliveryRefusedError(submitErrorText) ? 'phone_delivery_refused' : 'add_phone_submit_failed',
                   { url: pageState?.url || '' }
                 );
                 continue;
@@ -6032,6 +6084,14 @@
                 };
                 continue;
               }
+              if (isPhoneNumberDeliveryRefusedError(addPhoneRejectText)) {
+                await rotateActivationAfterAddPhoneFailure(
+                  addPhoneRejectText,
+                  'phone_delivery_refused',
+                  submitResult || {}
+                );
+                continue;
+              }
 
               await addLog(
                 `步骤 9：添加手机号页面拒绝当前号码，但未明确提示已使用（${addPhoneRejectText}），将用同一号码再试一次。`,
@@ -6050,10 +6110,16 @@
                   || submitResult?.url
                   || 'unknown error'
                 );
-                if (isPhoneNumberUsedError(retryRejectText) || isRecoverableAddPhoneSubmitError(retryRejectText)) {
+                if (
+                  isPhoneNumberUsedError(retryRejectText)
+                  || isPhoneNumberDeliveryRefusedError(retryRejectText)
+                  || isRecoverableAddPhoneSubmitError(retryRejectText)
+                ) {
                   await rotateActivationAfterAddPhoneFailure(
                     `add-phone keeps rejecting ${activation.phoneNumber} (${retryRejectText})`,
-                    isPhoneNumberUsedError(retryRejectText) ? 'phone_number_used' : 'add_phone_rejected',
+                    isPhoneNumberUsedError(retryRejectText)
+                      ? 'phone_number_used'
+                      : (isPhoneNumberDeliveryRefusedError(retryRejectText) ? 'phone_delivery_refused' : 'add_phone_rejected'),
                     submitResult || {}
                   );
                   continue;
@@ -6170,9 +6236,30 @@
 
               if (remainingResendRequests > 0) {
                 remainingResendRequests -= 1;
-                await requestAdditionalPhoneSms(state, activation);
                 try {
-                  await resendPhoneVerificationCode(tabId);
+                  const resendProbeResult = await resendPhoneVerificationCode(tabId, { probeOnly: true });
+                  if (isWhatsAppPhoneResendResult(resendProbeResult)) {
+                    shouldReplaceNumber = true;
+                    replaceReason = 'whatsapp_resend_channel';
+                    await addLog(
+                      `步骤 9：验证码被拒后的重发入口显示 WhatsApp 通道（${resendProbeResult.channelText || resendProbeResult.text || 'WhatsApp'}），当前接码平台无法读取 WhatsApp 消息，将更换号码。`,
+                      'warn'
+                    );
+                    break;
+                  }
+                  await requestAdditionalPhoneSms(state, activation);
+                  if (resendProbeResult?.probed) {
+                    const resendResult = await resendPhoneVerificationCode(tabId);
+                    if (isWhatsAppPhoneResendResult(resendResult)) {
+                      shouldReplaceNumber = true;
+                      replaceReason = 'whatsapp_resend_channel';
+                      await addLog(
+                        `步骤 9：验证码被拒后的重发入口切换为 WhatsApp 通道（${resendResult.channelText || resendResult.text || 'WhatsApp'}），当前接码平台无法读取 WhatsApp 消息，将更换号码。`,
+                        'warn'
+                      );
+                      break;
+                    }
+                  }
                   await addLog('步骤 9：手机验证码被拒后已点击“重新发送短信”。', 'info');
                 } catch (resendError) {
                   await addLog(`步骤 9：验证码被拒后点击重发失败。${resendError.message}`, 'warn');

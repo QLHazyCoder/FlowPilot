@@ -105,7 +105,7 @@ async function handleCommand(message) {
       }
       return await submitPhoneVerificationCodeWithProfileFallback(message.payload);
     case 'RESEND_PHONE_VERIFICATION_CODE':
-      return await phoneAuthHelpers.resendPhoneVerificationCode();
+      return await phoneAuthHelpers.resendPhoneVerificationCode(undefined, message.payload || {});
     case 'CHECK_PHONE_RESEND_ERROR':
       return phoneAuthHelpers.checkPhoneResendError();
     case 'RETURN_TO_ADD_PHONE':
