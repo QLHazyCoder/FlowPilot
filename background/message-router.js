@@ -167,6 +167,25 @@
       return '';
     }
 
+    function isStaleAutoRunStepMessage(step, state = {}) {
+      if (typeof isAutoRunLockedState !== 'function' || !isAutoRunLockedState(state)) {
+        return false;
+      }
+      const normalizedStep = Number(step);
+      if (!Number.isInteger(normalizedStep) || normalizedStep <= 0) {
+        return false;
+      }
+      const currentStatus = String(state?.stepStatuses?.[normalizedStep] || '').trim();
+      if (currentStatus === 'running') {
+        return false;
+      }
+      const currentStep = Number(state?.currentStep) || 0;
+      if (currentStep > 0 && normalizedStep !== currentStep) {
+        return true;
+      }
+      return ['completed', 'manual_completed', 'skipped', 'failed', 'stopped'].includes(currentStatus);
+    }
+
     function resolveSignupPhonePayload(payload = {}) {
       const directPhone = String(
         payload?.signupPhoneNumber
@@ -540,6 +559,11 @@
         }
 
         case 'STEP_COMPLETE': {
+          const currentState = await getState();
+          if (isStaleAutoRunStepMessage(message.step, currentState)) {
+            await addLog(`自动运行：忽略过期的步骤 ${message.step} 完成消息，当前流程已在步骤 ${currentState.currentStep || '未知'}。`, 'warn', { step: message.step });
+            return { ok: true, ignored: true };
+          }
           if (getStopRequested()) {
             await setStepStatus(message.step, 'stopped');
             await appendManualAccountRunRecordIfNeeded(`step${message.step}_stopped`, null, '流程已被用户停止。');
@@ -582,6 +606,11 @@
         }
 
         case 'STEP_ERROR': {
+          const staleCheckState = await getState();
+          if (isStaleAutoRunStepMessage(message.step, staleCheckState)) {
+            await addLog(`自动运行：忽略过期的步骤 ${message.step} 失败消息，当前流程已在步骤 ${staleCheckState.currentStep || '未知'}。原始错误：${message.error || '未知错误'}`, 'warn', { step: message.step });
+            return { ok: true, ignored: true };
+          }
           if (typeof isCloudflareSecurityBlockedError === 'function' && isCloudflareSecurityBlockedError(message.error)) {
             const userMessage = typeof handleCloudflareSecurityBlocked === 'function'
               ? await handleCloudflareSecurityBlocked(message.error)

@@ -23,13 +23,17 @@ function createRouter(overrides = {}) {
     securityBlocks: [],
     invalidations: [],
     executedSteps: [],
+    accountRecords: [],
   };
 
   const router = api.createMessageRouter({
     addLog: async (message, level, options = {}) => {
       events.logs.push({ message, level, step: options.step, stepKey: options.stepKey });
     },
-    appendAccountRunRecord: async () => null,
+    appendAccountRunRecord: overrides.appendAccountRunRecord || (async (status, state, reason) => {
+      events.accountRecords.push({ status, state, reason });
+      return null;
+    }),
     batchUpdateLuckmailPurchases: async () => {},
     buildLocalhostCleanupPrefix: () => '',
     buildLuckmailSessionSettingsPayload: () => ({}),
@@ -89,7 +93,7 @@ function createRouter(overrides = {}) {
       events.invalidations.push({ step, options });
     },
     isCloudflareSecurityBlockedError: overrides.isCloudflareSecurityBlockedError || ((error) => /^CF_SECURITY_BLOCKED::/.test(typeof error === 'string' ? error : error?.message || '')),
-    isAutoRunLockedState: () => false,
+    isAutoRunLockedState: overrides.isAutoRunLockedState || (() => false),
     isHotmailProvider: () => false,
     isLocalhostOAuthCallbackUrl: () => true,
     isLuckmailProvider: () => false,
@@ -561,4 +565,60 @@ test('message router refreshes GPC balance through explicit sidepanel message', 
   assert.equal(events.balanceRefreshes[0].state.gopayHelperApiUrl, 'http://localhost:18473/');
   assert.equal(events.balanceRefreshes[0].state.gopayHelperApiKey, 'payload_api_key');
   assert.deepStrictEqual(events.balanceRefreshes[0].options, { reason: 'manual' });
+});
+
+test('message router ignores stale step 2 errors while auto-run is already on a later step', async () => {
+  const { router, events } = createRouter({
+    state: {
+      autoRunning: true,
+      autoRunPhase: 'running',
+      currentStep: 6,
+      stepStatuses: {
+        2: 'completed',
+        6: 'running',
+      },
+    },
+    isAutoRunLockedState: (state) => Boolean(state?.autoRunning) && state?.autoRunPhase === 'running',
+  });
+
+  const response = await router.handleMessage({
+    type: 'STEP_ERROR',
+    step: 2,
+    error: '步骤 2：旧页面异步失败，不应覆盖当前第 6 步记录。',
+  }, {});
+
+  assert.deepStrictEqual(response, { ok: true, ignored: true });
+  assert.deepStrictEqual(events.stepStatuses, []);
+  assert.deepStrictEqual(events.notifyErrors, []);
+  assert.deepStrictEqual(events.accountRecords, []);
+  assert.equal(events.logs.some(({ message }) => /忽略过期的步骤 2 失败消息/.test(message)), true);
+});
+
+test('message router ignores stale step 2 completion while auto-run is already on a later step', async () => {
+  const { router, events } = createRouter({
+    state: {
+      autoRunning: true,
+      autoRunPhase: 'running',
+      currentStep: 6,
+      stepStatuses: {
+        2: 'completed',
+        6: 'running',
+      },
+    },
+    isAutoRunLockedState: (state) => Boolean(state?.autoRunning) && state?.autoRunPhase === 'running',
+  });
+
+  const response = await router.handleMessage({
+    type: 'STEP_COMPLETE',
+    step: 2,
+    payload: {
+      email: 'late@example.com',
+    },
+  }, {});
+
+  assert.deepStrictEqual(response, { ok: true, ignored: true });
+  assert.deepStrictEqual(events.stepStatuses, []);
+  assert.deepStrictEqual(events.notifyCompletions, []);
+  assert.deepStrictEqual(events.emailStates, []);
+  assert.equal(events.logs.some(({ message }) => /忽略过期的步骤 2 完成消息/.test(message)), true);
 });

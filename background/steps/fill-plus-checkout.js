@@ -14,6 +14,7 @@
   const GPC_HELPER_PHONE_MODE_AUTO = 'auto';
   const GPC_HELPER_PHONE_MODE_MANUAL = 'manual';
   const GPC_TASK_POLL_INTERVAL_MS = 3000;
+  const GPC_TASK_STALE_STATUS_TIMEOUT_MS = 60000;
   const GPC_REMOTE_STAGE_LABELS = {
     auto_otp_wait: '等待自动 OTP',
     checkout_order_start: '创建订单',
@@ -786,6 +787,49 @@
       return ['completed', 'failed', 'expired', 'discarded'].includes(String(status || '').trim().toLowerCase());
     }
 
+    function buildGpcTaskProgressSignature(task = {}) {
+      return [
+        task?.status,
+        task?.status_text,
+        task?.remote_stage,
+        task?.api_waiting_for,
+        task?.last_input_error,
+        task?.otp_invalid_count,
+        task?.reference_id || task?.referenceId,
+        task?.redirect_url || task?.redirectUrl,
+        task?.flow_id || task?.flowId,
+        task?.challenge_id || task?.challengeId,
+        task?.gopay_guid || task?.gopayGuid,
+      ].map((value) => String(value ?? '').trim()).join('|');
+    }
+
+    function shouldWatchGpcTaskProgress(task = {}, state = {}) {
+      if (!task || isGpcTaskTerminal(task.status)) {
+        return false;
+      }
+      if (isGpcTaskOtpWait(task, state) || isGpcTaskPinWait(task, state)) {
+        return false;
+      }
+      return true;
+    }
+
+    function getGpcTaskStaleStatusTimeoutMs(state = {}) {
+      const configuredSeconds = Number(state?.gopayHelperTaskStaleSeconds);
+      if (Number.isFinite(configuredSeconds) && configuredSeconds > 0) {
+        return Math.max(15000, Math.min(600000, Math.floor(configuredSeconds * 1000)));
+      }
+      return GPC_TASK_STALE_STATUS_TIMEOUT_MS;
+    }
+
+    function buildGpcTaskStaleStatusError(task = {}, staleTimeoutMs = GPC_TASK_STALE_STATUS_TIMEOUT_MS) {
+      const seconds = Math.max(1, Math.round(staleTimeoutMs / 1000));
+      const label = formatGpcRemoteStageLabel(task?.remote_stage)
+        || task?.status_text
+        || task?.status
+        || '未知状态';
+      return new Error(`GPC_TASK_ENDED::GPC 任务状态超过 ${seconds} 秒无进展（${label}），请重新创建任务。`);
+    }
+
     function buildGpcTaskTerminalError(task = {}) {
       const status = String(task?.status || '').trim().toLowerCase();
       const remoteStage = String(task?.remote_stage || task?.remoteStage || '').trim();
@@ -927,6 +971,9 @@
       let lastSubmittedOtp = '';
       let pinSubmitted = false;
       let terminalReached = false;
+      let lastProgressSignature = '';
+      let lastProgressAt = Date.now();
+      const staleStatusTimeoutMs = getGpcTaskStaleStatusTimeoutMs(state);
 
       if (!taskId) {
         throw new Error('步骤 7：GPC 模式缺少 task_id，请先执行步骤 6。');
@@ -973,6 +1020,20 @@
           if (['failed', 'expired', 'discarded'].includes(task.status)) {
             terminalReached = true;
             throw buildGpcTaskEndedError(task, 'GPC 任务已结束，请重新创建任务。');
+          }
+
+          if (shouldWatchGpcTaskProgress(task, state)) {
+            const progressSignature = buildGpcTaskProgressSignature(task);
+            const now = Date.now();
+            if (progressSignature && progressSignature !== lastProgressSignature) {
+              lastProgressSignature = progressSignature;
+              lastProgressAt = now;
+            } else if (progressSignature && now - lastProgressAt >= staleStatusTimeoutMs) {
+              throw buildGpcTaskStaleStatusError(task, staleStatusTimeoutMs);
+            }
+          } else {
+            lastProgressSignature = '';
+            lastProgressAt = Date.now();
           }
 
           if (isGpcTaskOtpWait(task, state)) {
