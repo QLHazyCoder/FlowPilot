@@ -385,6 +385,7 @@ return {
     firstName: 'Mia',
     lastName: 'Harris',
     age: 19,
+    prefillOnly: true,
   });
 
   const { operationEvents, consentChecked } = api.snapshot();
