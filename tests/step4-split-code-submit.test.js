@@ -206,6 +206,141 @@ return {
   assert.equal(snapshot.splitCodeEvents.filter((event) => event.startsWith('delay:split-code')).length, 1);
 });
 
+test('fillVerificationCode treats phone signup SMS landing on email verification as handoff success', async () => {
+  const api = new Function(`
+let now = 0;
+const logs = [];
+const clicks = [];
+const VERIFICATION_CODE_INPUT_SELECTOR = 'input[name="code"]';
+const VERIFICATION_PAGE_PATTERN = /verification code/i;
+const location = {
+  href: 'https://auth.openai.com/phone-verification',
+  pathname: '/phone-verification',
+};
+function KeyboardEvent(type, init = {}) {
+  this.type = type;
+  Object.assign(this, init);
+}
+
+const codeInput = {
+  value: '',
+  disabled: false,
+  form: null,
+  getAttribute(name) {
+    if (name === 'maxlength') return '6';
+    if (name === 'aria-disabled') return 'false';
+    if (name === 'name') return 'code';
+    return '';
+  },
+  closest() { return null; },
+  focus() {},
+  dispatchEvent() {},
+};
+const submitBtn = {
+  tagName: 'BUTTON',
+  textContent: 'Continue',
+  disabled: false,
+  getAttribute(name) {
+    if (name === 'type') return 'submit';
+    if (name === 'aria-disabled') return 'false';
+    return '';
+  },
+  click() {
+    location.href = 'https://auth.openai.com/email-verification';
+    location.pathname = '/email-verification';
+  },
+};
+
+const document = {
+  readyState: 'complete',
+  body: {
+    textContent: 'Enter the verification code we just sent to your email',
+    innerText: 'Enter the verification code we just sent to your email',
+  },
+  querySelector(selector) {
+    if (selector === VERIFICATION_CODE_INPUT_SELECTOR && location.pathname === '/phone-verification') return codeInput;
+    if (selector === 'button[type="submit"]' && location.pathname === '/phone-verification') return submitBtn;
+    if (selector === 'form[action*="email-verification" i]' && location.pathname === '/email-verification') return {};
+    return null;
+  },
+  querySelectorAll(selector) {
+    if (selector === 'input[maxlength="1"]') return [];
+    if (location.pathname === '/phone-verification' && selector === 'button[type="submit"], input[type="submit"]') return [submitBtn];
+    if (location.pathname === '/phone-verification' && selector === 'button, [role="button"], input[type="button"], input[type="submit"]') return [submitBtn];
+    if (location.pathname === '/email-verification' && selector === 'button, a, [role="button"], [role="link"], input[type="button"], input[type="submit"]') {
+      return [{ textContent: 'Resend code', disabled: false, getAttribute() { return ''; } }];
+    }
+    return [];
+  },
+};
+
+const Date = { now: () => now };
+function throwIfStopped() {}
+function log(message, level = 'info') { logs.push({ message, level }); }
+async function waitForLoginVerificationPageReady() {}
+function is405MethodNotAllowedPage() { return false; }
+async function handle405ResendError() {}
+function fillInput(el, value) { el.value = value; }
+async function sleep(ms = 0) { now += ms || 15000; }
+async function waitForDocumentLoadComplete() {}
+function isStep5Ready() { return false; }
+function isStep8Ready() { return false; }
+function isAddPhonePageReady() { return false; }
+function isVisibleElement() { return true; }
+function isActionEnabled(el) { return Boolean(el) && !el.disabled; }
+function getActionText(el) { return el?.textContent || ''; }
+async function humanPause() {}
+function simulateClick(el) { el.click(); clicks.push(el.textContent); }
+function getVerificationErrorText() { return ''; }
+function getCurrentAuthRetryPageState() { return null; }
+async function recoverCurrentAuthRetryPage() { throw new Error('should not recover retry page'); }
+function createSignupUserAlreadyExistsError() { return new Error('user already exists'); }
+function isPhoneVerificationPageReady() { return location.pathname === '/phone-verification'; }
+function getPageTextSnapshot() { return document.body.textContent; }
+function findResendVerificationCodeTrigger() {
+  return location.pathname === '/email-verification'
+    ? { textContent: 'Resend code', disabled: false, getAttribute() { return ''; } }
+    : null;
+}
+
+${extractFunction('getVisibleSplitVerificationInputs')}
+${extractFunction('getVerificationCodeTarget')}
+${extractFunction('isEmailVerificationPage')}
+${extractFunction('isVerificationPageStillVisible')}
+${extractFunction('isSignupProfilePageUrl')}
+${extractFunction('isLikelyLoggedInChatgptHomeUrl')}
+${extractFunction('getStep4PostVerificationState')}
+${extractFunction('getVerificationSubmitButtonForTarget')}
+${extractFunction('waitForVerificationSubmitButton')}
+${extractFunction('waitForVerificationCodeTarget')}
+${extractFunction('waitForSplitVerificationInputsFilled')}
+${extractFunction('isCombinedSignupVerificationProfilePage')}
+${extractFunction('waitForCombinedSignupVerificationProfilePage')}
+${extractFunction('waitForVerificationSubmitOutcome')}
+${extractFunction('fillVerificationCode')}
+
+return {
+  run() {
+    return fillVerificationCode(4, { code: '123456', purpose: 'signup' });
+  },
+  snapshot() {
+    return { clicks, logs, href: location.href };
+  },
+};
+`)();
+
+  const result = await api.run();
+  const snapshot = api.snapshot();
+
+  assert.equal(snapshot.href, 'https://auth.openai.com/email-verification');
+  assert.deepStrictEqual(snapshot.clicks, ['Continue']);
+  assert.equal(result.success, true);
+  assert.equal(result.emailVerificationRequired, true);
+  assert.equal(result.emailVerificationPage, true);
+  assert.equal(result.url, 'https://auth.openai.com/email-verification');
+  assert.equal(Object.prototype.hasOwnProperty.call(result, 'invalidCode'), false);
+});
+
 test('fillVerificationCode does not short-circuit on mixed email-verification profile page before verification exits', async () => {
   const api = new Function(`
 const logs = [];

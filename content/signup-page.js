@@ -4737,8 +4737,9 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
 }
 
 
-async function waitForVerificationSubmitOutcome(step, timeout) {
+async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
   const resolvedTimeout = timeout ?? (step === 8 ? 30000 : 12000);
+  const purpose = options?.purpose || '';
   const start = Date.now();
   let recoveryCount = 0;
   const maxRecoveryCount = 2;
@@ -4784,6 +4785,14 @@ async function waitForVerificationSubmitOutcome(step, timeout) {
       if (postVerificationState?.state === 'step5') {
         return { success: true };
       }
+      if (purpose === 'signup' && isEmailVerificationPage()) {
+        return {
+          success: true,
+          emailVerificationRequired: true,
+          emailVerificationPage: true,
+          url: location.href,
+        };
+      }
     }
 
     const errorText = getVerificationErrorText();
@@ -4818,6 +4827,14 @@ async function waitForVerificationSubmitOutcome(step, timeout) {
     }
     if (postVerificationState?.state === 'step5') {
       return { success: true };
+    }
+    if (purpose === 'signup' && isEmailVerificationPage()) {
+      return {
+        success: true,
+        emailVerificationRequired: true,
+        emailVerificationPage: true,
+        url: location.href,
+      };
     }
   }
 
@@ -5057,9 +5074,11 @@ async function fillVerificationCode(step, payload) {
       log(`步骤 ${step}：分格验证码页面未找到可点击提交按钮，继续等待页面自动推进。`, 'info');
     }
 
-    const outcome = await waitForVerificationSubmitOutcome(step);
+    const outcome = await waitForVerificationSubmitOutcome(step, undefined, payload);
     if (outcome.invalidCode) {
       log(`步骤 ${step}：验证码被拒绝：${outcome.errorText}`, 'warn');
+    } else if (outcome.emailVerificationRequired) {
+      log(`步骤 ${step}：手机验证码已通过，页面进入邮箱验证码验证。`, 'ok');
     } else if (outcome.addPhonePage) {
       log(`步骤 ${step}：验证码提交后页面进入手机号页面，当前流程将停止自动授权。`, 'warn');
     } else {
@@ -5096,9 +5115,11 @@ async function fillVerificationCode(step, payload) {
     log(`步骤 ${step}：未找到可提交的验证码按钮，先等待页面自动推进或反馈结果。`, 'warn');
   }
 
-  const outcome = await waitForVerificationSubmitOutcome(step);
+  const outcome = await waitForVerificationSubmitOutcome(step, undefined, payload);
   if (outcome.invalidCode) {
     log(`步骤 ${step}：验证码被拒绝：${outcome.errorText}`, 'warn');
+  } else if (outcome.emailVerificationRequired) {
+    log(`步骤 ${step}：手机验证码已通过，页面进入邮箱验证码验证。`, 'ok');
   } else if (outcome.addPhonePage) {
     log(`步骤 ${step}：验证码提交后页面进入手机号页面，当前流程将停止自动授权。`, 'warn');
   } else {

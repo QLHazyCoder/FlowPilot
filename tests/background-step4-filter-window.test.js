@@ -307,6 +307,87 @@ test('step 4 phone signup branch uses SMS helper and does not poll mailbox', asy
   ]);
 });
 
+test('step 4 phone signup email-verification handoff polls mailbox instead of completing phone-only', async () => {
+  const completions = [];
+  const phoneCalls = [];
+  const mailConfigCalls = [];
+  const resolvedCalls = [];
+  const tabReuses = [];
+
+  const executor = api.createStep4Executor({
+    addLog: async () => {},
+    chrome: {
+      tabs: {
+        update: async () => {},
+      },
+    },
+    completeStepFromBackground: async (step, payload) => {
+      completions.push({ step, payload });
+    },
+    confirmCustomVerificationStepBypass: async () => {},
+    ensureMail2925MailboxSession: async () => {},
+    getMailConfig: (state) => {
+      mailConfigCalls.push({ state });
+      return {
+        provider: '163',
+        label: '163 邮箱',
+        source: 'mail-163',
+        url: 'https://mail.163.com',
+      };
+    },
+    getTabId: async () => 1,
+    HOTMAIL_PROVIDER: 'hotmail-api',
+    isTabAlive: async () => false,
+    LUCKMAIL_PROVIDER: 'luckmail-api',
+    CLOUDFLARE_TEMP_EMAIL_PROVIDER: 'cloudflare-temp-email',
+    phoneVerificationHelpers: {
+      completeSignupPhoneVerificationFlow: async (tabId, options) => {
+        phoneCalls.push({ tabId, options });
+        return {
+          success: true,
+          code: '123456',
+          emailVerificationRequired: true,
+          emailVerificationPage: true,
+          url: 'https://auth.openai.com/email-verification',
+        };
+      },
+    },
+    resolveSignupMethod: () => 'phone',
+    resolveVerificationStep: async (step, state, mail, options) => {
+      resolvedCalls.push({ step, state, mail, options });
+    },
+    reuseOrCreateTab: async (source, url) => {
+      tabReuses.push({ source, url });
+    },
+    sendToContentScript: async () => ({ ready: true }),
+    sendToContentScriptResilient: async () => ({ ready: true }),
+    isRetryableContentScriptTransportError: () => false,
+    shouldUseCustomRegistrationEmail: () => false,
+    STANDARD_MAIL_VERIFICATION_RESEND_INTERVAL_MS: 25000,
+    throwIfStopped: () => {},
+  });
+
+  await executor.executeStep4({
+    email: 'user@example.com',
+    resolvedSignupMethod: 'phone',
+    accountIdentifierType: 'phone',
+    signupPhoneNumber: '66959916439',
+    signupPhoneActivation: { activationId: 'signup-123', phoneNumber: '66959916439' },
+  });
+
+  assert.equal(phoneCalls.length, 1);
+  assert.equal(mailConfigCalls.length, 1);
+  assert.equal(resolvedCalls.length, 1);
+  assert.deepStrictEqual(completions, []);
+  assert.deepStrictEqual(tabReuses, [
+    { source: 'mail-163', url: 'https://mail.163.com' },
+  ]);
+  assert.equal(resolvedCalls[0].step, 4);
+  assert.equal(resolvedCalls[0].mail.label, '163 邮箱');
+  assert.equal(resolvedCalls[0].options.requestFreshCodeFirst, true);
+  assert.equal(Object.prototype.hasOwnProperty.call(resolvedCalls[0].options, 'signupProfile'), true);
+});
+
 test('step 4 prepare retries transport by recovering retry page without replaying full prepare loop', async () => {
   let sendToContentScriptCalls = 0;
   let recoverCalls = 0;
