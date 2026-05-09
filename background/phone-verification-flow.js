@@ -1399,6 +1399,14 @@
       return /this\s+page\s+isn['’]?t\s+working|currently\s+unable\s+to\s+handle\s+this\s+request|http\s+error\s+500|500\s+internal\s+server\s+error/i.test(message);
     }
 
+    function buildPhoneResendServerError(error) {
+      const message = String(error?.message || error || '').trim();
+      if (message.startsWith(PHONE_RESEND_SERVER_ERROR_PREFIX)) {
+        return new Error(message);
+      }
+      return new Error(`${PHONE_RESEND_SERVER_ERROR_PREFIX}${message || 'OpenAI contact-verification page returned HTTP ERROR 500 after resend.'}`);
+    }
+
     function shouldTreatResendThrottledAsBanned(state = {}) {
       return Boolean(state?.phoneResendThrottledAsBannedEnabled);
     }
@@ -5395,7 +5403,7 @@
                     throw resendError;
                   }
                   if (isPhoneResendServerError(resendError)) {
-                    throw new Error(`${PHONE_RESEND_SERVER_ERROR_PREFIX}${resendError.message}`);
+                    throw buildPhoneResendServerError(resendError);
                   }
                   await addLog(`步骤 4：注册手机验证码页面重发失败，将继续轮询短信。${resendError.message}`, 'warn', {
                     step: 4,
@@ -5435,7 +5443,7 @@
                   throw resendError;
                 }
                 if (isPhoneResendServerError(resendError)) {
-                  throw new Error(`${PHONE_RESEND_SERVER_ERROR_PREFIX}${resendError.message}`);
+                  throw buildPhoneResendServerError(resendError);
                 }
                 await addLog(`步骤 4：验证码被拒后点击重发失败。${resendError.message}`, 'warn', {
                   step: 4,

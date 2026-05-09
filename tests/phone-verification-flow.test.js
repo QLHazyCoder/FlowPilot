@@ -5765,10 +5765,19 @@ test('signup phone verification cancels the current activation when resend lands
     throwIfStopped: () => {},
   });
 
-  await assert.rejects(
-    () => helpers.completeSignupPhoneVerificationFlow(1, { state: currentState }),
-    /PHONE_RESEND_SERVER_ERROR::/
+  let thrown = null;
+  try {
+    await helpers.completeSignupPhoneVerificationFlow(1, { state: currentState });
+  } catch (error) {
+    thrown = error;
+  }
+
+  assert.ok(thrown, 'expected resend HTTP 500 to reject the signup phone verification flow');
+  assert.match(
+    thrown.message,
+    /^PHONE_RESEND_SERVER_ERROR::This page isn't working auth\.openai\.com is currently unable to handle this request\. HTTP ERROR 500/
   );
+  assert.equal(thrown.message.includes('PHONE_RESEND_SERVER_ERROR::PHONE_RESEND_SERVER_ERROR::'), false);
 
   assert.equal(currentState.signupPhoneActivation, null);
 });
