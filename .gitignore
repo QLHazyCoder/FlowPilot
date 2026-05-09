@@ -11,5 +11,6 @@
 /node_modules
 /.runtime
 /docs/新步骤顺序
+.worktrees/
 # Local exported runtime settings
 /config.json

@@ -15,6 +15,7 @@
       isActionEnabled,
       isVisibleElement,
       log,
+      performOperationWithDelay: injectedPerformOperationWithDelay,
       routeErrorPattern = null,
       simulateClick,
       sleep,
@@ -122,6 +123,10 @@
     }
 
     async function recoverAuthRetryPage(options = {}) {
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      const performOperationWithDelay = injectedPerformOperationWithDelay
+        || rootScope.CodexOperationDelay?.performOperationWithDelay
+        || (async (_metadata, operation) => operation());
       const {
         logLabel = '',
         maxClickAttempts = 5,
@@ -173,7 +178,9 @@
           if (typeof humanPause === 'function') {
             await humanPause(300, 800);
           }
-          simulateClick(retryState.retryButton);
+          await performOperationWithDelay({ stepKey: options.stepKey || '', kind: 'click', label: 'auth-retry-click' }, async () => {
+            simulateClick(retryState.retryButton);
+          });
           const recoveryResult = await waitForRetryPageRecoveryAfterClick({
             pathPatterns,
             pollIntervalMs,

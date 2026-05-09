@@ -35,6 +35,12 @@ if (document.documentElement.getAttribute(GOPAY_FLOW_LISTENER_SENTINEL) !== '1')
   console.log('[MultiPage:gopay-flow] 消息监听已存在，跳过重复注册');
 }
 
+async function performGoPayOperationWithDelay(metadata, operation) {
+  const rootScope = typeof window !== 'undefined' ? window : globalThis;
+  const gate = rootScope?.CodexOperationDelay?.performOperationWithDelay;
+  return typeof gate === 'function' ? gate(metadata, operation) : operation();
+}
+
 async function handleGoPayCommand(message) {
   switch (message.type) {
     case 'GOPAY_GET_STATE':
@@ -622,20 +628,33 @@ function fillVisibleOtpInputs(code = '') {
 }
 
 async function submitGoPayPhone(payload = {}) {
+  const delayOperation = typeof performGoPayOperationWithDelay === 'function'
+    ? performGoPayOperationWithDelay
+    : async (metadata, operation) => {
+        const rootScope = typeof window !== 'undefined' ? window : globalThis;
+        const gate = rootScope?.CodexOperationDelay?.performOperationWithDelay;
+        return typeof gate === 'function' ? gate(metadata, operation) : operation();
+      };
   await waitForDocumentComplete();
   const countryCode = normalizeGoPayCountryCode(payload.countryCode || payload.gopayCountryCode || '+86');
   const phone = normalizeGoPayNationalPhone(payload.phone || payload.gopayPhone || '', countryCode);
   if (!phone) {
     throw new Error('GoPay 手机号为空，请先在侧边栏配置。');
   }
-  const countryResult = await ensureGoPayCountryCode(countryCode);
   const input = await waitUntil(() => findPhoneInput(), {
     label: 'GoPay 手机号输入框',
     intervalMs: 250,
     timeoutMs: 15000,
   });
-  fillInput(input, phone);
-  const clickResult = await clickContinueIfPresent();
+  const { countryResult, clickResult } = await delayOperation({ stepKey: 'gopay-approve', kind: 'submit', label: 'submit-phone' }, async () => {
+    const nextCountryResult = await ensureGoPayCountryCode(countryCode);
+    fillInput(input, phone);
+    const nextClickResult = await clickContinueIfPresent();
+    return {
+      countryResult: nextCountryResult,
+      clickResult: nextClickResult,
+    };
+  });
   return {
     phoneSubmitted: true,
     countryCode,
@@ -647,17 +666,27 @@ async function submitGoPayPhone(payload = {}) {
 }
 
 async function submitGoPayOtp(payload = {}) {
+  const delayOperation = typeof performGoPayOperationWithDelay === 'function'
+    ? performGoPayOperationWithDelay
+    : async (metadata, operation) => {
+        const rootScope = typeof window !== 'undefined' ? window : globalThis;
+        const gate = rootScope?.CodexOperationDelay?.performOperationWithDelay;
+        return typeof gate === 'function' ? gate(metadata, operation) : operation();
+      };
   await waitForDocumentComplete();
   const code = normalizeOtp(payload.code || payload.otp || '');
   if (!code) {
     throw new Error('GoPay WhatsApp 验证码为空。');
   }
-  const filled = await waitUntil(() => fillVisibleOtpInputs(code), {
-    label: 'GoPay 验证码输入框',
-    intervalMs: 250,
-    timeoutMs: 15000,
+  const { filled, clickResult } = await delayOperation({ stepKey: 'gopay-approve', kind: 'submit', label: 'submit-otp' }, async () => {
+    const filledOtp = await waitUntil(() => fillVisibleOtpInputs(code), {
+      label: 'GoPay 验证码输入框',
+      intervalMs: 250,
+      timeoutMs: 15000,
+    });
+    const continueResult = await clickContinueIfPresent();
+    return { filled: filledOtp, clickResult: continueResult };
   });
-  const clickResult = await clickContinueIfPresent();
   return {
     otpSubmitted: Boolean(filled),
     clicked: Boolean(clickResult.clicked),
@@ -667,17 +696,27 @@ async function submitGoPayOtp(payload = {}) {
 }
 
 async function submitGoPayPin(payload = {}) {
+  const delayOperation = typeof performGoPayOperationWithDelay === 'function'
+    ? performGoPayOperationWithDelay
+    : async (metadata, operation) => {
+        const rootScope = typeof window !== 'undefined' ? window : globalThis;
+        const gate = rootScope?.CodexOperationDelay?.performOperationWithDelay;
+        return typeof gate === 'function' ? gate(metadata, operation) : operation();
+      };
   await waitForDocumentComplete();
   const pin = normalizeOtp(payload.pin || payload.gopayPin || '');
   if (!pin) {
     throw new Error('GoPay PIN 为空，请先在侧边栏配置。');
   }
-  const filled = await waitUntil(() => fillVisiblePinInputs(pin), {
-    label: 'GoPay PIN 输入框',
-    intervalMs: 250,
-    timeoutMs: 15000,
+  const { filled, clickResult } = await delayOperation({ stepKey: 'gopay-approve', kind: 'submit', label: 'submit-pin' }, async () => {
+    const filledPin = await waitUntil(() => fillVisiblePinInputs(pin), {
+      label: 'GoPay PIN 输入框',
+      intervalMs: 250,
+      timeoutMs: 15000,
+    });
+    const continueResult = await clickContinueIfPresent();
+    return { filled: filledPin, clickResult: continueResult };
   });
-  const clickResult = await clickContinueIfPresent();
   return {
     pinSubmitted: Boolean(filled),
     clicked: Boolean(clickResult.clicked),
@@ -722,18 +761,41 @@ function getGoPayPayNowTarget() {
 }
 
 async function clickGoPayContinue() {
+  const delayOperation = typeof performGoPayOperationWithDelay === 'function'
+    ? performGoPayOperationWithDelay
+    : async (metadata, operation) => {
+        const rootScope = typeof window !== 'undefined' ? window : globalThis;
+        const gate = rootScope?.CodexOperationDelay?.performOperationWithDelay;
+        return typeof gate === 'function' ? gate(metadata, operation) : operation();
+      };
   await waitForDocumentComplete();
-  const clickResult = await clickContinueIfPresent({ afterMs: 1200 });
+  const button = findContinueButton();
+  if (!button) {
+    return { clicked: false, clickTarget: '' };
+  }
+  const clickResult = await delayOperation({ stepKey: 'gopay-approve', kind: 'click', label: 'click-continue' }, async () => {
+    await humanClickElement(button, { afterMs: 1200 });
+    return { clicked: true, target: describeElement(button) };
+  });
   return { clicked: Boolean(clickResult.clicked), clickTarget: clickResult.target || '' };
 }
 
 async function clickGoPayPayNow() {
+  const delayOperation = typeof performGoPayOperationWithDelay === 'function'
+    ? performGoPayOperationWithDelay
+    : async (metadata, operation) => {
+        const rootScope = typeof window !== 'undefined' ? window : globalThis;
+        const gate = rootScope?.CodexOperationDelay?.performOperationWithDelay;
+        return typeof gate === 'function' ? gate(metadata, operation) : operation();
+      };
   await waitForDocumentComplete();
   const button = findPayNowButton();
   if (!button) {
     return { clicked: false, clickTarget: '' };
   }
-  await humanClickElement(button, { afterMs: 1500 });
+  await delayOperation({ stepKey: 'gopay-approve', kind: 'click', label: 'click-pay-now' }, async () => {
+    await humanClickElement(button, { afterMs: 1500 });
+  });
   return { clicked: true, clickTarget: describeElement(button) };
 }
 

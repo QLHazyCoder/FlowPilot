@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
 const source = fs.readFileSync('content/signup-page.js', 'utf8');
+const phoneAuthSource = fs.readFileSync('content/phone-auth.js', 'utf8');
 
 function extractFunction(name) {
   const markers = [`async function ${name}(`, `function ${name}(`];
@@ -693,4 +694,172 @@ test('step 7 stops before submit when phone fill never includes the local number
   await assert.rejects(api.run, /7780579093/);
   assert.equal(api.getValue(), '+44');
   assert.deepEqual(api.getFills(), ['+447780579093', '7780579093', '+447780579093', '7780579093']);
+});
+
+function createPhoneAuthSubmitHarness(runModeEvents, runMode) {
+  const selectedOption = { value: 'GB', textContent: 'United Kingdom (+44)' };
+  const select = {
+    value: 'GB',
+    selectedIndex: 0,
+    options: [selectedOption],
+    dispatchEvent() {},
+  };
+  const phoneInput = {
+    value: '',
+    closest() {
+      return addPhoneForm;
+    },
+  };
+  const hiddenPhoneNumberInput = {
+    value: '',
+    events: [],
+    dispatchEvent(event) {
+      this.events.push(event.type);
+    },
+  };
+  const submitButton = {
+    disabled: false,
+    textContent: 'Continue',
+    getAttribute(name) {
+      if (name === 'aria-disabled') return 'false';
+      return '';
+    },
+  };
+  const dialCodeSpan = { textContent: '44' };
+  let phoneVerificationReady = false;
+
+  const addPhoneForm = {
+    querySelector(selector) {
+      if (selector === 'input[type="tel"], input[name="__reservedForPhoneNumberInput_tel"], input[autocomplete="tel"]') {
+        return phoneInput;
+      }
+      if (selector === 'input[name="phoneNumber"]') {
+        return hiddenPhoneNumberInput;
+      }
+      if (selector === 'select') {
+        return select;
+      }
+      return null;
+    },
+    querySelectorAll(selector) {
+      if (selector === 'button[type="submit"], input[type="submit"]') {
+        return [submitButton];
+      }
+      if (selector === 'span') {
+        return [dialCodeSpan];
+      }
+      return [];
+    },
+  };
+  const phoneVerificationForm = {
+    querySelector() {
+      return null;
+    },
+    querySelectorAll() {
+      return [];
+    },
+  };
+  const root = {
+    document: {
+      querySelector(selector) {
+        if (selector === 'form[action*="/add-phone" i]') {
+          return addPhoneForm;
+        }
+        if (selector === 'form[action*="/phone-verification" i]') {
+          return phoneVerificationReady ? phoneVerificationForm : null;
+        }
+        return null;
+      },
+      querySelectorAll() {
+        return [];
+      },
+      title: '',
+    },
+    location: {
+      href: 'https://auth.openai.com/add-phone',
+      pathname: '/add-phone',
+    },
+    Event: function Event(type, init = {}) {
+      this.type = type;
+      this.bubbles = Boolean(init.bubbles);
+    },
+  };
+  const performOperationWithDelay = async (metadata, operation) => {
+    const result = await operation();
+    runModeEvents[runMode].push({
+      delayMs: 2000,
+      kind: metadata.kind,
+      label: metadata.label,
+    });
+    return result;
+  };
+  root.CodexOperationDelay = { performOperationWithDelay };
+
+  const phoneAuthModule = new Function('self', 'globalThis', `
+const document = self.document;
+const location = self.location;
+const Event = self.Event;
+${phoneAuthSource}
+return self.MultiPagePhoneAuth;
+  `)(root, root);
+
+  const helpers = phoneAuthModule.createPhoneAuthHelpers({
+    fillInput(input, value) {
+      input.value = value;
+    },
+    getActionText(element) {
+      return element?.textContent || '';
+    },
+    getPageTextSnapshot() {
+      return '';
+    },
+    getVerificationErrorText() {
+      return '';
+    },
+    humanPause: async () => {},
+    isActionEnabled(element) {
+      return Boolean(element) && !element.disabled && element.getAttribute?.('aria-disabled') !== 'true';
+    },
+    isAddPhonePageReady() {
+      return true;
+    },
+    isConsentReady() {
+      return false;
+    },
+    isPhoneVerificationPageReady() {
+      return phoneVerificationReady;
+    },
+    isVisibleElement(element) {
+      return Boolean(element);
+    },
+    performOperationWithDelay,
+    simulateClick(element) {
+      if (element === submitButton) {
+        phoneVerificationReady = true;
+      }
+    },
+    sleep: async () => {},
+    throwIfStopped() {},
+    waitForElement: async () => phoneInput,
+  });
+
+  return { helpers };
+}
+
+test('phone auth operation delay metadata is identical for auto and manual submit runs', async () => {
+  const runModeEvents = { auto: [], manual: [] };
+
+  for (const runMode of ['auto', 'manual']) {
+    const { helpers } = createPhoneAuthSubmitHarness(runModeEvents, runMode);
+    const result = await helpers.submitPhoneNumber({
+      countryLabel: 'United Kingdom',
+      phoneNumber: '447780579093',
+      runMode,
+    });
+    assert.equal(result.phoneVerificationPage, true);
+  }
+
+  assert.ok(runModeEvents.auto.length > 0);
+  assert.deepStrictEqual(runModeEvents.auto.map((event) => event.delayMs), runModeEvents.manual.map((event) => event.delayMs));
+  assert.deepStrictEqual(runModeEvents.auto.map((event) => event.kind), runModeEvents.manual.map((event) => event.kind));
 });

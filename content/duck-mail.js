@@ -95,11 +95,13 @@ async function fetchDuckEmail(payload = {}) {
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     await humanPause(500, 1300);
-    if (typeof simulateClick === 'function') {
-      simulateClick(generatorButton);
-    } else {
-      generatorButton.click();
-    }
+    await window.CodexOperationDelay.performOperationWithDelay({ stepKey: 'fetch-signup-code', kind: 'click', label: 'duck-generate-address' }, async () => {
+      if (typeof simulateClick === 'function') {
+        simulateClick(generatorButton);
+      } else {
+        generatorButton.click();
+      }
+    });
     log(`Duck 邮箱：已点击“生成 Duck 私有地址”按钮（${attempt}/2）`);
 
     try {

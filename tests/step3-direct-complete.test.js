@@ -57,6 +57,9 @@ const logs = [];
 const completions = [];
 const clicks = [];
 const scheduled = [];
+const events = [];
+let releaseSubmitDelay;
+const submitDelay = new Promise((resolve) => { releaseSubmitDelay = resolve; });
 
 const snapshot = {
   state: 'password_page',
@@ -66,9 +69,22 @@ const snapshot = {
 };
 
 const window = {
-  setTimeout(fn) {
-    scheduled.push(fn);
+  setTimeout(fn, ms) {
+    scheduled.push({ fn, ms });
     return scheduled.length;
+  },
+  CodexOperationDelay: {
+    async performOperationWithDelay(metadata, operation) {
+      events.push('operation:' + metadata.label + ':start');
+      const result = await operation();
+      events.push('operation:' + metadata.label + ':end');
+      if (metadata.kind === 'submit') {
+        events.push('delay:' + metadata.label + ':pending');
+        await submitDelay;
+      }
+      events.push('delay:' + metadata.label + ':2000');
+      return result;
+    },
   },
 };
 
@@ -114,6 +130,7 @@ async function waitForElementByText() {
 
 function fillInput(input, value) {
   input.value = value;
+  events.push('fill-password:' + value);
 }
 
 async function humanPause() {}
@@ -125,14 +142,21 @@ function isStopError() {
 
 function log(message, level = 'info') {
   logs.push({ message, level });
+  events.push('log:' + message);
 }
 
 function reportComplete(step, payload) {
   completions.push({ step, payload });
+  events.push('report:' + payload.deferredSubmit);
 }
 
 function simulateClick(target) {
   clicks.push(target.textContent || 'button');
+  events.push('click:' + (target.textContent || 'button'));
+}
+
+function getOperationDelayRunner() {
+  return window.CodexOperationDelay.performOperationWithDelay;
 }
 
 ${extractFunction('step3_fillEmailPassword')}
@@ -145,28 +169,42 @@ return {
     if (!scheduled.length) {
       throw new Error('missing deferred submit');
     }
-    await scheduled[0]();
+    await scheduled[0].fn();
+  },
+  releaseSubmitDelay() {
+    releaseSubmitDelay();
   },
   snapshot() {
     return {
       logs,
       completions,
       clicks,
+      events,
       passwordValue: snapshot.passwordInput.value,
       scheduledCount: scheduled.length,
+      scheduledDelayMs: scheduled[0]?.ms,
     };
   },
 };
 `)();
 
-  const result = await api.run({
+  let settled = false;
+  const tracked = api.run({
     email: 'user@example.com',
     password: 'Secret123!',
+  }).then((value) => {
+    settled = true;
+    return value;
   });
+
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(settled, true, 'step 3 must return completion before deferred submit can navigate');
+  const result = await tracked;
 
   const beforeSubmit = api.snapshot();
   assert.equal(beforeSubmit.passwordValue, 'Secret123!');
   assert.equal(beforeSubmit.scheduledCount, 1);
+  assert.equal(beforeSubmit.scheduledDelayMs, 120);
   assert.deepStrictEqual(beforeSubmit.clicks, []);
   assert.equal(beforeSubmit.completions.length, 1);
   assert.equal(beforeSubmit.completions[0].step, 3);
@@ -174,9 +212,24 @@ return {
   assert.equal(result.email, 'user@example.com');
   assert.equal(result.deferredSubmit, true);
   assert.equal(typeof result.signupVerificationRequestedAt, 'number');
+  assert.equal(beforeSubmit.events.includes('report:true'), true);
+  assert.equal(beforeSubmit.events.includes('operation:submit-signup-password:start'), false);
 
-  await api.flushDeferredSubmit();
+  let flushSettled = false;
+  const flushed = api.flushDeferredSubmit().then(() => {
+    flushSettled = true;
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  const duringSubmit = api.snapshot();
+  assert.equal(duringSubmit.events.includes('operation:submit-signup-password:start'), true);
+  assert.equal(duringSubmit.events.includes('delay:submit-signup-password:pending'), true);
+  assert.equal(flushSettled, false);
+
+  api.releaseSubmitDelay();
+  await flushed;
 
   const afterSubmit = api.snapshot();
   assert.deepStrictEqual(afterSubmit.clicks, ['Continue']);
+  assert.equal(afterSubmit.events.includes('delay:submit-signup-password:2000'), true);
 });

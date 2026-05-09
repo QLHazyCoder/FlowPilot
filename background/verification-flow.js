@@ -1,8 +1,8 @@
 ﻿(function attachBackgroundVerificationFlow(root, factory) {
   root.MultiPageBackgroundVerificationFlow = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createBackgroundVerificationFlowModule() {
-  const ICLOUD_MAIL_POLL_RESPONSE_TIMEOUT_CAP_MS = 18000;
-  const ICLOUD_MAIL_POLL_TOTAL_TIMEOUT_CAP_MS = 22000;
+  const ICLOUD_MAIL_POLL_MIN_ATTEMPTS = 5;
+  const ICLOUD_MAIL_POLL_TIMEOUT_MARGIN_MS = 25000;
 
   function createVerificationFlowHelpers(deps = {}) {
     const {
@@ -78,30 +78,54 @@
       return step === 4 ? '注册' : '登录';
     }
 
-    function capIcloudMailPollingTimeouts(mail, timedPoll) {
+    function isIcloudMail(mail) {
+      return mail?.source === 'icloud-mail' || mail?.provider === 'icloud';
+    }
+
+    function normalizeIcloudMailPollPayload(mail, payload = {}) {
+      if (!isIcloudMail(mail)) {
+        return payload;
+      }
+
+      const currentAttempts = Math.max(1, Math.floor(Number(payload?.maxAttempts) || 1));
+      if (currentAttempts >= ICLOUD_MAIL_POLL_MIN_ATTEMPTS) {
+        return payload;
+      }
+
+      return {
+        ...payload,
+        maxAttempts: ICLOUD_MAIL_POLL_MIN_ATTEMPTS,
+      };
+    }
+
+    function getMailPollingResponseTimeoutMs(payload = {}) {
+      const maxAttempts = Math.max(1, Math.floor(Number(payload?.maxAttempts) || 1));
+      const intervalMs = Math.max(1, Number(payload?.intervalMs) || 3000);
+      return Math.max(45000, maxAttempts * intervalMs + ICLOUD_MAIL_POLL_TIMEOUT_MARGIN_MS);
+    }
+
+    function resolveMailPollingTimeouts(mail, timedPoll) {
+      const payload = normalizeIcloudMailPollPayload(mail, timedPoll?.payload || {});
       const defaultResponseTimeoutMs = Math.max(1000, Number(timedPoll?.responseTimeoutMs) || 30000);
       const defaultTimeoutMs = Math.max(defaultResponseTimeoutMs, Number(timedPoll?.timeoutMs) || defaultResponseTimeoutMs);
-      if (mail?.source !== 'icloud-mail') {
+      if (!isIcloudMail(mail)) {
         return {
+          payload,
           responseTimeoutMs: defaultResponseTimeoutMs,
           timeoutMs: defaultTimeoutMs,
-          capped: false,
         };
       }
 
-      const cappedResponseTimeoutMs = Math.max(
-        5000,
-        Math.min(defaultResponseTimeoutMs, ICLOUD_MAIL_POLL_RESPONSE_TIMEOUT_CAP_MS)
+      const derivedResponseTimeoutMs = Math.max(
+        defaultResponseTimeoutMs,
+        getMailPollingResponseTimeoutMs(payload)
       );
-      const cappedTimeoutMs = Math.max(
-        cappedResponseTimeoutMs,
-        Math.min(defaultTimeoutMs, ICLOUD_MAIL_POLL_TOTAL_TIMEOUT_CAP_MS)
-      );
+      const derivedTimeoutMs = Math.max(defaultTimeoutMs, derivedResponseTimeoutMs);
 
       return {
-        responseTimeoutMs: cappedResponseTimeoutMs,
-        timeoutMs: cappedTimeoutMs,
-        capped: cappedResponseTimeoutMs < defaultResponseTimeoutMs || cappedTimeoutMs < defaultTimeoutMs,
+        payload,
+        responseTimeoutMs: derivedResponseTimeoutMs,
+        timeoutMs: derivedTimeoutMs,
       };
     }
 
@@ -717,20 +741,14 @@
               pollOverrides,
               `轮询${getVerificationCodeLabel(step)}验证码邮箱`
             );
-            const timeoutWindow = capIcloudMailPollingTimeouts(mail, timedPoll);
-            if (timeoutWindow.capped) {
-              await addLog(
-                `步骤 ${step}：iCloud 邮箱轮询已启用快速超时保护（${Math.ceil(timeoutWindow.timeoutMs / 1000)} 秒），避免页面无响应导致长时间卡住。`,
-                'info'
-              );
-            }
+            const timeoutWindow = resolveMailPollingTimeouts(mail, timedPoll);
             const result = await sendToMailContentScriptResilient(
               mail,
               {
                 type: 'POLL_EMAIL',
                 step,
                 source: 'background',
-                payload: timedPoll.payload,
+                payload: timeoutWindow.payload,
               },
               {
                 timeoutMs: timeoutWindow.timeoutMs,
@@ -992,20 +1010,14 @@
             pollOverrides,
             `轮询${getVerificationCodeLabel(step)}验证码邮箱`
           );
-          const timeoutWindow = capIcloudMailPollingTimeouts(mail, timedPoll);
-          if (timeoutWindow.capped) {
-            await addLog(
-              `步骤 ${step}：iCloud 邮箱轮询已启用快速超时保护（${Math.ceil(timeoutWindow.timeoutMs / 1000)} 秒），避免页面无响应导致长时间卡住。`,
-              'info'
-            );
-          }
+          const timeoutWindow = resolveMailPollingTimeouts(mail, timedPoll);
           const result = await sendToMailContentScriptResilient(
             mail,
             {
               type: 'POLL_EMAIL',
               step,
               source: 'background',
-              payload: timedPoll.payload,
+              payload: timeoutWindow.payload,
             },
             {
               timeoutMs: timeoutWindow.timeoutMs,

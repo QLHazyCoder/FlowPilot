@@ -53,6 +53,10 @@ function extractFunction(name) {
 }
 
 const bundle = [
+  "const PLUS_PAYMENT_METHOD_PAYPAL = 'paypal';",
+  "const PLUS_PAYMENT_METHOD_GOPAY = 'gopay';",
+  "const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';",
+  extractFunction('normalizePlusPaymentMethod'),
   extractFunction('isAddPhoneAuthUrl'),
   extractFunction('isAddPhoneAuthState'),
   extractFunction('isMail2925ThreadTerminatedError'),

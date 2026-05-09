@@ -838,6 +838,15 @@
       if (['CANCELED', 'BANNED', 'FINISHED', 'TIMEOUT'].includes(status)) {
         throw new Error(`5sim 查询验证码失败：订单状态 ${status}`);
       }
+      if (typeof options.onWaitingForCode === 'function') {
+        await options.onWaitingForCode({
+          activation: normalizedActivation,
+          elapsedMs: Date.now() - start,
+          pollCount,
+          statusText: String(payload?.status || lastResponse || '未知'),
+          timeoutMs,
+        });
+      }
       await deps.sleepWithStop(intervalMs);
     }
 

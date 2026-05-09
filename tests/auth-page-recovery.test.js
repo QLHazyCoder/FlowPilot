@@ -1,7 +1,24 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 
 const { createAuthPageRecovery } = require('../content/auth-page-recovery.js');
+const source = fs.readFileSync('content/auth-page-recovery.js', 'utf8');
+
+function extractFunction(sourceText, name) {
+  const start = sourceText.indexOf(`function ${name}(`);
+  assert.notEqual(start, -1, `missing ${name}`);
+  const bodyStart = sourceText.indexOf('{', start);
+  let depth = 0;
+  for (let i = bodyStart; i < sourceText.length; i += 1) {
+    if (sourceText[i] === '{') depth += 1;
+    if (sourceText[i] === '}') {
+      depth -= 1;
+      if (depth === 0) return sourceText.slice(start, i + 1);
+    }
+  }
+  throw new Error(`unterminated ${name}`);
+}
 
 function createRetryButton() {
   return {
@@ -42,9 +59,13 @@ function createRecoveryApi(state) {
     isActionEnabled: (element) => Boolean(element) && !element.disabled && element.getAttribute('aria-disabled') !== 'true',
     isVisibleElement: () => true,
     log: () => {},
+    performOperationWithDelay: state.performOperationWithDelay,
     routeErrorPattern: /405\s+method\s+not\s+allowed|route\s+error.*405|did\s+not\s+provide\s+an?\s+[`'"]?action|post\s+request\s+to\s+["']?\/email-verification/i,
     simulateClick: () => {
       state.clickCount += 1;
+      if (Array.isArray(state.events)) {
+        state.events.push('click:retry');
+      }
       if (typeof state.onClick === 'function') {
         state.onClick(state);
         return;
@@ -54,6 +75,9 @@ function createRecoveryApi(state) {
     },
     sleep: async (ms = 0) => {
       await new Promise((resolve) => setTimeout(resolve, Math.max(1, Math.min(5, ms))));
+      if (Array.isArray(state.events) && ms === 250) {
+        state.events.push(`poll-sleep:${ms}`);
+      }
       if (typeof state.onSleep === 'function') {
         state.onSleep(state);
       }
@@ -161,6 +185,48 @@ test('auth page recovery clicks retry and waits until page recovers', async () =
   });
   assert.equal(state.clickCount, 1);
   assert.equal(state.retryVisible, false);
+});
+
+test('auth page recovery routes retry click through operation delay without wrapping polling sleeps', async () => {
+  const authRetryEvents = [];
+  const state = {
+    clickCount: 0,
+    events: authRetryEvents,
+    pageText: 'Something went wrong. Please try again.',
+    retryVisible: true,
+    onClick() {},
+    onSleep(currentState) {
+      currentState.retryVisible = false;
+      currentState.pageText = 'Recovered login form';
+    },
+    async performOperationWithDelay(metadata, operation) {
+      authRetryEvents.push(`operation:${metadata.label}:start`);
+      const result = await operation();
+      authRetryEvents.push(`operation:${metadata.label}:end`);
+      authRetryEvents.push(`delay:${metadata.label}:2000`);
+      return result;
+    },
+  };
+  const api = createRecoveryApi(state);
+
+  await api.recoverAuthRetryPage({
+    logLabel: '步骤 8：检测到重试页，正在点击“重试”恢复',
+    pathPatterns: [/\/log-in(?:[/?#]|$)/i],
+    step: 8,
+    timeoutMs: 1000,
+    waitAfterClickMs: 1000,
+    pollIntervalMs: 250,
+  });
+
+  assert.deepStrictEqual(authRetryEvents, [
+    'operation:auth-retry-click:start',
+    'click:retry',
+    'operation:auth-retry-click:end',
+    'delay:auth-retry-click:2000',
+    'poll-sleep:250',
+  ]);
+  assert.equal(authRetryEvents.filter((event) => event.startsWith('delay:auth-retry-click')).length, 1);
+  assert.doesNotMatch(extractFunction(source, 'waitForRetryPageRecoveryAfterClick'), /performOperationWithDelay\(/);
 });
 
 test('auth page recovery can click retry twice before page recovers', async () => {

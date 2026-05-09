@@ -4,7 +4,7 @@
   const GOPAY_SOURCE = 'gopay-flow';
   const GOPAY_OTP_SOURCE = 'gopay-otp-flow';
   const PLUS_CHECKOUT_SOURCE = 'plus-checkout';
-  const GOPAY_INJECT_FILES = ['content/utils.js', 'content/gopay-flow.js'];
+  const GOPAY_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'content/gopay-flow.js'];
   const GOPAY_WAIT_TIMEOUT_MS = 120000;
   const GOPAY_POLL_INTERVAL_MS = 1000;
   const GOPAY_LINKING_RETRY_WAIT_MS = 15000;

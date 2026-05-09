@@ -188,6 +188,174 @@ test('step 7 exits internal retry loop immediately when add-phone is detected', 
   );
 });
 
+test('step 7 hands direct add-phone to shared phone verification when enabled', async () => {
+  const source = fs.readFileSync('background/steps/oauth-login.js', 'utf8');
+  const globalScope = {};
+  const api = new Function('self', `${source}; return self.MultiPageBackgroundStep7;`)(globalScope);
+
+  const events = {
+    refreshCalls: 0,
+    phoneCalls: [],
+    completions: [],
+  };
+
+  const executor = api.createStep7Executor({
+    addLog: async () => {},
+    completeStepFromBackground: async (step, payload) => {
+      events.completions.push({ step, payload });
+    },
+    getErrorMessage: (error) => error?.message || String(error || ''),
+    getLoginAuthStateLabel: (state) => state || 'unknown',
+    getState: async () => ({
+      email: 'user@example.com',
+      password: 'secret',
+      phoneVerificationEnabled: true,
+    }),
+    getTabId: async (sourceName) => (sourceName === 'signup-page' ? 91 : 0),
+    isStep6RecoverableResult: (result) => result?.step6Outcome === 'recoverable',
+    isStep6SuccessResult: (result) => result?.step6Outcome === 'success',
+    phoneVerificationHelpers: {
+      completePhoneVerificationFlow: async (tabId, pageState, options) => {
+        events.phoneCalls.push({ tabId, pageState, options });
+        return { success: true, consentReady: true, url: 'https://auth.openai.com/authorize/resume' };
+      },
+    },
+    refreshOAuthUrlBeforeStep6: async () => {
+      events.refreshCalls += 1;
+      return `https://oauth.example/${events.refreshCalls}`;
+    },
+    reuseOrCreateTab: async () => {},
+    sendToContentScriptResilient: async () => {
+      throw new Error('提交密码后页面直接进入手机号页面，未经过登录验证码页。URL: https://auth.openai.com/add-phone');
+    },
+    STEP6_MAX_ATTEMPTS: 3,
+    throwIfStopped: () => {},
+  });
+
+  await executor.executeStep7({
+    email: 'user@example.com',
+    password: 'secret',
+    phoneVerificationEnabled: true,
+  });
+
+  assert.equal(events.refreshCalls, 1);
+  assert.deepStrictEqual(events.phoneCalls, [
+    {
+      tabId: 91,
+      pageState: {
+        addPhonePage: true,
+        phoneVerificationPage: false,
+        state: 'add_phone_page',
+        url: 'https://auth.openai.com/add-phone',
+      },
+      options: {
+        step: 7,
+        visibleStep: 7,
+      },
+    },
+  ]);
+  assert.deepStrictEqual(events.completions, [
+    {
+      step: 7,
+      payload: {
+        loginVerificationRequestedAt: null,
+        skipLoginVerificationStep: true,
+        directOAuthConsentPage: true,
+        phoneVerification: true,
+        loginPhoneVerification: true,
+      },
+    },
+  ]);
+});
+
+test('step 7 direct add-phone stays fatal when phone verification is disabled', async () => {
+  const source = fs.readFileSync('background/steps/oauth-login.js', 'utf8');
+  const globalScope = {};
+  const api = new Function('self', `${source}; return self.MultiPageBackgroundStep7;`)(globalScope);
+
+  const events = {
+    phoneCalls: 0,
+    completions: 0,
+  };
+
+  const executor = api.createStep7Executor({
+    addLog: async () => {},
+    completeStepFromBackground: async () => {
+      events.completions += 1;
+    },
+    getErrorMessage: (error) => error?.message || String(error || ''),
+    getLoginAuthStateLabel: (state) => state || 'unknown',
+    getState: async () => ({ email: 'user@example.com', password: 'secret', phoneVerificationEnabled: false }),
+    getTabId: async () => 91,
+    isStep6RecoverableResult: (result) => result?.step6Outcome === 'recoverable',
+    isStep6SuccessResult: (result) => result?.step6Outcome === 'success',
+    phoneVerificationHelpers: {
+      completePhoneVerificationFlow: async () => {
+        events.phoneCalls += 1;
+        return {};
+      },
+    },
+    refreshOAuthUrlBeforeStep6: async () => 'https://oauth.example/latest',
+    reuseOrCreateTab: async () => {},
+    sendToContentScriptResilient: async () => {
+      throw new Error('提交密码后页面直接进入手机号页面，未经过登录验证码页。URL: https://auth.openai.com/add-phone');
+    },
+    STEP6_MAX_ATTEMPTS: 3,
+    throwIfStopped: () => {},
+  });
+
+  await assert.rejects(
+    () => executor.executeStep7({ email: 'user@example.com', password: 'secret', phoneVerificationEnabled: false }),
+    /手机号页面.*接码|phone verification/i
+  );
+  assert.equal(events.phoneCalls, 0);
+  assert.equal(events.completions, 0);
+});
+
+test('step 7 propagates fatal errors from shared add-phone verification', async () => {
+  const source = fs.readFileSync('background/steps/oauth-login.js', 'utf8');
+  const globalScope = {};
+  const api = new Function('self', `${source}; return self.MultiPageBackgroundStep7;`)(globalScope);
+
+  const events = {
+    phoneCalls: 0,
+    completions: 0,
+  };
+
+  const executor = api.createStep7Executor({
+    addLog: async () => {},
+    completeStepFromBackground: async () => {
+      events.completions += 1;
+    },
+    getErrorMessage: (error) => error?.message || String(error || ''),
+    getLoginAuthStateLabel: (state) => state || 'unknown',
+    getState: async () => ({ email: 'user@example.com', password: 'secret', phoneVerificationEnabled: true }),
+    getTabId: async () => 91,
+    isStep6RecoverableResult: (result) => result?.step6Outcome === 'recoverable',
+    isStep6SuccessResult: (result) => result?.step6Outcome === 'success',
+    phoneVerificationHelpers: {
+      completePhoneVerificationFlow: async () => {
+        events.phoneCalls += 1;
+        throw new Error('步骤 9：没有可用手机号。');
+      },
+    },
+    refreshOAuthUrlBeforeStep6: async () => 'https://oauth.example/latest',
+    reuseOrCreateTab: async () => {},
+    sendToContentScriptResilient: async () => {
+      throw new Error('提交密码后页面直接进入手机号页面，未经过登录验证码页。URL: https://auth.openai.com/add-phone');
+    },
+    STEP6_MAX_ATTEMPTS: 3,
+    throwIfStopped: () => {},
+  });
+
+  await assert.rejects(
+    () => executor.executeStep7({ email: 'user@example.com', password: 'secret', phoneVerificationEnabled: true }),
+    /没有可用手机号/
+  );
+  assert.equal(events.phoneCalls, 1);
+  assert.equal(events.completions, 0);
+});
+
 test('step 7 starts a new oauth timeout window for each refreshed oauth url', async () => {
   const source = fs.readFileSync('background/steps/oauth-login.js', 'utf8');
   const globalScope = {};

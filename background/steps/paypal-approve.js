@@ -3,7 +3,7 @@
 })(typeof self !== 'undefined' ? self : globalThis, function createBackgroundPayPalApproveModule() {
   const PAYPAL_SOURCE = 'paypal-flow';
   const PLUS_CHECKOUT_SOURCE = 'plus-checkout';
-  const PAYPAL_INJECT_FILES = ['content/utils.js', 'content/paypal-flow.js'];
+  const PAYPAL_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'content/paypal-flow.js'];
   const PAYPAL_LOGIN_TRANSITION_TIMEOUT_MS = 30000;
   const PAYPAL_LOGIN_TRANSITION_POLL_MS = 500;
 

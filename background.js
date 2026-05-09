@@ -678,6 +678,7 @@ const PERSISTED_SETTING_DEFAULTS = {
   autoRunFallbackThreadIntervalMinutes: 0,
   oauthFlowTimeoutEnabled: true,
   autoRunDelayEnabled: false,
+  operationDelayEnabled: true,
   autoRunDelayMinutes: 30,
   autoStepDelaySeconds: null,
   step6CookieCleanupEnabled: false,
@@ -2433,6 +2434,9 @@ function normalizePersistentSettingValue(key, value) {
     case 'gopayHelperLocalSmsHelperEnabled':
     case 'gopayHelperAutoModeEnabled':
     case 'autoRunDelayEnabled':
+      return Boolean(value);
+    case 'operationDelayEnabled':
+      return typeof value === 'boolean' ? value : true;
     case 'step6CookieCleanupEnabled':
     case 'phoneVerificationEnabled':
     case 'freePhoneReuseEnabled':
@@ -10765,7 +10769,7 @@ async function resumeAutoRun() {
 // ============================================================
 
 const SIGNUP_ENTRY_URL = 'https://chatgpt.com/';
-const SIGNUP_PAGE_INJECT_FILES = ['content/utils.js', 'content/auth-page-recovery.js', 'content/phone-country-utils.js', 'content/phone-auth.js', 'content/signup-page.js'];
+const SIGNUP_PAGE_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'content/auth-page-recovery.js', 'content/phone-country-utils.js', 'content/phone-auth.js', 'content/signup-page.js'];
 const panelBridge = self.MultiPageBackgroundPanelBridge?.createPanelBridge({
   chrome,
   addLog,
@@ -10869,6 +10873,28 @@ const phoneVerificationHelpers = self.MultiPageBackgroundPhoneVerification?.crea
   DEFAULT_PHONE_CODE_POLL_INTERVAL_SECONDS,
   DEFAULT_PHONE_CODE_POLL_ROUNDS,
   ensureStep8SignupPageReady,
+  navigateAuthTabToAddPhone: async (tabId, options = {}) => {
+    const visibleStep = Math.floor(Number(options.visibleStep || options.step) || 0) || 9;
+    const requestedTimeoutMs = Number(options.timeoutMs);
+    const timeoutMs = Number.isFinite(requestedTimeoutMs) && requestedTimeoutMs > 0
+      ? requestedTimeoutMs
+      : await getOAuthFlowStepTimeoutMs(30000, {
+        step: visibleStep,
+        actionLabel: 'direct add-phone navigation',
+      });
+    await chrome.tabs.update(tabId, { url: 'https://auth.openai.com/add-phone', active: true });
+    await ensureStep8SignupPageReady(tabId, {
+      timeoutMs,
+      visibleStep,
+      logStepKey: options.logStepKey || 'phone-verification',
+      logMessage: options.logMessage || '步骤 9：认证页已失联，直接打开添加手机号页面后等待脚本恢复。',
+    });
+    return {
+      addPhonePage: true,
+      phoneVerificationPage: false,
+      url: 'https://auth.openai.com/add-phone',
+    };
+  },
   generateRandomBirthday,
   generateRandomName,
   getOAuthFlowRemainingMs,
@@ -10980,9 +11006,11 @@ const step7Executor = self.MultiPageBackgroundStep7?.createStep7Executor({
   getLoginAuthStateLabel,
   getOAuthFlowStepTimeoutMs,
   getState,
+  getTabId,
   isAddPhoneAuthFailure,
   isStep6RecoverableResult,
   isStep6SuccessResult,
+  phoneVerificationHelpers,
   refreshOAuthUrlBeforeStep6,
   reuseOrCreateTab,
   sendToContentScriptResilient,
@@ -11448,7 +11476,7 @@ function getMailConfig(state) {
       source: 'mail-2925',
       url: 'https://2925.com/#/mailList',
       label: '2925 邮箱',
-      inject: ['content/utils.js', 'content/mail-2925.js'],
+      inject: ['content/utils.js', 'content/operation-delay.js', 'content/mail-2925.js'],
       injectSource: 'mail-2925',
     };
   }

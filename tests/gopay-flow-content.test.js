@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const vm = require('node:vm');
 
 const source = fs.readFileSync('content/gopay-flow.js', 'utf8');
 
@@ -48,6 +49,200 @@ function extractFunction(name) {
   return source.slice(start, end);
 }
 
+function createGoPayContentHarness() {
+  const gopayEvents = [];
+  const attrs = new Map();
+  let listener = null;
+  let elements = [];
+  let activeOperationLabel = null;
+  const body = { innerText: 'Phone number: +86', textContent: 'Phone number: +86' };
+
+  function createElement({ tagName = 'DIV', text = '', type = '', id = '', name = '', placeholder = '', attrs: initialAttrs = {}, onClick = null } = {}) {
+    const attrMap = new Map(Object.entries(initialAttrs));
+    if (type) attrMap.set('type', type);
+    if (id) attrMap.set('id', id);
+    if (name) attrMap.set('name', name);
+    if (placeholder) attrMap.set('placeholder', placeholder);
+    return {
+      nodeType: 1,
+      tagName,
+      type,
+      id,
+      name,
+      placeholder,
+      textContent: text,
+      innerText: text,
+      value: '',
+      className: initialAttrs.class || '',
+      disabled: false,
+      hidden: false,
+      parentElement: null,
+      style: { display: 'block', visibility: 'visible', opacity: '1' },
+      getAttribute(key) {
+        if (key === 'class') return this.className;
+        if (key === 'type') return this.type || attrMap.get(key) || '';
+        if (key === 'id') return this.id || attrMap.get(key) || '';
+        if (key === 'name') return this.name || attrMap.get(key) || '';
+        if (key === 'placeholder') return this.placeholder || attrMap.get(key) || '';
+        return attrMap.has(key) ? attrMap.get(key) : null;
+      },
+      scrollIntoView() {},
+      focus() {},
+      dispatchEvent() { return true; },
+      click() {
+        if (typeof onClick === 'function') onClick(this);
+        const field = this.getAttribute('data-test-field');
+        if (field) {
+          gopayEvents.push({ type: 'click', field, label: activeOperationLabel });
+        }
+      },
+      getBoundingClientRect() { return { left: 20, top: 30, width: 180, height: 44 }; },
+    };
+  }
+
+  const context = {
+    console: { log() {}, warn() {}, error() {}, info() {} },
+    location: { href: 'https://gopay.co.id/linking' },
+    window: {},
+    document: {
+      readyState: 'complete',
+      body,
+      documentElement: {
+        getAttribute(name) { return attrs.get(name) || null; },
+        setAttribute(name, value) { attrs.set(name, String(value)); },
+      },
+      querySelector(selector) {
+        if (selector === '.search-country') return null;
+        return null;
+      },
+      querySelectorAll(selector) {
+        const text = String(selector || '');
+        if (text.includes('country-item') || text.includes('[role="option"]') || text.includes('li')) {
+          return elements.filter((element) => element.tagName === 'LI' || /country-item/i.test(element.className) || element.getAttribute('role') === 'option');
+        }
+        if (text.includes('button') || text.includes('[role="button"]') || text.includes('a')) return elements.filter((element) => element.tagName === 'BUTTON' || element.tagName === 'A');
+        if (text.includes('input') || text.includes('textarea')) return elements.filter((element) => element.tagName === 'INPUT' || element.tagName === 'TEXTAREA');
+        if (text.includes('li') || text.includes('[role="option"]') || text.includes('div') || text.includes('span')) return [];
+        return [];
+      },
+    },
+    chrome: {
+      runtime: {
+        onMessage: { addListener(fn) { listener = fn; } },
+      },
+    },
+    CodexOperationDelay: {
+      async performOperationWithDelay(metadata, operation) {
+        gopayEvents.push({ type: 'operation', label: metadata.label, kind: metadata.kind });
+        const previousOperationLabel = activeOperationLabel;
+        activeOperationLabel = metadata.label;
+        let result;
+        try {
+          result = await operation();
+        } finally {
+          activeOperationLabel = previousOperationLabel;
+        }
+        gopayEvents.push({ type: 'delay', label: metadata.label, ms: 2000 });
+        return result;
+      },
+    },
+    resetStopState() {},
+    isStopError() { return false; },
+    throwIfStopped() {},
+    sleep() { return Promise.resolve(); },
+    fillInput(element, value) {
+      element.value = value;
+      const field = element.getAttribute?.('data-test-field');
+      if (field) {
+        gopayEvents.push({ type: 'fill', field, label: activeOperationLabel, value });
+      }
+    },
+    MouseEvent: class TestMouseEvent { constructor(type) { this.type = type; } },
+    PointerEvent: class TestPointerEvent { constructor(type) { this.type = type; } },
+    KeyboardEvent: class TestKeyboardEvent { constructor(type) { this.type = type; } },
+  };
+  context.window = context;
+  context.window.getComputedStyle = (element) => element?.style || { display: 'block', visibility: 'visible', opacity: '1' };
+  context.window.screenX = 0;
+  context.window.screenY = 0;
+  context.window.innerWidth = 390;
+  context.window.innerHeight = 844;
+
+  vm.createContext(context);
+  vm.runInContext(source, context);
+  assert.equal(typeof listener, 'function');
+
+  async function send(message) {
+    return await new Promise((resolve) => {
+      listener(message, {}, resolve);
+    });
+  }
+
+  return {
+    gopayEvents,
+    send,
+    showPhonePage() {
+      body.innerText = 'Phone number: +86';
+      body.textContent = body.innerText;
+      elements = [
+        createElement({ tagName: 'INPUT', type: 'tel', id: 'phone', name: 'gopay_phone', placeholder: 'GoPay phone' }),
+        createElement({ tagName: 'BUTTON', text: 'Continue', id: 'continue-phone' }),
+      ];
+    },
+    showPhonePageWithCountryMismatch() {
+      body.innerText = 'Phone number: +86';
+      body.textContent = body.innerText;
+      const countryToggle = createElement({ tagName: 'BUTTON', text: '+86', id: 'country-toggle', attrs: { class: 'phone-code-wrapper', 'data-test-field': 'country-toggle' } });
+      const countrySearch = createElement({ tagName: 'INPUT', type: 'text', id: 'country-search', name: 'country_search', placeholder: 'Country code', attrs: { 'data-test-field': 'country-search' } });
+      const countryOption = createElement({
+        tagName: 'LI',
+        text: 'Indonesia +62',
+        id: 'country-option-id',
+        attrs: { class: 'country-item', role: 'option', 'data-test-field': 'country-option' },
+        onClick: () => {
+          countryToggle.textContent = '+62';
+          countryToggle.innerText = '+62';
+          body.innerText = 'Phone number: +62';
+          body.textContent = body.innerText;
+        },
+      });
+      elements = [
+        countryToggle,
+        countrySearch,
+        countryOption,
+        createElement({ tagName: 'INPUT', type: 'tel', id: 'phone', name: 'gopay_phone', placeholder: 'GoPay phone' }),
+        createElement({ tagName: 'BUTTON', text: 'Continue', id: 'continue-phone' }),
+      ];
+    },
+    showOtpPage() {
+      body.innerText = 'Enter OTP code from WhatsApp';
+      body.textContent = body.innerText;
+      elements = [
+        createElement({ tagName: 'INPUT', type: 'text', id: 'otp', name: 'otp', placeholder: 'OTP code' }),
+        createElement({ tagName: 'BUTTON', text: 'Continue', id: 'continue-otp' }),
+      ];
+    },
+    showPinPage() {
+      body.innerText = 'Enter PIN to continue';
+      body.textContent = body.innerText;
+      elements = [
+        createElement({ tagName: 'INPUT', type: 'password', id: 'pin', name: 'pin', placeholder: 'PIN' }),
+        createElement({ tagName: 'BUTTON', text: 'Continue', id: 'continue-pin' }),
+      ];
+    },
+    showContinuePage() {
+      body.innerText = 'Link your GoPay account';
+      body.textContent = body.innerText;
+      elements = [createElement({ tagName: 'BUTTON', text: 'Hubungkan', id: 'continue' })];
+    },
+    showPayNowPage() {
+      body.innerText = 'Confirm payment';
+      body.textContent = body.innerText;
+      elements = [createElement({ tagName: 'BUTTON', text: 'Pay now' })];
+    },
+  };
+}
+
 test('GoPay human click helper dispatches pointer and mouse sequence before native click', async () => {
   const bundle = [
     extractFunction('dispatchPointerMouseSequence'),
@@ -83,6 +278,48 @@ return { humanClickElement };
   assert.ok(events.includes('mouseup'));
   assert.ok(events.includes('click'));
   assert.equal(events.at(-2), 'native-click');
+});
+
+test('GoPay content routes form submits and terminal clicks through the operation delay gate', async () => {
+  const harness = createGoPayContentHarness();
+
+  harness.showPhonePage();
+  assert.equal((await harness.send({ type: 'GOPAY_SUBMIT_PHONE', payload: { phone: '+8613800138000', countryCode: '+86' } })).ok, true);
+
+  harness.showOtpPage();
+  assert.equal((await harness.send({ type: 'GOPAY_SUBMIT_OTP', payload: { otp: '123456' } })).ok, true);
+
+  harness.showPinPage();
+  assert.equal((await harness.send({ type: 'GOPAY_SUBMIT_PIN', payload: { pin: '654321' } })).ok, true);
+
+  harness.showContinuePage();
+  assert.equal((await harness.send({ type: 'GOPAY_CLICK_CONTINUE', payload: {} })).ok, true);
+
+  harness.showPayNowPage();
+  assert.equal((await harness.send({ type: 'GOPAY_CLICK_PAY_NOW', payload: {} })).ok, true);
+
+  assert.deepStrictEqual(harness.gopayEvents.filter((event) => event.type === 'delay').map((event) => event.label), [
+    'submit-phone',
+    'submit-otp',
+    'submit-pin',
+    'click-continue',
+    'click-pay-now',
+  ]);
+  assert.equal(harness.gopayEvents.some((event) => event.type === 'delay' && event.ms !== 2000), false);
+});
+
+test('GoPay country-code changes occur inside the submit-phone operation delay gate', async () => {
+  const harness = createGoPayContentHarness();
+
+  harness.showPhonePageWithCountryMismatch();
+  const result = await harness.send({ type: 'GOPAY_SUBMIT_PHONE', payload: { phone: '+6281234567890', countryCode: '+62' } });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.countryChanged, true);
+  const countryEvents = harness.gopayEvents.filter((event) => ['country-toggle', 'country-search', 'country-option'].includes(event.field));
+  assert.deepStrictEqual(countryEvents.map((event) => event.type), ['click', 'fill', 'click']);
+  assert.deepStrictEqual(countryEvents.map((event) => event.label), ['submit-phone', 'submit-phone', 'submit-phone']);
+  assert.deepStrictEqual(harness.gopayEvents.filter((event) => event.type === 'delay').map((event) => event.label), ['submit-phone']);
 });
 
 

@@ -18,6 +18,8 @@
       },
       isStep6RecoverableResult,
       isStep6SuccessResult,
+      getTabId,
+      phoneVerificationHelpers = null,
       refreshOAuthUrlBeforeStep6,
       reuseOrCreateTab,
       sendToContentScriptResilient,
@@ -72,6 +74,49 @@
       }
 
       return normalizeStep7IdentifierType(fallbackType) || 'email';
+    }
+
+    function extractAddPhoneUrl(error) {
+      const message = String(typeof error === 'string' ? error : error?.message || '');
+      const match = message.match(/https:\/\/auth\.openai\.com\/add-phone(?:[^\s]*)?/i);
+      return match ? match[0] : 'https://auth.openai.com/add-phone';
+    }
+
+    async function completeStep7AddPhoneHandoff(state = {}, err, completionStep) {
+      if (!state?.phoneVerificationEnabled) {
+        throw new Error(
+          `步骤 ${completionStep}：登录提交后页面进入手机号页面，必须先启用接码/phone verification 后才能继续。URL: ${extractAddPhoneUrl(err)}`
+        );
+      }
+      if (typeof phoneVerificationHelpers?.completePhoneVerificationFlow !== 'function') {
+        throw new Error(`步骤 ${completionStep}：手机号验证流程不可用，接码模块尚未初始化。`);
+      }
+      if (typeof getTabId !== 'function') {
+        throw new Error(`步骤 ${completionStep}：无法定位认证页面标签页，不能继续手机号验证。`);
+      }
+
+      const signupTabId = await getTabId('signup-page');
+      if (!Number.isInteger(signupTabId)) {
+        throw new Error(`步骤 ${completionStep}：认证页面标签页已关闭，无法继续手机号验证。`);
+      }
+
+      const pageState = {
+        addPhonePage: true,
+        phoneVerificationPage: false,
+        state: 'add_phone_page',
+        url: extractAddPhoneUrl(err),
+      };
+      await phoneVerificationHelpers.completePhoneVerificationFlow(signupTabId, pageState, {
+        step: completionStep,
+        visibleStep: completionStep,
+      });
+      await completeStepFromBackground(completionStep, {
+        loginVerificationRequestedAt: null,
+        skipLoginVerificationStep: true,
+        directOAuthConsentPage: true,
+        phoneVerification: true,
+        loginPhoneVerification: true,
+      });
     }
 
     async function executeStep7(state) {
@@ -218,7 +263,15 @@
         } catch (err) {
           throwIfStopped(err);
           if (isAddPhoneAuthFailure(err)) {
-            throw err;
+            const latestAddPhoneState = typeof getState === 'function'
+              ? await getState().catch(() => state)
+              : state;
+            await completeStep7AddPhoneHandoff(
+              { ...(state || {}), ...(latestAddPhoneState || {}) },
+              err,
+              completionStep
+            );
+            return;
           }
           if (isManagementSecretConfigError(err)) {
             await addLog(

@@ -2,7 +2,7 @@
   root.MultiPageBackgroundPlusCheckoutBilling = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createBackgroundPlusCheckoutBillingModule() {
   const PLUS_CHECKOUT_SOURCE = 'plus-checkout';
-  const PLUS_CHECKOUT_INJECT_FILES = ['content/utils.js', 'content/plus-checkout.js'];
+  const PLUS_CHECKOUT_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'content/plus-checkout.js'];
   const PLUS_CHECKOUT_URL_PATTERN = /^https:\/\/chatgpt\.com\/checkout(?:\/|$)/i;
   const PLUS_CHECKOUT_FRAME_READY_DELAY_MS = 500;
   const PLUS_CHECKOUT_SUBMIT_MAX_ATTEMPTS = 3;

@@ -449,6 +449,80 @@ test('phone auth resend stops with PHONE_ROUTE_405_RECOVERY_FAILED instead of en
   }
 });
 
+test('phone auth probes WhatsApp resend channel without clicking', async () => {
+  const originalDocument = global.document;
+  const originalLocation = global.location;
+  const originalWindow = global.window;
+  let clickCount = 0;
+  const fakeWhatsAppButton = {
+    disabled: false,
+    textContent: '重新发送 WhatsApp 消息',
+    getAttribute() {
+      return '';
+    },
+    click() {
+      clickCount += 1;
+    },
+  };
+  const fakePhoneForm = {
+    querySelectorAll(selector) {
+      if (selector === 'button, input[type="submit"], input[type="button"]') {
+        return [fakeWhatsAppButton];
+      }
+      return [];
+    },
+  };
+
+  global.document = {
+    querySelector(selector) {
+      if (selector === 'form[action*="/phone-verification" i]') {
+        return fakePhoneForm;
+      }
+      return null;
+    },
+    querySelectorAll() {
+      return [];
+    },
+  };
+  global.location = {
+    href: 'https://auth.openai.com/phone-verification',
+    pathname: '/phone-verification',
+  };
+  global.window = global;
+
+  const helpers = api.createPhoneAuthHelpers({
+    fillInput: () => {},
+    getActionText: (element) => String(element?.textContent || ''),
+    getPageTextSnapshot: () => '重新发送 WhatsApp 消息',
+    getVerificationErrorText: () => '',
+    humanPause: async () => {},
+    isActionEnabled: () => true,
+    isAddPhonePageReady: () => false,
+    isConsentReady: () => false,
+    isPhoneVerificationPageReady: () => true,
+    isVisibleElement: () => true,
+    simulateClick: (element) => {
+      element?.click?.();
+    },
+    sleep: async () => {},
+    throwIfStopped: () => {},
+    waitForElement: async () => null,
+  });
+
+  try {
+    const result = await helpers.resendPhoneVerificationCode(1000, { probeOnly: true });
+
+    assert.equal(result.resent, false);
+    assert.equal(result.channel, 'whatsapp');
+    assert.match(result.channelText, /WhatsApp/i);
+    assert.equal(clickCount, 0);
+  } finally {
+    global.document = originalDocument;
+    global.location = originalLocation;
+    global.window = originalWindow;
+  }
+});
+
 test('phone auth exposes resend page error checks for banned numbers', () => {
   const originalLocation = global.location;
   const originalDocument = global.document;

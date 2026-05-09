@@ -147,7 +147,7 @@ test('getMailConfig keeps provider metadata for 2925 mailboxes', () => {
     source: 'mail-2925',
     url: 'https://2925.com/#/mailList',
     label: '2925 邮箱',
-    inject: ['content/utils.js', 'content/mail-2925.js'],
+    inject: ['content/utils.js', 'content/operation-delay.js', 'content/mail-2925.js'],
     injectSource: 'mail-2925',
   });
 });
