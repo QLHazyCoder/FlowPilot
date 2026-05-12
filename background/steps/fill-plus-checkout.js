@@ -387,13 +387,20 @@
       return headers;
     }
 
-    function normalizeGpcTaskData(payload = {}) {
+    function normalizeGpcTaskData(payload = {}, fallbackPhoneMode = '') {
       const data = unwrapGpcResponse(payload);
       const task = data && typeof data === 'object' && !Array.isArray(data) ? { ...data } : {};
       task.task_id = String(task.task_id || task.taskId || '').trim();
       task.status = String(task.status || '').trim().toLowerCase();
       task.status_text = String(task.status_text || task.statusText || '').trim();
-      task.phone_mode = normalizeGpcHelperPhoneMode(task.phone_mode || task.phoneMode || '');
+      const rawPhoneMode = task.phone_mode ?? task.phoneMode;
+      const normalizedFallbackPhoneMode = normalizeGpcHelperPhoneMode(fallbackPhoneMode);
+      task.phone_mode = rawPhoneMode === undefined || rawPhoneMode === null || String(rawPhoneMode).trim() === ''
+        ? normalizedFallbackPhoneMode
+        : normalizeGpcHelperPhoneMode(rawPhoneMode);
+      task.phone_mode_source = rawPhoneMode === undefined || rawPhoneMode === null || String(rawPhoneMode).trim() === ''
+        ? 'fallback'
+        : 'remote';
       task.remote_stage = String(task.remote_stage || task.remoteStage || '').trim().toLowerCase();
       task.api_waiting_for = String(task.api_waiting_for || task.apiWaitingFor || '').trim().toLowerCase();
       task.api_input_deadline_at = String(task.api_input_deadline_at || task.apiInputDeadlineAt || '').trim();
@@ -406,12 +413,13 @@
       return task;
     }
 
-    async function setGpcTaskState(taskData = {}) {
-      const task = normalizeGpcTaskData(taskData);
+    async function setGpcTaskState(taskData = {}, fallbackPhoneMode = '') {
+      const task = normalizeGpcTaskData(taskData, fallbackPhoneMode);
       const updates = {
         gopayHelperTaskId: task.task_id,
         gopayHelperTaskStatus: task.status,
         gopayHelperStatusText: task.status_text,
+        ...(task.phone_mode_source === 'remote' ? { gopayHelperPhoneMode: task.phone_mode } : {}),
         gopayHelperRemoteStage: task.remote_stage,
         gopayHelperApiWaitingFor: task.api_waiting_for,
         gopayHelperApiInputDeadlineAt: task.api_input_deadline_at,
@@ -429,7 +437,7 @@
       return task;
     }
 
-    async function fetchGpcTaskStatus(apiUrl, taskId, apiKey) {
+    async function fetchGpcTaskStatus(apiUrl, taskId, apiKey, fallbackPhoneMode = '') {
       const requestUrl = buildGpcTaskQueryUrl(apiUrl, taskId);
       const { response, data } = await fetchJsonWithTimeout(requestUrl, {
         method: 'GET',
@@ -438,10 +446,10 @@
       if (!response?.ok || !isGpcUnifiedResponseOk(data)) {
         throw new Error(getGpcResponseErrorDetail(data, response?.status || 0));
       }
-      return setGpcTaskState(data);
+      return setGpcTaskState(data, fallbackPhoneMode);
     }
 
-    async function postGpcTaskAction(apiUrl, taskId, action, payload = {}, apiKey = '', timeoutMs = 30000) {
+    async function postGpcTaskAction(apiUrl, taskId, action, payload = {}, apiKey = '', timeoutMs = 30000, fallbackPhoneMode = '') {
       const requestUrl = buildGpcTaskActionUrl(apiUrl, taskId, action);
       const { response, data } = await fetchJsonWithTimeout(requestUrl, {
         method: 'POST',
@@ -454,7 +462,7 @@
       if (!response?.ok || !isGpcUnifiedResponseOk(data)) {
         throw new Error(getGpcResponseErrorDetail(data, response?.status || 0));
       }
-      return setGpcTaskState(data);
+      return setGpcTaskState(data, fallbackPhoneMode);
     }
 
     async function postGpcJsonWithFallback(apiUrl, endpointPath, primaryPayload, fallbackPayload, timeoutMs = 30000) {
@@ -1008,7 +1016,7 @@
       try {
         while (Date.now() <= deadline) {
           throwIfStopped();
-          const task = await fetchGpcTaskStatus(apiUrl, taskId, apiKey);
+          const task = await fetchGpcTaskStatus(apiUrl, taskId, apiKey, configuredPhoneMode);
           await addLog(formatGpcTaskStatusLog(task), 'info');
 
           if (task.status === 'completed') {
@@ -1101,7 +1109,8 @@
                 'otp',
                 buildGpcTaskOtpPayload({ otp: normalizedOtp }),
                 apiKey,
-                30000
+                30000,
+                configuredPhoneMode
               );
             } catch (error) {
               if (isGpcOtpFormatConflict(error)) {
@@ -1128,7 +1137,8 @@
                 'pin',
                 buildGpcTaskPinPayload({ pin }),
                 apiKey,
-                30000
+                30000,
+                configuredPhoneMode
               );
             } catch (error) {
               throw new Error(`GPC_TASK_ENDED::${error?.message || String(error || 'PIN 提交失败，请重新创建任务。')}`);

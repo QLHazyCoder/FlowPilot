@@ -510,6 +510,62 @@ test('GPC auto checkout only sends access token and API Key', async () => {
   assert.equal(events.find((event) => event.type === 'complete')?.step, 6);
 });
 
+test('GPC auto checkout keeps selected mode when task create response omits phone_mode', async () => {
+  const events = [];
+  const fetchCalls = [];
+  const executor = api.createPlusCheckoutCreateExecutor({
+    addLog: async (message, level = 'info') => events.push({ type: 'log', message, level }),
+    chrome: {
+      tabs: {
+        create: async () => {
+          throw new Error('should not open token tab when direct access token exists');
+        },
+        remove: async () => {},
+      },
+    },
+    completeStepFromBackground: async (step, payload) => events.push({ type: 'complete', step, payload }),
+    ensureContentScriptReadyOnTabUntilStopped: async () => {},
+    fetch: async (url, options = {}) => {
+      fetchCalls.push({ url, options });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => url.endsWith('/api/gp/balance')
+          ? createGpcBalanceResponse({ auto_mode_enabled: true, remaining_uses: 998 })
+          : createGpcTaskResponse({
+              task_id: 'task_auto_without_mode',
+              status: 'queued',
+              status_text: '排队中',
+              phone_mode: '',
+              api_waiting_for: '',
+            }),
+      };
+    },
+    registerTab: async () => {},
+    sendTabMessageUntilStopped: async () => ({}),
+    setState: async (payload) => events.push({ type: 'set-state', payload }),
+    sleepWithStop: async () => {},
+    waitForTabCompleteUntilStopped: async () => {},
+  });
+
+  await executor.executePlusCheckoutCreate({
+    plusPaymentMethod: 'gpc-helper',
+    gopayHelperPhoneMode: 'auto',
+    gopayHelperApiUrl: 'https://gpc.qlhazycoder.top/',
+    chatgptAccessToken: 'state-access-token',
+    gopayHelperApiKey: 'gpc_auto_123',
+  });
+
+  assert.equal(fetchCalls.length, 2);
+  const helperPayload = JSON.parse(fetchCalls[1].options.body);
+  assert.equal(helperPayload.phone_mode, 'auto');
+  const statePayload = events.find((event) => event.type === 'set-state')?.payload || {};
+  assert.equal(statePayload.gopayHelperTaskId, 'task_auto_without_mode');
+  assert.equal(Object.prototype.hasOwnProperty.call(statePayload, 'gopayHelperPhoneMode'), false);
+  assert.equal(events.some((event) => event.type === 'log' && /GPC 自动模式任务已创建/.test(event.message)), true);
+  assert.equal(events.find((event) => event.type === 'complete')?.step, 6);
+});
+
 test('GPC auto checkout keeps running when balance payload omits auto mode permission', async () => {
   const events = [];
   const fetchCalls = [];

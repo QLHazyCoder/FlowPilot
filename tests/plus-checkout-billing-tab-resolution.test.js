@@ -965,6 +965,47 @@ test('GPC billing auto mode only polls until completed without OTP or PIN submis
   assert.equal(events.completed[0].payload.plusCheckoutSource, 'gpc-helper');
 });
 
+test('GPC billing auto mode keeps selected mode when task status omits phone_mode', async () => {
+  let pollCount = 0;
+  const { events, executor } = createExecutorHarness({
+    frames: [],
+    stateByFrame: {},
+    fetchImpl: async (url) => {
+      if (url === 'https://gpc.qlhazycoder.top/api/gp/tasks/task_auto_omitted_mode') {
+        pollCount += 1;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => createGpcTaskResponse({
+            task_id: 'task_auto_omitted_mode',
+            phone_mode: '',
+            status: pollCount === 1 ? 'active' : 'completed',
+            status_text: pollCount === 1 ? '处理中' : '充值完成',
+            remote_stage: pollCount === 1 ? 'auto_otp_wait' : 'completed',
+            api_waiting_for: pollCount === 1 ? 'otp' : '',
+          }),
+        };
+      }
+      throw new Error(`unexpected url: ${url}`);
+    },
+  });
+
+  await executor.executePlusCheckoutBilling({
+    plusPaymentMethod: 'gpc-helper',
+    plusCheckoutSource: 'gpc-helper',
+    gopayHelperTaskId: 'task_auto_omitted_mode',
+    gopayHelperPhoneMode: 'auto',
+    gopayHelperApiUrl: 'https://gpc.qlhazycoder.top/',
+    gopayHelperApiKey: 'gpc_auto',
+  });
+
+  assert.equal(events.states.some((state) => state.gopayHelperPhoneMode === 'manual'), false);
+  assert.equal(events.states.some((state) => state.plusManualConfirmationMethod === 'gopay-otp'), false);
+  assert.equal(events.states.some((state) => state.gopayHelperTaskId === 'task_auto_omitted_mode' && state.gopayHelperTaskStatus === 'completed'), true);
+  assert.equal(events.logs.some((entry) => entry.message === '步骤 7：GPC 任务状态：等待自动 OTP'), true);
+  assert.equal(events.completed[0].step, 7);
+});
+
 test('GPC billing logs checkout order stage in Chinese', async () => {
   let pollCount = 0;
   const { events, executor } = createExecutorHarness({

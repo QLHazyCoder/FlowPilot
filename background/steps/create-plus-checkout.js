@@ -404,7 +404,10 @@
         remoteStage: String(taskData?.remote_stage || taskData?.remoteStage || '').trim(),
         orderCreatedAt,
         responsePayload: taskData && typeof taskData === 'object' && !Array.isArray(taskData) ? taskData : null,
-        phoneMode: normalizeGpcHelperPhoneMode(taskData?.phone_mode || taskData?.phoneMode || phoneMode),
+        phoneMode: (taskData?.phone_mode === undefined && taskData?.phoneMode === undefined)
+          || String(taskData?.phone_mode ?? taskData?.phoneMode ?? '').trim() === ''
+          ? phoneMode
+          : normalizeGpcHelperPhoneMode(taskData?.phone_mode ?? taskData?.phoneMode),
         country: 'ID',
         currency: 'IDR',
         checkoutSource: PLUS_PAYMENT_METHOD_GPC_HELPER,
