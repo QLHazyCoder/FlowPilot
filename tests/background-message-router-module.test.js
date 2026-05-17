@@ -276,7 +276,7 @@ test('SAVE_SETTING broadcasts operation delay setting without background success
     addLog: async (message, level = 'info') => logs.push({ message, level }),
     buildLuckmailSessionSettingsPayload: () => ({}),
     buildPersistentSettingsPayload: (input = {}) => Object.prototype.hasOwnProperty.call(input, 'operationDelayEnabled')
-      ? { operationDelayEnabled: input.operationDelayEnabled === false ? false : true }
+      ? { operationDelayEnabled: true }
       : {},
     broadcastDataUpdate: (payload) => broadcasts.push(payload),
     getState: async () => ({ ...state }),
@@ -291,8 +291,8 @@ test('SAVE_SETTING broadcasts operation delay setting without background success
   });
 
   assert.equal(response.ok, true);
-  assert.equal(state.operationDelayEnabled, false);
-  assert.deepStrictEqual(broadcasts.at(-1), { operationDelayEnabled: false });
+  assert.equal(state.operationDelayEnabled, true);
+  assert.deepStrictEqual(broadcasts.at(-1), { operationDelayEnabled: true });
   assert.equal(logs.length, 0);
 });
 

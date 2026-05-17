@@ -3033,7 +3033,7 @@ function normalizePersistentSettingValue(key, value) {
     case 'autoRunDelayEnabled':
       return Boolean(value);
     case 'operationDelayEnabled':
-      return typeof value === 'boolean' ? value : true;
+      return true;
     case 'step6CookieCleanupEnabled':
       return Boolean(value);
     case 'stepExecutionRangeByFlow':

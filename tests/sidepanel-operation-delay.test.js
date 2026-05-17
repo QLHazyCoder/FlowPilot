@@ -38,95 +38,43 @@ function extractFunction(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('sidepanel exposes one operation delay switch in the existing settings surface', () => {
-  assert.match(html, /id="row-operation-delay-settings"/);
-  assert.match(html, /id="input-operation-delay-enabled"/);
-  assert.match(html, /操作间延迟/);
-  assert.match(html, /2\s*秒/);
-  assert.match(html, /id="row-operation-delay-settings"[\s\S]{0,900}输入[\s\S]{0,900}选择[\s\S]{0,900}点击[\s\S]{0,900}提交[\s\S]{0,900}继续[\s\S]{0,900}授权/);
+test('sidepanel no longer exposes operation delay switch and places step execution range below oauth timeout', () => {
+  assert.doesNotMatch(html, /id="row-operation-delay-settings"/);
+  assert.doesNotMatch(html, /id="input-operation-delay-enabled"/);
+
+  const autoDelayIndex = html.indexOf('id="row-auto-delay-settings"');
+  const oauthTimeoutIndex = html.indexOf('id="row-oauth-flow-timeout"');
+  const stepRangeIndex = html.indexOf('id="row-step-execution-range"');
+  const oauthDisplayIndex = html.indexOf('id="row-oauth-display"');
+
+  assert.notEqual(autoDelayIndex, -1);
+  assert.notEqual(oauthTimeoutIndex, -1);
+  assert.notEqual(stepRangeIndex, -1);
+  assert.notEqual(oauthDisplayIndex, -1);
+  assert.ok(stepRangeIndex > autoDelayIndex, 'step execution range should still remain below the step6 toggle row');
+  assert.ok(stepRangeIndex > oauthTimeoutIndex, 'step execution range should render below oauth timeout');
+  assert.ok(stepRangeIndex < oauthDisplayIndex, 'step execution range should stay above oauth runtime display');
 });
 
-test('sidepanel owns operation delay toggle feedback exactly once', () => {
-  assert.match(source, /inputOperationDelayEnabled/);
-  assert.match(source, /operationDelayEnabled/);
-  assert.match(source, /appendLog\(\{[\s\S]*操作间延迟/);
-  assert.doesNotMatch(source, /operationDelayEnabled[\s\S]{0,240}addLog\(/);
-});
-
-test('sidepanel operation delay restore and save failure contracts are explicit', () => {
-  assert.match(source, /normalizeOperationDelayEnabled/);
-  assert.match(source, /lastConfirmedOperationDelayEnabled/);
-  assert.match(source, /操作间延迟设置读取失败/);
-  assert.match(source, /操作间延迟设置保存失败/);
-  assert.match(source, /inputOperationDelayEnabled\.checked\s*=\s*lastConfirmedOperationDelayEnabled/);
-  assert.match(source, /typeof\s+applyOperationDelayState\s*===\s*['"]function['"]/);
-});
-
-test('sidepanel syncs operation delay DATA_UPDATED without becoming the success-log owner', () => {
-  assert.match(source, /message\.payload\.operationDelayEnabled\s*!==\s*undefined[\s\S]{0,240}applyOperationDelayState\(message\.payload\)/);
-});
-
-function loadOperationDelaySidepanelHarness() {
-  const runtimeMessages = [];
-  const logs = [];
-  const inputOperationDelayEnabled = { checked: true, disabled: false };
-
-  const chrome = {
-    runtime: {
-      sendMessage: async (message) => {
-        runtimeMessages.push(message);
-        return { ok: true, state: { operationDelayEnabled: message.payload.operationDelayEnabled } };
-      },
-    },
-  };
-
-  const harness = new Function('chrome', 'appendLog', 'inputOperationDelayEnabled', 'initialLatestState', `
-    let latestState = initialLatestState;
-    let lastConfirmedOperationDelayEnabled = true;
+test('sidepanel operation delay state is always normalized back to enabled', () => {
+  const harness = new Function(`
+    let latestState = { operationDelayEnabled: false };
     function syncLatestState(nextState) {
       latestState = { ...(latestState || {}), ...(nextState || {}) };
     }
     ${extractFunction('normalizeOperationDelayEnabled')}
-    ${extractFunction('appendOperationDelayLog')}
     ${extractFunction('applyOperationDelayState')}
-    ${extractFunction('persistOperationDelayToggle')}
     return {
+      normalizeOperationDelayEnabled,
       applyOperationDelayState,
-      persistOperationDelayToggle,
       getLatestState: () => latestState,
-      getLastConfirmedOperationDelayEnabled: () => lastConfirmedOperationDelayEnabled,
-      setLastConfirmedOperationDelayEnabled: (value) => { lastConfirmedOperationDelayEnabled = value; },
     };
-  `)(chrome, (entry) => logs.push(entry), inputOperationDelayEnabled, { operationDelayEnabled: true });
+  `)();
 
-  return { chrome, harness, inputOperationDelayEnabled, logs, runtimeMessages };
-}
+  assert.equal(harness.normalizeOperationDelayEnabled(undefined), true);
+  assert.equal(harness.normalizeOperationDelayEnabled(false), true);
+  assert.equal(harness.normalizeOperationDelayEnabled(true), true);
 
-test('operation delay switch logs once, defaults restore failures to enabled, and rolls back save failures', async () => {
-  const { chrome, harness: helpers, inputOperationDelayEnabled: input, logs, runtimeMessages: sentMessages } = loadOperationDelaySidepanelHarness();
-
-  helpers.applyOperationDelayState({ operationDelayEnabled: false });
-  assert.equal(input.checked, false);
-  assert.equal(helpers.getLatestState().operationDelayEnabled, false);
-
-  helpers.applyOperationDelayState({ operationDelayEnabled: undefined }, { restoreFailed: true });
-  assert.equal(input.checked, true);
-  assert.equal(helpers.getLatestState().operationDelayEnabled, true);
-  assert.equal(logs.filter((entry) => entry.level === 'warn').length, 1);
-
-  logs.length = 0;
-  input.checked = false;
-  await helpers.persistOperationDelayToggle();
-  assert.equal(sentMessages.at(-1).payload.operationDelayEnabled, false);
-  assert.equal(logs.length, 1);
-  assert.match(logs[0].message, /关闭|off/i);
-
-  sentMessages.length = 0;
-  chrome.runtime.sendMessage = async () => { throw new Error('network down'); };
-  logs.length = 0;
-  input.checked = true;
-  helpers.setLastConfirmedOperationDelayEnabled(false);
-  await assert.rejects(() => helpers.persistOperationDelayToggle(), /network down/);
-  assert.equal(input.checked, false);
-  assert.equal(logs.filter((entry) => entry.level === 'error').length, 1);
+  harness.applyOperationDelayState({ operationDelayEnabled: false });
+  assert.equal(harness.getLatestState().operationDelayEnabled, true);
 });

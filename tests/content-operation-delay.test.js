@@ -34,9 +34,9 @@ test('operation delay runs action first and waits once after completion', async 
   assert.deepStrictEqual(events, ['operation:start', 'operation:end', 'sleep:2000']);
 });
 
-test('operation delay skips disabled mode and excluded step keys', async () => {
+test('operation delay ignores disabled flags but still skips excluded step keys', async () => {
   const api = loadOperationDelayApi();
-  assert.equal(api.shouldDelayOperation({ enabled: false, stepKey: 'fill-profile', kind: 'click' }), false);
+  assert.equal(api.shouldDelayOperation({ enabled: false, stepKey: 'fill-profile', kind: 'click' }), true);
   assert.equal(api.shouldDelayOperation({ enabled: true, stepKey: 'confirm-oauth', kind: 'click' }), false);
   assert.equal(api.shouldDelayOperation({ enabled: true, stepKey: 'platform-verify', kind: 'submit' }), false);
   assert.equal(api.shouldDelayOperation({ enabled: true, stepKey: 'fill-profile', kind: 'fill' }), true);
@@ -49,7 +49,7 @@ test('operation delay defaults unresolved settings to enabled', async () => {
   assert.deepStrictEqual(events, ['operation', 'sleep:2000']);
 });
 
-test('persisted disabled setting prevents first operation delay even before initial restore resolves', async () => {
+test('persisted disabled setting is normalized back to enabled before first operation delay resolves', async () => {
   const events = [];
   let resolveStorage;
   const storageReady = new Promise((resolve) => { resolveStorage = resolve; });
@@ -69,10 +69,10 @@ test('persisted disabled setting prevents first operation delay even before init
 
   resolveStorage({ operationDelayEnabled: false });
   await pendingOperation;
-  assert.deepStrictEqual(events, ['operation']);
+  assert.deepStrictEqual(events, ['operation', 'sleep:2000']);
 });
 
-test('newer disabled storage change wins over older pending restore', async () => {
+test('disabled storage changes are normalized back to enabled even when they arrive before restore', async () => {
   const events = [];
   let changeListener = null;
   let resolveStorage;
@@ -88,17 +88,17 @@ test('newer disabled storage change wins over older pending restore', async () =
   });
 
   changeListener({ operationDelayEnabled: { newValue: false } }, 'local');
-  assert.equal(api.getOperationDelayEnabled(), false);
+  assert.equal(api.getOperationDelayEnabled(), true);
   resolveStorage({ operationDelayEnabled: true });
   await waitForTimer();
 
-  assert.equal(api.getOperationDelayEnabled(), false);
+  assert.equal(api.getOperationDelayEnabled(), true);
   await api.performOperationWithDelay(
     { stepKey: 'fill-profile', kind: 'fill' },
     async () => events.push('operation'),
     { sleep: async (ms) => events.push(`sleep:${ms}`) }
   );
-  assert.deepStrictEqual(events, ['operation']);
+  assert.deepStrictEqual(events, ['operation', 'sleep:2000']);
 });
 
 test('newer enabled storage change wins over older pending restore', async () => {
@@ -130,7 +130,7 @@ test('newer enabled storage change wins over older pending restore', async () =>
   assert.deepStrictEqual(events, ['operation', 'sleep:2000']);
 });
 
-test('first operation honors async persisted disabled setting before fallback budget expires', async () => {
+test('first operation keeps the delay even when async persisted state says disabled', async () => {
   const events = [];
   const api = loadOperationDelayApi({
     events,
@@ -147,7 +147,7 @@ test('first operation honors async persisted disabled setting before fallback bu
     async () => events.push('operation'),
     { sleep: async (ms) => events.push(`sleep:${ms}`) }
   );
-  assert.deepStrictEqual(events, ['operation']);
+  assert.deepStrictEqual(events, ['operation', 'sleep:2000']);
 });
 
 test('hanging initial storage restore falls back to enabled delay and returns', async () => {
@@ -167,7 +167,7 @@ test('hanging initial storage restore falls back to enabled delay and returns', 
   assert.deepStrictEqual(events, ['operation', 'sleep:2000']);
 });
 
-test('explicit disabled metadata does not wait for hanging initial storage restore', async () => {
+test('explicit disabled metadata is normalized back to enabled during hanging initial restore', async () => {
   const events = [];
   const api = loadOperationDelayApi({
     events,
@@ -181,7 +181,7 @@ test('explicit disabled metadata does not wait for hanging initial storage resto
   );
 
   assert.equal(await resolveOrPending(operation), 'resolved');
-  assert.deepStrictEqual(events, ['operation']);
+  assert.deepStrictEqual(events, ['operation', 'sleep:2000']);
 });
 
 test('invalid persisted values still resolve to enabled', async () => {
@@ -190,14 +190,14 @@ test('invalid persisted values still resolve to enabled', async () => {
   assert.equal(api.getOperationDelayEnabled(), true);
 });
 
-test('shouldDelayOperation uses cached disabled setting by default', async () => {
+test('shouldDelayOperation normalizes cached disabled setting back to enabled by default', async () => {
   const api = loadOperationDelayApi({ chrome: { storage: { local: { get: async () => ({ operationDelayEnabled: false }) }, onChanged: { addListener() {} } } } });
   await api.refreshOperationDelaySetting();
-  assert.equal(api.getOperationDelayEnabled(), false);
-  assert.equal(api.shouldDelayOperation({ stepKey: 'fill-profile', kind: 'fill' }), false);
+  assert.equal(api.getOperationDelayEnabled(), true);
+  assert.equal(api.shouldDelayOperation({ stepKey: 'fill-profile', kind: 'fill' }), true);
 });
 
-test('storage change to disabled is honored by later delayed operations', async () => {
+test('storage change to disabled is normalized back to enabled for later delayed operations', async () => {
   const events = [];
   let changeListener = null;
   const api = loadOperationDelayApi({
@@ -212,14 +212,14 @@ test('storage change to disabled is honored by later delayed operations', async 
   await api.refreshOperationDelaySetting();
   changeListener({ operationDelayEnabled: { newValue: false } }, 'local');
 
-  assert.equal(api.getOperationDelayEnabled(), false);
-  assert.equal(api.shouldDelayOperation({ stepKey: 'fill-profile', kind: 'fill' }), false);
+  assert.equal(api.getOperationDelayEnabled(), true);
+  assert.equal(api.shouldDelayOperation({ stepKey: 'fill-profile', kind: 'fill' }), true);
   await api.performOperationWithDelay(
     { stepKey: 'fill-profile', kind: 'fill' },
     async () => events.push('operation'),
     { sleep: async (ms) => events.push(`sleep:${ms}`) }
   );
-  assert.deepStrictEqual(events, ['operation']);
+  assert.deepStrictEqual(events, ['operation', 'sleep:2000']);
 });
 
 test('storage change to enabled is honored by later delayed operations', async () => {

@@ -7,7 +7,7 @@
   let operationDelaySettingRevision = 0;
 
   function normalizeOperationDelayEnabled(value) {
-    return typeof value === 'boolean' ? value : true;
+    return true;
   }
 
   function getOperationDelayEnabled() {

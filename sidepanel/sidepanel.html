@@ -596,26 +596,6 @@
           <button id="btn-fetch-email" class="btn btn-outline btn-sm data-inline-btn" type="button">获取</button>
         </div>
       </div>
-      <div class="data-row" id="row-step-execution-range">
-        <span class="data-label">执行范围</span>
-        <div class="data-inline setting-pair step-execution-range-setting">
-          <div class="setting-group setting-group-primary">
-            <label class="toggle-switch" for="input-step-execution-range-enabled" title="开启后，只执行指定起止步骤，范围外步骤禁用">
-              <input type="checkbox" id="input-step-execution-range-enabled" />
-              <span class="toggle-switch-track" aria-hidden="true">
-                <span class="toggle-switch-thumb"></span>
-              </span>
-              <span>启用</span>
-            </label>
-          </div>
-          <div class="setting-group setting-group-secondary step-range-controls">
-            <span class="setting-caption">步骤</span>
-            <input type="number" id="input-step-execution-range-from" class="data-input auto-delay-input step-range-input" value="1" min="1" step="1" title="允许执行的起始步骤" />
-            <span class="data-unit">到</span>
-            <input type="number" id="input-step-execution-range-to" class="data-input auto-delay-input step-range-input" value="1" min="1" step="1" title="允许执行的结束步骤" />
-          </div>
-        </div>
-      </div>
       <div class="data-row module-divider-start" id="row-auto-delay-settings">
         <span class="data-label">第六步</span>
         <div class="data-inline setting-pair auto-delay-setting-pair">
@@ -641,21 +621,6 @@
                 max="1440" step="1" title="启动前倒计时分钟数" />
               <span class="data-unit">分钟</span>
             </div>
-          </div>
-        </div>
-      </div>
-      <div class="data-row" id="row-operation-delay-settings">
-        <span class="data-label">操作间延迟</span>
-        <div class="data-inline setting-pair operation-delay-setting-pair">
-          <div class="setting-group setting-group-primary operation-delay-setting">
-            <label class="toggle-switch" for="input-operation-delay-enabled" title="开启后，页面输入、选择、点击、提交、继续、授权操作完成后等待 2 秒">
-              <input type="checkbox" id="input-operation-delay-enabled" checked />
-              <span class="toggle-switch-track" aria-hidden="true">
-                <span class="toggle-switch-thumb"></span>
-              </span>
-              <span>启用</span>
-            </label>
-            <span class="setting-caption">页面输入、选择、点击、提交、继续、授权后等待 2 秒</span>
           </div>
         </div>
       </div>
@@ -701,6 +666,26 @@
                 class="data-input auto-delay-input" value="0" min="0" max="1440" step="1" title="兜底模式下，两轮线程之间的等待分钟数" />
               <span class="data-unit">分钟</span>
             </div>
+          </div>
+        </div>
+      </div>
+      <div class="data-row" id="row-step-execution-range">
+        <span class="data-label">执行范围</span>
+        <div class="data-inline setting-pair step-execution-range-setting">
+          <div class="setting-group setting-group-primary">
+            <label class="toggle-switch" for="input-step-execution-range-enabled" title="开启后，只执行指定起止步骤，范围外步骤禁用">
+              <input type="checkbox" id="input-step-execution-range-enabled" />
+              <span class="toggle-switch-track" aria-hidden="true">
+                <span class="toggle-switch-thumb"></span>
+              </span>
+              <span>启用</span>
+            </label>
+          </div>
+          <div class="setting-group setting-group-secondary step-range-controls">
+            <span class="setting-caption">步骤</span>
+            <input type="number" id="input-step-execution-range-from" class="data-input auto-delay-input step-range-input" value="1" min="1" step="1" title="允许执行的起始步骤" />
+            <span class="data-unit">到</span>
+            <input type="number" id="input-step-execution-range-to" class="data-input auto-delay-input step-range-input" value="1" min="1" step="1" title="允许执行的结束步骤" />
           </div>
         </div>
       </div>

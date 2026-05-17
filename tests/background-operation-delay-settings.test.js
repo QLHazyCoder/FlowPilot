@@ -46,7 +46,7 @@ test('operationDelayEnabled defaults to enabled and strictly normalizes values',
     assert.equal(api.normalizePersistentSettingValue('operationDelayEnabled', value), true);
   }
   assert.equal(api.normalizePersistentSettingValue('operationDelayEnabled', true), true);
-  assert.equal(api.normalizePersistentSettingValue('operationDelayEnabled', false), false);
+  assert.equal(api.normalizePersistentSettingValue('operationDelayEnabled', false), true);
 });
 
 test('operationDelayEnabled is normalized through the background settings payload path', () => {
@@ -63,5 +63,5 @@ test('operationDelayEnabled is normalized through the background settings payloa
   for (const value of [undefined, null, '', 0, 'false', true]) {
     assert.equal(api.buildPersistentSettingsPayload({ operationDelayEnabled: value }, { fillDefaults: true }).operationDelayEnabled, true);
   }
-  assert.equal(api.buildPersistentSettingsPayload({ operationDelayEnabled: false }).operationDelayEnabled, false);
+  assert.equal(api.buildPersistentSettingsPayload({ operationDelayEnabled: false }).operationDelayEnabled, true);
 });

@@ -399,7 +399,6 @@ const inputStep6CookieCleanupEnabled = document.getElementById('input-step6-cook
 const inputAutoDelayEnabled = document.getElementById('input-auto-delay-enabled');
 const inputAutoDelayMinutes = document.getElementById('input-auto-delay-minutes');
 const inputAutoStepDelaySeconds = document.getElementById('input-auto-step-delay-seconds');
-const inputOperationDelayEnabled = document.getElementById('input-operation-delay-enabled');
 const inputOAuthFlowTimeoutEnabled = document.getElementById('input-oauth-flow-timeout-enabled');
 const rowStepExecutionRange = document.getElementById('row-step-execution-range');
 const inputStepExecutionRangeEnabled = document.getElementById('input-step-execution-range-enabled');
@@ -554,7 +553,6 @@ let currentSignupMethod = DEFAULT_SIGNUP_METHOD;
 let currentPhoneSignupReloginAfterBindEmailEnabled = DEFAULT_PHONE_SIGNUP_RELOGIN_AFTER_BIND_EMAIL_ENABLED;
 let currentStepDefinitionFlowId = DEFAULT_ACTIVE_FLOW_ID;
 let phoneSignupReuseUiWasLocked = false;
-let lastConfirmedOperationDelayEnabled = true;
 let heroSmsCountrySelectionOrder = [];
 let phoneSmsProviderOrderSelection = [];
 let heroSmsCountryMenuSearchKeyword = '';
@@ -2634,7 +2632,7 @@ function scheduleAccountRunHistoryRefresh(delayMs = 150) {
 }
 
 function normalizeOperationDelayEnabled(value) {
-  return typeof value === 'boolean' ? value : true;
+  return true;
 }
 
 function appendOperationDelayLog(enabled, level = 'info', message = '') {
@@ -2642,15 +2640,13 @@ function appendOperationDelayLog(enabled, level = 'info', message = '') {
     timestamp: Date.now(),
     level,
     message: message || (enabled
-      ? '操作间延迟已开启：页面输入、选择、点击、提交、继续、授权后等待 2 秒。'
-      : '操作间延迟已关闭：页面操作将连续执行。'),
+      ? '操作间延迟已固定开启。'
+      : '操作间延迟保持固定开启。'),
   });
 }
 
 function applyOperationDelayState(state = latestState, options = {}) {
   const enabled = options.restoreFailed ? true : normalizeOperationDelayEnabled(state?.operationDelayEnabled);
-  lastConfirmedOperationDelayEnabled = enabled;
-  if (inputOperationDelayEnabled) inputOperationDelayEnabled.checked = enabled;
   if (typeof syncLatestState === 'function') {
     syncLatestState({ operationDelayEnabled: enabled });
   }
@@ -2660,6 +2656,8 @@ function applyOperationDelayState(state = latestState, options = {}) {
 }
 
 async function persistOperationDelayToggle() {
+  applyOperationDelayState({ operationDelayEnabled: true });
+  return true;
   const nextEnabled = normalizeOperationDelayEnabled(inputOperationDelayEnabled?.checked);
   try {
     const response = await chrome.runtime.sendMessage({
@@ -13739,10 +13737,6 @@ inputPlusModeEnabled?.addEventListener('change', () => {
   });
   markSettingsDirty(true);
   saveSettings({ silent: true }).catch(() => { });
-});
-
-inputOperationDelayEnabled?.addEventListener('change', () => {
-  persistOperationDelayToggle().catch(() => { });
 });
 
 selectPlusPaymentMethod?.addEventListener('change', () => {
