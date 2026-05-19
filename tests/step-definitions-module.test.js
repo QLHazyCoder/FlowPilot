@@ -190,6 +190,8 @@ test('step definitions module exposes ordered normal and Plus step metadata', ()
   assert.equal(kiroSteps[6].title, '启动桌面授权');
   assert.equal(kiroSteps[7].title, '完成桌面授权');
   assert.equal(kiroSteps[8].title, '上传凭据到 kiro.rs');
+  const kiroContributionSteps = api.getSteps({ activeFlowId: 'kiro', accountContributionEnabled: true });
+  assert.equal(kiroContributionSteps[8].title, '贡献上传');
   assert.deepStrictEqual(api.getStepIds({ activeFlowId: 'kiro' }), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
   assert.equal(api.getLastStepId({ activeFlowId: 'kiro' }), 9);
   assert.deepStrictEqual(

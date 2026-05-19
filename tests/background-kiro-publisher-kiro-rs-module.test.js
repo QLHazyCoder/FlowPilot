@@ -171,6 +171,65 @@ test('kiro publisher reads latest kiro.rs key from background state instead of s
   assert.equal(completed[0].nodeId, 'kiro-upload-credential');
 });
 
+test('kiro publisher routes step 9 through public contribution upload when contribution mode is enabled', async () => {
+  const api = loadPublisherApi();
+  const requests = [];
+  const completed = [];
+  let liveState = {
+    activeFlowId: 'kiro',
+    flowId: 'kiro',
+    accountContributionEnabled: true,
+    contributionAdapterId: 'kiro-builder-id',
+    kiroTargetId: 'kiro-rs',
+    kiroRuntime: {
+      register: {
+        email: 'aws-user@example.com',
+      },
+      desktopAuth: {
+        region: 'us-east-1',
+        clientId: 'client-001',
+        clientSecret: 'secret-001',
+        refreshToken: 'refresh-token-001',
+      },
+      upload: {
+        targetId: 'kiro-rs',
+      },
+    },
+  };
+  const publisher = api.createKiroRsPublisher({
+    addLog: async () => {},
+    completeNodeFromBackground: async (nodeId, payload) => {
+      completed.push({ nodeId, payload });
+    },
+    fetchImpl: async (url, options = {}) => {
+      requests.push({ url, options });
+      throw new Error('kiro.rs upload should not be called in contribution mode');
+    },
+    getState: async () => ({ ...liveState }),
+    maybeSubmitFlowContribution: async (_state, options = {}) => ({
+      ok: true,
+      skipped: false,
+      contributionId: 'kiro-contribution-009',
+      message: `贡献链路成功:${options.trigger || 'unknown'}`,
+    }),
+    setState: async (updates = {}) => {
+      liveState = { ...liveState, ...updates };
+    },
+  });
+
+  await publisher.executeKiroUploadCredential({
+    nodeId: 'kiro-upload-credential',
+  });
+
+  assert.equal(requests.length, 0);
+  assert.equal(completed.length, 1);
+  assert.equal(completed[0].nodeId, 'kiro-upload-credential');
+  assert.equal(completed[0].payload.kiroRuntime.upload.targetId, 'contribution');
+  assert.equal(completed[0].payload.kiroRuntime.upload.status, 'uploaded');
+  assert.equal(completed[0].payload.kiroRuntime.upload.credentialId, 'kiro-contribution-009');
+  assert.equal(completed[0].payload.kiroRuntime.upload.lastMessage, '贡献链路成功:kiro-step-9');
+});
+
 test('kiro publisher trims api key and includes fallback Authorization header during connection check', async () => {
   const api = loadPublisherApi();
   const requests = [];

@@ -305,6 +305,7 @@
     'submit-signup-email': '注册并输入手机号',
     'fetch-signup-code': '获取手机验证码',
   });
+  const KIRO_CONTRIBUTION_STEP_TITLE = '贡献上传';
 
   function isPlusModeEnabled(options = {}) {
     return Boolean(options?.plusModeEnabled || options?.plusMode);
@@ -415,6 +416,10 @@
     return step.title;
   }
 
+  function isKiroContributionModeEnabled(options = {}) {
+    return Boolean(options?.accountContributionEnabled || options?.state?.accountContributionEnabled);
+  }
+
   const FLOW_DEFINITION_BUILDERS = Object.freeze({
     openai: {
       getAllSteps() {
@@ -462,7 +467,10 @@
       getPlusPaymentStepTitle() {
         return '';
       },
-      resolveStepTitle(step) {
+      resolveStepTitle(step, options = {}) {
+        if (step?.key === 'kiro-upload-credential' && isKiroContributionModeEnabled(options)) {
+          return KIRO_CONTRIBUTION_STEP_TITLE;
+        }
         return step?.title || '';
       },
     },

@@ -13575,6 +13575,7 @@ const kiroPublisher = self.MultiPageBackgroundKiroPublisherKiroRs?.createKiroRsP
   completeNodeFromBackground,
   fetchImpl: typeof fetch === 'function' ? fetch.bind(globalThis) : null,
   getState,
+  maybeSubmitFlowContribution,
   setState,
 });
 const step10Executor = self.MultiPageBackgroundStep10?.createStep10Executor({

@@ -295,6 +295,7 @@
       completeNodeFromBackground,
       fetchImpl = typeof fetch === 'function' ? fetch.bind(globalThis) : null,
       getState = async () => ({}),
+      maybeSubmitFlowContribution = async () => ({ ok: true, skipped: true, reason: 'not_configured' }),
       setState = async () => {},
     } = deps;
 
@@ -329,10 +330,59 @@
       await setState(nextPatch);
     }
 
+    function shouldUseContributionUpload(state = {}) {
+      return Boolean(state?.accountContributionEnabled)
+        && cleanString(state?.activeFlowId || state?.flowId).toLowerCase() === 'kiro'
+        && cleanString(state?.contributionAdapterId).toLowerCase() === 'kiro-builder-id';
+    }
+
     async function executeKiroUploadCredential(state = {}) {
       const nodeId = String(state?.nodeId || 'kiro-upload-credential').trim();
       const currentState = await getState();
       try {
+        if (shouldUseContributionUpload(currentState)) {
+          await applyRuntimeState(currentState, {
+            session: {
+              currentStage: 'upload',
+              lastError: '',
+              lastWarning: '',
+            },
+            upload: {
+              targetId: 'contribution',
+              status: 'uploading',
+              error: '',
+            },
+          });
+
+          await log('步骤 9：正在上传 Builder ID 到贡献池...', 'info', nodeId);
+          const contributionResult = await maybeSubmitFlowContribution(currentState, {
+            nodeId,
+            trigger: 'kiro-step-9',
+          });
+          if (!contributionResult?.ok || contributionResult?.skipped) {
+            throw new Error(contributionResult?.message || 'Kiro 贡献上传失败。');
+          }
+
+          const uploadedAt = Date.now();
+          const payload = await applyRuntimeState(currentState, {
+            session: {
+              currentStage: 'upload',
+              lastError: '',
+            },
+            upload: {
+              targetId: 'contribution',
+              status: 'uploaded',
+              error: '',
+              credentialId: contributionResult.contributionId || '',
+              lastMessage: contributionResult.message || '贡献上传成功',
+              lastUploadedAt: uploadedAt,
+            },
+          });
+          await log(`步骤 9：贡献上传完成，状态：${contributionResult.message || '贡献上传成功'}`, 'ok', nodeId);
+          await completeNodeFromBackground(nodeId, payload);
+          return;
+        }
+
         const targetId = resolveKiroTargetId(currentState);
         const targetConfig = resolveKiroTargetConfig(currentState, targetId);
         const baseUrl = normalizeKiroRsBaseUrl(targetConfig.baseUrl);

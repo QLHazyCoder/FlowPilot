@@ -210,8 +210,10 @@ test('Kiro contribution adapter redacts server errors that echo submitted secret
   assert.equal(combined.includes('client-secret-super-long'), false);
 });
 
-test('Kiro desktop authorization runner is wired to submit public contribution after step 8', () => {
-  const source = fs.readFileSync('background/kiro/desktop-authorize-runner.js', 'utf8');
-  assert.match(source, /maybeSubmitFlowContribution/);
-  assert.match(source, /trigger:\s*'kiro-step-8'/);
+test('Kiro public contribution is triggered from step 9 instead of step 8', () => {
+  const desktopSource = fs.readFileSync('background/kiro/desktop-authorize-runner.js', 'utf8');
+  const publisherSource = fs.readFileSync('background/kiro/publisher-kiro-rs.js', 'utf8');
+  assert.doesNotMatch(desktopSource, /trigger:\s*'kiro-step-8'/);
+  assert.match(publisherSource, /maybeSubmitFlowContribution/);
+  assert.match(publisherSource, /trigger:\s*'kiro-step-9'/);
 });
