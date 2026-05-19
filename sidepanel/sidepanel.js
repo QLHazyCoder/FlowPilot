@@ -555,7 +555,7 @@ const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_PAYPAL;
 const PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH = 'oauth';
 const PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION = 'sub2api_codex_session';
 const PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION = 'cpa_codex_session';
-const DEFAULT_PLUS_ACCOUNT_ACCESS_STRATEGY = PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH;
+const DEFAULT_PLUS_ACCOUNT_ACCESS_STRATEGY = PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION;
 const SIGNUP_METHOD_EMAIL = 'email';
 const SIGNUP_METHOD_PHONE = 'phone';
 const DEFAULT_SIGNUP_METHOD = SIGNUP_METHOD_EMAIL;
@@ -9312,31 +9312,8 @@ function updatePlusModeUI() {
     selectPlusAccountAccessStrategy.setAttribute('aria-disabled', String(selectPlusAccountAccessStrategy.disabled));
   }
   if (typeof plusAccountAccessStrategyCaption !== 'undefined' && plusAccountAccessStrategyCaption) {
-    if (!enabled) {
-      plusAccountAccessStrategyCaption.textContent = '当前来源仅支持 OAuth';
-    } else if (!canEditPlusAccountAccessStrategy) {
-      plusAccountAccessStrategyCaption.textContent = '当前来源仅支持 OAuth';
-    } else if (effectivePlusAccountAccessStrategy === sub2apiSessionStrategyValue) {
-      plusAccountAccessStrategyCaption.textContent = '复用当前 Plus 已登录会话，直接导入到 SUB2API';
-    } else if (effectivePlusAccountAccessStrategy === oauthStrategyValue) {
-      plusAccountAccessStrategyCaption.textContent = '通过 OAuth 回调创建 SUB2API 账号';
-    } else {
-      plusAccountAccessStrategyCaption.textContent = '当前来源仅支持 OAuth';
-    }
-  }
-  if (typeof plusAccountAccessStrategyCaption !== 'undefined' && plusAccountAccessStrategyCaption) {
-    if (!enabled || !canEditPlusAccountAccessStrategy) {
-      plusAccountAccessStrategyCaption.textContent = '当前来源仅支持 OAuth';
-    } else {
-      plusAccountAccessStrategyCaption.textContent = describePlusAccountAccessStrategy(
-        effectivePlusAccountAccessStrategy,
-        effectiveTargetId
-      );
-    }
-  }
-  if (typeof plusAccountAccessStrategyCaption !== 'undefined' && plusAccountAccessStrategyCaption) {
-    plusAccountAccessStrategyCaption.textContent = !enabled || !canEditPlusAccountAccessStrategy
-      ? '当前来源仅支持 OAuth'
+    plusAccountAccessStrategyCaption.textContent = !enabled
+      ? 'Plus 模式未启用'
       : describePlusAccountAccessStrategy(
         effectivePlusAccountAccessStrategy,
         effectiveTargetId

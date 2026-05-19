@@ -123,6 +123,7 @@ return {
       plusAccountAccessStrategy: 'oauth',
       signupMethod: 'email',
       phoneSignupReloginAfterBindEmailEnabled: false,
+      accountContributionEnabled: false,
     },
   });
   assert.deepEqual(api.calls[1], { type: 'render', stepIds: [88] });

@@ -38,7 +38,7 @@ test('plus checkout content script can be injected repeatedly on the same page',
   assert.equal(context.__MULTIPAGE_PLUS_CHECKOUT_READY__, true);
 });
 
-function createPlusCheckoutMessageHarness({ checkoutSessionId = 'cs_test_123' } = {}) {
+function createPlusCheckoutMessageHarness({ checkoutSessionId = 'cs_test_123', checkoutResponse = null } = {}) {
   const attrs = new Map();
   let listener = null;
   const fetchCalls = [];
@@ -84,7 +84,7 @@ function createPlusCheckoutMessageHarness({ checkoutSessionId = 'cs_test_123' } 
         return {
           ok: true,
           status: 200,
-          json: async () => ({ checkout_session_id: checkoutSessionId }),
+          json: async () => checkoutResponse || ({ checkout_session_id: checkoutSessionId }),
         };
       }
       throw new Error(`unexpected fetch url: ${url}`);
@@ -124,7 +124,56 @@ test('CREATE_PLUS_CHECKOUT keeps PayPal on DE/EUR and openai_ie merchant path by
   assert.equal(checkoutCall.options.headers.Authorization, 'Bearer test-access-token');
   const payload = JSON.parse(checkoutCall.options.body);
   assert.equal(payload.plan_name, 'chatgptplusplan');
+  assert.equal(payload.checkout_ui_mode, 'custom');
   assert.deepEqual(payload.billing_details, { country: 'DE', currency: 'EUR' });
+});
+
+test('CREATE_PLUS_CHECKOUT ignores hosted PayPal URLs outside hosted mode', async () => {
+  const harness = createPlusCheckoutMessageHarness({
+    checkoutResponse: {
+      checkout_session_id: 'cs_paypal_custom',
+      nested: {
+        hosted: 'https://pay.openai.com/c/pay/hosted_cs_paypal_custom',
+      },
+    },
+  });
+
+  const result = await harness.send({
+    type: 'CREATE_PLUS_CHECKOUT',
+    source: 'test',
+    payload: {},
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.checkoutUrl, 'https://chatgpt.com/checkout/openai_ie/cs_paypal_custom');
+  assert.equal(result.hostedCheckoutUrl, 'https://pay.openai.com/c/pay/hosted_cs_paypal_custom');
+  assert.equal(result.fallbackCheckoutUrl, 'https://chatgpt.com/checkout/openai_ie/cs_paypal_custom');
+});
+
+test('CREATE_PLUS_CHECKOUT prefers the hosted PayPal checkout URL only in hosted mode', async () => {
+  const harness = createPlusCheckoutMessageHarness({
+    checkoutResponse: {
+      checkout_session_id: 'cs_paypal_hosted',
+      nested: {
+        hosted: 'https://pay.openai.com/c/pay/hosted_cs_paypal',
+      },
+    },
+  });
+
+  const result = await harness.send({
+    type: 'CREATE_PLUS_CHECKOUT',
+    source: 'test',
+    payload: { hostedCheckoutMode: true },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.checkoutUrl, 'https://pay.openai.com/c/pay/hosted_cs_paypal');
+  assert.equal(result.hostedCheckoutUrl, 'https://pay.openai.com/c/pay/hosted_cs_paypal');
+  assert.equal(result.fallbackCheckoutUrl, 'https://chatgpt.com/checkout/openai_ie/cs_paypal_hosted');
+
+  const checkoutCall = harness.fetchCalls.find((call) => call.url === 'https://chatgpt.com/backend-api/payments/checkout');
+  const payload = JSON.parse(checkoutCall.options.body);
+  assert.equal(payload.checkout_ui_mode, 'hosted');
 });
 
 test('CREATE_PLUS_CHECKOUT uses ID/IDR and openai_llc merchant path for GoPay', async () => {

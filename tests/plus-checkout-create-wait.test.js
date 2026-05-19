@@ -257,6 +257,102 @@ test('Plus checkout create does not wait 20 seconds after opening checkout page'
   assert.equal(events.some((event) => event.type === 'sleep' && event.ms === 20000), false);
 });
 
+test('PayPal session-import checkout waits for the ChatGPT payment success signal', async () => {
+  const events = [];
+  const executor = api.createPlusCheckoutCreateExecutor({
+    addLog: async (message, level = 'info') => events.push({ type: 'log', message, level }),
+    chrome: {
+      tabs: {
+        create: async (payload) => {
+          events.push({ type: 'tab-create', payload });
+          return { id: 43 };
+        },
+        update: async (tabId, payload) => events.push({ type: 'tab-update', tabId, payload }),
+      },
+    },
+    completeNodeFromBackground: async (step, payload) => events.push({ type: 'complete', step, payload }),
+    ensureContentScriptReadyOnTabUntilStopped: async () => events.push({ type: 'ready' }),
+    registerTab: async (source, tabId) => events.push({ type: 'register', source, tabId }),
+    sendTabMessageUntilStopped: async (tabId, source, message) => {
+      events.push({ type: 'tab-message', tabId, source, message });
+      return {
+        checkoutUrl: 'https://pay.openai.com/c/pay/hosted_session',
+        country: 'US',
+        currency: 'USD',
+      };
+    },
+    setState: async (payload) => events.push({ type: 'set-state', payload }),
+    sleepWithStop: async (ms) => events.push({ type: 'sleep', ms }),
+    waitForTabCompleteUntilStopped: async () => events.push({ type: 'tab-complete' }),
+  });
+
+  await executor.executePlusCheckoutCreate({
+    plusModeEnabled: true,
+    plusPaymentMethod: 'paypal',
+    plusAccountAccessStrategy: 'sub2api_codex_session',
+    signupMethod: 'email',
+  });
+
+  assert.equal(events.some((event) => event.type === 'complete'), false);
+  assert.deepEqual(
+    events.find((event) => event.type === 'tab-message')?.message?.payload,
+    { paymentMethod: 'paypal', hostedCheckoutMode: true }
+  );
+  assert.deepEqual(
+    events.find((event) => event.type === 'tab-update'),
+    { type: 'tab-update', tabId: 43, payload: { url: 'https://pay.openai.com/c/pay/hosted_session', active: true } }
+  );
+  const statePayload = events.find((event) => event.type === 'set-state')?.payload || {};
+  assert.equal(statePayload.plusCheckoutTabId, 43);
+  assert.equal(statePayload.plusCheckoutUrl, 'https://pay.openai.com/c/pay/hosted_session');
+  assert.equal(statePayload.plusHostedCheckoutCompletionPending, true);
+  assert.equal(statePayload.plusHostedCheckoutCompleted, false);
+  assert.equal(statePayload.plusReturnUrl, '');
+  assert.equal(events.some((event) => event.type === 'log' && /waiting for the ChatGPT payment success page/.test(event.message)), true);
+});
+
+test('Contribution Plus checkout uses hosted success waiting even when the requested strategy is OAuth', async () => {
+  const events = [];
+  const executor = api.createPlusCheckoutCreateExecutor({
+    addLog: async () => {},
+    chrome: {
+      tabs: {
+        create: async () => ({ id: 44 }),
+        update: async (tabId, payload) => events.push({ type: 'tab-update', tabId, payload }),
+      },
+    },
+    completeNodeFromBackground: async (step, payload) => events.push({ type: 'complete', step, payload }),
+    ensureContentScriptReadyOnTabUntilStopped: async () => {},
+    registerTab: async () => {},
+    sendTabMessageUntilStopped: async (tabId, source, message) => {
+      events.push({ type: 'tab-message', tabId, source, message });
+      return {
+        checkoutUrl: 'https://pay.openai.com/c/pay/contribution_hosted_session',
+        country: 'US',
+        currency: 'USD',
+      };
+    },
+    setState: async (payload) => events.push({ type: 'set-state', payload }),
+    sleepWithStop: async () => {},
+    waitForTabCompleteUntilStopped: async () => {},
+  });
+
+  await executor.executePlusCheckoutCreate({
+    plusModeEnabled: true,
+    accountContributionEnabled: true,
+    plusPaymentMethod: 'paypal',
+    plusAccountAccessStrategy: 'oauth',
+    signupMethod: 'email',
+  });
+
+  assert.deepEqual(
+    events.find((event) => event.type === 'tab-message')?.message?.payload,
+    { paymentMethod: 'paypal', hostedCheckoutMode: true }
+  );
+  assert.equal(events.some((event) => event.type === 'complete'), false);
+  assert.equal(events.find((event) => event.type === 'set-state')?.payload?.plusHostedCheckoutCompletionPending, true);
+});
+
 test('GoPay plus checkout create forwards gopay payment method to the checkout content script', async () => {
   const events = [];
   const executor = api.createPlusCheckoutCreateExecutor({

@@ -106,7 +106,7 @@
             plus: {
               plusModeEnabled: false,
               plusPaymentMethod: 'paypal',
-              plusAccountAccessStrategy: 'oauth',
+              plusAccountAccessStrategy: 'sub2api_codex_session',
             },
             autoRun: {
               stepExecutionRange: {

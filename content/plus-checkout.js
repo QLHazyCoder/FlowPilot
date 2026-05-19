@@ -616,10 +616,12 @@ function writeGoPayDiagnostics(reason, level = 'info') {
   return writePaymentMethodDiagnostics(PLUS_PAYMENT_METHOD_GOPAY, reason, level);
 }
 
-function buildPlusCheckoutPayload(paymentMethod = PLUS_PAYMENT_METHOD_PAYPAL) {
+function buildPlusCheckoutPayload(paymentMethod = PLUS_PAYMENT_METHOD_PAYPAL, options = {}) {
   const config = getPaymentMethodConfig(paymentMethod);
+  const hostedCheckoutMode = config.id === PLUS_PAYMENT_METHOD_PAYPAL && Boolean(options.hostedCheckoutMode);
   return {
     ...JSON.parse(JSON.stringify(PLUS_CHECKOUT_PAYLOAD_BASE)),
+    checkout_ui_mode: hostedCheckoutMode ? 'hosted' : 'custom',
     billing_details: {
       ...config.billingDetails,
     },
@@ -633,6 +635,31 @@ function buildPlusCheckoutUrl(checkoutSessionId, paymentMethod = PLUS_PAYMENT_ME
   }
   const config = getPaymentMethodConfig(paymentMethod);
   return `https://chatgpt.com/checkout/${config.checkoutMerchantPath}/${sessionId}`;
+}
+
+function findHostedCheckoutUrl(payload = {}) {
+  const queue = [payload];
+  const seen = new Set();
+  while (queue.length) {
+    const current = queue.shift();
+    if (!current || typeof current !== 'object' || seen.has(current)) {
+      continue;
+    }
+    seen.add(current);
+
+    const values = Array.isArray(current) ? current : Object.values(current);
+    for (const value of values) {
+      if (typeof value === 'string') {
+        const candidate = value.trim();
+        if (/^https:\/\/(?:pay\.openai\.com|checkout\.stripe\.com)\/c\/pay\//i.test(candidate)) {
+          return candidate;
+        }
+      } else if (value && typeof value === 'object') {
+        queue.push(value);
+      }
+    }
+  }
+  return '';
 }
 
 async function createPlusCheckoutSession(options = {}) {
@@ -650,7 +677,8 @@ async function createPlusCheckoutSession(options = {}) {
 
   log('Plus：正在创建 checkout 会话...');
   const paymentMethod = normalizePlusPaymentMethod(options.paymentMethod);
-  const checkoutPayload = buildPlusCheckoutPayload(paymentMethod);
+  const hostedCheckoutMode = Boolean(options.hostedCheckoutMode);
+  const checkoutPayload = buildPlusCheckoutPayload(paymentMethod, { hostedCheckoutMode });
   const response = await fetch('https://chatgpt.com/backend-api/payments/checkout', {
     method: 'POST',
     credentials: 'include',
@@ -666,9 +694,16 @@ async function createPlusCheckoutSession(options = {}) {
     const detail = data?.detail || data?.message || `HTTP ${response.status}`;
     throw new Error(`创建 Plus Checkout 失败：${detail}`);
   }
+  const hostedCheckoutUrl = findHostedCheckoutUrl(data);
+  const fallbackCheckoutUrl = buildPlusCheckoutUrl(data.checkout_session_id, paymentMethod);
+  const checkoutUrl = hostedCheckoutMode && paymentMethod === PLUS_PAYMENT_METHOD_PAYPAL && hostedCheckoutUrl
+    ? hostedCheckoutUrl
+    : fallbackCheckoutUrl;
 
   return {
-    checkoutUrl: buildPlusCheckoutUrl(data.checkout_session_id, paymentMethod),
+    checkoutUrl,
+    hostedCheckoutUrl,
+    fallbackCheckoutUrl,
     country: checkoutPayload.billing_details.country,
     currency: checkoutPayload.billing_details.currency,
   };

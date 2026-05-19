@@ -12,6 +12,11 @@
   const PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH = 'oauth';
   const PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION = 'sub2api_codex_session';
   const PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION = 'cpa_codex_session';
+  const OPENAI_PLUS_ACCOUNT_ACCESS_STRATEGIES = Object.freeze([
+    PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH,
+    PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION,
+    PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION,
+  ]);
   const VALID_OPENAI_TARGET_IDS = Array.isArray(flowRegistryApi.OPENAI_TARGET_IDS)
     ? flowRegistryApi.OPENAI_TARGET_IDS.slice()
     : ['cpa', 'sub2api', 'codex2api'];
@@ -378,24 +383,27 @@
       const requestedPlusAccountAccessStrategy = normalizePlusAccountAccessStrategy(
         options?.plusAccountAccessStrategy ?? state?.plusAccountAccessStrategy
       );
-      const availablePlusAccountAccessStrategies = activeFlowId === 'openai'
+      const canUsePlusAccountAccessStrategies = activeFlowId === 'openai'
         && Boolean(flowState.supportsPlusMode)
         && Boolean(runtimeLocks.plusModeEnabled)
-        && effectiveSignupMethod === SIGNUP_METHOD_EMAIL
-        ? (
-          Array.isArray(targetState.supportedPlusAccountAccessStrategies)
-            && targetState.supportedPlusAccountAccessStrategies.length > 0
-            ? targetState.supportedPlusAccountAccessStrategies.slice()
-            : [PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH]
-        )
+        && effectiveSignupMethod === SIGNUP_METHOD_EMAIL;
+      const forceSub2ApiSessionImportForContribution = canUsePlusAccountAccessStrategies
+        && Boolean(runtimeLocks.accountContribution);
+      const availablePlusAccountAccessStrategies = canUsePlusAccountAccessStrategies
+        ? (forceSub2ApiSessionImportForContribution
+          ? [PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION]
+          : OPENAI_PLUS_ACCOUNT_ACCESS_STRATEGIES.slice())
         : [PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH];
-      const effectivePlusAccountAccessStrategy = availablePlusAccountAccessStrategies.includes(requestedPlusAccountAccessStrategy)
-        ? requestedPlusAccountAccessStrategy
-        : PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH;
+      const effectivePlusAccountAccessStrategy = forceSub2ApiSessionImportForContribution
+        ? PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION
+        : (availablePlusAccountAccessStrategies.includes(requestedPlusAccountAccessStrategy)
+          ? requestedPlusAccountAccessStrategy
+          : PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH);
       const canEditPlusAccountAccessStrategy = activeFlowId === 'openai'
         && Boolean(flowState.supportsPlusMode)
         && Boolean(runtimeLocks.plusModeEnabled)
         && effectiveSignupMethod === SIGNUP_METHOD_EMAIL
+        && !forceSub2ApiSessionImportForContribution
         && availablePlusAccountAccessStrategies.length > 1;
       const visibleGroupIds = typeof flowRegistryApi.getVisibleGroupIds === 'function'
         && isRegisteredFlowId(activeFlowId)

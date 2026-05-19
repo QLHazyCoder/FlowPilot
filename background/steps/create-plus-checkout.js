@@ -7,6 +7,8 @@
   const PLUS_PAYMENT_METHOD_PAYPAL = 'paypal';
   const PLUS_PAYMENT_METHOD_GOPAY = 'gopay';
   const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
+  const PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION = 'sub2api_codex_session';
+  const PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION = 'cpa_codex_session';
   const DEFAULT_GPC_HELPER_API_URL = 'https://gpc.qlhazycoder.top';
   const GPC_HELPER_PHONE_MODE_AUTO = 'auto';
   const GPC_HELPER_PHONE_MODE_MANUAL = 'manual';
@@ -47,6 +49,17 @@
       return normalized === PLUS_PAYMENT_METHOD_GOPAY ? PLUS_PAYMENT_METHOD_GOPAY : PLUS_PAYMENT_METHOD_PAYPAL;
     }
 
+    function normalizePlusAccountAccessStrategy(value = '') {
+      const normalized = String(value || '').trim().toLowerCase();
+      if (normalized === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
+        return PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION;
+      }
+      if (normalized === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION) {
+        return PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION;
+      }
+      return 'oauth';
+    }
+
     function getCheckoutModeLabel(state = {}) {
       const paymentMethod = normalizePlusPaymentMethod(state?.plusPaymentMethod);
       if (paymentMethod === PLUS_PAYMENT_METHOD_GPC_HELPER) {
@@ -61,6 +74,25 @@
         return 'GPC';
       }
       return paymentMethod === PLUS_PAYMENT_METHOD_GOPAY ? 'GoPay' : 'PayPal';
+    }
+
+    function shouldWaitForHostedCheckoutSuccess(state = {}, paymentMethod = PLUS_PAYMENT_METHOD_PAYPAL) {
+      if (!state?.plusModeEnabled) {
+        return false;
+      }
+      if (normalizePlusPaymentMethod(paymentMethod) !== PLUS_PAYMENT_METHOD_PAYPAL) {
+        return false;
+      }
+      const signupMethod = String(state?.resolvedSignupMethod || state?.signupMethod || 'email').trim().toLowerCase();
+      if (signupMethod === 'phone') {
+        return false;
+      }
+      if (Boolean(state?.accountContributionEnabled)) {
+        return true;
+      }
+      const strategy = normalizePlusAccountAccessStrategy(state?.plusAccountAccessStrategy);
+      return strategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION
+        || strategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION;
     }
 
     async function openFreshChatGptTabForCheckoutCreate() {
@@ -439,6 +471,8 @@
         plusCheckoutCountry: result.country || 'ID',
         plusCheckoutCurrency: result.currency || 'IDR',
         plusCheckoutSource: result.checkoutSource,
+        plusHostedCheckoutCompletionPending: false,
+        plusHostedCheckoutCompleted: false,
         gopayHelperTaskId: result.taskId,
         gopayHelperTaskStatus: result.taskStatus,
         gopayHelperStatusText: result.statusText,
@@ -484,10 +518,14 @@
         logMessage: '步骤 6：正在等待 ChatGPT 页面完成加载，再继续创建订阅页...',
       });
 
+      const waitForHostedSuccess = shouldWaitForHostedCheckoutSuccess(state, paymentMethod);
       const result = await sendTabMessageUntilStopped(tabId, PLUS_CHECKOUT_SOURCE, {
         type: 'CREATE_PLUS_CHECKOUT',
         source: 'background',
-        payload: { paymentMethod },
+        payload: {
+          paymentMethod,
+          ...(waitForHostedSuccess ? { hostedCheckoutMode: true } : {}),
+        },
       });
 
       if (result?.error) {
@@ -496,9 +534,10 @@
       if (!result?.checkoutUrl) {
         throw new Error(`步骤 6：${checkoutModeLabel}未返回可用的订阅链接。`);
       }
+      const checkoutUrl = String(result.checkoutUrl || '').trim();
 
       await addLog(`步骤 6：${checkoutModeLabel}已创建，正在打开订阅页面...`, 'ok');
-      await chrome.tabs.update(tabId, { url: result.checkoutUrl, active: true });
+      await chrome.tabs.update(tabId, { url: checkoutUrl, active: true });
       await waitForTabCompleteUntilStopped(tabId);
       await sleepWithStop(1000);
       await ensureContentScriptReadyOnTabUntilStopped(PLUS_CHECKOUT_SOURCE, tabId, {
@@ -509,13 +548,21 @@
 
       await setState({
         plusCheckoutTabId: tabId,
-        plusCheckoutUrl: result.checkoutUrl,
+        plusCheckoutUrl: checkoutUrl,
         plusCheckoutCountry: result.country || 'DE',
         plusCheckoutCurrency: result.currency || 'EUR',
         plusCheckoutSource: '',
+        plusReturnUrl: '',
+        plusHostedCheckoutCompletionPending: waitForHostedSuccess,
+        plusHostedCheckoutCompleted: false,
       });
 
       await addLog(`步骤 6：Plus Checkout 页面已就绪（${paymentMethodLabel} / ${result.country || 'DE'} ${result.currency || 'EUR'}），准备继续下一步。`, 'info');
+
+      if (waitForHostedSuccess) {
+        await addLog('Step 6: PayPal hosted checkout is open; waiting for the ChatGPT payment success page before importing the Plus session.', 'info');
+        return;
+      }
 
       await completeNodeFromBackground('plus-checkout-create', {
         plusCheckoutCountry: result.country || 'DE',

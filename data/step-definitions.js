@@ -32,6 +32,7 @@
     { id: 8, order: 80, key: 'paypal-approve', title: 'PayPal 登录与授权', sourceId: 'paypal-flow', driverId: 'content/paypal-flow', command: 'paypal-approve' },
     { id: 9, order: 90, key: 'plus-checkout-return', title: '订阅回跳确认', sourceId: 'plus-checkout', driverId: 'content/plus-checkout', command: 'plus-checkout-return' },
   ];
+  const PLUS_PAYPAL_SESSION_PREFIX_STEP_DEFINITIONS = PLUS_PAYPAL_PREFIX_STEP_DEFINITIONS.slice(0, 6);
 
   const PLUS_GOPAY_PREFIX_STEP_DEFINITIONS = [
     { id: 1, order: 10, key: 'open-chatgpt', title: '打开 ChatGPT 官网', sourceId: 'chatgpt', driverId: null, command: 'open-chatgpt' },
@@ -168,16 +169,16 @@
   const NORMAL_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS = createOpenAiSteps(NORMAL_PREFIX_STEP_DEFINITIONS, 7, 70, SIGNUP_METHOD_PHONE, { phoneSignupReloginAfterBindEmailEnabled: true });
   const PLUS_PAYPAL_STEP_DEFINITIONS = createOpenAiSteps(PLUS_PAYPAL_PREFIX_STEP_DEFINITIONS, 10, 100, SIGNUP_METHOD_EMAIL);
   const PLUS_PAYPAL_SUB2API_SESSION_STEP_DEFINITIONS = createOpenAiSteps(
-    PLUS_PAYPAL_PREFIX_STEP_DEFINITIONS,
-    10,
-    100,
+    PLUS_PAYPAL_SESSION_PREFIX_STEP_DEFINITIONS,
+    7,
+    70,
     SIGNUP_METHOD_EMAIL,
     { plusAccountAccessStrategy: PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION }
   );
   const PLUS_PAYPAL_CPA_SESSION_STEP_DEFINITIONS = createOpenAiSteps(
-    PLUS_PAYPAL_PREFIX_STEP_DEFINITIONS,
-    10,
-    100,
+    PLUS_PAYPAL_SESSION_PREFIX_STEP_DEFINITIONS,
+    7,
+    70,
     SIGNUP_METHOD_EMAIL,
     { plusAccountAccessStrategy: PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION }
   );

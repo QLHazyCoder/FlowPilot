@@ -55,6 +55,8 @@ function extractFunction(name) {
 function createHarness() {
   return new Function(`
 const DEFAULT_ACTIVE_FLOW_ID = 'openai';
+const SIGNUP_METHOD_EMAIL = 'email';
+const PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION = 'sub2api_codex_session';
 const workflowEngine = null;
 const self = {
   MultiPageStepDefinitions: {
@@ -120,13 +122,10 @@ function isPlusModeState(state = {}) {
   return Boolean(state?.plusModeEnabled);
 }
 function resolveCurrentFlowCapabilities(state = {}, options = {}) {
-  const normalizedPanelMode = String(options.panelMode || '').trim().toLowerCase();
   const requestedStrategy = normalizePlusAccountAccessStrategy(state.plusAccountAccessStrategy);
-  const effectiveStrategy = normalizedPanelMode === 'sub2api'
-    ? (requestedStrategy === 'sub2api_codex_session' ? 'sub2api_codex_session' : 'oauth')
-    : (normalizedPanelMode === 'cpa'
-      ? (requestedStrategy === 'cpa_codex_session' ? 'cpa_codex_session' : 'oauth')
-      : 'oauth');
+  const effectiveStrategy = state.accountContributionEnabled && state.plusModeEnabled
+    ? 'sub2api_codex_session'
+    : requestedStrategy;
   return {
     effectivePanelMode: options.panelMode,
     effectivePlusAccountAccessStrategy: effectiveStrategy,
@@ -153,12 +152,12 @@ return {
 `)();
 }
 
-test('background step resolution keeps SUB2API session tail only when the effective Plus target supports it', () => {
+test('background step resolution keeps SUB2API session tail independent from the current panel mode', () => {
   const api = createHarness();
   const state = {
     activeFlowId: 'openai',
     flowId: 'openai',
-    panelMode: 'sub2api',
+    panelMode: 'cpa',
     plusModeEnabled: true,
     plusPaymentMethod: 'paypal',
     plusAccountAccessStrategy: 'sub2api_codex_session',
@@ -205,7 +204,7 @@ test('background step resolution keeps CPA session tail when the effective Plus 
   ]);
 });
 
-test('background step resolution falls back to OAuth tail when the requested session strategy is not effective for the current panel mode', () => {
+test('background step resolution keeps SUB2API session tail even when the current panel mode is CPA', () => {
   const api = createHarness();
   const state = {
     activeFlowId: 'openai',
@@ -220,12 +219,34 @@ test('background step resolution falls back to OAuth tail when the requested ses
   const resolvedState = api.buildResolvedStepDefinitionState(state);
   const nodeIds = api.getNodeIdsForState(state);
 
-  assert.equal(resolvedState.plusAccountAccessStrategy, 'oauth');
-  assert.equal(nodeIds.includes('sub2api-session-import'), false);
-  assert.deepStrictEqual(nodeIds.slice(-4), [
-    'oauth-login',
-    'fetch-login-code',
-    'confirm-oauth',
-    'platform-verify',
+  assert.equal(resolvedState.plusAccountAccessStrategy, 'sub2api_codex_session');
+  assert.deepStrictEqual(nodeIds, [
+    'open-chatgpt',
+    'plus-checkout-create',
+    'plus-checkout-billing',
+    'paypal-approve',
+    'plus-checkout-return',
+    'sub2api-session-import',
   ]);
+});
+
+test('background contribution Plus mode forces SUB2API session import over a CPA session request', () => {
+  const api = createHarness();
+  const state = {
+    activeFlowId: 'openai',
+    flowId: 'openai',
+    panelMode: 'cpa',
+    plusModeEnabled: true,
+    accountContributionEnabled: true,
+    plusPaymentMethod: 'paypal',
+    plusAccountAccessStrategy: 'cpa_codex_session',
+    signupMethod: 'email',
+  };
+
+  const resolvedState = api.buildResolvedStepDefinitionState(state);
+  const nodeIds = api.getNodeIdsForState(state);
+
+  assert.equal(resolvedState.plusAccountAccessStrategy, 'sub2api_codex_session');
+  assert.equal(nodeIds.includes('cpa-session-import'), false);
+  assert.equal(nodeIds.at(-1), 'sub2api-session-import');
 });
