@@ -658,7 +658,7 @@ header {
   align-items: center;
   min-height: 34px;
   margin-bottom: 14px;
-  padding: 7px 46px;
+  padding: 7px 90px;
   border: 1px solid color-mix(in srgb, var(--amber) 24%, var(--border));
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--amber) 10%, var(--bg-base));
@@ -675,6 +675,7 @@ header {
   left: 10px;
   top: 50%;
   transform: translateY(-50%);
+  min-width: 62px;
   padding: 3px 7px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--amber) 22%, var(--bg-base));
@@ -682,6 +683,7 @@ header {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
+  text-align: center;
 }
 
 .auto-run-ad-badge--end {
@@ -1380,6 +1382,26 @@ header {
 }
 .data-textarea::placeholder { color: var(--text-muted); }
 .data-textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+
+.textarea-with-icon {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+}
+
+.data-textarea-with-icon {
+  padding-right: 38px;
+}
+
+.data-textarea.is-privacy-masked {
+  -webkit-text-security: disc;
+}
+
+.textarea-with-icon .input-icon-btn {
+  top: 8px;
+}
 
 .data-input-with-icon {
   padding-right: 38px;

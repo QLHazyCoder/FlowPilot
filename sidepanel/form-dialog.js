@@ -92,9 +92,10 @@
           input.appendChild(optionNode);
         });
       } else {
+        const shouldMaskInput = field.type === 'password' || field.masked === true;
         input = documentRef.createElement('input');
-        input.type = field.type === 'password' ? 'password' : 'text';
-        input.className = field.type === 'password'
+        input.type = shouldMaskInput ? 'password' : 'text';
+        input.className = shouldMaskInput
           ? 'data-input data-input-with-icon'
           : 'data-input';
       }
@@ -120,7 +121,7 @@
       input.dataset.fieldKey = String(field.key || '');
       label.htmlFor = field.key;
       input.id = field.key;
-      if (field.type === 'password') {
+      if (field.type === 'password' || field.masked === true) {
         const inputShell = documentRef.createElement('div');
         inputShell.className = 'input-with-icon';
         inputShell.appendChild(input);

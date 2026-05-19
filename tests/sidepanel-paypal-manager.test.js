@@ -44,6 +44,14 @@ test('sidepanel html contains paypal select and GoPay controls', () => {
   assert.match(html, /id="shared-form-modal"/);
 });
 
+test('paypal account dialog masks the login account field for recording', () => {
+  const source = fs.readFileSync('sidepanel/paypal-manager.js', 'utf8');
+
+  assert.match(source, /label:\s*'PayPal 账号'[\s\S]*masked:\s*true/);
+  assert.match(source, /showPasswordLabel:\s*'显示 PayPal 账号'/);
+  assert.match(source, /hidePasswordLabel:\s*'隐藏 PayPal 账号'/);
+});
+
 test('paypal manager saves a paypal account and selects it immediately', async () => {
   const source = fs.readFileSync('sidepanel/paypal-manager.js', 'utf8');
   const windowObject = {};

@@ -1550,6 +1550,50 @@ let customEmailPoolEntriesState = [];
 
 const EYE_OPEN_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const EYE_CLOSED_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19C5 19 1 12 1 12a21.77 21.77 0 0 1 5.06-6.94"/><path d="M9.9 4.24A10.94 10.94 0 0 1 12 5c7 0 11 7 11 7a21.86 21.86 0 0 1-2.16 3.19"/><path d="M1 1l22 22"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/></svg>';
+const PRIVACY_MASKED_INPUT_IDS = Object.freeze([
+  'input-contribution-qq',
+  'input-sub2api-url',
+  'input-sub2api-email',
+  'input-sub2api-default-proxy',
+  'input-codex2api-url',
+  'input-kiro-rs-url',
+  'input-gpc-helper-api',
+  'input-gpc-helper-phone',
+  'input-gpc-helper-local-sms-url',
+  'input-gopay-phone',
+  'input-gopay-otp',
+  'input-email-prefix',
+  'input-inbucket-host',
+  'input-inbucket-mailbox',
+  'input-email',
+  'input-temp-email-base-url',
+  'input-temp-email-receive-mailbox',
+  'input-cloud-mail-base-url',
+  'input-cloud-mail-admin-email',
+  'input-cloud-mail-receive-mailbox',
+  'input-cloud-mail-domain',
+  'input-yyds-mail-base-url',
+  'input-hotmail-remote-base-url',
+  'input-hotmail-local-base-url',
+  'input-hotmail-email',
+  'input-hotmail-client-id',
+  'input-mail2925-email',
+  'input-luckmail-base-url',
+  'input-luckmail-domain',
+  'input-ip-proxy-account-session-prefix',
+  'input-ip-proxy-host',
+  'input-ip-proxy-region',
+  'input-account-run-history-helper-base-url',
+  'input-free-reusable-phone',
+  'input-signup-phone',
+]);
+const PRIVACY_MASKED_TEXTAREA_IDS = Object.freeze([
+  'input-custom-mail-provider-pool',
+  'input-custom-email-pool-import',
+  'input-hotmail-import',
+  'input-mail2925-import',
+  'input-ip-proxy-account-list',
+]);
 const COPY_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 const parseHotmailImportText = window.HotmailUtils?.parseHotmailImportText;
 const normalizeHotmailServiceModeFromUtils = window.HotmailUtils?.normalizeHotmailServiceMode;
@@ -13244,6 +13288,132 @@ function bindPasswordVisibilityToggles(root = document) {
   });
 }
 
+function getPrivacyMaskFieldLabel(control) {
+  const row = control?.closest?.('.data-row, .modal-form-row');
+  const label = row?.querySelector?.('.data-label, .modal-form-label')?.textContent;
+  const fallback = control?.getAttribute?.('aria-label')
+    || control?.placeholder
+    || control?.id
+    || '\u5185\u5bb9';
+  return String(label || fallback || '\u5185\u5bb9').replace(/\s+/g, ' ').trim();
+}
+
+function getPrivacyMaskLabels(control) {
+  const label = getPrivacyMaskFieldLabel(control) || '\u5185\u5bb9';
+  return {
+    show: `\u663e\u793a${label}`,
+    hide: `\u9690\u85cf${label}`,
+  };
+}
+
+function ensurePrivacyControlShell(control, className) {
+  const parent = control?.parentElement || null;
+  if (!control || !parent) {
+    return null;
+  }
+  if (parent.classList?.contains(className)) {
+    return parent;
+  }
+  const shell = document.createElement('div');
+  shell.className = className;
+  parent.insertBefore(shell, control);
+  shell.appendChild(control);
+  return shell;
+}
+
+function createPrivacyToggleButton(control, labels) {
+  const button = document.createElement('button');
+  button.className = 'input-icon-btn';
+  button.type = 'button';
+  if (control?.id) {
+    button.id = `btn-toggle-${control.id.replace(/^input-/, '')}`;
+  }
+  button.setAttribute('aria-label', labels.show);
+  button.title = labels.show;
+  return button;
+}
+
+function installPrivacyMaskedInput(input) {
+  if (!input || input.type === 'hidden') {
+    return;
+  }
+  const labels = getPrivacyMaskLabels(input);
+  input.type = 'password';
+  input.classList?.add('data-input-with-icon');
+  const shell = ensurePrivacyControlShell(input, 'input-with-icon');
+  if (!shell) {
+    return;
+  }
+
+  let button = shell.querySelector?.(`[data-password-toggle="${input.id}"]`) || null;
+  if (!button) {
+    button = createPrivacyToggleButton(input, labels);
+    shell.appendChild(button);
+  }
+  button.dataset.passwordToggle = input.id;
+  button.dataset.showLabel = button.dataset.showLabel || labels.show;
+  button.dataset.hideLabel = button.dataset.hideLabel || labels.hide;
+  syncPasswordVisibilityToggle(button);
+}
+
+function syncPrivacyTextareaToggle(button, textarea) {
+  if (!button || !textarea) {
+    return;
+  }
+  const labels = getPrivacyMaskLabels(textarea);
+  const isHidden = textarea.dataset?.privacyMasked !== 'false';
+  textarea.classList?.toggle('is-privacy-masked', isHidden);
+  button.innerHTML = isHidden ? EYE_OPEN_ICON : EYE_CLOSED_ICON;
+  button.setAttribute('aria-label', isHidden ? labels.show : labels.hide);
+  button.title = isHidden ? labels.show : labels.hide;
+}
+
+function installPrivacyMaskedTextarea(textarea) {
+  if (!textarea) {
+    return;
+  }
+  const labels = getPrivacyMaskLabels(textarea);
+  textarea.classList?.add('data-textarea-with-icon', 'is-privacy-masked');
+  if (!textarea.dataset) {
+    return;
+  }
+  textarea.dataset.privacyMasked = textarea.dataset.privacyMasked || 'true';
+  const shell = ensurePrivacyControlShell(textarea, 'textarea-with-icon');
+  if (!shell) {
+    return;
+  }
+
+  let button = shell.querySelector?.(`[data-privacy-textarea-toggle="${textarea.id}"]`) || null;
+  if (!button) {
+    button = createPrivacyToggleButton(textarea, labels);
+    shell.appendChild(button);
+  }
+  button.dataset.privacyTextareaToggle = textarea.id;
+  syncPrivacyTextareaToggle(button, textarea);
+  if (button.dataset?.privacyTextareaToggleBound === 'true') {
+    return;
+  }
+  button.dataset.privacyTextareaToggleBound = 'true';
+  button.addEventListener('click', () => {
+    textarea.dataset.privacyMasked = textarea.dataset.privacyMasked === 'false' ? 'true' : 'false';
+    syncPrivacyTextareaToggle(button, textarea);
+  });
+}
+
+function installPrivacyMaskControls(root = document) {
+  PRIVACY_MASKED_INPUT_IDS.forEach((inputId) => {
+    const input = root.getElementById?.(inputId) || document.getElementById(inputId);
+    installPrivacyMaskedInput(input);
+  });
+  PRIVACY_MASKED_TEXTAREA_IDS.forEach((textareaId) => {
+    const textarea = root.getElementById?.(textareaId) || document.getElementById(textareaId);
+    installPrivacyMaskedTextarea(textarea);
+  });
+}
+
+installPrivacyMaskControls();
+bindPasswordVisibilityToggles();
+
 async function copyTextToClipboard(text) {
   const value = String(text || '').trim();
   if (!value) {
@@ -17437,7 +17607,6 @@ document.addEventListener('scroll', () => {
 // ============================================================
 
 initializeManualStepActions();
-bindPasswordVisibilityToggles();
 initTheme();
 initHotmailListExpandedState();
 initMail2925ListExpandedState();
