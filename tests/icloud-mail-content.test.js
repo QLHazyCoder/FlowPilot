@@ -227,6 +227,19 @@ test('icloud poll session baseline is reused across calls and enables fallback a
     extractFunction('normalizeRulePatternList'),
     extractFunction('extractCodeByRulePatterns'),
     extractFunction('extractVerificationCode'),
+    extractFunction('getElementAccessibleText'),
+    extractFunction('resolveIcloudInboxCategoryId'),
+    extractFunction('getIcloudInboxCategoryLabel'),
+    extractFunction('resolveIcloudInboxControlText'),
+    extractFunction('isIcloudInboxControlLabel'),
+    extractFunction('isIcloudSelectedMailboxControl'),
+    extractFunction('findIcloudInboxControl'),
+    extractFunction('openIcloudInboxIfAvailable'),
+    extractFunction('getIcloudInboxCategoryControls'),
+    extractFunction('isIcloudInboxCategorySelected'),
+    extractFunction('switchIcloudInboxCategory'),
+    extractFunction('visitIcloudInboxCategories'),
+    extractFunction('collectThreadSignaturesAcrossInboxCategories'),
     extractFunction('normalizePollSessionKey'),
     extractFunction('getOrCreatePollSessionBaseline'),
     extractFunction('persistPollSessionBaseline'),
@@ -240,6 +253,7 @@ function throwIfStopped() {}
 async function sleep() {}
 async function waitForElement() { return true; }
 async function refreshInbox() { return true; }
+function isVisibleElement() { return true; }
 function normalizeThreadEntry(entry) {
   return {
     signature: String(entry.signature || ''),
@@ -330,6 +344,19 @@ test('icloud step8 polling finds a visible first-row code immediately', async ()
     extractFunction('normalizeRulePatternList'),
     extractFunction('extractCodeByRulePatterns'),
     extractFunction('extractVerificationCode'),
+    extractFunction('getElementAccessibleText'),
+    extractFunction('resolveIcloudInboxCategoryId'),
+    extractFunction('getIcloudInboxCategoryLabel'),
+    extractFunction('resolveIcloudInboxControlText'),
+    extractFunction('isIcloudInboxControlLabel'),
+    extractFunction('isIcloudSelectedMailboxControl'),
+    extractFunction('findIcloudInboxControl'),
+    extractFunction('openIcloudInboxIfAvailable'),
+    extractFunction('getIcloudInboxCategoryControls'),
+    extractFunction('isIcloudInboxCategorySelected'),
+    extractFunction('switchIcloudInboxCategory'),
+    extractFunction('visitIcloudInboxCategories'),
+    extractFunction('collectThreadSignaturesAcrossInboxCategories'),
     extractFunction('normalizePollSessionKey'),
     extractFunction('getOrCreatePollSessionBaseline'),
     extractFunction('persistPollSessionBaseline'),
@@ -343,6 +370,7 @@ function throwIfStopped() {}
 async function sleep() {}
 async function waitForElement() { return true; }
 async function refreshInbox() { return true; }
+function isVisibleElement() { return true; }
 const currentThreadData = [
   {
     signature: 'visible-code',
@@ -410,6 +438,19 @@ test('icloud step8 visible first-row code still respects excluded codes', async 
     extractFunction('normalizeRulePatternList'),
     extractFunction('extractCodeByRulePatterns'),
     extractFunction('extractVerificationCode'),
+    extractFunction('getElementAccessibleText'),
+    extractFunction('resolveIcloudInboxCategoryId'),
+    extractFunction('getIcloudInboxCategoryLabel'),
+    extractFunction('resolveIcloudInboxControlText'),
+    extractFunction('isIcloudInboxControlLabel'),
+    extractFunction('isIcloudSelectedMailboxControl'),
+    extractFunction('findIcloudInboxControl'),
+    extractFunction('openIcloudInboxIfAvailable'),
+    extractFunction('getIcloudInboxCategoryControls'),
+    extractFunction('isIcloudInboxCategorySelected'),
+    extractFunction('switchIcloudInboxCategory'),
+    extractFunction('visitIcloudInboxCategories'),
+    extractFunction('collectThreadSignaturesAcrossInboxCategories'),
     extractFunction('normalizePollSessionKey'),
     extractFunction('getOrCreatePollSessionBaseline'),
     extractFunction('persistPollSessionBaseline'),
@@ -423,6 +464,7 @@ function throwIfStopped() {}
 async function sleep() {}
 async function waitForElement() { return true; }
 async function refreshInbox() { return true; }
+function isVisibleElement() { return true; }
 const currentThreadData = [
   {
     signature: 'visible-code',
@@ -473,4 +515,227 @@ return { handlePollEmail };
     }),
     /仍未在 iCloud 邮箱中找到新的匹配邮件/
   );
+});
+
+test('icloud polling scans updates category when primary has no new verification code', async () => {
+  const bundle = [
+    extractFunction('normalizeText'),
+    extractFunction('getElementAccessibleText'),
+    extractFunction('resolveIcloudInboxCategoryId'),
+    extractFunction('getIcloudInboxCategoryLabel'),
+    extractFunction('resolveIcloudInboxControlText'),
+    extractFunction('isIcloudInboxControlLabel'),
+    extractFunction('isIcloudSelectedMailboxControl'),
+    extractFunction('findIcloudInboxControl'),
+    extractFunction('openIcloudInboxIfAvailable'),
+    extractFunction('getIcloudInboxCategoryControls'),
+    extractFunction('isIcloudInboxCategorySelected'),
+    extractFunction('switchIcloudInboxCategory'),
+    extractFunction('visitIcloudInboxCategories'),
+    extractFunction('getThreadItemMetadata'),
+    extractFunction('buildItemSignature'),
+    extractFunction('collectThreadSignaturesAcrossInboxCategories'),
+    extractFunction('normalizeRulePatternList'),
+    extractFunction('extractCodeByRulePatterns'),
+    extractFunction('extractVerificationCode'),
+    extractFunction('normalizePollSessionKey'),
+    extractFunction('getOrCreatePollSessionBaseline'),
+    extractFunction('persistPollSessionBaseline'),
+    extractFunction('handlePollEmail'),
+  ].join('\n');
+
+  const api = new Function(`
+const ICLOUD_POLL_SESSION_CACHE = new Map();
+const ICLOUD_INBOX_CATEGORY_DEFINITIONS = Object.freeze([
+  { id: 'primary', label: '主要', patterns: [/^主要(?:\\s*\\d+)?$/i, /^primary(?:\\s+\\d+)?$/i] },
+  { id: 'updates', label: '更新', patterns: [/^更新(?:\\s*\\d+)?$/i, /^updates?(?:\\s+\\d+)?$/i] },
+]);
+let activeCategory = 'primary';
+const controls = [
+  {
+    id: 'primary',
+    innerText: '主要',
+    textContent: '主要',
+    className: '',
+    getAttribute(name) {
+      if (name === 'aria-selected') return activeCategory === 'primary' ? 'true' : 'false';
+      return '';
+    },
+  },
+  {
+    id: 'updates',
+    innerText: '更新',
+    textContent: '更新',
+    className: '',
+    getAttribute(name) {
+      if (name === 'aria-selected') return activeCategory === 'updates' ? 'true' : 'false';
+      return '';
+    },
+  },
+];
+const threadsByCategory = {
+  primary: [
+    { signature: 'primary-old', sender: 'OpenAI', subject: '旧邮件', preview: 'no code', timestamp: '10:00', ariaLabel: 'primary-old' },
+  ],
+  updates: [],
+};
+function log() {}
+function throwIfStopped() {}
+async function sleep() {}
+async function waitForElement() { return true; }
+async function refreshInbox() { return true; }
+function isVisibleElement() { return true; }
+function simulateClick(node) {
+  activeCategory = node.id;
+}
+const document = {
+  querySelectorAll(selector) {
+    if (selector === 'button, [role="tab"], [role="button"], a') {
+      return controls;
+    }
+    return [];
+  },
+};
+function setUpdatesThreadData(next) {
+  threadsByCategory.updates = next;
+}
+function collectThreadItems() {
+  return threadsByCategory[activeCategory].map((entry) => ({
+    getAttribute(name) {
+      if (name === 'aria-label') return entry.ariaLabel || entry.signature;
+      return '';
+    },
+    querySelector(selector) {
+      if (selector === '.thread-participants') return { textContent: entry.sender };
+      if (selector === '.thread-subject') return { textContent: entry.subject };
+      if (selector === '.thread-preview') return { textContent: entry.preview };
+      if (selector === '.thread-timestamp') return { textContent: entry.timestamp };
+      return null;
+    },
+  }));
+}
+async function openMailItemAndRead(item) {
+  const meta = getThreadItemMetadata(item);
+  return {
+    sender: meta.sender,
+    recipients: '',
+    timestamp: meta.timestamp,
+    bodyText: meta.preview,
+    combinedText: meta.combinedText,
+  };
+}
+${bundle}
+return {
+  handlePollEmail,
+  setUpdatesThreadData,
+};
+`)();
+
+  await assert.rejects(
+    () => api.handlePollEmail(8, {
+      senderFilters: ['openai'],
+      subjectFilters: ['code', 'login', '验证码'],
+      maxAttempts: 1,
+      intervalMs: 10,
+      excludeCodes: [],
+      sessionKey: 'icloud-categories',
+    }),
+    /仍未在 iCloud 邮箱中找到新的匹配邮件/
+  );
+
+  api.setUpdatesThreadData([
+    {
+      signature: 'updates-code',
+      sender: 'noreply@tm.openai.com',
+      subject: 'ChatGPT Log-in Code',
+      preview: 'enter this code 774411',
+      timestamp: '10:01',
+      ariaLabel: 'updates-code',
+    },
+  ]);
+
+  const result = await api.handlePollEmail(8, {
+    senderFilters: ['openai', 'noreply'],
+    subjectFilters: ['code', 'login', '验证码'],
+    maxAttempts: 1,
+    intervalMs: 10,
+    excludeCodes: [],
+    sessionKey: 'icloud-categories',
+  });
+
+  assert.equal(result.code, '774411');
+});
+
+test('icloud refresh opens inbox before refreshing current mail list', async () => {
+  const bundle = [
+    extractFunction('normalizeText'),
+    extractFunction('getElementAccessibleText'),
+    extractFunction('resolveIcloudInboxCategoryId'),
+    extractFunction('resolveIcloudInboxControlText'),
+    extractFunction('isIcloudInboxControlLabel'),
+    extractFunction('isIcloudSelectedMailboxControl'),
+    extractFunction('findIcloudInboxControl'),
+    extractFunction('openIcloudInboxIfAvailable'),
+    extractFunction('refreshInbox'),
+  ].join('\n');
+
+  const api = new Function(`
+const ICLOUD_INBOX_CATEGORY_DEFINITIONS = Object.freeze([
+  { id: 'primary', label: '主要', patterns: [/^主要(?:\\s*\\d+)?$/i, /^primary(?:\\s+\\d+)?$/i] },
+  { id: 'updates', label: '更新', patterns: [/^更新(?:\\s*\\d+)?$/i, /^updates?(?:\\s+\\d+)?$/i] },
+]);
+const clicks = [];
+function isVisibleElement() { return true; }
+async function sleep() {}
+function simulateClick(node) {
+  clicks.push(node.id);
+}
+const inbox = {
+  id: 'inbox',
+  innerText: '收件箱',
+  textContent: '收件箱',
+  className: '',
+  getAttribute(name) {
+    if (name === 'aria-selected') return 'false';
+    return '';
+  },
+};
+const refresh = {
+  id: 'refresh',
+  innerText: '刷新',
+  textContent: '刷新',
+  className: '',
+  getAttribute() {
+    return '';
+  },
+};
+const primary = {
+  id: 'primary',
+  innerText: '主要',
+  textContent: '主要',
+  className: '',
+  getAttribute() {
+    return '';
+  },
+};
+const document = {
+  querySelectorAll(selector) {
+    if (selector === 'button, [role="button"], [role="treeitem"], [role="option"], a') {
+      return [primary, inbox, refresh];
+    }
+    if (selector === 'button, [role="button"], a') {
+      return [primary, inbox, refresh];
+    }
+    return [];
+  },
+};
+${bundle}
+return {
+  refreshInbox,
+  clicks,
+};
+`)();
+
+  await api.refreshInbox();
+  assert.deepEqual(api.clicks, ['inbox', 'refresh']);
 });

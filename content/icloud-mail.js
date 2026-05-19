@@ -90,6 +90,170 @@ if (shouldHandlePollEmailInCurrentFrame) {
     });
   }
 
+  const ICLOUD_INBOX_CATEGORY_DEFINITIONS = Object.freeze([
+    {
+      id: 'primary',
+      label: '主要',
+      patterns: [/^主要(?:\s*\d+)?$/i, /^primary(?:\s+\d+)?$/i],
+    },
+    {
+      id: 'updates',
+      label: '更新',
+      patterns: [/^更新(?:\s*\d+)?$/i, /^updates?(?:\s+\d+)?$/i],
+    },
+  ]);
+
+  function getElementAccessibleText(node) {
+    if (!node) return '';
+    return normalizeText([
+      node.getAttribute?.('aria-label') || '',
+      node.getAttribute?.('title') || '',
+      node.innerText || node.textContent || '',
+    ].filter(Boolean).join(' '));
+  }
+
+  function resolveIcloudInboxCategoryId(label = '') {
+    const normalized = normalizeText(label)
+      .replace(/[，,：:;；()[\]（）]/g, ' ')
+      .replace(/\b(?:unread|messages?|mails?)\b/gi, ' ')
+      .replace(/(?:未读|封|邮件)/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!normalized) return '';
+    return ICLOUD_INBOX_CATEGORY_DEFINITIONS.find((definition) => (
+      definition.patterns.some((pattern) => pattern.test(normalized))
+    ))?.id || '';
+  }
+
+  function getIcloudInboxCategoryControls() {
+    if (typeof document === 'undefined' || typeof document.querySelectorAll !== 'function') {
+      return [];
+    }
+    const controls = [];
+    const seenIds = new Set();
+    const candidates = Array.from(document.querySelectorAll('button, [role="tab"], [role="button"], a'));
+    for (const node of candidates) {
+      if (!isVisibleElement(node)) continue;
+      const categoryId = resolveIcloudInboxCategoryId(getElementAccessibleText(node));
+      if (!categoryId || seenIds.has(categoryId)) continue;
+      seenIds.add(categoryId);
+      controls.push({ id: categoryId, node, label: getIcloudInboxCategoryLabel(categoryId) });
+    }
+    return controls;
+  }
+
+  function getIcloudInboxCategoryLabel(categoryId = '') {
+    return ICLOUD_INBOX_CATEGORY_DEFINITIONS.find((definition) => definition.id === categoryId)?.label || categoryId || '当前分类';
+  }
+
+  function resolveIcloudInboxControlText(label = '') {
+    return normalizeText(label)
+      .replace(/[，,：:;；()[\]（）]/g, ' ')
+      .replace(/\b(?:unread|messages?|mails?)\b/gi, ' ')
+      .replace(/(?:未读|封|邮件)/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function isIcloudInboxControlLabel(label = '') {
+    const normalized = resolveIcloudInboxControlText(label);
+    return /^(?:收件箱|inbox)(?:\s*\d+)?$/i.test(normalized);
+  }
+
+  function isIcloudSelectedMailboxControl(node) {
+    if (!node) return false;
+    if (node.getAttribute?.('aria-selected') === 'true') return true;
+    if (node.getAttribute?.('aria-current')) return true;
+    const className = String(node.className || '').toLowerCase();
+    return /\b(selected|current|active)\b/.test(className);
+  }
+
+  function findIcloudInboxControl() {
+    if (typeof document === 'undefined' || typeof document.querySelectorAll !== 'function') {
+      return null;
+    }
+    const candidates = Array.from(document.querySelectorAll('button, [role="button"], [role="treeitem"], [role="option"], a'));
+    return candidates.find((node) => (
+      isVisibleElement(node)
+      && !resolveIcloudInboxCategoryId(getElementAccessibleText(node))
+      && isIcloudInboxControlLabel(getElementAccessibleText(node))
+    )) || null;
+  }
+
+  async function openIcloudInboxIfAvailable(options = {}) {
+    const inboxControl = findIcloudInboxControl();
+    if (!inboxControl) {
+      return false;
+    }
+    if (!options.force && isIcloudSelectedMailboxControl(inboxControl)) {
+      return true;
+    }
+    simulateClick(inboxControl);
+    await sleep(Number(options.waitMs) > 0 ? Number(options.waitMs) : 1000);
+    return true;
+  }
+
+  function isIcloudInboxCategorySelected(control = {}) {
+    const node = control?.node;
+    if (!node) return false;
+    if (node.getAttribute?.('aria-selected') === 'true') return true;
+    if (node.getAttribute?.('aria-pressed') === 'true') return true;
+    const className = String(node.className || '').toLowerCase();
+    return /\b(selected|current|active)\b/.test(className);
+  }
+
+  async function switchIcloudInboxCategory(control = {}) {
+    if (!control?.node) return false;
+    if (isIcloudInboxCategorySelected(control)) {
+      return true;
+    }
+    simulateClick(control.node);
+    await sleep(800);
+    return true;
+  }
+
+  async function visitIcloudInboxCategories(visitor) {
+    const controls = getIcloudInboxCategoryControls();
+    if (controls.length <= 1) {
+      return visitor({
+        id: controls[0]?.id || 'current',
+        label: controls[0]?.label || '当前分类',
+      });
+    }
+
+    const selected = controls.find(isIcloudInboxCategorySelected) || null;
+    const orderedControls = [
+      ...(selected ? [selected] : []),
+      ...controls.filter((control) => control !== selected),
+    ];
+
+    for (const control of orderedControls) {
+      throwIfStopped();
+      await switchIcloudInboxCategory(control);
+      const result = await visitor({
+        id: control.id,
+        label: control.label,
+      });
+      if (result) {
+        return result;
+      }
+    }
+    return null;
+  }
+
+  async function collectThreadSignaturesAcrossInboxCategories() {
+    const signatures = new Set();
+    let categoryCount = 0;
+    await visitIcloudInboxCategories(async () => {
+      categoryCount += 1;
+      collectThreadItems().forEach((item) => {
+        signatures.add(buildItemSignature(item));
+      });
+      return null;
+    });
+    return { signatures, categoryCount };
+  }
+
   function getThreadItemMetadata(item) {
     const sender = normalizeText(item.querySelector('.thread-participants')?.textContent || '');
     const subject = normalizeText(item.querySelector('.thread-subject')?.textContent || '');
@@ -105,6 +269,9 @@ if (shouldHandlePollEmailInCurrentFrame) {
   }
 
   function buildItemSignature(item) {
+    if (item?.__icloudSignature) {
+      return normalizeText(item.__icloudSignature);
+    }
     const meta = getThreadItemMetadata(item);
     return normalizeText([
       item.getAttribute('aria-label') || '',
@@ -237,6 +404,7 @@ if (shouldHandlePollEmailInCurrentFrame) {
   }
 
   async function refreshInbox() {
+    const inboxOpened = await openIcloudInboxIfAvailable({ force: true, waitMs: 700 });
     const refreshPatterns = [/刷新/i, /refresh/i, /重新载入/i];
     const candidates = document.querySelectorAll('button, [role="button"], a');
     for (const node of candidates) {
@@ -247,6 +415,10 @@ if (shouldHandlePollEmailInCurrentFrame) {
         await sleep(1000);
         return;
       }
+    }
+
+    if (inboxOpened) {
+      return;
     }
 
     const inboxPatterns = [/收件箱/, /inbox/i];
@@ -327,16 +499,19 @@ if (shouldHandlePollEmailInCurrentFrame) {
     const normalizedSubjectFilters = subjectFilters.map((filter) => String(filter || '').toLowerCase()).filter(Boolean);
 
     log(`步骤 ${step}：开始轮询 iCloud 邮箱（最多 ${maxAttempts} 次）`);
-    await waitForElement('.content-container', 10000);
+    await waitForElement('.content-container, [role="tab"], .thread-list-item, [role="treeitem"]', 10000);
+    await openIcloudInboxIfAvailable();
     await sleep(1500);
-    const currentItems = collectThreadItems();
+    const baselineSnapshot = await collectThreadSignaturesAcrossInboxCategories();
+    const currentItems = Array.from(baselineSnapshot.signatures, (signature) => ({ __icloudSignature: signature }));
     const sessionBaseline = getOrCreatePollSessionBaseline(pollSessionKey, currentItems);
     const existingSignatures = sessionBaseline.signatures;
     let fallbackCarry = sessionBaseline.fallbackCarry;
     if (sessionBaseline.fromCache) {
       log(`步骤 ${step}：已复用当前会话旧邮件快照（${existingSignatures.size} 封）。`);
     } else {
-      log(`步骤 ${step}：已记录当前 ${existingSignatures.size} 封旧邮件快照`);
+      const categoryText = baselineSnapshot.categoryCount > 1 ? `，覆盖 ${baselineSnapshot.categoryCount} 个 iCloud 收件箱分类` : '';
+      log(`步骤 ${step}：已记录当前 ${existingSignatures.size} 封旧邮件快照${categoryText}`);
     }
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -347,65 +522,75 @@ if (shouldHandlePollEmailInCurrentFrame) {
         await sleep(1200);
       }
 
-      const items = collectThreadItems();
       const useFallback = (fallbackCarry + attempt) > FALLBACK_AFTER;
 
-      for (const [index, item] of items.entries()) {
-        const signature = buildItemSignature(item);
-        const allowInitialStep8VisibleCode = Number(step) === 8
-          && attempt === 1
-          && index === 0
-          && !sessionBaseline.fromCache;
-        if (!useFallback && existingSignatures.has(signature) && !allowInitialStep8VisibleCode) {
-          continue;
-        }
+      const found = await visitIcloudInboxCategories(async (category) => {
+        const items = collectThreadItems();
 
-        const meta = getThreadItemMetadata(item);
-        const lowerSender = meta.sender.toLowerCase();
-        const lowerSubject = normalizeText([meta.subject, meta.preview].join(' ')).toLowerCase();
-        const senderMatch = normalizedSenderFilters.some((filter) => lowerSender.includes(filter));
-        const subjectMatch = normalizedSubjectFilters.some((filter) => lowerSubject.includes(filter));
-
-        if (!senderMatch && !subjectMatch) {
-          continue;
-        }
-
-        let code = extractVerificationCode(meta.combinedText, { codePatterns });
-        let opened = null;
-
-        if (!code) {
-          opened = await openMailItemAndRead(item);
-          const openedSender = opened.sender.toLowerCase();
-          const openedBody = opened.bodyText.toLowerCase();
-          const openedSenderMatch = normalizedSenderFilters.some((filter) => openedSender.includes(filter));
-          const openedSubjectMatch = normalizedSubjectFilters.some((filter) => openedBody.includes(filter));
-          if (!openedSenderMatch && !openedSubjectMatch && !senderMatch && !subjectMatch) {
+        for (const [index, item] of items.entries()) {
+          const signature = buildItemSignature(item);
+          const allowInitialStep8VisibleCode = Number(step) === 8
+            && attempt === 1
+            && index === 0
+            && !sessionBaseline.fromCache;
+          if (!useFallback && existingSignatures.has(signature) && !allowInitialStep8VisibleCode) {
             continue;
           }
-          code = extractVerificationCode(opened.combinedText, { codePatterns });
-        }
 
-        if (!code) {
-          continue;
-        }
-        if (excludedCodeSet.has(code)) {
-          log(`步骤 ${step}：跳过排除的验证码：${code}`, 'info');
-          continue;
-        }
+          const meta = getThreadItemMetadata(item);
+          const lowerSender = meta.sender.toLowerCase();
+          const lowerSubject = normalizeText([meta.subject, meta.preview].join(' ')).toLowerCase();
+          const senderMatch = normalizedSenderFilters.some((filter) => lowerSender.includes(filter));
+          const subjectMatch = normalizedSubjectFilters.some((filter) => lowerSubject.includes(filter));
 
-        const source = useFallback && existingSignatures.has(signature) ? '回退匹配邮件' : '新邮件';
-        log(`步骤 ${step}：已找到验证码：${code}（来源：${source}）`, 'ok');
-        persistPollSessionBaseline(
-          pollSessionKey,
-          new Set(collectThreadItems().map(buildItemSignature)),
-          0
-        );
-        return {
-          ok: true,
-          code,
-          emailTimestamp: Date.now(),
-          preview: (opened?.combinedText || meta.combinedText).slice(0, 160),
-        };
+          if (!senderMatch && !subjectMatch) {
+            continue;
+          }
+
+          let code = extractVerificationCode(meta.combinedText, { codePatterns });
+          let opened = null;
+
+          if (!code) {
+            opened = await openMailItemAndRead(item);
+            const openedSender = opened.sender.toLowerCase();
+            const openedBody = opened.bodyText.toLowerCase();
+            const openedSenderMatch = normalizedSenderFilters.some((filter) => openedSender.includes(filter));
+            const openedSubjectMatch = normalizedSubjectFilters.some((filter) => openedBody.includes(filter));
+            if (!openedSenderMatch && !openedSubjectMatch && !senderMatch && !subjectMatch) {
+              continue;
+            }
+            code = extractVerificationCode(opened.combinedText, { codePatterns });
+          }
+
+          if (!code) {
+            continue;
+          }
+          if (excludedCodeSet.has(code)) {
+            log(`步骤 ${step}：跳过排除的验证码：${code}`, 'info');
+            continue;
+          }
+
+          const source = useFallback && existingSignatures.has(signature) ? '回退匹配邮件' : '新邮件';
+          const categoryText = category?.id && category.id !== 'current' ? `，分类：${category.label}` : '';
+          log(`步骤 ${step}：已找到验证码：${code}（来源：${source}${categoryText}）`, 'ok');
+          const latestSnapshot = await collectThreadSignaturesAcrossInboxCategories();
+          persistPollSessionBaseline(
+            pollSessionKey,
+            latestSnapshot.signatures,
+            0
+          );
+          return {
+            ok: true,
+            code,
+            emailTimestamp: Date.now(),
+            preview: (opened?.combinedText || meta.combinedText).slice(0, 160),
+          };
+        }
+        return null;
+      });
+
+      if (found) {
+        return found;
       }
 
       if (attempt === FALLBACK_AFTER + 1) {
@@ -418,9 +603,10 @@ if (shouldHandlePollEmailInCurrentFrame) {
     }
 
     fallbackCarry += maxAttempts;
+    const latestSnapshot = await collectThreadSignaturesAcrossInboxCategories();
     persistPollSessionBaseline(
       pollSessionKey,
-      new Set(collectThreadItems().map(buildItemSignature)),
+      latestSnapshot.signatures,
       fallbackCarry
     );
 
