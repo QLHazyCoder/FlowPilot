@@ -248,6 +248,10 @@ const rowGoPayPin = document.getElementById('row-gopay-pin');
 const inputGoPayPin = document.getElementById('input-gopay-pin');
 const selectMailProvider = document.getElementById('select-mail-provider');
 const btnMailLogin = document.getElementById('btn-mail-login');
+const rowYahooMailEmail = document.getElementById('row-yahoo-mail-email');
+const inputYahooMailEmail = document.getElementById('input-yahoo-mail-email');
+const rowYahooMailPassword = document.getElementById('row-yahoo-mail-password');
+const inputYahooMailPassword = document.getElementById('input-yahoo-mail-password');
 const rowCustomMailProviderPool = document.getElementById('row-custom-mail-provider-pool');
 const inputCustomMailProviderPool = document.getElementById('input-custom-mail-provider-pool');
 const rowMail2925Mode = document.getElementById('row-mail-2925-mode');
@@ -1058,6 +1062,8 @@ const HOTMAIL_SERVICE_MODE_LOCAL = 'local';
 const ICLOUD_PROVIDER = 'icloud';
 const GMAIL_PROVIDER = 'gmail';
 const GMAIL_ALIAS_GENERATOR = 'gmail-alias';
+const YAHOO_PROVIDER = window.YahooUtils?.YAHOO_PROVIDER || 'yahoo';
+const YAHOO_GENERATOR = window.YahooUtils?.YAHOO_GENERATOR || 'yahoo';
 const LUCKMAIL_PROVIDER = 'luckmail-api';
 const YYDS_MAIL_PROVIDER = 'yyds-mail';
 const CUSTOM_EMAIL_POOL_GENERATOR = 'custom-pool';
@@ -1673,6 +1679,11 @@ const MAIL_PROVIDER_LOGIN_CONFIGS = {
   [GMAIL_PROVIDER]: {
     label: 'Gmail 邮箱',
     url: 'https://mail.google.com/mail/u/0/#inbox',
+    buttonLabel: '登录',
+  },
+  [YAHOO_PROVIDER]: {
+    label: 'Yahoo 邮箱',
+    url: 'https://mail.yahoo.com/n/inbox/priority',
     buttonLabel: '登录',
   },
   '163': {
@@ -4750,6 +4761,12 @@ function collectSettingsPayload() {
     mail2925Mode: getSelectedMail2925Mode(),
     mail2925UseAccountPool,
     currentMail2925AccountId: String(latestState?.currentMail2925AccountId || '').trim(),
+    yahooMailEmail: typeof inputYahooMailEmail !== 'undefined' && inputYahooMailEmail
+      ? inputYahooMailEmail.value.trim()
+      : String(latestState?.yahooMailEmail || '').trim(),
+    yahooMailPassword: typeof inputYahooMailPassword !== 'undefined' && inputYahooMailPassword
+      ? inputYahooMailPassword.value
+      : String(latestState?.yahooMailPassword || ''),
     emailGenerator: selectEmailGenerator.value,
     customMailProviderPool: typeof normalizeCustomEmailPoolEntries === 'function'
       ? normalizeCustomEmailPoolEntries(inputCustomMailProviderPool?.value)
@@ -10866,8 +10883,14 @@ function applySettingsState(state) {
   const yydsMailProvider = typeof YYDS_MAIL_PROVIDER === 'string'
     ? YYDS_MAIL_PROVIDER
     : 'yyds-mail';
+  const yahooProvider = typeof YAHOO_PROVIDER === 'string'
+    ? YAHOO_PROVIDER
+    : 'yahoo';
+  const yahooGenerator = typeof YAHOO_GENERATOR === 'string'
+    ? YAHOO_GENERATOR
+    : 'yahoo';
   const restoredMailProvider = isCustomMailProvider(state?.mailProvider)
-    || [ICLOUD_PROVIDER, 'hotmail-api', GMAIL_PROVIDER, 'luckmail-api', yydsMailProvider, '163', '163-vip', '126', 'qq', 'inbucket', '2925', 'cloudflare-temp-email', 'cloudmail'].includes(String(state?.mailProvider || '').trim())
+    || [ICLOUD_PROVIDER, yahooProvider, 'hotmail-api', GMAIL_PROVIDER, 'luckmail-api', yydsMailProvider, '163', '163-vip', '126', 'qq', 'inbucket', '2925', 'cloudflare-temp-email', 'cloudmail'].includes(String(state?.mailProvider || '').trim())
     ? String(state?.mailProvider || '163').trim()
     : (String(state?.emailGenerator || '').trim().toLowerCase() === 'custom'
       || String(state?.emailGenerator || '').trim().toLowerCase() === 'manual'
@@ -10885,6 +10908,8 @@ function applySettingsState(state) {
       selectEmailGenerator.value = CUSTOM_EMAIL_POOL_GENERATOR;
     } else if (restoredEmailGenerator === 'icloud') {
       selectEmailGenerator.value = 'icloud';
+    } else if (restoredEmailGenerator === yahooGenerator) {
+      selectEmailGenerator.value = yahooGenerator;
     } else if (restoredEmailGenerator === 'cloudflare') {
       selectEmailGenerator.value = 'cloudflare';
     } else if (restoredEmailGenerator === 'cloudflare-temp-email') {
@@ -10923,6 +10948,12 @@ function applySettingsState(state) {
   }
   if (inputMail2925UseAccountPool) {
     inputMail2925UseAccountPool.checked = Boolean(state?.mail2925UseAccountPool);
+  }
+  if (inputYahooMailEmail) {
+    inputYahooMailEmail.value = state?.yahooMailEmail || '';
+  }
+  if (inputYahooMailPassword) {
+    inputYahooMailPassword.value = state?.yahooMailPassword || '';
   }
   setManagedAliasBaseEmailInputForProvider(restoredMailProvider, state);
   inputInbucketHost.value = state?.inbucketHost || '';
@@ -11917,6 +11948,13 @@ function isIcloudMailProvider(provider = selectMailProvider.value) {
   return String(provider || '').trim().toLowerCase() === ICLOUD_PROVIDER;
 }
 
+function isYahooMailProvider(provider = selectMailProvider.value) {
+  const yahooProvider = typeof YAHOO_PROVIDER === 'string'
+    ? YAHOO_PROVIDER
+    : 'yahoo';
+  return String(provider || '').trim().toLowerCase() === yahooProvider;
+}
+
 function normalizeLuckmailBaseUrl(value = '') {
   const trimmed = String(value || '').trim();
   if (!trimmed) {
@@ -11969,6 +12007,9 @@ function normalizeYydsMailBaseUrl(value = '') {
 
 function getSelectedEmailGenerator() {
   const generator = String(selectEmailGenerator.value || '').trim().toLowerCase();
+  const yahooGenerator = typeof YAHOO_GENERATOR === 'string'
+    ? YAHOO_GENERATOR
+    : 'yahoo';
   if (generator === 'custom' || generator === 'manual') {
     return 'custom';
   }
@@ -11981,6 +12022,9 @@ function getSelectedEmailGenerator() {
   if (generator === 'icloud') {
     return 'icloud';
   }
+  if (generator === yahooGenerator) {
+    return yahooGenerator;
+  }
   if (generator === 'cloudflare') return 'cloudflare';
   if (generator === 'cloudflare-temp-email') return 'cloudflare-temp-email';
   if (generator === 'cloudmail') return 'cloudmail';
@@ -11988,6 +12032,9 @@ function getSelectedEmailGenerator() {
 }
 
 function getEmailGeneratorUiCopy() {
+  const yahooGenerator = typeof YAHOO_GENERATOR === 'string'
+    ? YAHOO_GENERATOR
+    : 'yahoo';
   if (getSelectedEmailGenerator() === 'custom') {
     return getCustomMailProviderUiCopy();
   }
@@ -12013,6 +12060,14 @@ function getEmailGeneratorUiCopy() {
       placeholder: '点击获取 iCloud 隐私邮箱，或手动粘贴邮箱',
       successVerb: '获取',
       label: 'iCloud 隐私邮箱',
+    };
+  }
+  if (getSelectedEmailGenerator() === yahooGenerator) {
+    return {
+      buttonLabel: '创建别名',
+      placeholder: '点击创建 Yahoo 临时邮箱，或手动粘贴邮箱',
+      successVerb: '创建',
+      label: 'Yahoo 临时邮箱',
     };
   }
   if (getSelectedEmailGenerator() === 'cloudflare') {
@@ -12437,6 +12492,12 @@ function updateMailProviderUI() {
   const customEmailPoolGenerator = typeof CUSTOM_EMAIL_POOL_GENERATOR === 'string'
     ? CUSTOM_EMAIL_POOL_GENERATOR
     : 'custom-pool';
+  const yahooProvider = typeof YAHOO_PROVIDER === 'string'
+    ? YAHOO_PROVIDER
+    : 'yahoo';
+  const yahooGenerator = typeof YAHOO_GENERATOR === 'string'
+    ? YAHOO_GENERATOR
+    : 'yahoo';
   const gmailOnlyGenerators = new Set([gmailAliasGenerator, customEmailPoolGenerator]);
   Array.from(selectEmailGenerator?.options || []).forEach((option) => {
     if (!option) return;
@@ -12463,6 +12524,9 @@ function updateMailProviderUI() {
   const useCustomEmail = isCustomMailProvider();
   const useCustomMailProviderPool = useCustomEmail && usesCustomMailProviderPool(selectMailProvider.value);
   const useIcloudProvider = isIcloudMailProvider();
+  const useYahooProvider = typeof isYahooMailProvider === 'function'
+    ? isYahooMailProvider()
+    : String(selectMailProvider.value || '').trim().toLowerCase() === yahooProvider;
   const useEmailGenerator = !useHotmail && !useLuckmail && !useYydsMail && !useCustomEmail && (!useGeneratedAlias || useGmail);
   const useCloudflareTempEmailProvider = selectMailProvider.value === 'cloudflare-temp-email';
   const useCloudMailProvider = selectMailProvider.value === 'cloudmail';
@@ -12480,6 +12544,12 @@ function updateMailProviderUI() {
   if (typeof rowCustomMailProviderPool !== 'undefined' && rowCustomMailProviderPool) {
     rowCustomMailProviderPool.style.display = useCustomEmail ? '' : 'none';
   }
+  if (rowYahooMailEmail) {
+    rowYahooMailEmail.style.display = (useYahooProvider || selectedGenerator === yahooGenerator) ? '' : 'none';
+  }
+  if (rowYahooMailPassword) {
+    rowYahooMailPassword.style.display = (useYahooProvider || selectedGenerator === yahooGenerator) ? '' : 'none';
+  }
   rowEmailPrefix.style.display = useGeneratedAlias && !useMail2925AccountPool ? '' : 'none';
   const hotmailServiceMode = getSelectedHotmailServiceMode();
   rowInbucketHost.style.display = useInbucket ? '' : 'none';
@@ -12487,6 +12557,7 @@ function updateMailProviderUI() {
   const useCustomEmailPool = useEmailGenerator && selectedGenerator === customEmailPoolGenerator;
   const useCloudflare = selectedGenerator === 'cloudflare';
   const useIcloud = selectedGenerator === 'icloud';
+  const useYahooGenerator = selectedGenerator === yahooGenerator;
   const useCloudflareTempEmailGenerator = selectedGenerator === 'cloudflare-temp-email';
   const useCloudMailGenerator = selectedGenerator === 'cloudmail';
   const showCloudflareDomain = useEmailGenerator && useCloudflare;
@@ -12661,6 +12732,9 @@ function updateMailProviderUI() {
   }
   if (autoHintText && useGeneratedAlias && aliasUiCopy?.hint) {
     autoHintText.textContent = aliasUiCopy.hint;
+  }
+  if (autoHintText && (useYahooProvider || (useEmailGenerator && useYahooGenerator))) {
+    autoHintText.textContent = 'Yahoo 需要先手动登录。创建临时邮箱时会直接创建新的临时邮箱；第 4/8 步会打开收件箱顶部邮件取码。';
   }
   if (autoHintText && useMail2925AccountPool && !useCustomEmailPool) {
     autoHintText.textContent = getMail2925Accounts().length
@@ -14410,7 +14484,19 @@ btnMailLogin?.addEventListener('click', async () => {
   }
 
   try {
-    await chrome.tabs.create({ url: loginUrl, active: true });
+    const response = await chrome.runtime.sendMessage({
+      type: 'OPEN_MAIL_PROVIDER_LOGIN',
+      source: 'sidepanel',
+      payload: {
+        provider: selectMailProvider?.value || latestState?.mailProvider || '',
+        url: loginUrl,
+        yahooMailEmail: inputYahooMailEmail?.value.trim() || '',
+        yahooMailPassword: inputYahooMailPassword?.value || '',
+      },
+    });
+    if (response?.error) {
+      throw new Error(response.error);
+    }
   } catch (err) {
     showToast(`打开${config.label}失败：${err.message}`, 'error');
   }
@@ -15319,6 +15405,19 @@ selectPlusAccountAccessStrategy?.addEventListener('change', () => {
     scheduleSettingsAutoSave();
   });
   input?.addEventListener('blur', () => {
+    saveSettings({ silent: true }).catch(() => { });
+  });
+});
+
+[inputYahooMailEmail, inputYahooMailPassword].forEach((input) => {
+  input?.addEventListener('input', () => {
+    markSettingsDirty(true);
+    scheduleSettingsAutoSave();
+  });
+  input?.addEventListener('blur', () => {
+    if (input === inputYahooMailEmail) {
+      inputYahooMailEmail.value = inputYahooMailEmail.value.trim();
+    }
     saveSettings({ silent: true }).catch(() => { });
   });
 });

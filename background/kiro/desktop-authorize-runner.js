@@ -913,6 +913,125 @@
       return Math.max(45000, maxAttempts * intervalMs + 25000);
     }
 
+    async function pollYahooKiroDesktopOtpCode(step, state = {}, mail = {}, pollPayload = {}, nodeId = '') {
+      const maxAttempts = Math.max(1, Math.floor(Number(pollPayload?.maxAttempts) || 5));
+      const intervalMs = Math.max(1000, Number(pollPayload?.intervalMs) || 3000);
+      const requestedAt = Math.max(0, Number(pollPayload?.filterAfterTimestamp || Date.now()) || Date.now());
+      let lastObservedTopMessageFingerprint = '';
+      let lastError = null;
+
+      await log(`步骤 ${step}：Yahoo 使用专用 Kiro 桌面授权取码链路：打开收件箱、检查顶部 AWS/Kiro 邮件，必要时点进邮件正文读码。`, 'warn', nodeId);
+      await focusOrOpenMailTab(mail);
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        throwIfStopped();
+        let result = await sendToMailContentScriptResilient(
+          mail,
+          {
+            type: 'YAHOO_CHECK_TOP_MESSAGE',
+            step,
+            source: 'background',
+            payload: {
+              ...pollPayload,
+              intervalMs,
+              maxAttempts: 1,
+              keepRefreshingUntilCode: false,
+              yahooTopRowOnly: true,
+              requestedAt,
+              previousTopMessageFingerprint: lastObservedTopMessageFingerprint,
+              previousAcceptedEmailTimestamp: 0,
+              yahooFreshnessSkewMs: Math.max(intervalMs * 2, 180000),
+            },
+          },
+          {
+            timeoutMs: 30000,
+            responseTimeoutMs: 30000,
+            maxRecoveryAttempts: 2,
+            logStep: step,
+            logStepKey: 'kiro-complete-desktop-authorize',
+          }
+        );
+
+        if (result?.error) {
+          throw new Error(result.error);
+        }
+        if (result?.needsOpenDetails) {
+          await log(`步骤 ${step}：Yahoo 顶部 Kiro/AWS 桌面授权邮件需要点进正文，正在单独打开详情页。`, 'warn', nodeId);
+          await sendToMailContentScriptResilient(
+            mail,
+            {
+              type: 'YAHOO_OPEN_TOP_MESSAGE',
+              step,
+              source: 'background',
+              payload: {
+                ...pollPayload,
+                forceOpenTopMessage: true,
+              },
+            },
+            {
+              timeoutMs: 6000,
+              responseTimeoutMs: 3000,
+              maxRecoveryAttempts: 0,
+              logStep: step,
+              logStepKey: 'kiro-complete-desktop-authorize',
+            }
+          ).catch((error) => {
+            log(`步骤 ${step}：Yahoo 打开桌面授权邮件详情命令已发出，但响应异常，将继续尝试读取当前页面正文：${getErrorMessage(error)}`, 'warn', nodeId);
+          });
+          result = {
+            ...result,
+            detailOpened: true,
+          };
+        }
+        if (result?.needsDetailRead || result?.detailOpened) {
+          await log(`步骤 ${step}：Yahoo 正在重连内容脚本读取桌面授权邮件正文验证码。`, 'warn', nodeId);
+          await sleepWithStop(1500);
+          result = await sendToMailContentScriptResilient(
+            mail,
+            {
+              type: 'YAHOO_READ_CURRENT_MESSAGE_CODE',
+              step,
+              source: 'background',
+              payload: {
+                ...pollPayload,
+              },
+            },
+            {
+              timeoutMs: 25000,
+              responseTimeoutMs: 20000,
+              maxRecoveryAttempts: 0,
+              logStep: step,
+              logStepKey: 'kiro-complete-desktop-authorize',
+            }
+          );
+          if (result?.error) {
+            throw new Error(result.error);
+          }
+        }
+        if (result?.topMessageFingerprint !== undefined) {
+          lastObservedTopMessageFingerprint = String(result.topMessageFingerprint || '').trim();
+        }
+        if (result?.code && result.freshnessMatched !== false) {
+          await log(`步骤 ${step}：Yahoo 已从 Kiro/AWS 邮件读取桌面授权验证码 ${result.code}`, 'warn', nodeId);
+          return result;
+        }
+
+        lastError = new Error(result?.reason || `步骤 ${step}：Yahoo 顶部 Kiro/AWS 邮件暂未读取到桌面授权验证码。`);
+        if (attempt < maxAttempts) {
+          await log(`步骤 ${step}：Yahoo 暂未命中 Kiro 桌面授权验证码，${Math.round(intervalMs / 1000)} 秒后刷新收件箱重试（${attempt}/${maxAttempts}）。`, 'warn', nodeId);
+          await sleepWithStop(intervalMs);
+          await reuseOrCreateTab(mail.source, mail.url, {
+            inject: mail.inject,
+            injectSource: mail.injectSource,
+            navigateOnReuse: true,
+            reloadIfSameUrl: true,
+          });
+        }
+      }
+
+      throw lastError || new Error(`步骤 ${step}：Yahoo Kiro 桌面授权取码链路结束，但未获取到验证码。`);
+    }
+
     async function pollDesktopOtpCode(step, state = {}, nodeId = '') {
       if (typeof getMailConfig !== 'function') {
         throw new Error('Kiro 桌面授权验证码步骤缺少邮箱配置能力，无法继续执行。');
@@ -975,6 +1094,10 @@
 
       if (typeof sendToMailContentScriptResilient !== 'function') {
         throw new Error('Kiro 桌面授权验证码步骤缺少邮箱内容脚本通信能力，无法继续执行。');
+      }
+
+      if (mail.provider === 'yahoo') {
+        return pollYahooKiroDesktopOtpCode(step, state, mail, pollPayload, nodeId);
       }
 
       const responseTimeoutMs = getMailPollingResponseTimeoutMs(pollPayload);

@@ -32,6 +32,8 @@
     'https://profile.aws.amazon.com',
   ]);
   const MAIL_2925_FILTER_LOOKBACK_MS = 10 * 60 * 1000;
+  const KIRO_YAHOO_VERIFICATION_RESEND_INTERVAL_MS = 60 * 1000;
+  const KIRO_YAHOO_VERIFICATION_MAX_ATTEMPTS = 45;
   const KIRO_AWS_VERIFICATION_CODE_PATTERNS = Object.freeze([
     Object.freeze({
       source: '(?:verification\\s*code|验证码|Your code is|code is)[：:\\s]*(\\d{6})',
@@ -857,12 +859,16 @@
       const runtimeState = readKiroRuntime(state);
       const targetEmail = cleanString(runtimeState.register?.email || state?.email).toLowerCase();
       const targetEmailHints = targetEmail ? [targetEmail] : [];
-      const isMail2925Provider = String(mail?.provider || '').trim().toLowerCase() === '2925';
       const normalizedProvider = String(mail?.provider || '').trim().toLowerCase();
-      const maxAttempts = normalizedProvider === String(LUCKMAIL_PROVIDER || '').trim().toLowerCase()
+      const isMail2925Provider = normalizedProvider === '2925';
+      const isYahooProvider = normalizedProvider === 'yahoo';
+      const isLuckmailProvider = normalizedProvider === String(LUCKMAIL_PROVIDER || '').trim().toLowerCase();
+      const maxAttempts = isYahooProvider
+        ? KIRO_YAHOO_VERIFICATION_MAX_ATTEMPTS
+        : (isLuckmailProvider
         ? 3
-        : (isMail2925Provider ? MAIL_2925_VERIFICATION_MAX_ATTEMPTS : 5);
-      const intervalMs = normalizedProvider === String(LUCKMAIL_PROVIDER || '').trim().toLowerCase()
+          : (isMail2925Provider ? MAIL_2925_VERIFICATION_MAX_ATTEMPTS : 5));
+      const intervalMs = isLuckmailProvider
         ? 15000
         : (isMail2925Provider ? MAIL_2925_VERIFICATION_INTERVAL_MS : 3000);
 
@@ -887,6 +893,306 @@
       const maxAttempts = Math.max(1, Math.floor(Number(payload?.maxAttempts) || 1));
       const intervalMs = Math.max(1, Number(payload?.intervalMs) || 3000);
       return Math.max(45000, maxAttempts * intervalMs + 25000);
+    }
+
+    async function readKiroYahooTopMessageViaScripting(step, mail = {}, pollPayload = {}, nodeId = '') {
+      if (!chrome?.scripting?.executeScript) {
+        return null;
+      }
+
+      let tabId = await getTabId(mail.source);
+      if (!Number.isInteger(tabId) || !(await isTabAlive(mail.source))) {
+        tabId = await reuseOrCreateTab(mail.source, mail.url, {
+          inject: mail.inject,
+          injectSource: mail.injectSource,
+          navigateOnReuse: true,
+        });
+      }
+      if (!Number.isInteger(tabId)) {
+        return null;
+      }
+
+      const [{ result } = {}] = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: (payload) => {
+          const normalizeText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+          const normalizeLowerText = (value) => normalizeText(value).toLowerCase();
+          const isVisible = (node) => {
+            if (!(node instanceof HTMLElement)) return false;
+            const style = getComputedStyle(node);
+            if (style.display === 'none' || style.visibility === 'hidden') return false;
+            const rect = node.getBoundingClientRect();
+            return rect.width > 0
+              && rect.height > 0
+              && rect.bottom > 0
+              && rect.right > 0
+              && rect.top < (window.innerHeight || document.documentElement.clientHeight || 99999)
+              && rect.left < (window.innerWidth || document.documentElement.clientWidth || 99999);
+          };
+          const joinUnique = (parts) => {
+            const seen = new Set();
+            return normalizeText(parts
+              .map((part) => normalizeText(part))
+              .filter(Boolean)
+              .filter((part) => {
+                if (seen.has(part)) return false;
+                seen.add(part);
+                return true;
+              })
+              .join(' '));
+          };
+          const rowText = (row) => {
+            const nodes = Array.from(row.querySelectorAll([
+              '[id^="email-sender-"]',
+              '[id^="email-subject-snippet-"]',
+              '[id^="email-subject-"]',
+              '[id^="email-snippet-"]',
+              '[id^="email-date-"]',
+              '[title]',
+            ].join(',')));
+            return joinUnique([
+              row.getAttribute('aria-label'),
+              row.getAttribute('title'),
+              row.innerText,
+              row.textContent,
+              ...nodes.map((node) => [
+                node.getAttribute?.('aria-label'),
+                node.getAttribute?.('title'),
+                node.innerText,
+                node.textContent,
+              ].filter(Boolean).join(' ')),
+            ]);
+          };
+          const extractCode = (text) => {
+            const source = String(text || '');
+            const patterns = Array.isArray(payload?.codePatterns) ? payload.codePatterns : [];
+            for (const pattern of patterns) {
+              try {
+                const regex = new RegExp(String(pattern?.source || pattern || ''), String(pattern?.flags || 'i'));
+                const match = source.match(regex);
+                const code = match?.[1] || match?.[0];
+                const normalized = String(code || '').match(/\b(\d{6})\b/)?.[1] || '';
+                if (normalized) return normalized;
+              } catch {}
+            }
+            return source.match(/(?:验证码|verification\s*code|code(?:\s+is)?)[^0-9]{0,24}(\d{6})/i)?.[1]
+              || source.match(/\b(\d{6})\b/)?.[1]
+              || '';
+          };
+          const rows = Array.from(document.querySelectorAll([
+            'li[data-test-id="message-list-item"]',
+            '[data-test-id="message-list"] li[data-test-id="message-list-item"]',
+            '[data-test-id="virtual-list"] li[data-test-id="message-list-item"]',
+            'li.H_A.hd_n.p_a.L_0.R_0',
+          ].join(',')))
+            .filter(isVisible)
+            .sort((left, right) => {
+              const leftRect = left.getBoundingClientRect();
+              const rightRect = right.getBoundingClientRect();
+              if (Math.abs(leftRect.top - rightRect.top) > 4) return leftRect.top - rightRect.top;
+              return leftRect.left - rightRect.left;
+            })
+            .slice(0, 8);
+
+          const topRow = rows[0] || null;
+          if (!topRow) {
+            return { ok: false, code: null, reason: '后台直读未找到可见 Yahoo 邮件行', preview: '' };
+          }
+          const text = rowText(topRow);
+          const lower = normalizeLowerText(text);
+          const looksKiroAws = /no-?reply@signin\.aws|signin\.aws|amazon web services|aws/.test(lower)
+            && /构建者|builder id|verification|验证码|code/.test(lower);
+          if (!looksKiroAws) {
+            return {
+              ok: false,
+              code: null,
+              reason: '后台直读顶部邮件不是 AWS/Kiro 验证邮件',
+              preview: text.slice(0, 200),
+              topMessageFingerprint: text.slice(0, 240),
+            };
+          }
+          const code = extractCode(text);
+          if (!code) {
+            return {
+              ok: false,
+              code: null,
+              reason: '后台直读顶部 AWS/Kiro 邮件未提取到验证码',
+              preview: text.slice(0, 200),
+              topMessageFingerprint: text.slice(0, 240),
+              needsOpenDetails: true,
+              needsDetailRead: true,
+            };
+          }
+          return {
+            ok: true,
+            code,
+            emailTimestamp: Date.now(),
+            preview: text.slice(0, 200),
+            topMessageFingerprint: text.slice(0, 240),
+            freshnessMatched: true,
+            freshnessReason: '后台 executeScript 直接读取 Yahoo 顶部 AWS/Kiro 邮件行',
+          };
+        },
+        args: [pollPayload],
+      });
+
+      if (result?.code) {
+        await log(`步骤 ${step}：Yahoo 后台直读已从顶部 AWS/Kiro 邮件行提取验证码 ${result.code}`, 'warn', nodeId);
+      }
+      return result || null;
+    }
+
+    async function resendKiroVerificationCodeFromRegisterPage(step, state = {}, nodeId = '') {
+      const tabId = await activateKiroRegisterTab(state, {
+        missingUrlMessage: '缺少 Kiro 注册页地址，无法重新发送验证码，请先执行步骤 1。',
+        openFailedMessage: '无法恢复 Kiro 注册页，无法重新发送验证码，请重新执行步骤 1。',
+      });
+      await ensureKiroPageState(tabId, {
+        step,
+        targetStates: ['register_otp_page'],
+        stableMs: 900,
+        initialDelayMs: 100,
+        injectLogMessage: `步骤 ${step}：Kiro 验证码页内容脚本未就绪，正在等待页面恢复后重新发送验证码...`,
+        readyLogMessage: `步骤 ${step}：正在确认 Kiro 验证码页以重新发送验证码...`,
+        timeoutMessage: 'Kiro 验证码页未恢复，无法点击重新发送验证码。',
+      });
+      const result = await sendToContentScriptResilient(KIRO_REGISTER_PAGE_SOURCE_ID, {
+        type: 'KIRO_RESEND_VERIFICATION_CODE',
+        step,
+        source: 'background',
+        payload: {
+          timeoutMs: 30000,
+          retryDelayMs: 250,
+        },
+      }, {
+        timeoutMs: 35000,
+        retryDelayMs: 700,
+        onRetryableError: buildKiroRetryRecovery(tabId, {}),
+        logStep: step,
+        logStepKey: 'kiro-submit-verification-code',
+        logMessage: `步骤 ${step}：正在回到 Kiro 验证码页点击重新发送...`,
+      });
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+      await log(`步骤 ${step}：已在 Kiro 页面点击重新发送验证码，继续回 Yahoo 读取新邮件。`, 'warn', nodeId);
+      return result || { resent: true };
+    }
+
+    async function pollYahooKiroVerificationCode(step, state = {}, mail = {}, pollPayload = {}, nodeId = '') {
+      const maxAttempts = Math.max(1, Math.floor(Number(pollPayload?.maxAttempts) || 5));
+      const intervalMs = Math.max(1000, Number(pollPayload?.intervalMs) || 3000);
+      const requestedAt = Math.max(0, Number(pollPayload?.filterAfterTimestamp || Date.now()) || Date.now());
+      let lastObservedTopMessageFingerprint = '';
+      let lastKiroResendAt = Date.now();
+      let lastError = null;
+
+      await log(`步骤 ${step}：Yahoo 使用专用 Kiro 取码链路：打开收件箱、检查顶部 AWS/Kiro 邮件，必要时点进邮件正文读码。`, 'warn', nodeId);
+      await focusOrOpenMailTab(mail);
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        throwIfStopped();
+        const yahooPayload = {
+          ...pollPayload,
+          intervalMs,
+          maxAttempts: 1,
+          keepRefreshingUntilCode: false,
+          yahooTopRowOnly: true,
+          requestedAt,
+          previousTopMessageFingerprint: lastObservedTopMessageFingerprint,
+          previousAcceptedEmailTimestamp: 0,
+          yahooFreshnessSkewMs: Math.max(intervalMs * 2, 180000),
+        };
+        let result = await readKiroYahooTopMessageViaScripting(step, mail, yahooPayload, nodeId);
+        if (!result?.code) {
+          lastError = new Error(result?.reason || `步骤 ${step}：Yahoo 后台直读未获取到 Kiro/AWS 验证码。`);
+        }
+
+        if (result?.error) {
+          throw new Error(result.error);
+        }
+        if (result?.needsOpenDetails) {
+          await log(`步骤 ${step}：Yahoo 顶部 Kiro/AWS 邮件需要点进正文，正在单独打开详情页。`, 'warn', nodeId);
+          await sendToMailContentScriptResilient(
+            mail,
+            {
+              type: 'YAHOO_OPEN_TOP_MESSAGE',
+              step,
+              source: 'background',
+              payload: {
+                ...pollPayload,
+                forceOpenTopMessage: true,
+              },
+            },
+            {
+              timeoutMs: 6000,
+              responseTimeoutMs: 3000,
+              maxRecoveryAttempts: 0,
+              logStep: step,
+              logStepKey: 'kiro-submit-verification-code',
+            }
+          ).catch((error) => {
+            log(`步骤 ${step}：Yahoo 打开邮件详情命令已发出，但响应异常，将继续尝试读取当前页面正文：${getErrorMessage(error)}`, 'warn', nodeId);
+          });
+          result = {
+            ...result,
+            detailOpened: true,
+          };
+        }
+        if (result?.needsDetailRead || result?.detailOpened) {
+          await log(`步骤 ${step}：Yahoo 正在重连内容脚本读取正文验证码。`, 'warn', nodeId);
+          await sleepWithStop(1500);
+          result = await sendToMailContentScriptResilient(
+            mail,
+            {
+              type: 'YAHOO_READ_CURRENT_MESSAGE_CODE',
+              step,
+              source: 'background',
+              payload: {
+                ...pollPayload,
+              },
+            },
+            {
+              timeoutMs: 25000,
+              responseTimeoutMs: 20000,
+              maxRecoveryAttempts: 0,
+              logStep: step,
+              logStepKey: 'kiro-submit-verification-code',
+            }
+          );
+          if (result?.error) {
+            throw new Error(result.error);
+          }
+        }
+        if (result?.topMessageFingerprint !== undefined) {
+          lastObservedTopMessageFingerprint = String(result.topMessageFingerprint || '').trim();
+        }
+        if (result?.code && result.freshnessMatched !== false) {
+          await log(`步骤 ${step}：Yahoo 已从 Kiro/AWS 邮件读取验证码 ${result.code}`, 'warn', nodeId);
+          return result;
+        }
+
+        lastError = new Error(result?.reason || `步骤 ${step}：Yahoo 顶部 Kiro/AWS 邮件暂未读取到验证码。`);
+        if (attempt < maxAttempts) {
+          if (Date.now() - lastKiroResendAt >= KIRO_YAHOO_VERIFICATION_RESEND_INTERVAL_MS) {
+            await log(`步骤 ${step}：Yahoo 等待超过 1 分钟仍未收到 Kiro 验证码，回 Kiro 页面点击重新发送。`, 'warn', nodeId);
+            await resendKiroVerificationCodeFromRegisterPage(step, state, nodeId);
+            lastKiroResendAt = Date.now();
+            lastObservedTopMessageFingerprint = '';
+            await focusOrOpenMailTab(mail);
+          }
+          await log(`步骤 ${step}：Yahoo 暂未命中 Kiro 验证码，${Math.round(intervalMs / 1000)} 秒后刷新收件箱重试（${attempt}/${maxAttempts}）。`, 'warn', nodeId);
+          await sleepWithStop(intervalMs);
+          await reuseOrCreateTab(mail.source, mail.url, {
+            inject: mail.inject,
+            injectSource: mail.injectSource,
+            navigateOnReuse: true,
+            reloadIfSameUrl: true,
+          });
+        }
+      }
+
+      throw lastError || new Error(`步骤 ${step}：Yahoo Kiro 取码链路结束，但未获取到验证码。`);
     }
 
     async function pollKiroVerificationCode(step, state = {}, nodeId = '') {
@@ -953,6 +1259,10 @@
 
       if (typeof sendToMailContentScriptResilient !== 'function') {
         throw new Error('Kiro 验证码步骤缺少邮箱内容脚本通信能力，无法继续执行。');
+      }
+
+      if (mail.provider === 'yahoo') {
+        return pollYahooKiroVerificationCode(step, state, mail, pollPayload, nodeId);
       }
 
       const responseTimeoutMs = getMailPollingResponseTimeoutMs(pollPayload);

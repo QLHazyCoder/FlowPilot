@@ -36,6 +36,15 @@
       driverId: 'content/gmail-mail',
       cleanupScopes: [],
     },
+    'yahoo-mail': {
+      flowId: null,
+      kind: 'mail-provider',
+      label: 'Yahoo 邮箱',
+      readyPolicy: 'top-frame-only',
+      family: 'yahoo-mail-family',
+      driverId: 'content/yahoo-mail',
+      cleanupScopes: [],
+    },
     'icloud-mail': {
       flowId: null,
       kind: 'mail-provider',
@@ -96,6 +105,10 @@
       sourceId: 'gmail-mail',
       commands: ['POLL_EMAIL'],
     },
+    'content/yahoo-mail': {
+      sourceId: 'yahoo-mail',
+      commands: ['POLL_EMAIL', 'YAHOO_CHECK_TOP_MESSAGE', 'YAHOO_OPEN_TOP_MESSAGE', 'YAHOO_READ_CURRENT_MESSAGE_CODE', 'YAHOO_CREATE_TEMP_ALIAS', 'YAHOO_LOGIN_WITH_CREDENTIALS'],
+    },
     'content/icloud-mail': {
       sourceId: 'icloud-mail',
       commands: ['POLL_EMAIL'],
@@ -120,6 +133,7 @@
     'qq-mail',
     'mail-163',
     'gmail-mail',
+    'yahoo-mail',
     'mail-2925',
     'inbucket-mail',
     'plus-checkout',
@@ -300,6 +314,8 @@
           return is163MailHost(candidate.hostname);
         case 'gmail-mail':
           return candidate.hostname === 'mail.google.com';
+        case 'yahoo-mail':
+          return candidate.hostname === 'mail.yahoo.com';
         case 'icloud-mail':
           return candidate.hostname === 'www.icloud.com'
             || candidate.hostname === 'www.icloud.com.cn';
@@ -359,6 +375,7 @@
       if (normalizedHostname === 'mail.qq.com' || normalizedHostname === 'wx.mail.qq.com') return 'qq-mail';
       if (is163MailHost(normalizedHostname)) return 'mail-163';
       if (normalizedHostname === 'mail.google.com') return 'gmail-mail';
+      if (normalizedHostname === 'mail.yahoo.com') return 'yahoo-mail';
       if (normalizedHostname === 'www.icloud.com' || normalizedHostname === 'www.icloud.com.cn') return 'icloud-mail';
       if (normalizedUrl.includes('duckduckgo.com/email/settings/autofill')) return 'duck-mail';
       if (normalizedUrl.includes('2925.com')) return 'mail-2925';

@@ -187,10 +187,15 @@
     }
 
     async function keepSignupTabWindowInBackgroundForStep2(tabId) {
-      // Intentionally no-op: the task tab is locked to the selected Chrome
-      // window by the tab-runtime layer. Step 2 must not focus/raise that
-      // window while the user is working in another app or browser window.
-      void tabId;
+      if (!Number.isInteger(tabId) || typeof chrome?.tabs?.get !== 'function') {
+        return;
+      }
+      try {
+        const tab = await chrome.tabs.get(tabId);
+        if (Number.isInteger(tab?.windowId) && typeof chrome?.windows?.update === 'function') {
+          await chrome.windows.update(tab.windowId, { focused: true }).catch(() => {});
+        }
+      } catch {}
     }
 
     async function ensureSignupPhoneEntryReady(tabId) {
@@ -239,6 +244,7 @@
       } else {
         await chrome.tabs.update(signupTabId, { active: true });
         await keepSignupTabWindowInBackgroundForStep2(signupTabId);
+        await addLog('步骤 2：已从邮箱页面恢复到 ChatGPT 注册页，准备提交注册邮箱。', 'info');
         await waitForStep2SignupTabToSettle(
           signupTabId,
           '步骤 2：已切换到注册页标签，正在等待页面加载完成并额外稳定 3 秒...'

@@ -53,6 +53,10 @@
       return String(state?.mailProvider || '').trim().toLowerCase() === '2925';
     }
 
+    function isYahooProvider(state = {}) {
+      return String(state?.mailProvider || '').trim().toLowerCase() === 'yahoo';
+    }
+
     function shouldMatchMail2925TargetEmail(state = {}) {
       return isMail2925Provider(state)
         && String(state?.mail2925Mode || '').trim().toLowerCase() === 'receive';
@@ -78,10 +82,13 @@
       const nodeId = resolveVerificationNodeId(input);
       const normalizedStep = getVisibleStepForNode(nodeId, state);
       const mail2925Provider = isMail2925Provider(state);
+      const yahooProvider = isYahooProvider(state);
       const signupStep = nodeId === SIGNUP_CODE_NODE_ID;
       const targetEmail = signupStep
         ? state?.email
         : (String(state?.step8VerificationTargetEmail || '').trim() || state?.email);
+      const defaultMaxAttempts = yahooProvider ? 60 : 5;
+      const defaultIntervalMs = yahooProvider ? 5000 : 3000;
 
       return {
         flowId: 'openai',
@@ -105,8 +112,9 @@
         targetEmail,
         targetEmailHints: buildTargetEmailHints(targetEmail),
         mail2925MatchTargetEmail: shouldMatchMail2925TargetEmail(state),
-        maxAttempts: mail2925Provider ? MAIL_2925_VERIFICATION_MAX_ATTEMPTS : 5,
-        intervalMs: mail2925Provider ? MAIL_2925_VERIFICATION_INTERVAL_MS : 3000,
+        maxAttempts: mail2925Provider ? MAIL_2925_VERIFICATION_MAX_ATTEMPTS : defaultMaxAttempts,
+        intervalMs: mail2925Provider ? MAIL_2925_VERIFICATION_INTERVAL_MS : defaultIntervalMs,
+        ...(yahooProvider ? { keepRefreshingUntilCode: true } : {}),
       };
     }
 

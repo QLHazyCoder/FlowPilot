@@ -2,6 +2,10 @@
   root.MultiPageBackgroundStep8 = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createBackgroundStep8Module() {
   const MAIL_2925_FILTER_LOOKBACK_MS = 10 * 60 * 1000;
+  const YAHOO_MAILBOX_REFRESH_INTERVAL_MS = 5 * 1000;
+  const YAHOO_MAILBOX_REFRESH_ROUNDS_BEFORE_RESEND = 5;
+  const YAHOO_MAILBOX_REFRESH_MAX_ATTEMPTS = 60;
+  const YAHOO_MAILBOX_RESEND_INTERVAL_MS = YAHOO_MAILBOX_REFRESH_INTERVAL_MS * YAHOO_MAILBOX_REFRESH_ROUNDS_BEFORE_RESEND;
 
   function createStep8Executor(deps = {}) {
     const {
@@ -384,6 +388,27 @@
       return String(state?.mail2925BaseEmail || '').trim().toLowerCase();
     }
 
+    function resolveEffectiveMailProvider(mail = {}, state = {}) {
+      const explicitProvider = String(mail?.provider || '').trim().toLowerCase();
+      if (explicitProvider) return explicitProvider;
+
+      const stateProvider = String(state?.mailProvider || '').trim().toLowerCase();
+      if (stateProvider) return stateProvider;
+
+      const source = String(mail?.source || '').trim().toLowerCase();
+      const injectSource = String(mail?.injectSource || '').trim().toLowerCase();
+      const label = String(mail?.label || '').trim().toLowerCase();
+      const url = String(mail?.url || '').trim().toLowerCase();
+      const combined = `${source} ${injectSource} ${label} ${url}`;
+      if (/yahoo/.test(combined)) return 'yahoo';
+      if (/2925/.test(combined)) return '2925';
+      if (/hotmail/.test(combined)) return HOTMAIL_PROVIDER;
+      if (/luckmail/.test(combined)) return LUCKMAIL_PROVIDER;
+      if (/cloudmail/.test(combined)) return CLOUD_MAIL_PROVIDER;
+      if (/cloudflare/.test(combined)) return CLOUDFLARE_TEMP_EMAIL_PROVIDER;
+      return explicitProvider || stateProvider || '';
+    }
+
     async function focusOrOpenMailTab(mail) {
       const alive = await isTabAlive(mail.source);
       if (alive) {
@@ -408,6 +433,10 @@
 
     function getStep8ResendIntervalMs(state = {}) {
       const mail = getMailConfig(state);
+      const effectiveProvider = resolveEffectiveMailProvider(mail, state);
+      if (effectiveProvider === 'yahoo') {
+        return YAHOO_MAILBOX_RESEND_INTERVAL_MS;
+      }
       if (mail?.provider === LUCKMAIL_PROVIDER) {
         return 15000;
       }
@@ -559,8 +588,16 @@
       const notifyResendRequestedAt = typeof runtime?.onResendRequestedAt === 'function'
         ? runtime.onResendRequestedAt
         : null;
-      const mail = getMailConfig(preparedState);
-      if (mail.error) throw new Error(mail.error);
+      const rawMail = getMailConfig(preparedState);
+      if (rawMail.error) throw new Error(rawMail.error);
+      const effectiveProvider = resolveEffectiveMailProvider(rawMail, preparedState);
+      const mail = effectiveProvider && effectiveProvider !== rawMail.provider
+        ? { ...rawMail, provider: effectiveProvider }
+        : { ...rawMail };
+      if (effectiveProvider === 'yahoo') {
+        mail.url = 'https://mail.yahoo.com/n/inbox/all?listFilter=ALL_INBOX';
+        mail.navigateOnReuse = true;
+      }
       const stepStartedAt = Date.now();
       const verificationFilterAfterTimestamp = mail.provider === '2925'
         ? Math.max(0, stepStartedAt - MAIL_2925_FILTER_LOOKBACK_MS)
@@ -608,6 +645,8 @@
         || mail.provider === CLOUD_MAIL_PROVIDER
       ) {
         await addLog(`步骤 ${visibleStep}：正在通过 ${mail.label} 轮询验证码...`);
+      } else if (mail.provider === 'yahoo') {
+        await addLog(`步骤 ${visibleStep}：Yahoo 使用专用取码流程：先在认证页重新获取验证码，再跳转收件箱检查顶部邮件；进入步骤时不预先打开旧收件箱轮询。`, 'warn');
       } else {
         await addLog(`步骤 ${visibleStep}：正在打开${mail.label}...`);
         if (mail.provider === '2925' && typeof ensureMail2925MailboxSession === 'function') {
@@ -626,6 +665,7 @@
         }
       }
 
+      const useYahooMailboxRefreshResendCycle = effectiveProvider === 'yahoo';
       await resolveVerificationStep(8, {
         ...preparedState,
         step8VerificationTargetEmail: displayedVerificationEmail || '',
@@ -636,7 +676,7 @@
         disableTimeBudgetCap: mail.provider === '2925',
         getRemainingTimeMs: getStep8RemainingTimeResolver(preparedState?.oauthUrl || '', visibleStep),
         requestFreshCodeFirst: false,
-        lastResendAt: latestResendAt,
+        lastResendAt: useYahooMailboxRefreshResendCycle ? (latestResendAt || stepStartedAt) : latestResendAt,
         onResendRequestedAt: async (requestedAt) => {
           const numericRequestedAt = Number(requestedAt) || 0;
           if (numericRequestedAt > 0) {
@@ -647,14 +687,20 @@
           }
         },
         targetEmail: fixedTargetEmail,
-        maxResendRequests: mail.provider === '2925' ? 2 : undefined,
+        maxResendRequests: useYahooMailboxRefreshResendCycle ? 0 : (mail.provider === '2925' ? 2 : undefined),
         initialPollMaxAttempts: mail.provider === '2925' ? 5 : undefined,
         pollAttemptPlan: mail.provider === '2925' ? [2, 3, 15] : undefined,
+        intervalMs: useYahooMailboxRefreshResendCycle ? YAHOO_MAILBOX_REFRESH_INTERVAL_MS : undefined,
+        maxAttempts: useYahooMailboxRefreshResendCycle ? YAHOO_MAILBOX_REFRESH_MAX_ATTEMPTS : undefined,
+        refreshesBeforeResend: useYahooMailboxRefreshResendCycle ? YAHOO_MAILBOX_REFRESH_ROUNDS_BEFORE_RESEND : undefined,
+        keepRefreshingUntilCode: useYahooMailboxRefreshResendCycle ? false : undefined,
         resendIntervalMs: mail.provider === LUCKMAIL_PROVIDER
           ? 15000
           : ((mail.provider === HOTMAIL_PROVIDER || mail.provider === '2925')
             ? 0
-            : STANDARD_MAIL_VERIFICATION_RESEND_INTERVAL_MS),
+            : (useYahooMailboxRefreshResendCycle
+              ? YAHOO_MAILBOX_RESEND_INTERVAL_MS
+              : STANDARD_MAIL_VERIFICATION_RESEND_INTERVAL_MS)),
       });
       return {
         lastResendAt: latestResendAt,

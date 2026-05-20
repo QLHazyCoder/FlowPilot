@@ -11,6 +11,7 @@
 })(typeof self !== 'undefined' ? self : globalThis, function createMailProviderUtils() {
   const HOTMAIL_PROVIDER = 'hotmail-api';
   const GMAIL_PROVIDER = 'gmail';
+  const YAHOO_PROVIDER = 'yahoo';
   const YYDS_MAIL_PROVIDER = 'yyds-mail';
   const NETEASE_LIST_PATH = '/js6/main.jsp?df=mail163_letter#module=mbox.ListModule%7C%7B%22fid%22%3A1%2C%22order%22%3A%22date%22%2C%22desc%22%3Atrue%7D';
   const ICLOUD_TARGET_MAILBOX_TYPE_INBOX = 'icloud-inbox';
@@ -27,6 +28,7 @@
     const normalized = String(value || '').trim().toLowerCase();
     switch (normalized) {
       case HOTMAIL_PROVIDER:
+      case YAHOO_PROVIDER:
       case YYDS_MAIL_PROVIDER:
       case '163':
       case '163-vip':
@@ -78,6 +80,17 @@
     if (provider === HOTMAIL_PROVIDER) {
       return { provider: HOTMAIL_PROVIDER, label: 'Hotmail（微软 Graph）' };
     }
+    if (provider === YAHOO_PROVIDER) {
+      return {
+        provider: YAHOO_PROVIDER,
+        source: 'yahoo-mail',
+        url: 'https://mail.yahoo.com/n/inbox/all?listFilter=ALL_INBOX',
+        label: 'Yahoo 邮箱',
+        navigateOnReuse: true,
+        inject: ['content/activation-utils.js', 'shared/source-registry.js', 'content/utils.js', 'content/yahoo-mail.js'],
+        injectSource: 'yahoo-mail',
+      };
+    }
     if (provider === YYDS_MAIL_PROVIDER) {
       return { provider: YYDS_MAIL_PROVIDER, label: 'YYDS Mail' };
     }
@@ -126,6 +139,7 @@
   return {
     GMAIL_PROVIDER,
     HOTMAIL_PROVIDER,
+    YAHOO_PROVIDER,
     YYDS_MAIL_PROVIDER,
     getIcloudForwardMailConfig,
     getIcloudForwardMailProviderOptions,

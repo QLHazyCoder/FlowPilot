@@ -499,6 +499,7 @@
             <option value="luckmail-api">LuckMail（API 购邮）</option>
             <option value="yyds-mail">YYDS Mail</option>
             <option value="icloud">iCloud 邮箱</option>
+            <option value="yahoo">Yahoo 邮箱 (mail.yahoo.com) 请把默认邮箱页面设置为ALL</option>
             <option value="163">163 邮箱 (mail.163.com) 版本老旧，请自行维护使用</option>
             <option value="163-vip">163 VIP 邮箱 (vip.163.com) 版本老旧，请自行维护使用</option>
             <option value="126">126 邮箱 (mail.126.com) 版本老旧，请自行维护使用</option>
@@ -510,6 +511,20 @@
             <option value="cloudmail">Cloud Mail</option>
           </select>
           <button id="btn-mail-login" class="btn btn-outline btn-sm data-inline-btn" type="button" disabled>登录</button>
+        </div>
+      </div>
+      <div class="data-row" id="row-yahoo-mail-email" style="display:none;">
+        <span class="data-label">Yahoo账号</span>
+        <input type="text" id="input-yahoo-mail-email" class="data-input" placeholder="name@yahoo.com" />
+      </div>
+      <div class="data-row" id="row-yahoo-mail-password" style="display:none;">
+        <span class="data-label">Yahoo密码</span>
+        <div class="input-with-icon">
+          <input type="password" id="input-yahoo-mail-password" class="data-input data-input-with-icon"
+            placeholder="Yahoo 登录密码" />
+          <button id="btn-toggle-yahoo-mail-password" class="input-icon-btn" type="button"
+            data-password-toggle="input-yahoo-mail-password" data-show-label="显示 Yahoo 登录密码"
+            data-hide-label="隐藏 Yahoo 登录密码" aria-label="显示 Yahoo 登录密码" title="显示 Yahoo 登录密码"></button>
         </div>
       </div>
       <div class="data-row data-check-row" id="row-custom-mail-provider-pool" style="display:none;">
@@ -532,6 +547,7 @@
           <option value="custom-pool">自定义邮箱池</option>
           <option value="cloudflare">Cloudflare</option>
           <option value="icloud">iCloud 隐私邮箱</option>
+          <option value="yahoo">Yahoo 临时邮箱</option>
           <option value="cloudflare-temp-email">Cloudflare Temp Email（推荐）</option>
           <option value="cloudmail">Cloud Mail</option>
         </select>
@@ -1872,6 +1888,7 @@
   <script src="../phone-sms/providers/five-sim.js"></script>
   <script src="../phone-sms/providers/registry.js"></script>
   <script src="../icloud-utils.js"></script>
+  <script src="../yahoo-utils.js"></script>
   <script src="../mail-provider-utils.js"></script>
   <script src="../hotmail-utils.js"></script>
   <script src="../luckmail-utils.js"></script>

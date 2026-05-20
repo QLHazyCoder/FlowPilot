@@ -74,6 +74,7 @@ importScripts(
   'background/cloudmail-provider.js',
   'yyds-mail-utils.js',
   'background/yyds-mail-provider.js',
+  'yahoo-utils.js',
   'icloud-utils.js',
   'mail-provider-utils.js',
   'content/activation-utils.js'
@@ -390,6 +391,10 @@ const {
   normalizeYydsMailMessageDetail,
   normalizeYydsMailMessages,
 } = self.YydsMailUtils;
+const {
+  YAHOO_PROVIDER = 'yahoo',
+  YAHOO_GENERATOR = 'yahoo',
+} = self.YahooUtils || {};
 const {
   findIcloudAliasByEmail,
   getConfiguredIcloudHostPreference,
@@ -1297,6 +1302,8 @@ const PERSISTED_SETTING_DEFAULTS = {
   customMailProviderPool: [],
   customEmailPool: [],
   customEmailPoolEntries: [],
+  yahooMailEmail: '',
+  yahooMailPassword: '',
   autoDeleteUsedIcloudAlias: false,
   icloudHostPreference: 'auto',
   icloudTargetMailboxType: 'icloud-inbox',
@@ -2415,6 +2422,9 @@ function normalizeEmailGenerator(value = '') {
   const yydsMailGenerator = typeof YYDS_MAIL_GENERATOR === 'string'
     ? YYDS_MAIL_GENERATOR
     : 'yyds-mail';
+  const yahooGenerator = typeof YAHOO_GENERATOR === 'string'
+    ? YAHOO_GENERATOR
+    : 'yahoo';
   if (normalized === 'custom' || normalized === 'manual') {
     return 'custom';
   }
@@ -2430,6 +2440,7 @@ function normalizeEmailGenerator(value = '') {
   if (normalized === 'cloudflare') return 'cloudflare';
   if (normalized === CLOUDFLARE_TEMP_EMAIL_GENERATOR) return CLOUDFLARE_TEMP_EMAIL_GENERATOR;
   if (normalized === 'cloudmail') return 'cloudmail';
+  if (normalized === yahooGenerator) return yahooGenerator;
   if (normalized === yydsMailGenerator) return yydsMailGenerator;
   return 'duck';
 }
@@ -2669,10 +2680,14 @@ function normalizeMailProvider(value = '') {
   const yydsMailProvider = typeof YYDS_MAIL_PROVIDER === 'string'
     ? YYDS_MAIL_PROVIDER
     : 'yyds-mail';
+  const yahooProvider = typeof YAHOO_PROVIDER === 'string'
+    ? YAHOO_PROVIDER
+    : 'yahoo';
   switch (normalized) {
     case 'custom':
     case ICLOUD_PROVIDER:
     case GMAIL_PROVIDER:
+    case yahooProvider:
     case HOTMAIL_PROVIDER:
     case LUCKMAIL_PROVIDER:
     case CLOUDFLARE_TEMP_EMAIL_PROVIDER:
@@ -3334,6 +3349,10 @@ function normalizePersistentSettingValue(key, value) {
       return normalizeCustomEmailPool(value);
     case 'customEmailPoolEntries':
       return normalizeCustomEmailPoolEntryObjects(value);
+    case 'yahooMailEmail':
+      return String(value || '').trim();
+    case 'yahooMailPassword':
+      return String(value || '');
     case 'autoDeleteUsedIcloudAlias':
     case 'accountRunHistoryTextEnabled':
     case 'cloudflareTempEmailUseRandomSubdomain':
@@ -8671,6 +8690,8 @@ function matchesSourceUrlFamily(source, candidateUrl, referenceUrl) {
       return is163MailHost(candidate.hostname);
     case 'gmail-mail':
       return candidate.hostname === 'mail.google.com';
+    case 'yahoo-mail':
+      return candidate.hostname === 'mail.yahoo.com';
     case 'icloud-mail':
       return candidate.hostname === 'www.icloud.com' || candidate.hostname === 'www.icloud.com.cn';
     case 'inbucket-mail':
@@ -8974,6 +8995,7 @@ function getSourceLabel(source) {
   const labels = {
     'openai-auth': '认证页',
     'gmail-mail': 'Gmail 邮箱',
+    'yahoo-mail': 'Yahoo 邮箱',
     'sidepanel': '侧边栏',
     'signup-page': '认证页',
     'vps-panel': 'CPA 面板',
@@ -11579,6 +11601,9 @@ function getEmailGeneratorLabel(generator) {
   const yydsMailGenerator = typeof YYDS_MAIL_GENERATOR === 'string'
     ? YYDS_MAIL_GENERATOR
     : 'yyds-mail';
+  const yahooGenerator = typeof YAHOO_GENERATOR === 'string'
+    ? YAHOO_GENERATOR
+    : 'yahoo';
   if (generator === 'custom') {
     return '自定义邮箱';
   }
@@ -11594,6 +11619,7 @@ function getEmailGeneratorLabel(generator) {
   if (generator === 'cloudflare') return 'Cloudflare 邮箱';
   if (generator === CLOUDFLARE_TEMP_EMAIL_GENERATOR) return 'Cloudflare Temp Email';
   if (generator === CLOUD_MAIL_GENERATOR) return 'Cloud Mail';
+  if (generator === yahooGenerator) return 'Yahoo 临时邮箱';
   if (generator === yydsMailGenerator) return 'YYDS Mail';
   return 'Duck 邮箱';
 }
@@ -11767,6 +11793,10 @@ async function fetchCloudflareTempEmailAddress(state, options = {}) {
 
 async function fetchDuckEmail(options = {}) {
   return generatedEmailHelpers.fetchDuckEmail(options);
+}
+
+async function fetchYahooTempEmail(state, options = {}) {
+  return generatedEmailHelpers.fetchYahooTempEmail(state, options);
 }
 
 async function fetchGeneratedEmail(state, options = {}) {
@@ -12895,7 +12925,15 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
         if (resolvedSignupMethod === SIGNUP_METHOD_PHONE) {
           await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：本轮注册方式为手机号注册，将跳过邮箱预获取 ===`, 'info');
         } else {
-          await ensureAutoEmailReady(targetRun, totalRuns, attemptRuns);
+          const readyEmail = await ensureAutoEmailReady(targetRun, totalRuns, attemptRuns);
+          const normalizedReadyEmail = String(readyEmail || '').trim();
+          if (normalizedReadyEmail) {
+            const latestEmailState = await getState();
+            const normalizedStateEmail = String(latestEmailState?.email || '').trim();
+            if (normalizedStateEmail.toLowerCase() !== normalizedReadyEmail.toLowerCase()) {
+              await setEmailState(normalizedReadyEmail);
+            }
+          }
         }
         await executeNodeAndWait('submit-signup-email', getAutoRunNodeDelayMs('submit-signup-email'));
       });
@@ -13318,12 +13356,14 @@ const verificationFlowHelpers = self.MultiPageBackgroundVerificationFlow?.create
   getHotmailVerificationPollConfig,
   getHotmailVerificationRequestTimestamp,
   handleMail2925LimitReachedError,
+  ensureContentScriptReadyOnTab,
   getState,
   getTabId,
   HOTMAIL_PROVIDER,
   isMail2925LimitReachedError,
   isRetryableContentScriptTransportError,
   isStopError,
+  isTabAlive,
   LUCKMAIL_PROVIDER,
   YYDS_MAIL_PROVIDER,
   MAIL_2925_VERIFICATION_INTERVAL_MS,
@@ -13333,6 +13373,7 @@ const verificationFlowHelpers = self.MultiPageBackgroundVerificationFlow?.create
   pollHotmailVerificationCode,
   pollLuckmailVerificationCode,
   pollYydsMailVerificationCode,
+  reuseOrCreateTab,
   sendToContentScript,
   sendToContentScriptResilient,
   sendToMailContentScriptResilient,
@@ -13903,6 +13944,7 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   executeNodeViaCompletionSignal,
   exportSettingsBundle,
   fetchGeneratedEmail,
+  openMailProviderLogin,
   refreshGpcCardBalance,
   finalizePhoneActivationAfterSuccessfulFlow,
   testKiroRsConnection: async (baseUrl, apiKey) => {
@@ -14122,8 +14164,17 @@ async function ensureSignupPostEmailPageReadyInTab(tabId, step = 2, options = {}
   return signupFlowHelpers.ensureSignupPostEmailPageReadyInTab(tabId, step, options);
 }
 
-async function resolveSignupEmailForFlow(state) {
-  return signupFlowHelpers.resolveSignupEmailForFlow(state);
+async function resolveSignupEmailForFlow(state, options = {}) {
+  let latestState = null;
+  try {
+    latestState = await getState();
+  } catch {
+    latestState = null;
+  }
+  return signupFlowHelpers.resolveSignupEmailForFlow({
+    ...(state || {}),
+    ...(latestState || {}),
+  }, options);
 }
 
 // ============================================================
@@ -14159,11 +14210,25 @@ function getMailConfig(state) {
   const yydsMailProvider = typeof YYDS_MAIL_PROVIDER === 'string'
     ? YYDS_MAIL_PROVIDER
     : 'yyds-mail';
+  const yahooProvider = typeof YAHOO_PROVIDER === 'string'
+    ? YAHOO_PROVIDER
+    : 'yahoo';
   if (provider === 'custom') {
     return { provider: 'custom', label: '自定义邮箱' };
   }
   if (provider === HOTMAIL_PROVIDER) {
     return { provider: HOTMAIL_PROVIDER, label: 'Hotmail（API对接/本地助手）' };
+  }
+  if (provider === yahooProvider) {
+    return {
+      provider: yahooProvider,
+      source: 'yahoo-mail',
+      url: 'https://mail.yahoo.com/n/inbox/all?listFilter=ALL_INBOX',
+      label: 'Yahoo 邮箱',
+      navigateOnReuse: true,
+      inject: ['content/activation-utils.js', 'shared/source-registry.js', 'content/utils.js', 'content/yahoo-mail.js'],
+      injectSource: 'yahoo-mail',
+    };
   }
   if (provider === ICLOUD_PROVIDER) {
     const configuredHost = getConfiguredIcloudHostPreference(state)
@@ -14248,6 +14313,74 @@ function getMailConfig(state) {
     };
   }
   return { source: 'qq-mail', url: 'https://wx.mail.qq.com/', label: 'QQ 邮箱' };
+}
+
+async function openMailProviderLogin(payload = {}) {
+  const state = await getState();
+  const provider = String(payload.provider || state.mailProvider || '').trim() || state.mailProvider || 'qq';
+  const mail = getMailConfig({
+    ...state,
+    mailProvider: provider,
+  });
+
+  if (mail?.error) {
+    throw new Error(mail.error);
+  }
+
+  const requestedUrl = String(payload.url || '').trim();
+  const targetUrl = requestedUrl || String(mail?.url || '').trim();
+  if (!targetUrl) {
+    throw new Error(`${mail?.label || provider || '当前邮箱服务'}没有可跳转的登录页。`);
+  }
+
+  if (mail?.source) {
+    const tabId = await reuseOrCreateTab(mail.source, targetUrl, {
+      inject: mail.inject,
+      injectSource: mail.injectSource,
+      navigateOnReuse: mail.navigateOnReuse !== false,
+    });
+    if (payload.active !== false && Number.isInteger(tabId)) {
+      await chrome.tabs.update(tabId, { active: true }).catch(() => { });
+    }
+    const yahooMailEmail = String(payload.yahooMailEmail || state.yahooMailEmail || '').trim();
+    const yahooMailPassword = String(payload.yahooMailPassword || state.yahooMailPassword || '');
+    if (provider === YAHOO_PROVIDER && yahooMailEmail && yahooMailPassword) {
+      try {
+        const loginResult = await sendToContentScriptResilient(mail.source, {
+          type: 'YAHOO_LOGIN_WITH_CREDENTIALS',
+          payload: {
+            email: yahooMailEmail,
+            password: yahooMailPassword,
+          },
+        }, {
+          responseTimeoutMs: 45000,
+          logLabel: '填写 Yahoo 邮箱登录账号密码',
+        });
+        if (loginResult?.submitted) {
+          await addLog('Yahoo 邮箱：已自动填写登录账号密码并提交。', 'ok');
+        }
+      } catch (err) {
+        await addLog(`Yahoo 邮箱：自动填写登录账号密码失败，请在打开的页面手动完成登录。原因：${getErrorMessage(err)}`, 'warn');
+      }
+    }
+    await addLog(`${mail.label || '邮箱'}：已打开登录/收件箱页面。`, 'info');
+    return {
+      ok: true,
+      provider,
+      source: mail.source,
+      tabId,
+      url: targetUrl,
+    };
+  }
+
+  const tab = await chrome.tabs.create({ url: targetUrl, active: true });
+  await addLog(`${mail?.label || '邮箱'}：已打开登录页面。`, 'info');
+  return {
+    ok: true,
+    provider,
+    tabId: tab?.id ?? null,
+    url: targetUrl,
+  };
 }
 
 function normalizeInbucketOrigin(rawValue) {

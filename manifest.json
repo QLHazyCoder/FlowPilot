@@ -106,6 +106,19 @@
     },
     {
       "matches": [
+        "https://mail.yahoo.com/*"
+      ],
+      "js": [
+        "content/activation-utils.js",
+        "shared/source-registry.js",
+        "content/utils.js",
+        "content/yahoo-mail.js"
+      ],
+      "all_frames": false,
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
         "https://duckduckgo.com/email/settings/autofill*"
       ],
       "js": [

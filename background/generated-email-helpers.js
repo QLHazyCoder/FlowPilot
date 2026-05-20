@@ -221,6 +221,53 @@
       return result.email;
     }
 
+    async function fetchYahooTempEmail(state, options = {}) {
+      throwIfStopped();
+      const latestState = state || await getState();
+      const yahooSettingsUrl = 'https://mail.yahoo.com/n/settings/2';
+      await addLog('Yahoo 临时邮箱：正在打开设置页并准备创建新别名...', 'info');
+
+      const yahooTabOptions = {
+        navigateOnReuse: true,
+        inject: ['content/activation-utils.js', 'shared/source-registry.js', 'content/utils.js', 'content/yahoo-mail.js'],
+        injectSource: 'yahoo-mail',
+      };
+      await reuseOrCreateTab('yahoo-mail', yahooSettingsUrl, yahooTabOptions);
+
+      const createMessage = {
+        type: 'YAHOO_CREATE_TEMP_ALIAS',
+        source: 'background',
+        payload: {
+          prefix: String(options.prefix || latestState.emailPrefix || '').trim().toLowerCase(),
+        },
+      };
+      const sendCreateRequest = async () => sendToContentScript('yahoo-mail', createMessage, {
+        responseTimeoutMs: 120000,
+      });
+
+      let result = await sendCreateRequest();
+      if (result?.error && shouldRetryYahooAliasCreationInForeground(result.error)) {
+        await addLog(`Yahoo 临时邮箱：后台创建需要前台页面交互，正在自动切换到 Yahoo 设置页后重试。原因：${result.error}`, 'warn');
+        await reuseOrCreateTab('yahoo-mail', yahooSettingsUrl, yahooTabOptions);
+        result = await sendCreateRequest();
+      }
+
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+      if (!result?.email) {
+        throw new Error('Yahoo 临时邮箱创建后未返回可用邮箱地址。');
+      }
+
+      await setEmailState(result.email);
+      await addLog(`Yahoo 临时邮箱：已创建 ${result.email}`, 'ok');
+      return result.email;
+    }
+
+    function shouldRetryYahooAliasCreationInForeground(message = '') {
+      return /未找到“新建一次性电子邮箱|未找到“新建一次性电子邮箱\/地址|点击“添加”后未出现创建面板|未找到一次性邮箱输入框|未找到保存\/创建按钮|创建面板/.test(String(message || ''));
+    }
+
     async function fetchCustomEmailPoolEmail(state, options = {}) {
       throwIfStopped();
       const latestState = state || await getState();
@@ -340,6 +387,9 @@
       if (generator === CLOUDFLARE_TEMP_EMAIL_GENERATOR) {
         return fetchCloudflareTempEmailAddress(mergedState, options);
       }
+      if (generator === 'yahoo') {
+        return fetchYahooTempEmail(mergedState, options);
+      }
       const resolvedDuckBaselineEmail = typeof getRegistrationEmailBaseline === 'function'
         ? getRegistrationEmailBaseline(mergedState, {
           preferredEmail: options.currentEmail,
@@ -365,6 +415,7 @@
       fetchCloudflareTempEmailAddress,
       fetchDuckEmail,
       fetchGeneratedEmail,
+      fetchYahooTempEmail,
       generateCloudflareAliasLocalPart,
       requestCloudflareTempEmailJson,
     };

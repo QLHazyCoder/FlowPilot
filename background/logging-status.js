@@ -21,6 +21,7 @@
       const labels = {
         'openai-auth': '认证页',
         'gmail-mail': 'Gmail 邮箱',
+        'yahoo-mail': 'Yahoo 邮箱',
         'sidepanel': '侧边栏',
         'signup-page': '认证页',
         'vps-panel': 'CPA 面板',

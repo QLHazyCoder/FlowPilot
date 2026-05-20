@@ -3,6 +3,7 @@ console.log('[MultiPage:kiro-register-page] Content script loaded on', location.
 const KIRO_REGISTER_PAGE_LISTENER_SENTINEL = 'data-multipage-kiro-register-page-listener';
 const DEFAULT_KIRO_PAGE_LOAD_TIMEOUT_MS = globalThis.MultiPageKiroTimeouts?.DEFAULT_KIRO_PAGE_LOAD_TIMEOUT_MS || (3 * 60 * 1000);
 const KIRO_CONTINUE_TEXT_PATTERN = /continue|继续/i;
+const KIRO_RESEND_VERIFICATION_CODE_PATTERN = /重新发送(?:验证码)?|再次发送(?:验证码)?|重发(?:验证码)?|未收到(?:验证码|邮件)?|resend(?:\s+(?:code|email))?|send\s+(?:a\s+)?new\s+code|send\s+(?:it\s+)?again|request\s+(?:a\s+)?new\s+code|didn'?t\s+receive|did\s+not\s+receive/i;
 const KIRO_BUILDER_ID_TEXT_PATTERN = /aws\s*builder\s*id|builder\s*id/i;
 const KIRO_CONFIRM_CONTINUE_TEXT_PATTERN = /confirm and continue|确认并继续/i;
 const KIRO_ALLOW_ACCESS_TEXT_PATTERN = /allow access|允许访问/i;
@@ -47,7 +48,7 @@ const KIRO_CONFIRM_PASSWORD_TEXT_PATTERN = /confirm\s*password|re[-\s]*enter\s*p
 const KIRO_PRIMARY_PASSWORD_HINT_PATTERN = /enter\s*password|create\s*password|new\s*password|\u8f93\u5165.*\u5bc6\u7801|\u521b\u5efa.*\u5bc6\u7801|^\s*\u5bc6\u7801\s*$/i;
 const KIRO_SIGN_IN_TEXT_PATTERN = /sign\s*in\s*with\s*your\s*aws\s*builder\s*id|aws\s*builder\s*id\s*sign\s*in/i;
 const KIRO_CODE_INVALID_TEXT_PATTERN = /code\s*(?:is\s*)?invalid|invalid\s*code|\u4ee3\u7801\u65e0\u6548|\u9a8c\u8bc1\u7801\u65e0\u6548/i;
-const KIRO_RESEND_CODE_TEXT_PATTERN = /resend|send\s*again|\u91cd\u65b0\u53d1\u9001/i;
+const KIRO_RESEND_CODE_TEXT_PATTERN = KIRO_RESEND_VERIFICATION_CODE_PATTERN;
 
 function isVisibleKiroElement(element) {
   if (!element) return false;
@@ -166,6 +167,12 @@ function getElementActionText(element) {
     .trim();
 }
 
+function isKiroActionEnabled(element) {
+  return Boolean(element)
+    && !element.disabled
+    && element.getAttribute('aria-disabled') !== 'true';
+}
+
 function findActionButton(options = {}) {
   const {
     preferredSelectors = [],
@@ -175,13 +182,13 @@ function findActionButton(options = {}) {
 
   for (const selector of preferredSelectors) {
     const preferred = findFirstVisible(selector);
-    if (preferred && !preferred.disabled && preferred.getAttribute('aria-disabled') !== 'true') {
+    if (preferred && isKiroActionEnabled(preferred)) {
       return preferred;
     }
   }
 
   const candidates = collectVisibleElements('button, [role="button"], input[type="submit"], input[type="button"]')
-    .filter((element) => !element.disabled && element.getAttribute('aria-disabled') !== 'true');
+    .filter((element) => isKiroActionEnabled(element));
 
   const prioritized = formOwner
     ? candidates.filter((element) => (element.form || element.closest?.('form') || null) === formOwner)
@@ -386,12 +393,27 @@ function findOtpVerifyButton(otpInput = null) {
   });
 }
 
-function findOtpResendButton(otpInput = null) {
+function findOtpResendButton(otpInputOrOptions = null) {
+  const options = otpInputOrOptions instanceof HTMLElement ? {} : (otpInputOrOptions || {});
+  const otpInput = otpInputOrOptions instanceof HTMLElement
+    ? otpInputOrOptions
+    : (options.otpInput instanceof HTMLElement ? options.otpInput : null);
   const form = otpInput?.form || otpInput?.closest?.('form') || null;
-  return findActionButton({
-    textPattern: KIRO_RESEND_CODE_TEXT_PATTERN,
-    formOwner: form,
+  const allowDisabled = Boolean(options.allowDisabled);
+  const candidates = collectVisibleElements(
+    'button, a, [role="button"], [role="link"], input[type="submit"], input[type="button"]'
+  );
+  const matches = candidates.filter((element) => {
+    if (!allowDisabled && !isKiroActionEnabled(element)) {
+      return false;
+    }
+    const text = getElementActionText(element);
+    return text && KIRO_RESEND_CODE_TEXT_PATTERN.test(text);
   });
+  const sameFormMatches = form
+    ? matches.filter((element) => (element.form || element.closest?.('form') || null) === form)
+    : [];
+  return sameFormMatches[0] || matches[0] || null;
 }
 
 function findPasswordContinueButton(passwordInput = null) {
@@ -838,6 +860,41 @@ async function submitKiroVerificationCode(payload = {}) {
   };
 }
 
+async function resendKiroVerificationCode(payload = {}) {
+  const readyState = await ensureKiroRegisterPageState({
+    targetStates: ['register_otp_page'],
+    timeoutMs: payload?.timeoutMs || DEFAULT_KIRO_PAGE_LOAD_TIMEOUT_MS,
+    retryDelayMs: payload?.retryDelayMs || 250,
+  });
+
+  const timeoutMs = Math.max(1000, Math.floor(Number(payload?.timeoutMs) || 30000));
+  const retryDelayMs = Math.max(100, Math.floor(Number(payload?.retryDelayMs) || 250));
+  const start = Date.now();
+  let resendButton = null;
+
+  while (Date.now() - start < timeoutMs) {
+    throwIfStopped();
+    resendButton = findOtpResendButton({
+      otpInput: readyState.otpInput,
+      allowDisabled: true,
+    });
+    if (resendButton && isKiroActionEnabled(resendButton)) {
+      const actionText = getElementActionText(resendButton);
+      await sleep(200);
+      simulateClick(resendButton);
+      return {
+        resent: true,
+        state: 'verification_resend_requested',
+        actionText,
+        url: location.href,
+      };
+    }
+    await sleep(retryDelayMs);
+  }
+
+  throw new Error('Kiro 验证码页未找到可用的重新发送验证码按钮。');
+}
+
 async function submitKiroPassword(payload = {}) {
   const password = String(payload?.password || '');
   if (!password) {
@@ -946,6 +1003,8 @@ async function handleKiroRegisterCommand(message) {
       return ensureKiroRegisterPageState(message.payload || {});
     case 'ENSURE_KIRO_STATE_CHANGE':
       return waitForKiroRegisterStateChange(message.payload || {});
+    case 'KIRO_RESEND_VERIFICATION_CODE':
+      return resendKiroVerificationCode(message.payload || {});
     case 'EXECUTE_NODE': {
       const nodeId = String(message.nodeId || message.payload?.nodeId || '').trim();
       if (nodeId === 'kiro-open-register-page') {
@@ -980,6 +1039,7 @@ if (document.documentElement.getAttribute(KIRO_REGISTER_PAGE_LISTENER_SENTINEL) 
       message.type === 'ENSURE_KIRO_PAGE_STATE'
       || message.type === 'ENSURE_KIRO_STATE_CHANGE'
       || message.type === 'GET_KIRO_REGISTER_PAGE_STATE'
+      || message.type === 'KIRO_RESEND_VERIFICATION_CODE'
       || message.type === 'EXECUTE_NODE'
     ) {
       resetStopState();

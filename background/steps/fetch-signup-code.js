@@ -2,6 +2,10 @@
   root.MultiPageBackgroundStep4 = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createBackgroundStep4Module() {
   const MAIL_2925_FILTER_LOOKBACK_MS = 10 * 60 * 1000;
+  const YAHOO_MAILBOX_REFRESH_INTERVAL_MS = 5 * 1000;
+  const YAHOO_MAILBOX_REFRESH_ROUNDS_BEFORE_RESEND = 5;
+  const YAHOO_MAILBOX_REFRESH_MAX_ATTEMPTS = 60;
+  const YAHOO_MAILBOX_RESEND_INTERVAL_MS = YAHOO_MAILBOX_REFRESH_INTERVAL_MS * YAHOO_MAILBOX_REFRESH_ROUNDS_BEFORE_RESEND;
 
   function createStep4Executor(deps = {}) {
     const {
@@ -68,6 +72,27 @@
         || Boolean(state?.signupPhoneActivation);
     }
 
+    function resolveEffectiveMailProvider(mail = {}, state = {}) {
+      const explicitProvider = String(mail?.provider || '').trim().toLowerCase();
+      if (explicitProvider) return explicitProvider;
+
+      const stateProvider = String(state?.mailProvider || '').trim().toLowerCase();
+      if (stateProvider) return stateProvider;
+
+      const source = String(mail?.source || '').trim().toLowerCase();
+      const injectSource = String(mail?.injectSource || '').trim().toLowerCase();
+      const label = String(mail?.label || '').trim().toLowerCase();
+      const url = String(mail?.url || '').trim().toLowerCase();
+      const combined = `${source} ${injectSource} ${label} ${url}`;
+      if (/yahoo/.test(combined)) return 'yahoo';
+      if (/2925/.test(combined)) return '2925';
+      if (/hotmail/.test(combined)) return HOTMAIL_PROVIDER;
+      if (/luckmail/.test(combined)) return LUCKMAIL_PROVIDER;
+      if (/cloudmail/.test(combined)) return CLOUD_MAIL_PROVIDER;
+      if (/cloudflare/.test(combined)) return CLOUDFLARE_TEMP_EMAIL_PROVIDER;
+      return explicitProvider || stateProvider || '';
+    }
+
     async function executeSignupPhoneCodeStep(state, signupTabId) {
       if (typeof phoneVerificationHelpers?.completeSignupPhoneVerificationFlow !== 'function') {
         throw new Error('步骤 4：手机号注册验证码流程不可用，接码模块尚未初始化。');
@@ -98,8 +123,12 @@
         return;
       }
 
-      const mail = getMailConfig(state);
-      if (mail.error) throw new Error(mail.error);
+      const rawMail = getMailConfig(state);
+      if (rawMail.error) throw new Error(rawMail.error);
+      const effectiveProvider = resolveEffectiveMailProvider(rawMail, state);
+      const mail = effectiveProvider && effectiveProvider !== rawMail.provider
+        ? { ...rawMail, provider: effectiveProvider }
+        : { ...rawMail };
 
       const verificationFilterAfterTimestamp = mail.provider === '2925'
         ? Math.max(0, stepStartedAt - MAIL_2925_FILTER_LOOKBACK_MS)
@@ -136,17 +165,22 @@
           await focusOrOpenMailTab(mail);
         }
         await addLog(`步骤 4：将直接使用当前已登录的 ${mail.label} 轮询验证码。`, 'info');
+      } else if (mail.provider === 'yahoo') {
+        await addLog('步骤 4：Yahoo 使用专用取码流程：先在认证页重新获取验证码，再跳转收件箱检查顶部邮件；进入步骤时不预先打开旧收件箱轮询。', 'warn');
       } else {
         await addLog(`步骤 4：正在打开${mail.label}...`);
         await focusOrOpenMailTab(mail);
       }
 
-      const shouldRequestFreshCodeFirst = ![
-        HOTMAIL_PROVIDER,
-        LUCKMAIL_PROVIDER,
-        CLOUDFLARE_TEMP_EMAIL_PROVIDER,
-        CLOUD_MAIL_PROVIDER,
-      ].includes(mail.provider);
+      const useYahooMailboxRefreshResendCycle = effectiveProvider === 'yahoo';
+      const shouldRequestFreshCodeFirst = useYahooMailboxRefreshResendCycle
+        ? false
+        : ![
+          HOTMAIL_PROVIDER,
+          LUCKMAIL_PROVIDER,
+          CLOUDFLARE_TEMP_EMAIL_PROVIDER,
+          CLOUD_MAIL_PROVIDER,
+        ].includes(mail.provider);
       const signupProfile = buildSignupProfileForVerificationStep();
 
       await resolveVerificationStep(4, state, mail, {
@@ -155,11 +189,19 @@
         disableTimeBudgetCap: mail.provider === '2925',
         requestFreshCodeFirst: shouldRequestFreshCodeFirst,
         signupProfile,
+        lastResendAt: useYahooMailboxRefreshResendCycle ? stepStartedAt : 0,
+        intervalMs: useYahooMailboxRefreshResendCycle ? YAHOO_MAILBOX_REFRESH_INTERVAL_MS : undefined,
+        maxAttempts: useYahooMailboxRefreshResendCycle ? YAHOO_MAILBOX_REFRESH_MAX_ATTEMPTS : undefined,
+        refreshesBeforeResend: useYahooMailboxRefreshResendCycle ? YAHOO_MAILBOX_REFRESH_ROUNDS_BEFORE_RESEND : undefined,
+        maxResendRequests: useYahooMailboxRefreshResendCycle ? 0 : undefined,
+        keepRefreshingUntilCode: useYahooMailboxRefreshResendCycle ? false : undefined,
         resendIntervalMs: mail.provider === LUCKMAIL_PROVIDER
           ? 15000
           : ((mail.provider === HOTMAIL_PROVIDER || mail.provider === '2925')
             ? 0
-            : STANDARD_MAIL_VERIFICATION_RESEND_INTERVAL_MS),
+            : (useYahooMailboxRefreshResendCycle
+              ? YAHOO_MAILBOX_RESEND_INTERVAL_MS
+              : STANDARD_MAIL_VERIFICATION_RESEND_INTERVAL_MS)),
       });
     }
 
