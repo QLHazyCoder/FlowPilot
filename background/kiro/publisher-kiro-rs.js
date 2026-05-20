@@ -4,6 +4,8 @@
   const kiroStateApi = root?.MultiPageBackgroundKiroState || null;
   const DEFAULT_REGION = kiroStateApi?.DEFAULT_REGION || 'us-east-1';
   const DEFAULT_TARGET_ID = kiroStateApi?.DEFAULT_TARGET_ID || 'kiro-rs';
+  const KIRO_RS_TARGET_ID = 'kiro-rs';
+  const KIRO_GO_TARGET_ID = 'kiro-go';
   const BUILDER_ID_PROFILE_ARN = 'arn:aws:codewhisperer:us-east-1:638616132270:profile/AAAACCCCXXXX';
 
   function isPlainObject(value) {
@@ -52,6 +54,10 @@
     return cleanString(value);
   }
 
+  function normalizeKiroGoAdminPassword(value = '') {
+    return cleanString(value);
+  }
+
   function buildKiroRsAdminHeaders(apiKey = '', extraHeaders = {}) {
     const normalizedApiKey = normalizeKiroRsApiKey(apiKey);
     return {
@@ -67,10 +73,24 @@
     return cleanString(body?.json?.error?.message || body?.json?.message || body?.text || fallback);
   }
 
+  function readKiroGoResponseMessage(body = {}, fallback = '') {
+    return cleanString(body?.json?.error || body?.json?.message || body?.text || fallback);
+  }
+
   function normalizeKiroRsBaseUrl(value = '') {
     const normalized = cleanString(value).replace(/\/+$/, '');
     if (!normalized) {
       throw new Error('缺少 kiro.rs 管理后台地址。');
+    }
+    return normalized.endsWith('/admin')
+      ? normalized.slice(0, -'/admin'.length)
+      : normalized;
+  }
+
+  function normalizeKiroGoBaseUrl(value = '') {
+    const normalized = cleanString(value).replace(/\/+$/, '');
+    if (!normalized) {
+      throw new Error('缺少 Kiro-Go 管理后台地址。');
     }
     return normalized.endsWith('/admin')
       ? normalized.slice(0, -'/admin'.length)
@@ -128,12 +148,28 @@
   }
 
   function resolveKiroTargetConfig(state = {}, targetId = DEFAULT_TARGET_ID) {
-    if (targetId !== DEFAULT_TARGET_ID) {
+    const normalizedTargetId = cleanString(targetId).toLowerCase() || DEFAULT_TARGET_ID;
+    const nestedConfig = state?.settingsState?.flows?.kiro?.targets?.[normalizedTargetId]
+      || state?.flows?.kiro?.targets?.[normalizedTargetId]
+      || {};
+
+    if (normalizedTargetId === KIRO_GO_TARGET_ID) {
+      return {
+        baseUrl: cleanString(nestedConfig.baseUrl || state?.kiroGoUrl),
+        adminPassword: normalizeKiroGoAdminPassword(
+          nestedConfig.adminPassword
+          ?? nestedConfig.apiKey
+          ?? state?.kiroGoPassword
+          ?? state?.kiroGoAdminPassword
+          ?? ''
+        ),
+      };
+    }
+
+    if (normalizedTargetId !== KIRO_RS_TARGET_ID) {
       throw new Error(`暂不支持 Kiro 发布目标：${targetId}`);
     }
-    const nestedConfig = state?.settingsState?.flows?.kiro?.targets?.[targetId]
-      || state?.flows?.kiro?.targets?.[targetId]
-      || {};
+
     return {
       baseUrl: cleanString(nestedConfig.baseUrl || state?.kiroRsUrl),
       apiKey: normalizeKiroRsApiKey(nestedConfig.apiKey ?? state?.kiroRsKey ?? ''),
@@ -289,6 +325,82 @@
     };
   }
 
+
+  async function checkKiroGoConnection(baseUrl, adminPassword, fetchImpl) {
+    const normalizedBaseUrl = normalizeKiroGoBaseUrl(baseUrl);
+    const normalizedAdminPassword = normalizeKiroGoAdminPassword(adminPassword);
+    const response = await fetchImpl(`${normalizedBaseUrl}/admin/api/accounts`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        ...(normalizedAdminPassword ? { 'X-Admin-Password': normalizedAdminPassword } : {}),
+      },
+    });
+    const body = await readResponse(response);
+    const detail = readKiroGoResponseMessage(body, response.statusText);
+    if (response.ok) {
+      return {
+        ok: true,
+        status: response.status,
+        message: `Kiro-Go 连接正常（HTTP ${response.status}）`,
+      };
+    }
+    if (response.status === 401 || response.status === 403) {
+      return {
+        ok: false,
+        status: response.status,
+        message: `Kiro-Go 管理密码被拒绝（HTTP ${response.status}${detail ? `：${detail}` : ''}）`,
+      };
+    }
+    if (response.status === 404) {
+      return {
+        ok: false,
+        status: response.status,
+        message: `未找到 Kiro-Go 管理接口（HTTP 404${detail ? `：${detail}` : ''}）`,
+      };
+    }
+    return {
+      ok: false,
+      status: response.status,
+      message: detail || `Kiro-Go 连接失败（HTTP ${response.status}）`,
+    };
+  }
+
+  async function uploadBuilderIdCredentialToKiroGo(baseUrl, adminPassword, payload, fetchImpl) {
+    const normalizedBaseUrl = normalizeKiroGoBaseUrl(baseUrl);
+    const normalizedAdminPassword = normalizeKiroGoAdminPassword(adminPassword);
+    const response = await fetchImpl(`${normalizedBaseUrl}/admin/api/auth/credentials`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...(normalizedAdminPassword ? { 'X-Admin-Password': normalizedAdminPassword } : {}),
+      },
+      body: JSON.stringify({
+        accessToken: payload.accessToken || '',
+        refreshToken: payload.refreshToken,
+        clientId: payload.clientId,
+        clientSecret: payload.clientSecret,
+        authMethod: payload.authMethod || 'idc',
+        provider: payload.provider || 'BuilderId',
+        region: payload.region,
+        profileArn: payload.profileArn,
+      }),
+    });
+    const body = await readResponse(response);
+    if (!response.ok || body.json?.success === false) {
+      const message = readKiroGoResponseMessage(body, response.statusText) || `HTTP ${response.status}`;
+      throw new Error(`Kiro-Go 凭据上传失败：${message}`);
+    }
+
+    return {
+      credentialId: cleanString(body.json?.account?.id) || null,
+      email: cleanString(body.json?.account?.email),
+      message: normalizeKiroUploadMessage(body.json?.message),
+      raw: body.json,
+    };
+  }
+
   function createKiroRsPublisher(deps = {}) {
     const {
       addLog = async () => {},
@@ -385,12 +497,6 @@
 
         const targetId = resolveKiroTargetId(currentState);
         const targetConfig = resolveKiroTargetConfig(currentState, targetId);
-        const baseUrl = normalizeKiroRsBaseUrl(targetConfig.baseUrl);
-        const apiKey = String(targetConfig.apiKey || '');
-        if (!apiKey) {
-          throw new Error('缺少 kiro.rs API Key。');
-        }
-
         const uploadInput = buildUploadPayload(currentState);
         const machineId = await buildMachineId(uploadInput.refreshToken);
 
@@ -407,28 +513,54 @@
           },
         });
 
-        await log('步骤 9：正在上传 Builder ID 凭据到 kiro.rs...', 'info', nodeId);
-
-        const connection = await checkKiroRsConnection(baseUrl, apiKey, fetchImpl);
-        if (!connection.ok) {
-          throw new Error(connection.message);
+        let uploadResult;
+        if (targetId === KIRO_GO_TARGET_ID) {
+          const baseUrl = normalizeKiroGoBaseUrl(targetConfig.baseUrl);
+          const adminPassword = String(targetConfig.adminPassword || '');
+          if (!adminPassword) {
+            throw new Error('缺少 Kiro-Go 管理密码。');
+          }
+          await log('步骤 9：正在上传 Builder ID 凭据到 Kiro-Go...', 'info', nodeId);
+          const connection = await checkKiroGoConnection(baseUrl, adminPassword, fetchImpl);
+          if (!connection.ok) {
+            throw new Error(connection.message);
+          }
+          uploadResult = await uploadBuilderIdCredentialToKiroGo(baseUrl, adminPassword, {
+            refreshToken: uploadInput.refreshToken,
+            profileArn: uploadInput.profileArn,
+            authMethod: uploadInput.authMethod,
+            clientId: uploadInput.clientId,
+            clientSecret: uploadInput.clientSecret,
+            region: uploadInput.region,
+            email: uploadInput.email,
+          }, fetchImpl);
+        } else {
+          const baseUrl = normalizeKiroRsBaseUrl(targetConfig.baseUrl);
+          const apiKey = String(targetConfig.apiKey || '');
+          if (!apiKey) {
+            throw new Error('缺少 kiro.rs API Key。');
+          }
+          await log('步骤 9：正在上传 Builder ID 凭据到 kiro.rs...', 'info', nodeId);
+          const connection = await checkKiroRsConnection(baseUrl, apiKey, fetchImpl);
+          if (!connection.ok) {
+            throw new Error(connection.message);
+          }
+          uploadResult = await uploadBuilderIdCredential(baseUrl, apiKey, {
+            refreshToken: uploadInput.refreshToken,
+            profileArn: uploadInput.profileArn,
+            authMethod: uploadInput.authMethod,
+            clientId: uploadInput.clientId,
+            clientSecret: uploadInput.clientSecret,
+            region: uploadInput.region,
+            authRegion: uploadInput.authRegion,
+            apiRegion: uploadInput.apiRegion,
+            machineId,
+            email: uploadInput.email,
+            ...(uploadInput.proxyUrl ? { proxyUrl: uploadInput.proxyUrl } : {}),
+            ...(uploadInput.proxyUsername ? { proxyUsername: uploadInput.proxyUsername } : {}),
+            ...(uploadInput.proxyPassword ? { proxyPassword: uploadInput.proxyPassword } : {}),
+          }, fetchImpl);
         }
-
-        const uploadResult = await uploadBuilderIdCredential(baseUrl, apiKey, {
-          refreshToken: uploadInput.refreshToken,
-          profileArn: uploadInput.profileArn,
-          authMethod: uploadInput.authMethod,
-          clientId: uploadInput.clientId,
-          clientSecret: uploadInput.clientSecret,
-          region: uploadInput.region,
-          authRegion: uploadInput.authRegion,
-          apiRegion: uploadInput.apiRegion,
-          machineId,
-          email: uploadInput.email,
-          ...(uploadInput.proxyUrl ? { proxyUrl: uploadInput.proxyUrl } : {}),
-          ...(uploadInput.proxyUsername ? { proxyUsername: uploadInput.proxyUsername } : {}),
-          ...(uploadInput.proxyPassword ? { proxyPassword: uploadInput.proxyPassword } : {}),
-        }, fetchImpl);
 
         const uploadedAt = Date.now();
         const payload = await applyRuntimeState(currentState, {
@@ -445,7 +577,7 @@
             lastUploadedAt: uploadedAt,
           },
         });
-        await log(`步骤 9：kiro.rs 上传完成，状态：${uploadResult.message || '上传成功'}`, 'ok', nodeId);
+        await log(`步骤 9：${targetId === KIRO_GO_TARGET_ID ? 'Kiro-Go' : 'kiro.rs'} 上传完成，状态：${uploadResult.message || '上传成功'}`, 'ok', nodeId);
         await completeNodeFromBackground(nodeId, payload);
       } catch (error) {
         const message = getErrorMessage(error);
@@ -462,10 +594,13 @@
   return {
     buildKiroRsPayload: buildUploadPayload,
     buildMachineId,
+    checkKiroGoConnection,
     checkKiroRsConnection,
     createKiroRsPublisher,
+    normalizeKiroGoBaseUrl,
     normalizeKiroRsBaseUrl,
     normalizeKiroUploadMessage,
     uploadBuilderIdCredential,
+    uploadBuilderIdCredentialToKiroGo,
   };
 });

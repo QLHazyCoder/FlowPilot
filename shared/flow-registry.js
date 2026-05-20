@@ -6,6 +6,8 @@
   const DEFAULT_KIRO_TARGET_ID = 'kiro-rs';
   const DEFAULT_KIRO_PUBLICATION_TARGET_ID = 'kiro-rs';
   const DEFAULT_KIRO_RS_URL = '';
+  const DEFAULT_KIRO_GO_URL = '';
+  const KIRO_TARGET_IDS = Object.freeze(['kiro-rs', 'kiro-go']);
   const OPENAI_TARGET_IDS = Object.freeze(['cpa', 'sub2api', 'codex2api']);
   const SHARED_SERVICE_IDS = Object.freeze(['account', 'email', 'proxy']);
 
@@ -222,7 +224,7 @@
         ...DEFAULT_FLOW_CAPABILITIES,
         supportsAccountContribution: true,
         contributionAdapterIds: ['kiro-builder-id'],
-        supportedTargetIds: [DEFAULT_KIRO_TARGET_ID],
+        supportedTargetIds: [...KIRO_TARGET_IDS],
         stepDefinitionMode: 'kiro',
       },
       baseGroups: [
@@ -234,11 +236,20 @@
           label: 'kiro.rs',
           groups: ['kiro-target-kiro-rs'],
         },
+        'kiro-go': {
+          id: 'kiro-go',
+          label: 'Kiro-Go',
+          groups: ['kiro-target-kiro-go'],
+        },
       },
       publicationTargets: {
         'kiro-rs': {
           id: 'kiro-rs',
           label: 'kiro.rs',
+        },
+        'kiro-go': {
+          id: 'kiro-go',
+          label: 'Kiro-Go',
         },
       },
       runtimeSources: {
@@ -379,6 +390,11 @@
       label: 'kiro.rs 配置',
       rowIds: ['row-kiro-rs-url', 'row-kiro-rs-key', 'row-kiro-rs-test-status'],
     },
+    'kiro-target-kiro-go': {
+      id: 'kiro-target-kiro-go',
+      label: 'Kiro-Go 配置',
+      rowIds: ['row-kiro-go-url', 'row-kiro-go-password', 'row-kiro-go-test-status'],
+    },
     'kiro-runtime-status': {
       id: 'kiro-runtime-status',
       label: 'Kiro 运行态',
@@ -428,11 +444,11 @@
 
   function normalizeKiroTargetId(value = '', fallback = DEFAULT_KIRO_TARGET_ID) {
     const normalized = String(value || '').trim().toLowerCase();
-    if (normalized === DEFAULT_KIRO_TARGET_ID) {
+    if (KIRO_TARGET_IDS.includes(normalized)) {
       return normalized;
     }
     const fallbackValue = String(fallback || '').trim().toLowerCase();
-    return fallbackValue === DEFAULT_KIRO_TARGET_ID
+    return KIRO_TARGET_IDS.includes(fallbackValue)
       ? fallbackValue
       : DEFAULT_KIRO_TARGET_ID;
   }
@@ -553,8 +569,10 @@
     DEFAULT_KIRO_TARGET_ID,
     DEFAULT_KIRO_PUBLICATION_TARGET_ID,
     DEFAULT_KIRO_RS_URL,
+    DEFAULT_KIRO_GO_URL,
     DEFAULT_OPENAI_TARGET_ID,
     FLOW_DEFINITIONS,
+    KIRO_TARGET_IDS,
     OPENAI_TARGET_IDS,
     SETTINGS_GROUP_DEFINITIONS,
     SHARED_SERVICE_IDS,

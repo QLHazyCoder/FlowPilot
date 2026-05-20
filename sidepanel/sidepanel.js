@@ -186,6 +186,14 @@ const inputKiroRsKey = document.getElementById('input-kiro-rs-key');
 const btnTestKiroRs = document.getElementById('btn-test-kiro-rs');
 const rowKiroRsTestStatus = document.getElementById('row-kiro-rs-test-status');
 const displayKiroRsTestStatus = document.getElementById('display-kiro-rs-test-status');
+const rowKiroGoUrl = document.getElementById('row-kiro-go-url');
+const inputKiroGoUrl = document.getElementById('input-kiro-go-url');
+const btnOpenKiroGoGithub = document.getElementById('btn-open-kiro-go-github');
+const rowKiroGoPassword = document.getElementById('row-kiro-go-password');
+const inputKiroGoPassword = document.getElementById('input-kiro-go-password');
+const btnTestKiroGo = document.getElementById('btn-test-kiro-go');
+const rowKiroGoTestStatus = document.getElementById('row-kiro-go-test-status');
+const displayKiroGoTestStatus = document.getElementById('display-kiro-go-test-status');
 const rowKiroWebStatus = document.getElementById('row-kiro-web-status');
 const displayKiroWebStatus = document.getElementById('display-kiro-web-status');
 const rowKiroLoginUrl = document.getElementById('row-kiro-login-url');
@@ -580,6 +588,7 @@ let currentPhoneSignupReloginAfterBindEmailEnabled = DEFAULT_PHONE_SIGNUP_RELOGI
 let currentStepDefinitionFlowId = DEFAULT_ACTIVE_FLOW_ID;
 let phoneSignupReuseUiWasLocked = false;
 let kiroRsConnectionTestStatusText = '未测试';
+let kiroGoConnectionTestStatusText = '未测试';
 let heroSmsCountrySelectionOrder = [];
 let phoneSmsProviderOrderSelection = [];
 let heroSmsCountryMenuSearchKeyword = '';
@@ -1566,6 +1575,7 @@ const PRIVACY_MASKED_INPUT_IDS = Object.freeze([
   'input-sub2api-default-proxy',
   'input-codex2api-url',
   'input-kiro-rs-url',
+  'input-kiro-go-url',
   'input-gpc-helper-api',
   'input-gpc-helper-phone',
   'input-gpc-helper-local-sms-url',
@@ -2564,6 +2574,14 @@ function setKiroRsConnectionTestStatus(message = '') {
   kiroRsConnectionTestStatusText = nextText;
   if (typeof displayKiroRsTestStatus !== 'undefined' && displayKiroRsTestStatus) {
     displayKiroRsTestStatus.textContent = nextText;
+  }
+}
+
+function setKiroGoConnectionTestStatus(message = '') {
+  const nextText = String(message || '').trim() || '未测试';
+  kiroGoConnectionTestStatusText = nextText;
+  if (typeof displayKiroGoTestStatus !== 'undefined' && displayKiroGoTestStatus) {
+    displayKiroGoTestStatus.textContent = nextText;
   }
 }
 
@@ -4600,6 +4618,7 @@ function collectSettingsPayload() {
     });
   const flowRegistryApi = typeof getFlowRegistry === 'function' ? getFlowRegistry() : null;
   const defaultKiroRsUrl = String(flowRegistryApi?.DEFAULT_KIRO_RS_URL || '').trim();
+  const defaultKiroGoUrl = String(flowRegistryApi?.DEFAULT_KIRO_GO_URL || '').trim();
   const normalizeKiroTargetIdSafe = typeof normalizeTargetIdForFlow === 'function'
     ? normalizeTargetIdForFlow
     : ((_flowId, targetId = '', fallback = 'kiro-rs') => {
@@ -4611,6 +4630,12 @@ function collectSettingsPayload() {
     : null;
   const currentKiroRsKeyValue = typeof inputKiroRsKey !== 'undefined' && inputKiroRsKey
     ? String(inputKiroRsKey.value ?? '').trim()
+    : null;
+  const currentKiroGoUrlValue = typeof inputKiroGoUrl !== 'undefined' && inputKiroGoUrl
+    ? String(inputKiroGoUrl.value ?? '').trim()
+    : null;
+  const currentKiroGoPasswordValue = typeof inputKiroGoPassword !== 'undefined' && inputKiroGoPassword
+    ? String(inputKiroGoPassword.value ?? '').trim()
     : null;
   const normalizeHostedCheckoutDelaySecondsSafe = typeof normalizePlusHostedCheckoutOauthDelaySeconds === 'function'
     ? normalizePlusHostedCheckoutOauthDelaySeconds
@@ -4639,6 +4664,12 @@ function collectSettingsPayload() {
     kiroRsKey: currentKiroRsKeyValue !== null
       ? currentKiroRsKeyValue
       : String(latestState?.kiroRsKey || '').trim(),
+    kiroGoUrl: currentKiroGoUrlValue !== null
+      ? (currentKiroGoUrlValue || defaultKiroGoUrl)
+      : (String(latestState?.kiroGoUrl || defaultKiroGoUrl).trim() || defaultKiroGoUrl),
+    kiroGoPassword: currentKiroGoPasswordValue !== null
+      ? currentKiroGoPasswordValue
+      : String(latestState?.kiroGoPassword || '').trim(),
     vpsUrl: inputVpsUrl.value.trim(),
     vpsPassword: inputVpsPassword.value,
     localCpaStep9Mode: getSelectedLocalCpaStep9Mode(),
@@ -10717,8 +10748,17 @@ function applySettingsState(state) {
   if (typeof inputKiroRsKey !== 'undefined' && inputKiroRsKey) {
     inputKiroRsKey.value = String(state?.kiroRsKey || '');
   }
+  if (typeof inputKiroGoUrl !== 'undefined' && inputKiroGoUrl) {
+    inputKiroGoUrl.value = String(state?.kiroGoUrl || '').trim();
+  }
+  if (typeof inputKiroGoPassword !== 'undefined' && inputKiroGoPassword) {
+    inputKiroGoPassword.value = String(state?.kiroGoPassword || '');
+  }
   if (typeof displayKiroRsTestStatus !== 'undefined' && displayKiroRsTestStatus) {
     displayKiroRsTestStatus.textContent = kiroRsConnectionTestStatusText;
+  }
+  if (typeof displayKiroGoTestStatus !== 'undefined' && displayKiroGoTestStatus) {
+    displayKiroGoTestStatus.textContent = kiroGoConnectionTestStatusText;
   }
   if (typeof displayKiroWebStatus !== 'undefined' && displayKiroWebStatus) {
     const kiroWebStatus = String(
@@ -14929,6 +14969,10 @@ btnOpenKiroRsGithub?.addEventListener('click', () => {
   openExternalUrl('https://github.com/QLHazyCoder/kiro.rs');
 });
 
+btnOpenKiroGoGithub?.addEventListener('click', () => {
+  openExternalUrl('https://github.com/tech-shrimp/Kiro-Go');
+});
+
 btnGpcHelperBalance?.addEventListener('click', async () => {
   try {
     const response = await chrome.runtime.sendMessage({
@@ -15011,6 +15055,42 @@ btnTestKiroRs?.addEventListener('click', async () => {
   } finally {
     btnTestKiroRs.disabled = false;
     btnTestKiroRs.textContent = defaultLabel;
+  }
+});
+
+
+btnTestKiroGo?.addEventListener('click', async () => {
+  const defaultLabel = btnTestKiroGo.textContent || '测试';
+  btnTestKiroGo.disabled = true;
+  btnTestKiroGo.textContent = '测试中';
+  setKiroGoConnectionTestStatus('测试中...');
+  try {
+    await persistCurrentSettingsForAction();
+    const activeFlowId = typeof getSelectedFlowId === 'function'
+      ? getSelectedFlowId(latestState)
+      : 'kiro';
+    const response = await sendSidepanelMessage({
+      type: 'CHECK_KIRO_GO_CONNECTION',
+      payload: {
+        activeFlowId,
+        targetId: 'kiro-go',
+        baseUrl: String(inputKiroGoUrl?.value || '').trim(),
+        adminPassword: String(inputKiroGoPassword?.value || ''),
+      },
+    });
+    if (response?.error) {
+      throw new Error(response.error);
+    }
+    const message = String(response?.message || '').trim() || 'Kiro-Go 测试完成。';
+    setKiroGoConnectionTestStatus(message);
+    showToast(message, response?.ok ? 'success' : 'error', response?.ok ? 2200 : 4200);
+  } catch (error) {
+    const message = error?.message || 'Kiro-Go 测试失败。';
+    setKiroGoConnectionTestStatus(message);
+    showToast(message, 'error', 4200);
+  } finally {
+    btnTestKiroGo.disabled = false;
+    btnTestKiroGo.textContent = defaultLabel;
   }
 });
 
@@ -15288,6 +15368,17 @@ selectPlusAccountAccessStrategy?.addEventListener('change', () => {
   input?.addEventListener('input', () => {
     markSettingsDirty(true);
     setKiroRsConnectionTestStatus('未测试');
+    scheduleSettingsAutoSave();
+  });
+  input?.addEventListener('blur', () => {
+    saveSettings({ silent: true }).catch(() => { });
+  });
+});
+
+[inputKiroGoUrl, inputKiroGoPassword].forEach((input) => {
+  input?.addEventListener('input', () => {
+    markSettingsDirty(true);
+    setKiroGoConnectionTestStatus('未测试');
     scheduleSettingsAutoSave();
   });
   input?.addEventListener('blur', () => {

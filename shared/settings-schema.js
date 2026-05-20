@@ -38,6 +38,7 @@
     const defaultOpenAiTargetId = flowRegistry.DEFAULT_OPENAI_TARGET_ID || 'cpa';
     const defaultKiroTargetId = flowRegistry.DEFAULT_KIRO_TARGET_ID || 'kiro-rs';
     const defaultKiroRsUrl = String(flowRegistry.DEFAULT_KIRO_RS_URL || '').trim();
+    const defaultKiroGoUrl = String(flowRegistry.DEFAULT_KIRO_GO_URL || '').trim();
     const normalizeFlowId = typeof flowRegistry.normalizeFlowId === 'function'
       ? flowRegistry.normalizeFlowId
       : ((value = '', fallback = defaultFlowId) => {
@@ -125,6 +126,10 @@
               'kiro-rs': {
                 baseUrl: defaultKiroRsUrl,
                 apiKey: '',
+              },
+              'kiro-go': {
+                baseUrl: defaultKiroGoUrl,
+                adminPassword: '',
               },
             },
             autoRun: {
@@ -367,6 +372,22 @@
                   ?? defaults.flows.kiro.targets['kiro-rs'].apiKey
                 ),
               },
+              'kiro-go': {
+                ...defaults.flows.kiro.targets['kiro-go'],
+                ...getIntegrationTargetValue(nested, (state) => state.flows?.kiro?.targets?.['kiro-go']),
+                baseUrl: String(
+                  input?.kiroGoUrl
+                  ?? input?.kiroGoBaseUrl
+                  ?? nested?.flows?.kiro?.targets?.['kiro-go']?.baseUrl
+                  ?? defaults.flows.kiro.targets['kiro-go'].baseUrl
+                ).trim() || defaults.flows.kiro.targets['kiro-go'].baseUrl,
+                adminPassword: String(
+                  input?.kiroGoPassword
+                  ?? input?.kiroGoAdminPassword
+                  ?? nested?.flows?.kiro?.targets?.['kiro-go']?.adminPassword
+                  ?? defaults.flows.kiro.targets['kiro-go'].adminPassword
+                ),
+              },
             },
             autoRun: {
               stepExecutionRange: normalizeStepExecutionRangeEntry(
@@ -486,6 +507,8 @@
       next.ipProxyMode = normalizedState.services.proxy.mode;
       next.kiroRsUrl = kiroState.targets['kiro-rs'].baseUrl;
       next.kiroRsKey = kiroState.targets['kiro-rs'].apiKey;
+      next.kiroGoUrl = kiroState.targets['kiro-go'].baseUrl;
+      next.kiroGoPassword = kiroState.targets['kiro-go'].adminPassword;
       next.stepExecutionRangeByFlow = buildStepExecutionRangeByFlow(normalizedState);
       next.settingsSchemaVersion = normalizedState.schemaVersion;
       next.settingsState = cloneValue(normalizedState);
@@ -502,6 +525,8 @@
           targetId,
           kiroRsUrl: normalizedState.flows.kiro.targets['kiro-rs'].baseUrl,
           kiroRsKey: normalizedState.flows.kiro.targets['kiro-rs'].apiKey,
+          kiroGoUrl: normalizedState.flows.kiro.targets['kiro-go'].baseUrl,
+          kiroGoPassword: normalizedState.flows.kiro.targets['kiro-go'].adminPassword,
         };
       }
       return {
