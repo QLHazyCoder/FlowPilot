@@ -1394,3 +1394,14 @@ test('hero sms max price input does not auto-save partial typing states', () => 
     /inputHeroSmsMinPrice\?\.\s*addEventListener\('input',\s*\(\)\s*=>\s*\{\s*markSettingsDirty\(true\);\s*scheduleSettingsAutoSave\(\);/
   );
 });
+
+test('sidepanel parses HeroSMS getCountries object payload', () => {
+  const match = sidepanelSource.match(/function normalizeHeroSmsCountriesPayload\(payload = null\) \{[\s\S]*?\n\}/);
+  assert.ok(match, 'normalizeHeroSmsCountriesPayload should exist');
+  const normalizeHeroSmsCountriesPayload = new Function(`${match[0]}; return normalizeHeroSmsCountriesPayload;`)();
+  const countries = normalizeHeroSmsCountriesPayload({
+    6: { id: 6, eng: 'Indonesia', chn: '印度尼西亚' },
+    52: { id: 52, eng: 'Thailand', chn: '泰国' },
+  });
+  assert.deepStrictEqual(countries.map((item) => item.id), [6, 52]);
+});

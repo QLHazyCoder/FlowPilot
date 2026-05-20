@@ -5813,6 +5813,26 @@ function buildHeroSmsCountryDisplayLabel(country = {}) {
   return chinese || english;
 }
 
+function normalizeHeroSmsCountriesPayload(payload = null) {
+  if (!payload) {
+    return [];
+  }
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  if (Array.isArray(payload?.value)) {
+    return payload.value;
+  }
+  if (payload.value && typeof payload.value === 'object' && !Array.isArray(payload.value)) {
+    return Object.values(payload.value);
+  }
+  if (typeof payload === 'object') {
+    return Object.values(payload).filter((entry) => entry && typeof entry === 'object' && !Array.isArray(entry));
+  }
+  return [];
+}
+
+
 function normalizeHeroSmsFetchErrorMessage(error) {
   const message = String(error?.message || error || '').trim();
   if (!message) {
@@ -7147,7 +7167,7 @@ async function loadHeroSmsCountries(options = {}) {
     });
     clearTimeout(timeoutId);
     const payload = await response.json();
-    const countries = Array.isArray(payload?.value) ? payload.value : (Array.isArray(payload) ? payload : []);
+    const countries = normalizeHeroSmsCountriesPayload(payload);
     if (!countries.length) {
       throw new Error('国家列表为空');
     }
