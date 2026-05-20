@@ -104,6 +104,7 @@ return { getMailConfig };
 
 test('background exposes yahoo mail login through managed source tab opening', () => {
   assert.match(backgroundSource, /async function openMailProviderLogin\(payload = \{\}\)/);
+  assert.match(backgroundSource, /const provider = normalizeMailProvider\(payload\.provider \|\| state\.mailProvider \|\| ''\);/);
   assert.match(backgroundSource, /const mail = getMailConfig\(\{\s*\.\.\.state,\s*mailProvider: provider,/);
   assert.match(backgroundSource, /await reuseOrCreateTab\(mail\.source, targetUrl, \{/);
   assert.match(backgroundSource, /injectSource: mail\.injectSource/);
@@ -113,11 +114,12 @@ test('background exposes yahoo mail login through managed source tab opening', (
   assert.match(backgroundSource, /password: yahooMailPassword,/);
 });
 
-test('background persists yahoo mailbox credentials', () => {
+test('background persists yahoo mailbox email but not yahoo password', () => {
   assert.match(backgroundSource, /yahooMailEmail: '',/);
-  assert.match(backgroundSource, /yahooMailPassword: '',/);
   assert.match(backgroundSource, /case 'yahooMailEmail':\s*return String\(value \|\| ''\)\.trim\(\);/);
-  assert.match(backgroundSource, /case 'yahooMailPassword':\s*return String\(value \|\| ''\);/);
+  assert.doesNotMatch(backgroundSource, /yahooMailPassword: '',/);
+  assert.doesNotMatch(backgroundSource, /case 'yahooMailPassword':/);
+  assert.match(backgroundSource, /const yahooMailPassword = String\(payload\.yahooMailPassword \|\| ''\);/);
 });
 
 test('auto run persists the generated yahoo email before executing signup step 2', () => {

@@ -394,10 +394,11 @@ function findOtpVerifyButton(otpInput = null) {
 }
 
 function findOtpResendButton(otpInputOrOptions = null) {
-  const options = otpInputOrOptions instanceof HTMLElement ? {} : (otpInputOrOptions || {});
-  const otpInput = otpInputOrOptions instanceof HTMLElement
+  const isElement = typeof HTMLElement !== 'undefined' && otpInputOrOptions instanceof HTMLElement;
+  const options = isElement ? {} : (otpInputOrOptions || {});
+  const otpInput = isElement
     ? otpInputOrOptions
-    : (options.otpInput instanceof HTMLElement ? options.otpInput : null);
+    : (typeof HTMLElement !== 'undefined' && options.otpInput instanceof HTMLElement ? options.otpInput : null);
   const form = otpInput?.form || otpInput?.closest?.('form') || null;
   const allowDisabled = Boolean(options.allowDisabled);
   const candidates = collectVisibleElements(

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const {
   HOTMAIL_PROVIDER,
+  inferMailProvider,
   YYDS_MAIL_PROVIDER,
   getIcloudForwardMailConfig,
   getIcloudForwardMailProviderOptions,
@@ -10,6 +11,7 @@ const {
   normalizeIcloudForwardMailProvider,
   normalizeIcloudTargetMailboxType,
   normalizeMailProvider,
+  withResolvedMailProvider,
 } = require('../mail-provider-utils.js');
 
 test('normalizeMailProvider accepts 126 and falls back to 163', () => {
@@ -47,6 +49,25 @@ test('getMailProviderConfig preserves the YYDS Mail provider sentinel', () => {
       provider: YYDS_MAIL_PROVIDER,
       label: 'YYDS Mail',
     }
+  );
+});
+
+test('mail provider utils infers effective provider from mail config shape', () => {
+  assert.equal(
+    inferMailProvider({ source: 'yahoo-mail', url: 'https://mail.yahoo.com/n/inbox/all' }, {}),
+    'yahoo'
+  );
+  assert.equal(
+    inferMailProvider({ label: 'Cloudflare Temp Email' }, {}),
+    'cloudflare-temp-email'
+  );
+  assert.equal(
+    inferMailProvider({}, { mailProvider: ' YAHOO ' }),
+    'yahoo'
+  );
+  assert.deepEqual(
+    withResolvedMailProvider({ source: 'yahoo-mail' }, {}),
+    { source: 'yahoo-mail', provider: 'yahoo' }
   );
 });
 

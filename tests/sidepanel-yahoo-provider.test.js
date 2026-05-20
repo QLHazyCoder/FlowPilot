@@ -93,7 +93,8 @@ test('sidepanel shows yahoo mailbox credential rows in the mail provider block',
   assert.match(html, /id="input-yahoo-mail-email"/);
   assert.match(html, /id="row-yahoo-mail-password"/);
   assert.match(html, /id="input-yahoo-mail-password"/);
-  assert.match(source, /yahooMailEmail: inputYahooMailEmail\?\.value\.trim\(\) \|\| ''/);
+  assert.match(source, /yahooMailEmail: typeof inputYahooMailEmail !== 'undefined' && inputYahooMailEmail/);
+  assert.doesNotMatch(source, /yahooMailPassword: typeof inputYahooMailPassword !== 'undefined'/);
   assert.match(source, /yahooMailPassword: inputYahooMailPassword\?\.value \|\| ''/);
   assert.match(source, /rowYahooMailEmail\.style\.display = \(useYahooProvider \|\| selectedGenerator === yahooGenerator\) \? '' : 'none';/);
 });

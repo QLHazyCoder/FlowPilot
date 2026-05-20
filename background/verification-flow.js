@@ -105,41 +105,18 @@
     }
 
     function inferMailProvider(mail = {}, state = {}) {
-      const explicitProvider = String(mail?.provider || '').trim().toLowerCase();
-      if (explicitProvider) {
-        return explicitProvider;
+      if (typeof globalThis?.MailProviderUtils?.inferMailProvider === 'function') {
+        return globalThis.MailProviderUtils.inferMailProvider(mail, state);
       }
-
-      const stateProvider = String(state?.mailProvider || '').trim().toLowerCase();
-      if (stateProvider) {
-        return stateProvider;
-      }
-
-      const source = String(mail?.source || '').trim().toLowerCase();
-      const injectSource = String(mail?.injectSource || '').trim().toLowerCase();
-      const label = String(mail?.label || '').trim().toLowerCase();
-      const url = String(mail?.url || '').trim().toLowerCase();
-      const combined = `${source} ${injectSource} ${label} ${url}`;
-
-      if (/yahoo/.test(combined)) return 'yahoo';
-      if (/2925/.test(combined)) return '2925';
-      if (/hotmail/.test(combined)) return HOTMAIL_PROVIDER;
-      if (/luckmail/.test(combined)) return LUCKMAIL_PROVIDER;
-      if (/cloudmail/.test(combined)) return CLOUD_MAIL_PROVIDER;
-      if (/yyds/.test(combined)) return YYDS_MAIL_PROVIDER;
-      if (/cloudflare/.test(combined)) return CLOUDFLARE_TEMP_EMAIL_PROVIDER;
-      return explicitProvider || stateProvider || '';
+      return String(mail?.provider || state?.mailProvider || '').trim().toLowerCase();
     }
 
     function withResolvedMailProvider(mail = {}, state = {}) {
+      if (typeof globalThis?.MailProviderUtils?.withResolvedMailProvider === 'function') {
+        return globalThis.MailProviderUtils.withResolvedMailProvider(mail, state);
+      }
       const provider = inferMailProvider(mail, state);
-      if (!mail || typeof mail !== 'object') {
-        return { provider };
-      }
-      if (String(mail?.provider || '').trim().toLowerCase() === provider) {
-        return mail;
-      }
-      return { ...mail, provider };
+      return mail && typeof mail === 'object' ? { ...mail, provider } : { provider };
     }
 
     function isIcloudMail(mail) {

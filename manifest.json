@@ -106,7 +106,9 @@
     },
     {
       "matches": [
-        "https://mail.yahoo.com/*"
+        "https://mail.yahoo.com/*",
+        "https://login.yahoo.com/*",
+        "https://guce.yahoo.com/*"
       ],
       "js": [
         "content/activation-utils.js",

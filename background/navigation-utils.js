@@ -139,7 +139,9 @@
         case 'gmail-mail':
           return candidate.hostname === 'mail.google.com';
         case 'yahoo-mail':
-          return candidate.hostname === 'mail.yahoo.com';
+          return candidate.hostname === 'mail.yahoo.com'
+            || candidate.hostname === 'login.yahoo.com'
+            || candidate.hostname === 'guce.yahoo.com';
         case 'icloud-mail':
           return candidate.hostname === 'www.icloud.com'
             || candidate.hostname === 'www.icloud.com.cn';

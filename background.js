@@ -1303,7 +1303,6 @@ const PERSISTED_SETTING_DEFAULTS = {
   customEmailPool: [],
   customEmailPoolEntries: [],
   yahooMailEmail: '',
-  yahooMailPassword: '',
   autoDeleteUsedIcloudAlias: false,
   icloudHostPreference: 'auto',
   icloudTargetMailboxType: 'icloud-inbox',
@@ -3351,8 +3350,6 @@ function normalizePersistentSettingValue(key, value) {
       return normalizeCustomEmailPoolEntryObjects(value);
     case 'yahooMailEmail':
       return String(value || '').trim();
-    case 'yahooMailPassword':
-      return String(value || '');
     case 'autoDeleteUsedIcloudAlias':
     case 'accountRunHistoryTextEnabled':
     case 'cloudflareTempEmailUseRandomSubdomain':
@@ -14317,7 +14314,7 @@ function getMailConfig(state) {
 
 async function openMailProviderLogin(payload = {}) {
   const state = await getState();
-  const provider = String(payload.provider || state.mailProvider || '').trim() || state.mailProvider || 'qq';
+  const provider = normalizeMailProvider(payload.provider || state.mailProvider || '');
   const mail = getMailConfig({
     ...state,
     mailProvider: provider,
@@ -14343,7 +14340,7 @@ async function openMailProviderLogin(payload = {}) {
       await chrome.tabs.update(tabId, { active: true }).catch(() => { });
     }
     const yahooMailEmail = String(payload.yahooMailEmail || state.yahooMailEmail || '').trim();
-    const yahooMailPassword = String(payload.yahooMailPassword || state.yahooMailPassword || '');
+    const yahooMailPassword = String(payload.yahooMailPassword || '');
     if (provider === YAHOO_PROVIDER && yahooMailEmail && yahooMailPassword) {
       try {
         const loginResult = await sendToContentScriptResilient(mail.source, {

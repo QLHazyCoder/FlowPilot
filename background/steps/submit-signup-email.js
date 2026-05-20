@@ -187,15 +187,10 @@
     }
 
     async function keepSignupTabWindowInBackgroundForStep2(tabId) {
-      if (!Number.isInteger(tabId) || typeof chrome?.tabs?.get !== 'function') {
-        return;
-      }
-      try {
-        const tab = await chrome.tabs.get(tabId);
-        if (Number.isInteger(tab?.windowId) && typeof chrome?.windows?.update === 'function') {
-          await chrome.windows.update(tab.windowId, { focused: true }).catch(() => {});
-        }
-      } catch {}
+      // Intentionally no-op: the task tab is locked to the selected Chrome
+      // window by the tab-runtime layer. Step 2 should not focus/raise that
+      // window while the user is working in another app or browser window.
+      void tabId;
     }
 
     async function ensureSignupPhoneEntryReady(tabId) {

@@ -315,7 +315,9 @@
         case 'gmail-mail':
           return candidate.hostname === 'mail.google.com';
         case 'yahoo-mail':
-          return candidate.hostname === 'mail.yahoo.com';
+          return candidate.hostname === 'mail.yahoo.com'
+            || candidate.hostname === 'login.yahoo.com'
+            || candidate.hostname === 'guce.yahoo.com';
         case 'icloud-mail':
           return candidate.hostname === 'www.icloud.com'
             || candidate.hostname === 'www.icloud.com.cn';
@@ -375,7 +377,7 @@
       if (normalizedHostname === 'mail.qq.com' || normalizedHostname === 'wx.mail.qq.com') return 'qq-mail';
       if (is163MailHost(normalizedHostname)) return 'mail-163';
       if (normalizedHostname === 'mail.google.com') return 'gmail-mail';
-      if (normalizedHostname === 'mail.yahoo.com') return 'yahoo-mail';
+      if (normalizedHostname === 'mail.yahoo.com' || normalizedHostname === 'login.yahoo.com' || normalizedHostname === 'guce.yahoo.com') return 'yahoo-mail';
       if (normalizedHostname === 'www.icloud.com' || normalizedHostname === 'www.icloud.com.cn') return 'icloud-mail';
       if (normalizedUrl.includes('duckduckgo.com/email/settings/autofill')) return 'duck-mail';
       if (normalizedUrl.includes('2925.com')) return 'mail-2925';

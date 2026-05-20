@@ -13,6 +13,9 @@
   const GMAIL_PROVIDER = 'gmail';
   const YAHOO_PROVIDER = 'yahoo';
   const YYDS_MAIL_PROVIDER = 'yyds-mail';
+  const LUCKMAIL_PROVIDER = 'luckmail-api';
+  const CLOUDFLARE_TEMP_EMAIL_PROVIDER = 'cloudflare-temp-email';
+  const CLOUD_MAIL_PROVIDER = 'cloudmail';
   const NETEASE_LIST_PATH = '/js6/main.jsp?df=mail163_letter#module=mbox.ListModule%7C%7B%22fid%22%3A1%2C%22order%22%3A%22date%22%2C%22desc%22%3Atrue%7D';
   const ICLOUD_TARGET_MAILBOX_TYPE_INBOX = 'icloud-inbox';
   const ICLOUD_TARGET_MAILBOX_TYPE_FORWARD = 'forward-mailbox';
@@ -136,16 +139,62 @@
     return { source: 'qq-mail', url: 'https://wx.mail.qq.com/', label: 'QQ 邮箱' };
   }
 
+  function normalizeProviderToken(value = '') {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function inferMailProvider(mail = {}, state = {}) {
+    const explicitProvider = normalizeProviderToken(mail?.provider);
+    if (explicitProvider) {
+      return explicitProvider;
+    }
+
+    const stateProvider = normalizeProviderToken(state?.mailProvider);
+    if (stateProvider) {
+      return stateProvider;
+    }
+
+    const source = normalizeProviderToken(mail?.source);
+    const injectSource = normalizeProviderToken(mail?.injectSource);
+    const label = normalizeProviderToken(mail?.label);
+    const url = normalizeProviderToken(mail?.url);
+    const combined = `${source} ${injectSource} ${label} ${url}`;
+    if (/yahoo/.test(combined)) return YAHOO_PROVIDER;
+    if (/2925/.test(combined)) return '2925';
+    if (/hotmail/.test(combined)) return HOTMAIL_PROVIDER;
+    if (/luckmail/.test(combined)) return LUCKMAIL_PROVIDER;
+    if (/cloudmail/.test(combined)) return CLOUD_MAIL_PROVIDER;
+    if (/yyds/.test(combined)) return YYDS_MAIL_PROVIDER;
+    if (/cloudflare/.test(combined)) return CLOUDFLARE_TEMP_EMAIL_PROVIDER;
+    return explicitProvider || stateProvider || '';
+  }
+
+  function withResolvedMailProvider(mail = {}, state = {}) {
+    const provider = inferMailProvider(mail, state);
+    if (!mail || typeof mail !== 'object') {
+      return { provider };
+    }
+    if (normalizeProviderToken(mail.provider) === provider) {
+      return mail;
+    }
+    return { ...mail, provider };
+  }
+
   return {
+    CLOUDFLARE_TEMP_EMAIL_PROVIDER,
+    CLOUD_MAIL_PROVIDER,
     GMAIL_PROVIDER,
     HOTMAIL_PROVIDER,
+    LUCKMAIL_PROVIDER,
     YAHOO_PROVIDER,
     YYDS_MAIL_PROVIDER,
     getIcloudForwardMailConfig,
     getIcloudForwardMailProviderOptions,
     getMailProviderConfig,
+    inferMailProvider,
     normalizeIcloudForwardMailProvider,
     normalizeIcloudTargetMailboxType,
     normalizeMailProvider,
+    withResolvedMailProvider,
   };
 });

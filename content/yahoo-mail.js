@@ -1651,6 +1651,10 @@ async function waitForAliasListStable(timeoutMs = 2500) {
   return collectAliasItems().map((node) => extractAliasEmailFromItem(node)).filter(Boolean);
 }
 
+function getAliasTextCandidateNodes(scope) {
+  return Array.from(scope.querySelectorAll('a, span, div, li, p, button, [role="button"], [title], [aria-label]'));
+}
+
 // 收集当前页面可见的一次性邮箱条目。
 function collectAliasItems() {
   const section = findDisposableAliasSection();
@@ -1661,7 +1665,7 @@ function collectAliasItems() {
   const unique = [];
   const seen = new Set();
 
-  const emailNodes = Array.from(scope.querySelectorAll('*')).filter((node) => {
+  const emailNodes = getAliasTextCandidateNodes(scope).filter((node) => {
     if (!(node instanceof HTMLElement) || !isVisibleElement(node)) return false;
     const text = normalizeLowerText((node.innerText || node.textContent || '').replace(/\s+/g, ''));
     if (!/^[a-z0-9._%+-]+@yahoo\.com$/.test(text)) return false;
@@ -1715,7 +1719,7 @@ function findAliasItemByEmail(email = '') {
   const section = findDisposableAliasSection();
   const scope = section || document;
 
-  const exactNode = Array.from(scope.querySelectorAll('*')).find((node) => {
+  const exactNode = getAliasTextCandidateNodes(scope).find((node) => {
     if (!(node instanceof HTMLElement) || !isVisibleElement(node)) return false;
     return normalizeLowerText((node.innerText || node.textContent || '').replace(/\s+/g, '')) === normalizedEmail;
   });

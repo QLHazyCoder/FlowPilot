@@ -4764,9 +4764,6 @@ function collectSettingsPayload() {
     yahooMailEmail: typeof inputYahooMailEmail !== 'undefined' && inputYahooMailEmail
       ? inputYahooMailEmail.value.trim()
       : String(latestState?.yahooMailEmail || '').trim(),
-    yahooMailPassword: typeof inputYahooMailPassword !== 'undefined' && inputYahooMailPassword
-      ? inputYahooMailPassword.value
-      : String(latestState?.yahooMailPassword || ''),
     emailGenerator: selectEmailGenerator.value,
     customMailProviderPool: typeof normalizeCustomEmailPoolEntries === 'function'
       ? normalizeCustomEmailPoolEntries(inputCustomMailProviderPool?.value)
@@ -10949,11 +10946,8 @@ function applySettingsState(state) {
   if (inputMail2925UseAccountPool) {
     inputMail2925UseAccountPool.checked = Boolean(state?.mail2925UseAccountPool);
   }
-  if (inputYahooMailEmail) {
+  if (typeof inputYahooMailEmail !== 'undefined' && inputYahooMailEmail) {
     inputYahooMailEmail.value = state?.yahooMailEmail || '';
-  }
-  if (inputYahooMailPassword) {
-    inputYahooMailPassword.value = state?.yahooMailPassword || '';
   }
   setManagedAliasBaseEmailInputForProvider(restoredMailProvider, state);
   inputInbucketHost.value = state?.inbucketHost || '';
@@ -12544,10 +12538,10 @@ function updateMailProviderUI() {
   if (typeof rowCustomMailProviderPool !== 'undefined' && rowCustomMailProviderPool) {
     rowCustomMailProviderPool.style.display = useCustomEmail ? '' : 'none';
   }
-  if (rowYahooMailEmail) {
+  if (typeof rowYahooMailEmail !== 'undefined' && rowYahooMailEmail) {
     rowYahooMailEmail.style.display = (useYahooProvider || selectedGenerator === yahooGenerator) ? '' : 'none';
   }
-  if (rowYahooMailPassword) {
+  if (typeof rowYahooMailPassword !== 'undefined' && rowYahooMailPassword) {
     rowYahooMailPassword.style.display = (useYahooProvider || selectedGenerator === yahooGenerator) ? '' : 'none';
   }
   rowEmailPrefix.style.display = useGeneratedAlias && !useMail2925AccountPool ? '' : 'none';
@@ -15409,17 +15403,13 @@ selectPlusAccountAccessStrategy?.addEventListener('change', () => {
   });
 });
 
-[inputYahooMailEmail, inputYahooMailPassword].forEach((input) => {
-  input?.addEventListener('input', () => {
-    markSettingsDirty(true);
-    scheduleSettingsAutoSave();
-  });
-  input?.addEventListener('blur', () => {
-    if (input === inputYahooMailEmail) {
-      inputYahooMailEmail.value = inputYahooMailEmail.value.trim();
-    }
-    saveSettings({ silent: true }).catch(() => { });
-  });
+inputYahooMailEmail?.addEventListener('input', () => {
+  markSettingsDirty(true);
+  scheduleSettingsAutoSave();
+});
+inputYahooMailEmail?.addEventListener('blur', () => {
+  inputYahooMailEmail.value = inputYahooMailEmail.value.trim();
+  saveSettings({ silent: true }).catch(() => { });
 });
 
 function syncCurrentIpProxyServiceProfileToLatestState() {
