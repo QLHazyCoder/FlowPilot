@@ -278,6 +278,32 @@
         <span class="data-label">连接测试</span>
         <span id="display-kiro-rs-test-status" class="data-value mono">未测试</span>
       </div>
+      <div class="data-row" id="row-kiro-go-url" style="display:none;">
+        <span class="data-label">Kiro-Go</span>
+        <div class="data-inline">
+          <input type="text" id="input-kiro-go-url" class="data-input"
+            placeholder="请输入 Kiro-Go 管理地址" />
+          <button id="btn-open-kiro-go-github" class="btn btn-ghost btn-xs data-inline-btn" type="button">GitHub</button>
+        </div>
+      </div>
+      <div class="data-row" id="row-kiro-go-password" style="display:none;">
+        <span class="data-label">管理密码</span>
+        <div class="data-inline">
+          <div class="input-with-icon">
+            <input type="password" id="input-kiro-go-password" class="data-input data-input-with-icon"
+              placeholder="请输入 Kiro-Go 管理密码" />
+            <button id="btn-toggle-kiro-go-password" class="input-icon-btn" type="button"
+              data-password-toggle="input-kiro-go-password" data-show-label="显示 Kiro-Go 管理密码"
+              data-hide-label="隐藏 Kiro-Go 管理密码" aria-label="显示 Kiro-Go 管理密码"
+              title="显示 Kiro-Go 管理密码"></button>
+          </div>
+          <button id="btn-test-kiro-go" class="btn btn-ghost btn-xs data-inline-btn" type="button">测试</button>
+        </div>
+      </div>
+      <div class="data-row" id="row-kiro-go-test-status" style="display:none;">
+        <span class="data-label">连接测试</span>
+        <span id="display-kiro-go-test-status" class="data-value mono">未测试</span>
+      </div>
       <div class="data-row" id="row-kiro-web-status" style="display:none;">
         <span class="data-label">Kiro Web</span>
         <span id="display-kiro-web-status" class="data-value mono">未开始</span>

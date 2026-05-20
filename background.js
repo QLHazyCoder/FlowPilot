@@ -13915,6 +13915,16 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
       typeof fetch === 'function' ? fetch.bind(globalThis) : null
     );
   },
+  testKiroGoConnection: async (baseUrl, adminPassword) => {
+    if (typeof self.MultiPageBackgroundKiroPublisherKiroRs?.checkKiroGoConnection !== 'function') {
+      throw new Error('Kiro-Go 连接测试能力尚未接入。');
+    }
+    return self.MultiPageBackgroundKiroPublisherKiroRs.checkKiroGoConnection(
+      baseUrl,
+      adminPassword,
+      typeof fetch === 'function' ? fetch.bind(globalThis) : null
+    );
+  },
   finalizeStep3Completion: async () => {
     const currentState = await getState();
     const signupTabId = await getTabId('signup-page');

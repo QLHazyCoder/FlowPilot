@@ -15,6 +15,8 @@ test('kiro publisher exposes a factory and upload payload helpers', () => {
   assert.equal(typeof api?.createKiroRsPublisher, 'function');
   assert.equal(typeof api?.buildKiroRsPayload, 'function');
   assert.equal(typeof api?.buildMachineId, 'function');
+  assert.equal(typeof api?.checkKiroGoConnection, 'function');
+  assert.equal(typeof api?.uploadBuilderIdCredentialToKiroGo, 'function');
 });
 
 test('kiro publisher builds kiro.rs payload from desktop auth runtime with BuilderId profileArn', async () => {
@@ -169,6 +171,97 @@ test('kiro publisher reads latest kiro.rs key from background state instead of s
   );
   assert.equal(completed.length, 1);
   assert.equal(completed[0].nodeId, 'kiro-upload-credential');
+});
+
+
+test('kiro publisher can upload Builder ID credentials to Kiro-Go', async () => {
+  const api = loadPublisherApi();
+  const requests = [];
+  let liveState = {
+    kiroTargetId: 'kiro-go',
+    email: 'aws-user@example.com',
+    kiroGoUrl: 'https://kiro-go.example.com/admin',
+    kiroGoPassword: 'go-secret',
+    kiroRuntime: {
+      register: {
+        email: 'aws-user@example.com',
+      },
+      desktopAuth: {
+        region: 'us-east-1',
+        clientId: 'client-001',
+        clientSecret: 'secret-001',
+        refreshToken: 'refresh-token-001',
+      },
+      upload: {
+        targetId: 'kiro-go',
+      },
+    },
+    settingsState: {
+      flows: {
+        kiro: {
+          targetId: 'kiro-go',
+          targets: {
+            'kiro-go': {
+              baseUrl: 'https://kiro-go.example.com/admin',
+              adminPassword: 'go-secret',
+            },
+          },
+        },
+      },
+    },
+  };
+  const completed = [];
+  const publisher = api.createKiroRsPublisher({
+    addLog: async () => {},
+    completeNodeFromBackground: async (nodeId, payload) => {
+      completed.push({ nodeId, payload });
+    },
+    fetchImpl: async (url, options = {}) => {
+      requests.push({
+        url,
+        method: options.method || 'GET',
+        adminPassword: options.headers?.['X-Admin-Password'],
+        body: options.body ? JSON.parse(options.body) : null,
+      });
+      if ((options.method || 'GET') === 'GET') {
+        return {
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => JSON.stringify([]),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify({
+          success: true,
+          account: { id: 'acc-001', email: 'aws-user@example.com' },
+        }),
+      };
+    },
+    getState: async () => ({ ...liveState }),
+    setState: async (updates = {}) => {
+      liveState = { ...liveState, ...updates };
+    },
+  });
+
+  await publisher.executeKiroUploadCredential({ nodeId: 'kiro-upload-credential' });
+
+  assert.equal(requests.length, 2);
+  assert.equal(requests[0].url, 'https://kiro-go.example.com/admin/api/accounts');
+  assert.equal(requests[0].adminPassword, 'go-secret');
+  assert.equal(requests[1].url, 'https://kiro-go.example.com/admin/api/auth/credentials');
+  assert.equal(requests[1].adminPassword, 'go-secret');
+  assert.equal(requests[1].body.refreshToken, 'refresh-token-001');
+  assert.equal(requests[1].body.clientId, 'client-001');
+  assert.equal(requests[1].body.clientSecret, 'secret-001');
+  assert.equal(requests[1].body.authMethod, 'idc');
+  assert.equal(requests[1].body.provider, 'BuilderId');
+  assert.equal(requests[1].body.region, 'us-east-1');
+  assert.equal(completed.length, 1);
+  assert.equal(liveState.kiroRuntime.upload.credentialId, 'acc-001');
 });
 
 test('kiro publisher routes step 9 through public contribution upload when contribution mode is enabled', async () => {

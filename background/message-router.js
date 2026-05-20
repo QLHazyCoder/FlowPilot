@@ -37,6 +37,7 @@
       exportSettingsBundle,
       fetchGeneratedEmail,
       refreshGpcCardBalance,
+      testKiroGoConnection,
       testKiroRsConnection,
       finalizePhoneActivationAfterSuccessfulFlow,
       finalizeStep3Completion,
@@ -1680,6 +1681,45 @@
             ?? ''
           );
           const result = await testKiroRsConnection(baseUrl, apiKey);
+          return {
+            ok: Boolean(result?.ok),
+            targetId,
+            status: Number(result?.status) || 0,
+            message: String(result?.message || '').trim(),
+          };
+        }
+
+
+        case 'CHECK_KIRO_GO_CONNECTION': {
+          if (typeof testKiroGoConnection !== 'function') {
+            throw new Error('Kiro-Go 连接测试能力尚未接入。');
+          }
+          const currentState = await getState();
+          const activeFlowId = normalizeMessageFlowId(
+            message.payload?.activeFlowId || currentState?.activeFlowId || 'kiro',
+            'kiro'
+          );
+          const targetId = normalizeMessageTargetId(
+            activeFlowId,
+            message.payload?.targetId || currentState?.kiroTargetId || 'kiro-go',
+            'kiro-go'
+          );
+          const nestedTargetConfig = currentState?.settingsState?.flows?.kiro?.targets?.[targetId]
+            || currentState?.flows?.kiro?.targets?.[targetId]
+            || {};
+          const baseUrl = String(
+            message.payload?.baseUrl
+            ?? nestedTargetConfig.baseUrl
+            ?? currentState?.kiroGoUrl
+            ?? ''
+          ).trim();
+          const adminPassword = String(
+            message.payload?.adminPassword
+            ?? nestedTargetConfig.adminPassword
+            ?? currentState?.kiroGoPassword
+            ?? ''
+          );
+          const result = await testKiroGoConnection(baseUrl, adminPassword);
           return {
             ok: Boolean(result?.ok),
             targetId,
