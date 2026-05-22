@@ -5,6 +5,8 @@ importScripts(
   'flows/openai/workflow.js',
   'flows/kiro/index.js',
   'flows/kiro/workflow.js',
+  'flows/grok/index.js',
+  'flows/grok/workflow.js',
   'flows/index.js',
   'core/flow-kernel/flow-registry.js',
   'shared/contribution-registry.js',
@@ -34,9 +36,11 @@ importScripts(
   'core/flow-kernel/workflow-engine.js',
   'core/flow-kernel/runtime-state.js',
   'flows/kiro/background/state.js',
+  'flows/grok/background/state.js',
   'flows/kiro/background/credential-artifact.js',
   'background/contribution/adapters/kiro-builder-id.js',
   'flows/kiro/background/register-runner.js',
+  'flows/grok/background/register-runner.js',
   'flows/kiro/background/desktop-client.js',
   'flows/kiro/background/desktop-authorize-runner.js',
   'flows/kiro/background/publisher-kiro-rs.js',
@@ -424,6 +428,7 @@ const runtimeStateHelpers = self.MultiPageBackgroundRuntimeState?.createRuntimeS
   defaultNodeStatuses: DEFAULT_NODE_STATUSES,
 }) || null;
 const kiroStateHelpers = self.MultiPageBackgroundKiroState || null;
+const grokStateHelpers = self.MultiPageBackgroundGrokState || null;
 const DEFAULT_REGISTRATION_EMAIL_STATE = registrationEmailStateHelpers?.DEFAULT_REGISTRATION_EMAIL_STATE || {
   current: '',
   previous: '',
@@ -4020,6 +4025,9 @@ function buildFreshAutoRunKeepState(prevState = {}) {
   }
   if (typeof kiroStateHelpers?.buildFreshKeepState === 'function') {
     Object.assign(keepState, kiroStateHelpers.buildFreshKeepState(sourceState));
+  }
+  if (typeof grokStateHelpers?.buildFreshKeepState === 'function') {
+    Object.assign(keepState, grokStateHelpers.buildFreshKeepState(sourceState));
   }
   if (Object.prototype.hasOwnProperty.call(sourceState, 'settingsSchemaVersion')) {
     keepState.settingsSchemaVersion = Number(sourceState.settingsSchemaVersion) || 0;
@@ -10858,6 +10866,11 @@ const AUTO_RUN_BACKGROUND_COMPLETED_STEP_KEYS = new Set([
   'kiro-start-desktop-authorize',
   'kiro-complete-desktop-authorize',
   'kiro-upload-credential',
+  'grok-open-signup-page',
+  'grok-submit-email',
+  'grok-submit-verification-code',
+  'grok-submit-profile',
+  'grok-extract-sso-cookie',
 ]);
 const STEP_COMPLETION_SIGNAL_STEP_KEYS = new Set([
   'fill-password',
@@ -13369,8 +13382,9 @@ async function resumeAutoRun() {
 
 const SIGNUP_ENTRY_URL = 'https://chatgpt.com/';
 const OPENAI_AUTH_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'flows/openai/content/auth-page-recovery.js', 'flows/openai/content/phone-country-utils.js', 'flows/openai/content/phone-auth.js', 'flows/openai/content/openai-auth.js'];
-const KIRO_REGISTER_INJECT_FILES = ['flows/openai/index.js', 'flows/kiro/index.js', 'flows/index.js', 'core/flow-kernel/flow-registry.js', 'core/flow-kernel/source-registry.js', 'shared/kiro-timeouts.js', 'content/utils.js', 'flows/kiro/content/register-page.js'];
-const KIRO_DESKTOP_AUTHORIZE_INJECT_FILES = ['flows/openai/index.js', 'flows/kiro/index.js', 'flows/index.js', 'core/flow-kernel/flow-registry.js', 'core/flow-kernel/source-registry.js', 'shared/kiro-timeouts.js', 'content/utils.js', 'flows/kiro/content/desktop-authorize-page.js'];
+const KIRO_REGISTER_INJECT_FILES = ['flows/openai/index.js', 'flows/kiro/index.js', 'flows/grok/index.js', 'flows/index.js', 'core/flow-kernel/flow-registry.js', 'core/flow-kernel/source-registry.js', 'shared/kiro-timeouts.js', 'content/utils.js', 'flows/kiro/content/register-page.js'];
+const KIRO_DESKTOP_AUTHORIZE_INJECT_FILES = ['flows/openai/index.js', 'flows/kiro/index.js', 'flows/grok/index.js', 'flows/index.js', 'core/flow-kernel/flow-registry.js', 'core/flow-kernel/source-registry.js', 'shared/kiro-timeouts.js', 'content/utils.js', 'flows/kiro/content/desktop-authorize-page.js'];
+const GROK_REGISTER_INJECT_FILES = ['flows/openai/index.js', 'flows/kiro/index.js', 'flows/grok/index.js', 'flows/index.js', 'core/flow-kernel/flow-registry.js', 'core/flow-kernel/source-registry.js', 'content/utils.js', 'flows/grok/content/register-page.js'];
 const panelBridge = self.MultiPageBackgroundPanelBridge?.createPanelBridge({
   chrome,
   addLog,
@@ -13836,6 +13850,44 @@ const kiroRegisterRunner = self.MultiPageBackgroundKiroRegisterRunner?.createKir
   waitForTabStableComplete,
   KIRO_REGISTER_INJECT_FILES,
 });
+const grokRegisterRunner = self.MultiPageBackgroundGrokRegisterRunner?.createGrokRegisterRunner({
+  addLog,
+  chrome,
+  ensureContentScriptReadyOnTab,
+  completeNodeFromBackground,
+  ensureIcloudMailSession: ensureIcloudMailSessionForVerification,
+  ensureMail2925MailboxSession,
+  generatePassword,
+  generateRandomName,
+  getMailConfig,
+  getTabId,
+  getState,
+  HOTMAIL_PROVIDER,
+  isTabAlive,
+  LUCKMAIL_PROVIDER,
+  CLOUDFLARE_TEMP_EMAIL_PROVIDER,
+  CLOUD_MAIL_PROVIDER,
+  YYDS_MAIL_PROVIDER,
+  MAIL_2925_VERIFICATION_INTERVAL_MS,
+  MAIL_2925_VERIFICATION_MAX_ATTEMPTS,
+  pollCloudflareTempEmailVerificationCode,
+  pollCloudMailVerificationCode,
+  pollHotmailVerificationCode,
+  pollLuckmailVerificationCode,
+  pollYydsMailVerificationCode,
+  registerTab,
+  resolveSignupEmailForFlow,
+  reuseOrCreateTab,
+  sendToContentScriptResilient,
+  sendToMailContentScriptResilient,
+  setPasswordState,
+  setState,
+  sleepWithStop,
+  throwIfStopped,
+  waitForTabStableComplete,
+  GROK_REGISTER_INJECT_FILES,
+  markCurrentRegistrationAccountUsed,
+});
 const kiroBuilderIdContributionAdapter = self.MultiPageBackgroundKiroBuilderIdContributionAdapter?.createKiroBuilderIdContributionAdapter?.({
   addLog,
   fetchImpl: typeof fetch === 'function' ? fetch.bind(globalThis) : null,
@@ -14000,6 +14052,11 @@ const stepExecutorsByKey = {
   'kiro-start-desktop-authorize': (state) => kiroDesktopAuthorizeRunner.executeKiroStartDesktopAuthorize(state),
   'kiro-complete-desktop-authorize': (state) => kiroDesktopAuthorizeRunner.executeKiroCompleteDesktopAuthorize(state),
   'kiro-upload-credential': (state) => kiroPublisher.executeKiroUploadCredential(state),
+  'grok-open-signup-page': (state) => grokRegisterRunner.executeGrokOpenSignupPage(state),
+  'grok-submit-email': (state) => grokRegisterRunner.executeGrokSubmitEmail(state),
+  'grok-submit-verification-code': (state) => grokRegisterRunner.executeGrokSubmitVerificationCode(state),
+  'grok-submit-profile': (state) => grokRegisterRunner.executeGrokSubmitProfile(state),
+  'grok-extract-sso-cookie': (state) => grokRegisterRunner.executeGrokExtractSsoCookie(state),
 };
 const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter({
   addLog,
