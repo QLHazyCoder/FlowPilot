@@ -80,12 +80,12 @@
     }
 
     function buildFreshStartStateSnapshot(state = {}) {
-      return {
+      return stripRuntimeProgressFromFreshKeepState({
         ...(state || {}),
         currentNodeId: '',
         nodeStatuses: {},
         stepStatuses: {},
-      };
+      });
     }
 
     function resolveFreshStartNodeId(state = {}) {
@@ -642,6 +642,7 @@
               sourceLastUrls: {},
               ...getAutoRunStatusPayload('running', { currentRun: targetRun, totalRuns, attemptRun, sessionId }),
             };
+            startNodeId = resolveFreshStartNodeId(keepSettings) || defaultStartNodeId;
             await resetState();
             await setState(keepSettings);
             deps.chrome.runtime.sendMessage({ type: 'AUTO_RUN_RESET' }).catch(() => { });
