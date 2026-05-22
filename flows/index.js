@@ -12,6 +12,10 @@
       id: 'kiro',
       path: 'flows/kiro/',
     },
+    grok: {
+      id: 'grok',
+      path: 'flows/grok/',
+    },
   });
 
   function normalizeFlowId(value = '') {
@@ -32,10 +36,14 @@
       ...baseEntry,
       definition: normalized === 'openai'
         ? (rootScope.MultiPageOpenAiFlowDefinition || null)
-        : (rootScope.MultiPageKiroFlowDefinition || null),
+        : (normalized === 'kiro'
+          ? (rootScope.MultiPageKiroFlowDefinition || null)
+          : (rootScope.MultiPageGrokFlowDefinition || null)),
       workflow: normalized === 'openai'
         ? (rootScope.MultiPageOpenAiWorkflow || null)
-        : (rootScope.MultiPageKiroWorkflow || null),
+        : (normalized === 'kiro'
+          ? (rootScope.MultiPageKiroWorkflow || null)
+          : (rootScope.MultiPageGrokWorkflow || null)),
     };
   }
 
