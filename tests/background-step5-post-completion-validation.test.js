@@ -201,3 +201,172 @@ return {
     true
   );
 });
+
+test('step 5 background recovery converts retryable transport error into success when tab already reached chatgpt', async () => {
+  const api = new Function(`
+const logs = [];
+const completions = [];
+const waitCalls = [];
+
+function getErrorMessage(error) {
+  return error?.message || String(error || '');
+}
+
+async function addLog(message, level, meta) {
+  logs.push({ message, level, meta });
+}
+
+async function getTabId(source) {
+  return source === 'openai-auth' ? 99 : null;
+}
+
+async function waitForTabStableComplete(tabId, options) {
+  waitCalls.push({ tabId, options });
+}
+
+function notifyNodeComplete(nodeId, payload) {
+  completions.push({ nodeId, payload });
+}
+
+const chrome = {
+  tabs: {
+    async get() {
+      return { url: 'https://chatgpt.com/' };
+    },
+  },
+};
+
+async function sendToContentScriptResilient(source, message) {
+  if (message.type === 'GET_STEP5_SUBMIT_STATE') {
+    return {
+      retryPage: false,
+      retryEnabled: false,
+      maxCheckAttemptsBlocked: false,
+      userAlreadyExistsBlocked: false,
+      successState: 'logged_in_home',
+      profileVisible: false,
+      errorText: '',
+      unknownAuthPage: false,
+      url: 'https://chatgpt.com/',
+    };
+  }
+  throw new Error('unexpected message type: ' + message.type);
+}
+
+${extractFunction('parseUrlSafely')}
+${extractFunction('isSignupEntryHost')}
+${extractFunction('isLikelyLoggedInChatgptHomeUrl')}
+${extractFunction('isStep5CompletionChatgptUrl')}
+${extractFunction('getStep5SubmitStateFromContent')}
+${extractFunction('recoverStep5SubmitRetryPageOnTab')}
+${extractFunction('validateStep5PostCompletion')}
+${extractFunction('recoverFillProfileCompletionFromBackground')}
+
+return {
+  async run() {
+    return recoverFillProfileCompletionFromBackground(
+      new Error('The page keeping the extension port is moved into back/forward cache, so the message channel is closed.')
+    );
+  },
+  snapshot() {
+    return { logs, completions, waitCalls };
+  },
+};
+`)();
+
+  const result = await api.run();
+  const snapshot = api.snapshot();
+
+  assert.equal(result.successState, 'logged_in_home');
+  assert.equal(result.recoveredByBackground, true);
+  assert.equal(result.url, 'https://chatgpt.com/');
+  assert.equal(snapshot.waitCalls.length, 1);
+  assert.deepStrictEqual(snapshot.completions, [
+    {
+      nodeId: 'fill-profile',
+      payload: result,
+    },
+  ]);
+  assert.equal(
+    snapshot.logs.some(({ message }) => /页面通信中断，正在通过后台复核最终状态/.test(message)),
+    true
+  );
+});
+
+test('step 5 background recovery still fails when page remains on profile after retryable transport error', async () => {
+  const api = new Function(`
+const logs = [];
+
+function getErrorMessage(error) {
+  return error?.message || String(error || '');
+}
+
+async function addLog(message, level, meta) {
+  logs.push({ message, level, meta });
+}
+
+async function getTabId(source) {
+  return source === 'openai-auth' ? 99 : null;
+}
+
+async function waitForTabStableComplete() {}
+
+function notifyNodeComplete() {
+  throw new Error('should not notify completion');
+}
+
+const chrome = {
+  tabs: {
+    async get() {
+      return { url: 'https://auth.openai.com/about-you' };
+    },
+  },
+};
+
+async function sendToContentScriptResilient(source, message) {
+  if (message.type === 'GET_STEP5_SUBMIT_STATE') {
+    return {
+      retryPage: false,
+      retryEnabled: false,
+      maxCheckAttemptsBlocked: false,
+      userAlreadyExistsBlocked: false,
+      successState: '',
+      profileVisible: true,
+      errorText: '',
+      unknownAuthPage: false,
+      url: 'https://auth.openai.com/about-you',
+    };
+  }
+  throw new Error('unexpected message type: ' + message.type);
+}
+
+${extractFunction('parseUrlSafely')}
+${extractFunction('isSignupEntryHost')}
+${extractFunction('isLikelyLoggedInChatgptHomeUrl')}
+${extractFunction('isStep5CompletionChatgptUrl')}
+${extractFunction('getStep5SubmitStateFromContent')}
+${extractFunction('recoverStep5SubmitRetryPageOnTab')}
+${extractFunction('validateStep5PostCompletion')}
+${extractFunction('recoverFillProfileCompletionFromBackground')}
+
+return {
+  run() {
+    return recoverFillProfileCompletionFromBackground(
+      new Error('The page keeping the extension port is moved into back/forward cache, so the message channel is closed.')
+    );
+  },
+  snapshot() {
+    return { logs };
+  },
+};
+`)();
+
+  await assert.rejects(
+    api.run(),
+    /资料提交完成信号已收到，但页面仍停留在资料页/
+  );
+  assert.equal(
+    api.snapshot().logs.some(({ message }) => /页面通信中断，正在通过后台复核最终状态/.test(message)),
+    true
+  );
+});
