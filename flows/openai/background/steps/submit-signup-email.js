@@ -215,6 +215,31 @@
       return result || {};
     }
 
+    async function recoverCurrentSignupPhoneEntryOnTab(tabId, options = {}) {
+      if (!Number.isInteger(tabId)) {
+        throw new Error('步骤 2：缺少有效的注册页标签，无法恢复当前手机号注册入口。');
+      }
+
+      await addLog(
+        options.logMessage || '步骤 2：手机号入口切换中，正在优先恢复当前注册页标签...',
+        'warn',
+        { step: 2, stepKey: 'signup-phone-entry' }
+      );
+
+      await waitForStep2SignupTabToSettle(
+        tabId,
+        '步骤 2：注册页正在切换，正在等待当前标签页稳定后重新接管手机号入口...'
+      );
+      await ensureContentScriptReadyOnTab('openai-auth', tabId, {
+        inject: OPENAI_AUTH_INJECT_FILES,
+        injectSource: 'openai-auth',
+        timeoutMs: 45000,
+        retryDelayMs: 900,
+        logMessage: '步骤 2：手机号注册入口切换后内容脚本未就绪，正在等待当前标签页恢复...',
+      });
+      return ensureSignupPhoneEntryReady(tabId);
+    }
+
     async function submitSignupEmail(resolvedEmail, options = {}) {
       return sendSignupIdentity({ email: resolvedEmail }, options);
     }
@@ -338,9 +363,19 @@
           || isSignupEntryUnavailableErrorMessage(entryErrorMessage)
           || isRetryableStep2TransportErrorMessage(entryErrorMessage)
         ) {
-          await addLog('步骤 2：手机号注册入口尚未就绪，正在重新打开官网入口后重试一次...', 'warn');
-          signupTabId = (await ensureSignupEntryPageReady(2)).tabId;
-          await ensureSignupPhoneEntryReady(signupTabId);
+          try {
+            await recoverCurrentSignupPhoneEntryOnTab(signupTabId, {
+              logMessage: '步骤 2：手机号注册入口尚未就绪，先尝试恢复当前标签页后再继续...',
+            });
+          } catch (recoverError) {
+            const recoverErrorMessage = getErrorMessage(recoverError);
+            if (await failStep2OnLoggedInSession(signupTabId, recoverErrorMessage)) {
+              return;
+            }
+            await addLog('步骤 2：当前标签页恢复手机号注册入口失败，正在重新打开官网入口后重试一次...', 'warn');
+            signupTabId = (await ensureSignupEntryPageReady(2)).tabId;
+            await ensureSignupPhoneEntryReady(signupTabId);
+          }
         } else {
           throw entryError;
         }
@@ -361,9 +396,19 @@
           || isSignupEntryUnavailableErrorMessage(errorMessage)
           || isRetryableStep2TransportErrorMessage(errorMessage)
         ) {
-          await addLog('步骤 2：手机号注册入口不可用或通信超时，正在重新准备手机号注册入口后重试一次...', 'warn');
-          signupTabId = (await ensureSignupEntryPageReady(2)).tabId;
-          await ensureSignupPhoneEntryReady(signupTabId);
+          try {
+            await recoverCurrentSignupPhoneEntryOnTab(signupTabId, {
+              logMessage: '步骤 2：手机号注册入口不可用或通信超时，先尝试恢复当前标签页后再重新提交...',
+            });
+          } catch (recoverError) {
+            const recoverErrorMessage = getErrorMessage(recoverError);
+            if (await failStep2OnLoggedInSession(signupTabId, recoverErrorMessage)) {
+              return;
+            }
+            await addLog('步骤 2：当前标签页恢复后仍无法提交手机号，正在重新准备官网注册入口后重试一次...', 'warn');
+            signupTabId = (await ensureSignupEntryPageReady(2)).tabId;
+            await ensureSignupPhoneEntryReady(signupTabId);
+          }
           step2Result = await submitSignupPhone(phoneNumber, activation, {
             timeoutMs: 45000,
             retryDelayMs: 700,

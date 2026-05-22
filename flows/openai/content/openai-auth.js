@@ -642,8 +642,38 @@ function findSignupUseEmailTrigger() {
   }) || null;
 }
 
-function findSignupUsePhoneTrigger() {
-  const candidates = document.querySelectorAll('button, a, [role="button"], [role="link"]');
+function getSignupSwitchScopeCandidates(anchor = null) {
+  const candidates = [];
+  const seen = new Set();
+  const pushUnique = (element) => {
+    if (!element || seen.has(element)) return;
+    seen.add(element);
+    candidates.push(element);
+  };
+
+  const directAnchor = anchor && typeof anchor.querySelectorAll === 'function' ? anchor : null;
+  if (directAnchor) {
+    directAnchor.querySelectorAll('button, a, [role="button"], [role="link"]').forEach(pushUnique);
+  }
+
+  let current = anchor?.parentElement || null;
+  let depth = 0;
+  while (current && depth < 4) {
+    if (typeof current.querySelectorAll === 'function') {
+      current.querySelectorAll('button, a, [role="button"], [role="link"]').forEach(pushUnique);
+    }
+    current = current.parentElement || null;
+    depth += 1;
+  }
+
+  document.querySelectorAll('button, a, [role="button"], [role="link"]').forEach(pushUnique);
+  return candidates;
+}
+
+function findSignupUsePhoneTrigger(anchor = null) {
+  const candidates = typeof getSignupSwitchScopeCandidates === 'function'
+    ? getSignupSwitchScopeCandidates(anchor)
+    : Array.from(document.querySelectorAll('button, a, [role="button"], [role="link"]'));
   return Array.from(candidates).find((el) => {
     if (!isVisibleElement(el) || !isActionEnabled(el)) return false;
     const text = getActionText(el);
@@ -2435,6 +2465,8 @@ async function waitForSignupPhoneEntryState(options = {}) {
   let lastSwitchToPhoneAt = 0;
   let lastMoreOptionsClickAt = 0;
   let slowSnapshotLogged = false;
+  let phoneSwitchTransitionUntil = 0;
+  let phoneSwitchTransitionLoggedAt = 0;
 
   while (Date.now() - start < timeout) {
     throwIfStopped();
@@ -2449,10 +2481,29 @@ async function waitForSignupPhoneEntryState(options = {}) {
     }
 
     if (snapshot.state === 'email_entry') {
-      const switchToPhone = snapshot.switchToPhoneTrigger || findSignupUsePhoneTrigger();
+      const switchToPhone = snapshot.switchToPhoneTrigger || findSignupUsePhoneTrigger(snapshot.emailInput);
+      const withinPhoneSwitchTransition = phoneSwitchTransitionUntil > Date.now();
+
+      if (withinPhoneSwitchTransition) {
+        const msSinceLogged = Date.now() - phoneSwitchTransitionLoggedAt;
+        if (!phoneSwitchTransitionLoggedAt || msSinceLogged >= 1000) {
+          phoneSwitchTransitionLoggedAt = Date.now();
+          log(`步骤 ${step}：手机号入口切换进行中，正在等待当前页面完成切换...`, 'info');
+        }
+        await sleep(250);
+        continue;
+      }
+
       if (switchToPhone && Date.now() - lastSwitchToPhoneAt >= 1500) {
         lastSwitchToPhoneAt = Date.now();
-        log(`步骤 ${step}：检测到邮箱输入模式，正在切换到手机号注册入口...`);
+        phoneSwitchTransitionUntil = Date.now() + 6000;
+        phoneSwitchTransitionLoggedAt = Date.now();
+        const switchMeta = {
+          text: getActionText(switchToPhone).slice(0, 80),
+          tag: (switchToPhone.tagName || '').toLowerCase(),
+          containerTag: (switchToPhone.parentElement?.tagName || '').toLowerCase(),
+        };
+        log(`步骤 ${step}：检测到邮箱输入模式，正在切换到手机号注册入口：${JSON.stringify(switchMeta)}`);
         await humanPause(350, 900);
         await performOperationWithDelay({ stepKey: 'signup-phone-entry', kind: 'click', label: 'switch-to-signup-phone' }, async () => {
           simulateClick(switchToPhone);

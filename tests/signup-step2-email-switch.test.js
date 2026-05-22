@@ -2268,3 +2268,249 @@ return {
   assert.deepEqual(api.getClicks(), ['Continue with phone number', 'Continue']);
   assert.deepEqual(api.getFilled(), [{ target: 'phone', value: '959916439' }]);
 });
+
+test('waitForSignupPhoneEntryState keeps waiting during delayed phone-entry transition after switch click', async () => {
+  const api = new Function(`
+const logs = [];
+const clicks = [];
+let now = 0;
+let phase = 'email';
+let phoneEntryVisibleAt = 2200;
+
+const emailInput = {
+  kind: 'email',
+  parentElement: null,
+  getAttribute(name) {
+    if (name === 'type') return 'email';
+    return '';
+  },
+};
+
+const phoneInput = {
+  kind: 'phone',
+  parentElement: null,
+  getAttribute(name) {
+    if (name === 'type') return 'tel';
+    return '';
+  },
+};
+
+const switchButton = {
+  textContent: 'Continue with phone number',
+  value: '',
+  disabled: false,
+  parentElement: null,
+  getAttribute(name) {
+    if (name === 'type') return 'button';
+    return '';
+  },
+  getBoundingClientRect() {
+    return { width: 200, height: 48 };
+  },
+};
+
+const container = {
+  parentElement: null,
+  querySelectorAll(selector) {
+    if (selector === 'button, a, [role="button"], [role="link"]') {
+      return phase === 'email' ? [switchButton] : [];
+    }
+    return [];
+  },
+};
+
+emailInput.parentElement = container;
+switchButton.parentElement = container;
+
+const document = {
+  querySelector(selector) {
+    if (selector === SIGNUP_EMAIL_INPUT_SELECTOR) {
+      return phase === 'email' ? emailInput : null;
+    }
+    if (selector === SIGNUP_PHONE_INPUT_SELECTOR) {
+      return phase === 'phone' ? phoneInput : null;
+    }
+    return null;
+  },
+  querySelectorAll(selector) {
+    if (selector === 'button, a, [role="button"], [role="link"]') {
+      return phase === 'email' ? [switchButton] : [];
+    }
+    if (selector === 'a, button, [role="button"], [role="link"]') {
+      return [];
+    }
+    if (selector === 'input') {
+      return phase === 'phone' ? [phoneInput] : [emailInput];
+    }
+    return [];
+  },
+};
+
+const location = {
+  href: 'https://chatgpt.com/',
+};
+
+const Date = {
+  now() {
+    return now;
+  },
+};
+
+${extractConst('SIGNUP_ENTRY_TRIGGER_PATTERN')}
+${extractConst('SIGNUP_EMAIL_INPUT_SELECTOR')}
+${extractConst('SIGNUP_PHONE_INPUT_SELECTOR')}
+${extractConst('SIGNUP_SWITCH_TO_EMAIL_PATTERN')}
+${extractConst('SIGNUP_SWITCH_ACTION_PATTERN')}
+${extractConst('SIGNUP_EMAIL_ACTION_PATTERN')}
+${extractConst('SIGNUP_PHONE_ACTION_PATTERN')}
+${extractConst('SIGNUP_SWITCH_TO_PHONE_PATTERN')}
+${extractConst('SIGNUP_MORE_OPTIONS_PATTERN')}
+${extractConst('SIGNUP_WORK_EMAIL_PATTERN')}
+
+function isVisibleElement(el) {
+  return Boolean(el);
+}
+
+function isActionEnabled(el) {
+  return Boolean(el) && !el.disabled && el.getAttribute('aria-disabled') !== 'true';
+}
+
+function getActionText(el) {
+  return [el?.textContent, el?.value, el?.getAttribute?.('aria-label'), el?.getAttribute?.('title')]
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\\s+/g, ' ')
+    .trim();
+}
+
+function getSignupPasswordInput() { return null; }
+function isSignupPasswordPage() { return false; }
+function getSignupPasswordSubmitButton() { return null; }
+function findSignupEntryTrigger() { return null; }
+function getSignupPasswordDisplayedEmail() { return ''; }
+function throwIfStopped() {}
+
+function log(message, level = 'info') {
+  logs.push({ message, level, now });
+}
+
+async function humanPause() {}
+
+function simulateClick(target) {
+  clicks.push(getActionText(target));
+}
+
+async function sleep(ms) {
+  now += ms;
+  if (phase === 'email' && now >= phoneEntryVisibleAt) {
+    phase = 'phone';
+  }
+}
+
+${extractFunction('getSignupEmailInput')}
+${extractFunction('getSignupPhoneInput')}
+${extractFunction('findSignupUseEmailTrigger')}
+${extractFunction('getSignupSwitchScopeCandidates')}
+${extractFunction('findSignupUsePhoneTrigger')}
+${extractFunction('findSignupMoreOptionsTrigger')}
+${extractFunction('getSignupEmailContinueButton')}
+${extractFunction('inspectSignupEntryState')}
+${extractFunction('waitForSignupPhoneEntryState')}
+
+return {
+  async run() {
+    return waitForSignupPhoneEntryState({ timeout: 8000, step: 2 });
+  },
+  getClicks() {
+    return clicks.slice();
+  },
+  getLogs() {
+    return logs.slice();
+  },
+};
+`)();
+
+  const snapshot = await api.run();
+  assert.equal(snapshot.state, 'phone_entry');
+  assert.deepEqual(api.getClicks(), ['Continue with phone number']);
+  assert.equal(api.getLogs().some(({ message }) => /正在切换到手机号注册入口/.test(message)), true);
+});
+
+test('findSignupUsePhoneTrigger prefers the current email container before scanning the whole page', async () => {
+  const api = new Function(`
+const localButton = {
+  textContent: 'Continue with phone number',
+  disabled: false,
+  parentElement: null,
+  getAttribute(name) {
+    if (name === 'type') return 'button';
+    return '';
+  },
+};
+const globalButton = {
+  textContent: 'Continue with phone number',
+  disabled: false,
+  parentElement: null,
+  getAttribute(name) {
+    if (name === 'type') return 'button';
+    return '';
+  },
+};
+const emailInput = {
+  parentElement: null,
+};
+const localContainer = {
+  parentElement: null,
+  querySelectorAll(selector) {
+    if (selector === 'button, a, [role="button"], [role="link"]') {
+      return [localButton];
+    }
+    return [];
+  },
+};
+const rootContainer = {
+  parentElement: null,
+  querySelectorAll(selector) {
+    if (selector === 'button, a, [role="button"], [role="link"]') {
+      return [globalButton];
+    }
+    return [];
+  },
+};
+emailInput.parentElement = localContainer;
+localContainer.parentElement = rootContainer;
+localButton.parentElement = localContainer;
+globalButton.parentElement = rootContainer;
+
+const document = {
+  querySelectorAll(selector) {
+    if (selector === 'button, a, [role="button"], [role="link"]') {
+      return [globalButton, localButton];
+    }
+    return [];
+  },
+};
+
+function isVisibleElement(el) { return Boolean(el); }
+function isActionEnabled(el) { return Boolean(el) && !el.disabled; }
+function getActionText(el) {
+  return String(el?.textContent || '').trim();
+}
+
+${extractConst('SIGNUP_SWITCH_ACTION_PATTERN')}
+${extractConst('SIGNUP_PHONE_ACTION_PATTERN')}
+${extractConst('SIGNUP_SWITCH_TO_PHONE_PATTERN')}
+${extractFunction('getSignupSwitchScopeCandidates')}
+${extractFunction('findSignupUsePhoneTrigger')}
+
+return {
+  run() {
+    return findSignupUsePhoneTrigger(emailInput);
+  },
+  localButton,
+  globalButton,
+};
+`)();
+
+  assert.equal(api.run(), api.localButton);
+});
