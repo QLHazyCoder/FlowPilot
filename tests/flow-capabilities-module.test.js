@@ -98,6 +98,36 @@ test('flow capability registry exposes Kiro as an independent flow with its own 
   );
 });
 
+test('flow capability registry exposes Grok as an independent SSO flow without OpenAI-only modes', () => {
+  const api = loadApi();
+  const registry = api.createFlowCapabilityRegistry();
+
+  const capabilityState = registry.resolveSidepanelCapabilities({
+    state: {
+      activeFlowId: 'grok',
+      targetId: 'webchat2api',
+      signupMethod: 'phone',
+      plusModeEnabled: true,
+      phoneVerificationEnabled: true,
+      accountContributionEnabled: true,
+    },
+  });
+
+  assert.equal(capabilityState.activeFlowId, 'grok');
+  assert.equal(capabilityState.canShowPhoneSettings, false);
+  assert.equal(capabilityState.canShowPlusSettings, false);
+  assert.equal(capabilityState.canShowContributionMode, false);
+  assert.equal(capabilityState.canShowLuckmail, false);
+  assert.equal(capabilityState.effectiveSignupMethod, 'email');
+  assert.equal(capabilityState.effectiveTargetId, 'webchat2api');
+  assert.deepEqual(capabilityState.supportedTargetIds, ['webchat2api']);
+  assert.deepEqual(capabilityState.flowCapabilities.contributionAdapterIds, []);
+  assert.deepEqual(
+    capabilityState.visibleGroupIds,
+    ['grok-runtime-status', 'grok-target-webchat2api', 'service-account', 'service-email', 'service-proxy']
+  );
+});
+
 test('flow capability registry exposes shared auto-run validation for phone locks and target support', () => {
   const api = loadApi();
   const registry = api.createFlowCapabilityRegistry({

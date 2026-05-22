@@ -37,6 +37,18 @@ test('kiro register runner uses a shared 3-minute page-load timeout budget', () 
   assert.match(source, /onRetryableError: buildKiroRetryRecovery\(tabId, \{\s*\.\.\.options,\s*timeoutBudget,/);
 });
 
+test('kiro register runner delegates verification mail polling to the shared flow mail service', () => {
+  const source = fs.readFileSync('flows/kiro/background/register-runner.js', 'utf8');
+  assert.match(source, /pollFlowVerificationCode/);
+  assert.doesNotMatch(source, /buildKiroVerificationPollPayload/);
+  assert.doesNotMatch(source, /pollHotmailVerificationCode/);
+  assert.doesNotMatch(source, /pollLuckmailVerificationCode/);
+  assert.doesNotMatch(source, /pollCloudflareTempEmailVerificationCode/);
+  assert.doesNotMatch(source, /pollCloudMailVerificationCode/);
+  assert.doesNotMatch(source, /pollYydsMailVerificationCode/);
+  assert.doesNotMatch(source, /sendToMailContentScriptResilient/);
+});
+
 test('kiro register consent step treats Kiro Web signed-in page as completion', () => {
   const source = fs.readFileSync('flows/kiro/background/register-runner.js', 'utf8');
   assert.match(source, /readKiroRegisterPageState\(tabId, \{/);
@@ -231,8 +243,8 @@ test('kiro verification polling uses the registration email field instead of pag
     getState: async () => currentState,
     getTabId: async () => 103,
     isTabAlive: async () => true,
-    pollCloudflareTempEmailVerificationCode: async (_step, _state, payload) => {
-      pollPayloads.push(payload);
+    pollFlowVerificationCode: async (options) => {
+      pollPayloads.push(options);
       return { code: '123456', emailTimestamp: 2000, mailId: 'mail-1' };
     },
     sendToContentScriptResilient: async (_sourceId, message) => {
@@ -266,8 +278,11 @@ test('kiro verification polling uses the registration email field instead of pag
   });
 
   assert.equal(pollPayloads.length, 1);
-  assert.equal(pollPayloads[0].targetEmail, 'skater-twine-carve@duck.com');
-  assert.deepEqual(pollPayloads[0].targetEmailHints, ['skater-twine-carve@duck.com']);
+  assert.equal(pollPayloads[0].flowId, 'kiro');
+  assert.equal(pollPayloads[0].nodeId, 'kiro-submit-verification-code');
+  assert.equal(pollPayloads[0].filterAfterTimestamp, 1000);
+  assert.equal(pollPayloads[0].state.email, 'skater-twine-carve@duck.com');
+  assert.equal(getKiroRuntime(pollPayloads[0].state).register?.email, 'skater-twine-carve@duck.com');
   assert.equal(sentMessages.some((message) => (
     message.type === 'EXECUTE_NODE'
       && message.nodeId === 'kiro-submit-verification-code'
@@ -315,8 +330,8 @@ test('kiro verification step can adopt the active AWS verify-otp page without st
     getState: async () => currentState,
     getTabId: async () => null,
     isTabAlive: async () => false,
-    pollCloudflareTempEmailVerificationCode: async (_step, _state, payload) => {
-      pollPayloads.push(payload);
+    pollFlowVerificationCode: async (options) => {
+      pollPayloads.push(options);
       return { code: '248680', emailTimestamp: 2000, mailId: 'mail-active' };
     },
     registerTab: async (source, tabId) => {
@@ -355,7 +370,10 @@ test('kiro verification step can adopt the active AWS verify-otp page without st
 
   assert.deepEqual(registeredTabs, [{ source: 'kiro-register-page', tabId: 301 }]);
   assert.equal(getKiroRuntime(statePatches[0]).session?.registerTabId, 301);
-  assert.equal(pollPayloads[0].targetEmail, 'tmp3x58ft2ivc@edu.email.qlhazycoder.tech');
+  assert.equal(pollPayloads[0].flowId, 'kiro');
+  assert.equal(pollPayloads[0].nodeId, 'kiro-submit-verification-code');
+  assert.equal(pollPayloads[0].state.email, 'tmp3x58ft2ivc@edu.email.qlhazycoder.tech');
+  assert.equal(getKiroRuntime(pollPayloads[0].state).register?.email, 'tmp3x58ft2ivc@edu.email.qlhazycoder.tech');
   assert.equal(sentMessages.some((message) => (
     message.type === 'EXECUTE_NODE'
       && message.nodeId === 'kiro-submit-verification-code'
@@ -419,8 +437,8 @@ test('kiro verification step reinjects the register driver when only the generic
       'content/utils.js',
       'flows/kiro/content/register-page.js',
     ],
-    pollCloudflareTempEmailVerificationCode: async (_step, _state, payload) => {
-      pollPayloads.push(payload);
+    pollFlowVerificationCode: async (options) => {
+      pollPayloads.push(options);
       return { code: '248680', emailTimestamp: 2000, mailId: 'mail-reinject' };
     },
     sendToContentScriptResilient: async (_sourceId, message) => {
@@ -464,7 +482,10 @@ test('kiro verification step reinjects the register driver when only the generic
     'content/utils.js',
     'flows/kiro/content/register-page.js',
   ]);
-  assert.equal(pollPayloads[0].targetEmail, 'tmp3x58ft2ivc@edu.email.qlhazycoder.tech');
+  assert.equal(pollPayloads[0].flowId, 'kiro');
+  assert.equal(pollPayloads[0].nodeId, 'kiro-submit-verification-code');
+  assert.equal(pollPayloads[0].state.email, 'tmp3x58ft2ivc@edu.email.qlhazycoder.tech');
+  assert.equal(getKiroRuntime(pollPayloads[0].state).register?.email, 'tmp3x58ft2ivc@edu.email.qlhazycoder.tech');
   assert.equal(getKiroRuntime(completedPayload).register?.email, 'tmp3x58ft2ivc@edu.email.qlhazycoder.tech');
 });
 

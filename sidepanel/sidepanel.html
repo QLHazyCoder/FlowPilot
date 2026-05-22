@@ -126,6 +126,7 @@
         <select id="select-flow" class="data-select" aria-label="Flow 选择">
           <option value="openai" selected>Codex / OpenAI</option>
           <option value="kiro">Kiro</option>
+          <option value="grok">Grok</option>
         </select>
       </div>
       <div class="data-row">
@@ -289,6 +290,23 @@
       <div class="data-row" id="row-kiro-upload-status" style="display:none;">
         <span class="data-label">上传状态</span>
         <span id="display-kiro-upload-status" class="data-value mono">未开始</span>
+      </div>
+      <div class="data-row" id="row-grok-register-status" style="display:none;">
+        <span class="data-label">Grok 注册</span>
+        <span id="display-grok-register-status" class="data-value mono">未开始</span>
+      </div>
+      <div class="data-row" id="row-grok-sso-status" style="display:none;">
+        <span class="data-label">SSO 状态</span>
+        <span id="display-grok-sso-status" class="data-value mono">未提取</span>
+      </div>
+      <div class="data-row" id="row-grok-sso-settings" style="display:none;">
+        <span class="data-label">SSO Cookie</span>
+        <div class="data-inline">
+          <span id="display-grok-sso-cookie" class="data-value mono">未提取</span>
+          <button id="btn-copy-grok-sso" class="btn btn-ghost btn-xs data-inline-btn" type="button">复制</button>
+          <button id="btn-export-grok-sso" class="btn btn-ghost btn-xs data-inline-btn" type="button">导出</button>
+          <button id="btn-clear-grok-sso" class="btn btn-ghost btn-xs data-inline-btn" type="button">清空</button>
+        </div>
       </div>
       <div class="data-row module-divider-start" id="row-custom-password">
         <span class="data-label">账户密码</span>
@@ -1881,6 +1899,8 @@
   <script src="../flows/openai/workflow.js"></script>
   <script src="../flows/kiro/index.js"></script>
   <script src="../flows/kiro/workflow.js"></script>
+  <script src="../flows/grok/index.js"></script>
+  <script src="../flows/grok/workflow.js"></script>
   <script src="../flows/index.js"></script>
   <script src="../core/flow-kernel/flow-registry.js"></script>
   <script src="../shared/contribution-registry.js"></script>

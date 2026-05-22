@@ -17,6 +17,7 @@
       deleteAccountRunHistoryRecords,
       clearAutoRunTimerAlarm,
       clearFreeReusablePhoneActivation,
+      clearGrokSsoCookies,
       clearLuckmailRuntimeState,
       clearYydsMailRuntimeState,
       clearStopRequest,
@@ -1146,6 +1147,13 @@
             throw new Error('白嫖复用手机号清除能力未接入。');
           }
           return await clearFreeReusablePhoneActivation();
+        }
+
+        case 'CLEAR_GROK_SSO_COOKIES': {
+          if (typeof clearGrokSsoCookies !== 'function') {
+            throw new Error('Grok SSO 清空能力未接入。');
+          }
+          return await clearGrokSsoCookies();
         }
 
         case 'SET_FREE_REUSABLE_PHONE': {

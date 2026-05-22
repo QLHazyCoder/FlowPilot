@@ -5,6 +5,8 @@ importScripts(
   'flows/openai/workflow.js',
   'flows/kiro/index.js',
   'flows/kiro/workflow.js',
+  'flows/grok/index.js',
+  'flows/grok/workflow.js',
   'flows/index.js',
   'core/flow-kernel/flow-registry.js',
   'shared/contribution-registry.js',
@@ -34,9 +36,11 @@ importScripts(
   'core/flow-kernel/workflow-engine.js',
   'core/flow-kernel/runtime-state.js',
   'flows/kiro/background/state.js',
+  'flows/grok/background/state.js',
   'flows/kiro/background/credential-artifact.js',
   'background/contribution/adapters/kiro-builder-id.js',
   'flows/kiro/background/register-runner.js',
+  'flows/grok/background/register-runner.js',
   'flows/kiro/background/desktop-client.js',
   'flows/kiro/background/desktop-authorize-runner.js',
   'flows/kiro/background/publisher-kiro-rs.js',
@@ -44,6 +48,9 @@ importScripts(
   'background/signup-flow-helpers.js',
   'background/mail-rule-registry.js',
   'flows/openai/mail-rules.js',
+  'flows/kiro/mail-rules.js',
+  'flows/grok/mail-rules.js',
+  'background/flow-mail-polling.js',
   'background/message-router.js',
   'background/verification-flow.js',
   'background/auto-run-controller.js',
@@ -424,6 +431,7 @@ const runtimeStateHelpers = self.MultiPageBackgroundRuntimeState?.createRuntimeS
   defaultNodeStatuses: DEFAULT_NODE_STATUSES,
 }) || null;
 const kiroStateHelpers = self.MultiPageBackgroundKiroState || null;
+const grokStateHelpers = self.MultiPageBackgroundGrokState || null;
 const DEFAULT_REGISTRATION_EMAIL_STATE = registrationEmailStateHelpers?.DEFAULT_REGISTRATION_EMAIL_STATE || {
   current: '',
   previous: '',
@@ -495,6 +503,9 @@ function buildStateViewWithRuntimeState(state = {}) {
   }
   if (kiroStateHelpers?.buildStateView) {
     nextState = kiroStateHelpers.buildStateView(nextState);
+  }
+  if (grokStateHelpers?.buildStateView) {
+    nextState = grokStateHelpers.buildStateView(nextState);
   }
   return nextState;
 }
@@ -3826,20 +3837,20 @@ function buildSettingsStatePatchFromFlatUpdates(updates = {}) {
   assignIfUpdated('kiroRsKey', ['flows', 'kiro', 'targets', 'kiro-rs', 'apiKey']);
 
   if (hasUpdate('stepExecutionRangeByFlow') && isPlainObjectValue(updates.stepExecutionRangeByFlow)) {
-    if (isPlainObjectValue(updates.stepExecutionRangeByFlow.openai)) {
+    Object.entries(updates.stepExecutionRangeByFlow).forEach(([rawFlowId, range]) => {
+      if (!isPlainObjectValue(range)) {
+        return;
+      }
+      const flowId = normalizePatchFlowId(rawFlowId, '');
+      if (!flowId) {
+        return;
+      }
       setSettingsStatePatchValue(
         patch,
-        ['flows', 'openai', 'autoRun', 'stepExecutionRange'],
-        updates.stepExecutionRangeByFlow.openai
+        ['flows', flowId, 'autoRun', 'stepExecutionRange'],
+        range
       );
-    }
-    if (isPlainObjectValue(updates.stepExecutionRangeByFlow.kiro)) {
-      setSettingsStatePatchValue(
-        patch,
-        ['flows', 'kiro', 'autoRun', 'stepExecutionRange'],
-        updates.stepExecutionRangeByFlow.kiro
-      );
-    }
+    });
   }
 
   return patch;
@@ -3958,6 +3969,25 @@ function buildAutoRunFreshResetSettingsState(prevState = {}, activeFlowId = DEFA
     })
     : currentSettingsState;
   const normalizedStepExecutionRangeByFlow = normalizeStepExecutionRangeByFlow(prevState?.stepExecutionRangeByFlow || {});
+  const flowIds = typeof self.MultiPageFlowRegistry?.getRegisteredFlowIds === 'function'
+    ? self.MultiPageFlowRegistry.getRegisteredFlowIds()
+      .map((flowId) => self.MultiPageFlowRegistry.normalizeFlowId?.(flowId, '') || String(flowId || '').trim().toLowerCase())
+      .filter(Boolean)
+    : ['openai', 'kiro'];
+  const flowPatch = {};
+  flowIds.forEach((flowId) => {
+    const selectedTargetId = settingsSchemaApi?.getSelectedTargetId
+      ? settingsSchemaApi.getSelectedTargetId(normalizedCurrentSettingsState, flowId)
+      : undefined;
+    flowPatch[flowId] = {
+      selectedTargetId,
+      autoRun: normalizedStepExecutionRangeByFlow[flowId]
+        ? {
+          stepExecutionRange: normalizedStepExecutionRangeByFlow[flowId],
+        }
+        : undefined,
+    };
+  });
   const nextSettingsStatePatch = {
     activeFlowId,
     services: {
@@ -3973,28 +4003,7 @@ function buildAutoRunFreshResetSettingsState(prevState = {}, activeFlowId = DEFA
         mode: prevState?.ipProxyMode,
       },
     },
-    flows: {
-      openai: {
-        selectedTargetId: settingsSchemaApi?.getSelectedTargetId
-          ? settingsSchemaApi.getSelectedTargetId(normalizedCurrentSettingsState, 'openai')
-          : undefined,
-        autoRun: normalizedStepExecutionRangeByFlow.openai
-          ? {
-            stepExecutionRange: normalizedStepExecutionRangeByFlow.openai,
-          }
-          : undefined,
-      },
-      kiro: {
-        selectedTargetId: settingsSchemaApi?.getSelectedTargetId
-          ? settingsSchemaApi.getSelectedTargetId(normalizedCurrentSettingsState, 'kiro')
-          : undefined,
-        autoRun: normalizedStepExecutionRangeByFlow.kiro
-          ? {
-            stepExecutionRange: normalizedStepExecutionRangeByFlow.kiro,
-          }
-          : undefined,
-      },
-    },
+    flows: flowPatch,
   };
 
   return mergeAutoRunKeepStateValue(currentSettingsState, nextSettingsStatePatch);
@@ -4037,6 +4046,9 @@ function buildFreshAutoRunKeepState(prevState = {}) {
   }
   if (typeof kiroStateHelpers?.buildFreshKeepState === 'function') {
     Object.assign(keepState, kiroStateHelpers.buildFreshKeepState(sourceState));
+  }
+  if (typeof grokStateHelpers?.buildFreshKeepState === 'function') {
+    Object.assign(keepState, grokStateHelpers.buildFreshKeepState(sourceState));
   }
   if (Object.prototype.hasOwnProperty.call(sourceState, 'settingsSchemaVersion')) {
     keepState.settingsSchemaVersion = Number(sourceState.settingsSchemaVersion) || 0;
@@ -4344,6 +4356,28 @@ function broadcastDataUpdate(payload) {
     type: 'DATA_UPDATED',
     payload,
   }).catch(() => { });
+}
+
+async function clearGrokSsoCookies() {
+  const currentState = await getState();
+  const patch = typeof grokStateHelpers?.buildRuntimeStatePatch === 'function'
+    ? grokStateHelpers.buildRuntimeStatePatch(currentState, {
+      sso: {
+        currentCookie: '',
+        cookies: [],
+        extractedAt: 0,
+      },
+    })
+    : {
+      grokSsoCookie: '',
+      grokSsoCookies: [],
+      grokSsoExtractedAt: 0,
+    };
+  await setState(patch);
+  const nextState = await getState();
+  broadcastDataUpdate(patch);
+  await addLog('Grok SSO Cookie 已清空。', 'info', { nodeId: 'grok-extract-sso-cookie' });
+  return { ok: true, state: nextState };
 }
 
 function broadcastIcloudAliasesChanged(payload = {}) {
@@ -9628,6 +9662,14 @@ function getDownstreamStateResets(step, state = {}) {
       };
     }
   }
+  if (String(stepKey || '').trim().toLowerCase().startsWith('grok-')) {
+    const grokResets = typeof grokStateHelpers?.buildDownstreamResetPatch === 'function'
+      ? grokStateHelpers.buildDownstreamResetPatch(stepKey, state)
+      : {};
+    if (Object.keys(grokResets).length > 0) {
+      return grokResets;
+    }
+  }
   const plusRuntimeResets = {
     plusCheckoutTabId: null,
     plusCheckoutUrl: null,
@@ -10822,6 +10864,16 @@ async function handleNodeData(nodeId, payload) {
     }
     return;
   }
+  if (String(nodeDefinition?.flowId || '').trim().toLowerCase() === 'grok') {
+    const updates = typeof grokStateHelpers?.applyNodeCompletionPayload === 'function'
+      ? grokStateHelpers.applyNodeCompletionPayload(state, payload || {})
+      : {};
+    if (Object.keys(updates).length > 0) {
+      await setState(updates);
+      broadcastDataUpdate(updates);
+    }
+    return;
+  }
   const step = getStepIdByNodeIdForState(nodeId, state);
   if (!Number.isInteger(step) || step <= 0) {
     return;
@@ -10879,6 +10931,11 @@ const AUTO_RUN_BACKGROUND_COMPLETED_STEP_KEYS = new Set([
   'kiro-start-desktop-authorize',
   'kiro-complete-desktop-authorize',
   'kiro-upload-credential',
+  'grok-open-signup-page',
+  'grok-submit-email',
+  'grok-submit-verification-code',
+  'grok-submit-profile',
+  'grok-extract-sso-cookie',
 ]);
 const STEP_COMPLETION_SIGNAL_STEP_KEYS = new Set([
   'fill-password',
@@ -13390,8 +13447,9 @@ async function resumeAutoRun() {
 
 const SIGNUP_ENTRY_URL = 'https://chatgpt.com/';
 const OPENAI_AUTH_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'flows/openai/content/auth-page-recovery.js', 'flows/openai/content/phone-country-utils.js', 'flows/openai/content/phone-auth.js', 'flows/openai/content/openai-auth.js'];
-const KIRO_REGISTER_INJECT_FILES = ['flows/openai/index.js', 'flows/kiro/index.js', 'flows/index.js', 'core/flow-kernel/flow-registry.js', 'core/flow-kernel/source-registry.js', 'shared/kiro-timeouts.js', 'content/utils.js', 'flows/kiro/content/register-page.js'];
-const KIRO_DESKTOP_AUTHORIZE_INJECT_FILES = ['flows/openai/index.js', 'flows/kiro/index.js', 'flows/index.js', 'core/flow-kernel/flow-registry.js', 'core/flow-kernel/source-registry.js', 'shared/kiro-timeouts.js', 'content/utils.js', 'flows/kiro/content/desktop-authorize-page.js'];
+const KIRO_REGISTER_INJECT_FILES = ['flows/openai/index.js', 'flows/kiro/index.js', 'flows/grok/index.js', 'flows/index.js', 'core/flow-kernel/flow-registry.js', 'core/flow-kernel/source-registry.js', 'shared/kiro-timeouts.js', 'content/utils.js', 'flows/kiro/content/register-page.js'];
+const KIRO_DESKTOP_AUTHORIZE_INJECT_FILES = ['flows/openai/index.js', 'flows/kiro/index.js', 'flows/grok/index.js', 'flows/index.js', 'core/flow-kernel/flow-registry.js', 'core/flow-kernel/source-registry.js', 'shared/kiro-timeouts.js', 'content/utils.js', 'flows/kiro/content/desktop-authorize-page.js'];
+const GROK_REGISTER_INJECT_FILES = ['flows/openai/index.js', 'flows/kiro/index.js', 'flows/grok/index.js', 'flows/index.js', 'core/flow-kernel/flow-registry.js', 'core/flow-kernel/source-registry.js', 'content/utils.js', 'flows/grok/content/register-page.js'];
 const panelBridge = self.MultiPageBackgroundPanelBridge?.createPanelBridge({
   chrome,
   addLog,
@@ -13449,11 +13507,49 @@ const openAiMailRules = self.MultiPageOpenAiMailRules?.createOpenAiMailRules({
   MAIL_2925_VERIFICATION_INTERVAL_MS,
   MAIL_2925_VERIFICATION_MAX_ATTEMPTS,
 });
+const kiroMailRules = self.MultiPageKiroMailRules?.createKiroMailRules({
+  LUCKMAIL_PROVIDER,
+  MAIL_2925_VERIFICATION_INTERVAL_MS,
+  MAIL_2925_VERIFICATION_MAX_ATTEMPTS,
+});
+const grokMailRules = self.MultiPageGrokMailRules?.createGrokMailRules({
+  LUCKMAIL_PROVIDER,
+  MAIL_2925_VERIFICATION_INTERVAL_MS,
+  MAIL_2925_VERIFICATION_MAX_ATTEMPTS,
+});
 const mailRuleRegistry = self.MultiPageBackgroundMailRuleRegistry?.createMailRuleRegistry({
   defaultFlowId: DEFAULT_ACTIVE_FLOW_ID,
   flowBuilders: {
     openai: openAiMailRules,
+    kiro: kiroMailRules,
+    grok: grokMailRules,
   },
+});
+const flowMailPollingService = self.MultiPageBackgroundFlowMailPolling?.createFlowMailPollingService({
+  addLog,
+  buildVerificationPollPayloadForNode: mailRuleRegistry?.buildVerificationPollPayloadForNode,
+  chrome,
+  CLOUDFLARE_TEMP_EMAIL_PROVIDER,
+  CLOUD_MAIL_PROVIDER,
+  ensureIcloudMailSession: ensureIcloudMailSessionForVerification,
+  ensureMail2925MailboxSession,
+  getMailConfig,
+  getTabId,
+  handleMail2925LimitReachedError,
+  HOTMAIL_PROVIDER,
+  isMail2925LimitReachedError,
+  isStopError,
+  isTabAlive,
+  LUCKMAIL_PROVIDER,
+  pollCloudflareTempEmailVerificationCode,
+  pollCloudMailVerificationCode,
+  pollHotmailVerificationCode,
+  pollLuckmailVerificationCode,
+  pollYydsMailVerificationCode,
+  reuseOrCreateTab,
+  sendToMailContentScriptResilient,
+  throwIfStopped,
+  YYDS_MAIL_PROVIDER,
 });
 const verificationFlowHelpers = self.MultiPageBackgroundVerificationFlow?.createVerificationFlowHelpers({
   addLog,
@@ -13823,39 +13919,47 @@ const kiroRegisterRunner = self.MultiPageBackgroundKiroRegisterRunner?.createKir
   chrome,
   ensureContentScriptReadyOnTab,
   completeNodeFromBackground,
-  ensureIcloudMailSession: ensureIcloudMailSessionForVerification,
-  ensureMail2925MailboxSession,
   fetchImpl: typeof fetch === 'function' ? fetch.bind(globalThis) : null,
   generatePassword,
   generateRandomName,
-  getMailConfig,
   getTabId,
   getState,
-  HOTMAIL_PROVIDER,
   isTabAlive,
-  LUCKMAIL_PROVIDER,
-  CLOUDFLARE_TEMP_EMAIL_PROVIDER,
-  CLOUD_MAIL_PROVIDER,
-  YYDS_MAIL_PROVIDER,
-  MAIL_2925_VERIFICATION_INTERVAL_MS,
-  MAIL_2925_VERIFICATION_MAX_ATTEMPTS,
   isRetryableContentScriptTransportError,
-  pollCloudflareTempEmailVerificationCode,
-  pollCloudMailVerificationCode,
-  pollHotmailVerificationCode,
-  pollLuckmailVerificationCode,
-  pollYydsMailVerificationCode,
+  pollFlowVerificationCode: flowMailPollingService?.pollFlowVerificationCode,
   registerTab,
   resolveSignupEmailForFlow,
   reuseOrCreateTab,
   sendToContentScriptResilient,
-  sendToMailContentScriptResilient,
   setPasswordState,
   setState,
   sleepWithStop,
   throwIfStopped,
   waitForTabStableComplete,
   KIRO_REGISTER_INJECT_FILES,
+});
+const grokRegisterRunner = self.MultiPageBackgroundGrokRegisterRunner?.createGrokRegisterRunner({
+  addLog,
+  chrome,
+  ensureContentScriptReadyOnTab,
+  completeNodeFromBackground,
+  generatePassword,
+  generateRandomName,
+  getTabId,
+  getState,
+  isTabAlive,
+  pollFlowVerificationCode: flowMailPollingService?.pollFlowVerificationCode,
+  registerTab,
+  resolveSignupEmailForFlow,
+  reuseOrCreateTab,
+  sendToContentScriptResilient,
+  setPasswordState,
+  setState,
+  sleepWithStop,
+  throwIfStopped,
+  waitForTabStableComplete,
+  GROK_REGISTER_INJECT_FILES,
+  markCurrentRegistrationAccountUsed,
 });
 const kiroBuilderIdContributionAdapter = self.MultiPageBackgroundKiroBuilderIdContributionAdapter?.createKiroBuilderIdContributionAdapter?.({
   addLog,
@@ -13888,31 +13992,16 @@ const kiroDesktopAuthorizeRunner = self.MultiPageBackgroundKiroDesktopAuthorizeR
   chrome,
   completeNodeFromBackground,
   ensureContentScriptReadyOnTab,
-  ensureIcloudMailSession: ensureIcloudMailSessionForVerification,
-  ensureMail2925MailboxSession,
   fetchImpl: typeof fetch === 'function' ? fetch.bind(globalThis) : null,
-  getMailConfig,
   getTabId,
   getState,
-  HOTMAIL_PROVIDER,
   isTabAlive,
   KIRO_REGISTER_INJECT_FILES,
-  LUCKMAIL_PROVIDER,
-  CLOUDFLARE_TEMP_EMAIL_PROVIDER,
-  CLOUD_MAIL_PROVIDER,
-  YYDS_MAIL_PROVIDER,
-  MAIL_2925_VERIFICATION_INTERVAL_MS,
-  MAIL_2925_VERIFICATION_MAX_ATTEMPTS,
   maybeSubmitFlowContribution,
-  pollCloudflareTempEmailVerificationCode,
-  pollCloudMailVerificationCode,
-  pollHotmailVerificationCode,
-  pollLuckmailVerificationCode,
-  pollYydsMailVerificationCode,
+  pollFlowVerificationCode: flowMailPollingService?.pollFlowVerificationCode,
   registerTab,
   reuseOrCreateTab,
   sendToContentScriptResilient,
-  sendToMailContentScriptResilient,
   setState,
   sleepWithStop,
   throwIfStopped,
@@ -14021,6 +14110,11 @@ const stepExecutorsByKey = {
   'kiro-start-desktop-authorize': (state) => kiroDesktopAuthorizeRunner.executeKiroStartDesktopAuthorize(state),
   'kiro-complete-desktop-authorize': (state) => kiroDesktopAuthorizeRunner.executeKiroCompleteDesktopAuthorize(state),
   'kiro-upload-credential': (state) => kiroPublisher.executeKiroUploadCredential(state),
+  'grok-open-signup-page': (state) => grokRegisterRunner.executeGrokOpenSignupPage(state),
+  'grok-submit-email': (state) => grokRegisterRunner.executeGrokSubmitEmail(state),
+  'grok-submit-verification-code': (state) => grokRegisterRunner.executeGrokSubmitVerificationCode(state),
+  'grok-submit-profile': (state) => grokRegisterRunner.executeGrokSubmitProfile(state),
+  'grok-extract-sso-cookie': (state) => grokRegisterRunner.executeGrokExtractSsoCookie(state),
 };
 const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter({
   addLog,
@@ -14037,6 +14131,7 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   deleteAccountRunHistoryRecords: (...args) => deleteAndBroadcastAccountRunHistoryRecords(...args),
   clearAutoRunTimerAlarm,
   clearFreeReusablePhoneActivation,
+  clearGrokSsoCookies,
   clearLuckmailRuntimeState,
   clearYydsMailRuntimeState,
   clearStopRequest,

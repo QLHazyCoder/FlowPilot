@@ -171,6 +171,7 @@
 - `resolvedSignupMethod` 是当前轮冻结结果，不等同于用户此刻 UI 上选择的 `signupMethod`。
 - 强制绑定邮箱后重登用邮箱身份，只能通过单次执行参数覆盖登录身份，不能持久改写 `signupMethod`。
 - flow 能力不足时必须在步骤定义层或启动校验层处理，不能等执行到不存在的节点后才报错。
+- 本地导出型 flow、发布型 flow、贡献型 flow 必须显式区分：只有声明了 `publicationTargets` 或明确支持贡献能力的 flow 才能进入发布/贡献 adapter 校验；例如 Grok / `webchat2api` SSO Cookie 导出属于本地导出 flow，不能因为有 target 就默认接入贡献模式。
 
 ### 1.7 日志步骤号原则
 
@@ -285,6 +286,7 @@
 - 贡献流程的后台公开 OAuth 状态机应优先收敛到独立模块，例如 `background/contribution-oauth.js`
 - 贡献模式的侧栏按钮、状态展示和轮询调度应优先收敛到独立 manager，例如 `sidepanel/contribution-mode.js`
 - 如果服务端当前返回“无需手动提交 callback”，扩展端必须把它当兼容成功态处理，不能简单按 HTTP 非 200 直接视为失败
+- 如果新增 flow 只是本地导出产物，例如 Cookie、JSON、会话文件、手动复制值，必须保持 `publicationTargets` 为空并关闭 `supportsAccountContribution`；如果后续产品决定发布到远端服务，必须先设计 publication target、贡献 adapter、敏感字段脱敏和测试，再打开能力开关。
 
 ### 3.4.1 iCloud Hide My Email 维护补充
 
@@ -495,6 +497,7 @@ npm test
 15. 如果创建了 `docs/md/` 方案文件，我有没有确认它是否应被提交？
 16. 如果改动涉及 flow、步骤、模式切换，我有没有同时检查 `getSteps / getNodes / getWorkflow`、后台 registry、sidepanel `workflowNodes` 和 node 状态？
 17. 我有没有新增任何用数字步骤判断业务含义的代码？如果有，是否能改为 `key / nodeId`？
+18. 如果新增或调整 flow target，我有没有确认它到底是本地导出、正式发布还是贡献 flow，并同步检查 `publicationTargets / supportsAccountContribution / contributionAdapterIds / shared/contribution-registry.js`？
 
 ## 9. 完成标准
 

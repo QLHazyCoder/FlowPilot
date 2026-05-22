@@ -192,6 +192,15 @@ const rowKiroLoginUrl = document.getElementById('row-kiro-login-url');
 const displayKiroLoginUrl = document.getElementById('display-kiro-login-url');
 const rowKiroUploadStatus = document.getElementById('row-kiro-upload-status');
 const displayKiroUploadStatus = document.getElementById('display-kiro-upload-status');
+const rowGrokRegisterStatus = document.getElementById('row-grok-register-status');
+const displayGrokRegisterStatus = document.getElementById('display-grok-register-status');
+const rowGrokSsoStatus = document.getElementById('row-grok-sso-status');
+const displayGrokSsoStatus = document.getElementById('display-grok-sso-status');
+const rowGrokSsoSettings = document.getElementById('row-grok-sso-settings');
+const displayGrokSsoCookie = document.getElementById('display-grok-sso-cookie');
+const btnCopyGrokSso = document.getElementById('btn-copy-grok-sso');
+const btnExportGrokSso = document.getElementById('btn-export-grok-sso');
+const btnClearGrokSso = document.getElementById('btn-clear-grok-sso');
 const rowCustomPassword = document.getElementById('row-custom-password');
 const rowPlusMode = document.getElementById('row-plus-mode');
 const inputPlusModeEnabled = document.getElementById('input-plus-mode-enabled');
@@ -2659,6 +2668,95 @@ function getKiroRuntimeState(state = {}) {
     return flowState;
   }
   return {};
+}
+
+function getGrokRuntimeState(state = {}) {
+  const runtimeState = state?.runtimeState?.flowState?.grok;
+  if (runtimeState && typeof runtimeState === 'object' && !Array.isArray(runtimeState)) {
+    return runtimeState;
+  }
+  const flowState = state?.flowState?.grok;
+  if (flowState && typeof flowState === 'object' && !Array.isArray(flowState)) {
+    return flowState;
+  }
+  return {};
+}
+
+function normalizeGrokSsoCookies(state = latestState) {
+  const runtimeState = getGrokRuntimeState(state);
+  const rawCookies = Array.isArray(runtimeState?.sso?.cookies)
+    ? runtimeState.sso.cookies
+    : (Array.isArray(state?.grokSsoCookies) ? state.grokSsoCookies : []);
+  const currentCookie = String(runtimeState?.sso?.currentCookie || state?.grokSsoCookie || '').trim();
+  return Array.from(new Set([
+    currentCookie,
+    ...rawCookies,
+  ].map((entry) => String(entry || '').trim()).filter(Boolean)));
+}
+
+function getGrokRegisterStatusLabel(value = '') {
+  const normalized = String(value || '').trim().toLowerCase();
+  switch (normalized) {
+    case 'signup_page_opened':
+      return '注册页已打开';
+    case 'email_submitting':
+      return '正在提交邮箱';
+    case 'verification_requested':
+      return '等待验证码';
+    case 'verified':
+      return '验证码已提交';
+    case 'profile_submitting':
+      return '正在提交资料';
+    case 'profile_submitted':
+      return '资料已提交';
+    case 'completed':
+      return '已完成';
+    case 'error':
+      return '失败';
+    default:
+      return String(value || '').trim() || '未开始';
+  }
+}
+
+function renderGrokRuntimeState(state = latestState) {
+  const runtimeState = getGrokRuntimeState(state);
+  const registerStatus = String(
+    runtimeState?.register?.status
+    || state?.grokRegisterStatus
+    || ''
+  ).trim();
+  const cookies = normalizeGrokSsoCookies(state);
+  const currentCookie = String(
+    runtimeState?.sso?.currentCookie
+    || state?.grokSsoCookie
+    || cookies[0]
+    || ''
+  ).trim();
+  const extractedAt = Number(
+    runtimeState?.sso?.extractedAt
+    || state?.grokSsoExtractedAt
+    || 0
+  ) || 0;
+
+  if (displayGrokRegisterStatus) {
+    displayGrokRegisterStatus.textContent = getGrokRegisterStatusLabel(registerStatus);
+  }
+  if (displayGrokSsoStatus) {
+    displayGrokSsoStatus.textContent = currentCookie
+      ? `已提取 ${cookies.length || 1} 条${extractedAt ? `，${new Date(extractedAt).toLocaleString()}` : ''}`
+      : '未提取';
+  }
+  if (displayGrokSsoCookie) {
+    displayGrokSsoCookie.textContent = currentCookie
+      ? `${currentCookie.slice(0, 8)}...${currentCookie.slice(-6)}`
+      : '未提取';
+    displayGrokSsoCookie.title = currentCookie ? '已隐藏完整 SSO Cookie，可使用复制或导出' : '';
+  }
+  [btnCopyGrokSso, btnExportGrokSso, btnClearGrokSso].forEach((button) => {
+    if (button) {
+      button.disabled = cookies.length === 0;
+    }
+  });
 }
 
 function setKiroRsConnectionTestStatus(message = '') {
@@ -11069,6 +11167,7 @@ function applySettingsState(state) {
     ).trim();
     displayKiroUploadStatus.textContent = getKiroUploadStatusLabel(kiroUploadStatus);
   }
+  renderGrokRuntimeState(state);
   const normalizedIpProxyService = resolveIpProxyService(state?.ipProxyService);
   const normalizedIpProxyServiceProfiles = typeof normalizeIpProxyServiceProfiles === 'function'
     ? normalizeIpProxyServiceProfiles(state?.ipProxyServiceProfiles || {}, state || {})
@@ -13944,6 +14043,64 @@ async function copyTextToClipboard(text) {
   await navigator.clipboard.writeText(value);
 }
 
+btnCopyGrokSso?.addEventListener('click', async () => {
+  try {
+    const cookies = normalizeGrokSsoCookies(latestState);
+    await copyTextToClipboard(cookies.join('\n'));
+    showToast('Grok SSO Cookie 已复制。', 'success');
+  } catch (error) {
+    showToast(error?.message || '复制 Grok SSO Cookie 失败。', 'error');
+  }
+});
+
+btnExportGrokSso?.addEventListener('click', () => {
+  try {
+    const cookies = normalizeGrokSsoCookies(latestState);
+    if (!cookies.length) {
+      throw new Error('没有可导出的 Grok SSO Cookie。');
+    }
+    downloadTextFile(
+      `${cookies.join('\n')}\n`,
+      `grok-sso-cookies-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`,
+      'text/plain;charset=utf-8'
+    );
+    showToast('Grok SSO Cookie 已导出。', 'success');
+  } catch (error) {
+    showToast(error?.message || '导出 Grok SSO Cookie 失败。', 'error');
+  }
+});
+
+btnClearGrokSso?.addEventListener('click', async () => {
+  try {
+    const cookies = normalizeGrokSsoCookies(latestState);
+    if (!cookies.length) {
+      showToast('当前没有 Grok SSO Cookie。', 'info');
+      return;
+    }
+    const response = await chrome.runtime.sendMessage({
+      type: 'CLEAR_GROK_SSO_COOKIES',
+      source: 'sidepanel',
+      payload: {},
+    });
+    if (response?.error) {
+      throw new Error(response.error);
+    }
+    if (response?.state) {
+      syncLatestState(response.state);
+    } else {
+      syncLatestState({
+        grokSsoCookie: '',
+        grokSsoCookies: [],
+        grokSsoExtractedAt: 0,
+      });
+    }
+    renderGrokRuntimeState(latestState);
+    showToast('Grok SSO Cookie 已清空。', 'success');
+  } catch (error) {
+    showToast(error?.message || '清空 Grok SSO Cookie 失败。', 'error');
+  }
+});
+
 const hotmailManager = window.SidepanelHotmailManager?.createHotmailManager({
   state: {
     getLatestState: () => latestState,
@@ -14590,7 +14747,9 @@ stepsList?.addEventListener('click', async (event) => {
     if (step === gpcCreateStep && !(await ensureGpcApiKeyReadyForStart())) {
       return;
     }
-    const shouldPersistSharedPassword = nodeId === 'fill-password' || nodeId === 'kiro-submit-password';
+    const shouldPersistSharedPassword = nodeId === 'fill-password'
+      || nodeId === 'kiro-submit-password'
+      || nodeId === 'grok-submit-profile';
     if (shouldPersistSharedPassword && inputPassword.value !== (latestState?.customPassword || '')) {
       await chrome.runtime.sendMessage({
         type: 'SAVE_SETTING',
@@ -17330,6 +17489,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         || message.payload.accountContributionEnabled !== undefined
       ) {
         syncPasswordField(latestState || {});
+      }
+      if (
+        message.payload.grokRegisterStatus !== undefined
+        || message.payload.grokCompletedAt !== undefined
+        || message.payload.grokSsoCookie !== undefined
+        || message.payload.grokSsoCookies !== undefined
+        || message.payload.grokSsoExtractedAt !== undefined
+        || message.payload.runtimeState !== undefined
+        || message.payload.flowState !== undefined
+      ) {
+        renderGrokRuntimeState(latestState);
       }
       if (message.payload.localCpaStep9Mode !== undefined) {
         setLocalCpaStep9Mode(message.payload.localCpaStep9Mode);

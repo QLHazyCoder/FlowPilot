@@ -625,6 +625,47 @@ test('SAVE_SETTING mirrors activeFlowId into flowId when switching to kiro flow'
   });
 });
 
+test('CLEAR_GROK_SSO_COOKIES delegates canonical runtime cleanup to background', async () => {
+  const source = fs.readFileSync('background/message-router.js', 'utf8');
+  const globalScope = { console };
+  const api = new Function('self', `${source}; return self.MultiPageBackgroundMessageRouter;`)(globalScope);
+  let called = false;
+  const router = api.createMessageRouter({
+    clearGrokSsoCookies: async () => {
+      called = true;
+      return {
+        ok: true,
+        state: {
+          grokSsoCookie: '',
+          grokSsoCookies: [],
+          runtimeState: {
+            flowState: {
+              grok: {
+                sso: {
+                  currentCookie: '',
+                  cookies: [],
+                  extractedAt: 0,
+                },
+              },
+            },
+          },
+        },
+      };
+    },
+  });
+
+  const response = await router.handleMessage({
+    type: 'CLEAR_GROK_SSO_COOKIES',
+    source: 'sidepanel',
+    payload: {},
+  });
+
+  assert.equal(called, true);
+  assert.equal(response.ok, true);
+  assert.deepStrictEqual(response.state.grokSsoCookies, []);
+  assert.equal(response.state.runtimeState.flowState.grok.sso.currentCookie, '');
+});
+
 test('SAVE_SETTING syncs canonical kiro settingsState back into session state', async () => {
   const source = fs.readFileSync('background/message-router.js', 'utf8');
   const globalScope = { console };

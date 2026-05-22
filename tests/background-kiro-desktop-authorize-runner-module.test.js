@@ -91,6 +91,18 @@ test('kiro desktop authorize runner uses a shared 3-minute page-load timeout bud
   assert.match(source, /finalizeDesktopAuthorizeCallback/);
 });
 
+test('kiro desktop authorize runner delegates OTP mail polling to the shared flow mail service', () => {
+  const source = fs.readFileSync('flows/kiro/background/desktop-authorize-runner.js', 'utf8');
+  assert.match(source, /pollFlowVerificationCode/);
+  assert.doesNotMatch(source, /buildDesktopOtpPollPayload/);
+  assert.doesNotMatch(source, /pollHotmailVerificationCode/);
+  assert.doesNotMatch(source, /pollLuckmailVerificationCode/);
+  assert.doesNotMatch(source, /pollCloudflareTempEmailVerificationCode/);
+  assert.doesNotMatch(source, /pollCloudMailVerificationCode/);
+  assert.doesNotMatch(source, /pollYydsMailVerificationCode/);
+  assert.doesNotMatch(source, /sendToMailContentScriptResilient/);
+});
+
 test('background wires the Kiro register injector into desktop authorization runner', () => {
   const source = fs.readFileSync('background.js', 'utf8');
   const start = source.indexOf('const kiroDesktopAuthorizeRunner = self.MultiPageBackgroundKiroDesktopAuthorizeRunner?.createKiroDesktopAuthorizeRunner({');

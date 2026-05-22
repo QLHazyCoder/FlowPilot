@@ -32,42 +32,6 @@
     'https://profile.aws.amazon.com',
   ]);
   const MAIL_2925_FILTER_LOOKBACK_MS = 10 * 60 * 1000;
-  const KIRO_AWS_VERIFICATION_CODE_PATTERNS = Object.freeze([
-    Object.freeze({
-      source: '(?:verification\\s*code|验证码|Your code is|code is)[：:\\s]*(\\d{6})',
-      flags: 'gi',
-    }),
-    Object.freeze({
-      source: '^\\s*(\\d{6})\\s*$',
-      flags: 'gm',
-    }),
-    Object.freeze({
-      source: '>\\s*(\\d{6})\\s*<',
-      flags: 'g',
-    }),
-  ]);
-  const KIRO_AWS_SENDER_FILTERS = Object.freeze([
-    'no-reply@signin.aws',
-    'no-reply@login.awsapps.com',
-    'noreply@amazon.com',
-    'account-update@amazon.com',
-    'no-reply@aws.amazon.com',
-    'noreply@aws.amazon.com',
-    'aws',
-  ]);
-  const KIRO_AWS_SUBJECT_FILTERS = Object.freeze([
-    'aws builder id',
-    'verification',
-    '验证码',
-    'code',
-    'aws',
-  ]);
-  const KIRO_AWS_REQUIRED_KEYWORDS = Object.freeze([
-    'verification',
-    '验证码',
-    'code',
-    'aws',
-  ]);
   const KIRO_REGISTER_PAGE_STATES = Object.freeze([
     'kiro_signin_page',
     'email_entry',
@@ -387,32 +351,17 @@
       chrome = (typeof globalThis !== 'undefined' ? globalThis.chrome : null),
       completeNodeFromBackground,
       ensureContentScriptReadyOnTab = null,
-      ensureIcloudMailSession = null,
-      ensureMail2925MailboxSession = null,
       generatePassword = null,
       generateRandomName = null,
-      getMailConfig = null,
       getState = async () => ({}),
       getTabId = async () => null,
-      HOTMAIL_PROVIDER = 'hotmail-api',
-      LUCKMAIL_PROVIDER = 'luckmail-api',
-      CLOUDFLARE_TEMP_EMAIL_PROVIDER = 'cloudflare-temp-email',
-      CLOUD_MAIL_PROVIDER = 'cloudmail',
-      YYDS_MAIL_PROVIDER = 'yyds-mail',
-      MAIL_2925_VERIFICATION_INTERVAL_MS = 15000,
-      MAIL_2925_VERIFICATION_MAX_ATTEMPTS = 15,
       isTabAlive = async () => false,
       KIRO_REGISTER_INJECT_FILES = null,
-      pollCloudflareTempEmailVerificationCode = null,
-      pollCloudMailVerificationCode = null,
-      pollHotmailVerificationCode = null,
-      pollLuckmailVerificationCode = null,
-      pollYydsMailVerificationCode = null,
+      pollFlowVerificationCode = null,
       registerTab = async () => {},
       resolveSignupEmailForFlow = null,
       reuseOrCreateTab = async () => null,
       sendToContentScriptResilient = null,
-      sendToMailContentScriptResilient = null,
       setPasswordState = async () => {},
       setState = async () => {},
       sleepWithStop = async (ms) => {
@@ -954,173 +903,36 @@
       };
     }
 
-    function getExpectedMail2925MailboxEmail(state = {}) {
-      if (Boolean(state?.mail2925UseAccountPool)) {
-        const currentAccountId = String(state?.currentMail2925AccountId || '').trim();
-        const accounts = Array.isArray(state?.mail2925Accounts) ? state.mail2925Accounts : [];
-        const currentAccount = accounts.find((account) => String(account?.id || '') === currentAccountId) || null;
-        const accountEmail = String(currentAccount?.email || '').trim().toLowerCase();
-        if (accountEmail) {
-          return accountEmail;
-        }
-      }
-
-      return String(state?.mail2925BaseEmail || '').trim().toLowerCase();
-    }
-
-    async function focusOrOpenMailTab(mail) {
-      if (!mail?.source) {
-        return;
-      }
-      const alive = await isTabAlive(mail.source);
-      if (alive) {
-        if (mail.navigateOnReuse) {
-          await reuseOrCreateTab(mail.source, mail.url, {
-            inject: mail.inject,
-            injectSource: mail.injectSource,
-          });
-          return;
-        }
-
-        const tabId = await getTabId(mail.source);
-        if (Number.isInteger(tabId)) {
-          await activateTab(tabId);
-        }
-        return;
-      }
-
-      await reuseOrCreateTab(mail.source, mail.url, {
-        inject: mail.inject,
-        injectSource: mail.injectSource,
-      });
-    }
-
-    function buildKiroVerificationPollPayload(step, state = {}, mail = {}, filterAfterTimestamp = 0) {
-      const targetEmail = resolveKiroRegisterEmail(state);
-      const targetEmailHints = targetEmail ? [targetEmail] : [];
-      const isMail2925Provider = String(mail?.provider || '').trim().toLowerCase() === '2925';
-      const normalizedProvider = String(mail?.provider || '').trim().toLowerCase();
-      const maxAttempts = normalizedProvider === String(LUCKMAIL_PROVIDER || '').trim().toLowerCase()
-        ? 3
-        : (isMail2925Provider ? MAIL_2925_VERIFICATION_MAX_ATTEMPTS : 5);
-      const intervalMs = normalizedProvider === String(LUCKMAIL_PROVIDER || '').trim().toLowerCase()
-        ? 15000
-        : (isMail2925Provider ? MAIL_2925_VERIFICATION_INTERVAL_MS : 3000);
-
-      return {
-        flowId: 'kiro',
-        step,
-        targetEmail,
-        targetEmailHints,
-        filterAfterTimestamp,
-        senderFilters: [...KIRO_AWS_SENDER_FILTERS],
-        subjectFilters: [...KIRO_AWS_SUBJECT_FILTERS],
-        requiredKeywords: [...KIRO_AWS_REQUIRED_KEYWORDS],
-        codePatterns: [...KIRO_AWS_VERIFICATION_CODE_PATTERNS],
-        mail2925MatchTargetEmail: isMail2925Provider
-          && String(state?.mail2925Mode || '').trim().toLowerCase() === 'receive',
-        maxAttempts,
-        intervalMs,
-      };
-    }
-
-    function getMailPollingResponseTimeoutMs(payload = {}) {
-      const maxAttempts = Math.max(1, Math.floor(Number(payload?.maxAttempts) || 1));
-      const intervalMs = Math.max(1, Number(payload?.intervalMs) || 3000);
-      return Math.max(45000, maxAttempts * intervalMs + 25000);
-    }
-
     async function pollKiroVerificationCode(step, state = {}, nodeId = '') {
-      if (typeof getMailConfig !== 'function') {
-        throw new Error('Kiro 验证码步骤缺少邮箱配置能力，无法继续执行。');
-      }
-      const mail = getMailConfig(state);
-      if (mail?.error) {
-        throw new Error(mail.error);
+      if (typeof pollFlowVerificationCode !== 'function') {
+        throw new Error('Kiro 验证码步骤缺少共享邮件轮询能力，无法继续执行。');
       }
 
       const runtimeState = readKiroRuntime(state);
       const recordedRequestedAt = Math.max(0, Number(runtimeState.register?.verificationRequestedAt) || 0);
       const requestedAt = recordedRequestedAt || Math.max(0, Date.now() - MAIL_2925_FILTER_LOOKBACK_MS);
-      const filterAfterTimestamp = mail.provider === '2925'
+      const mailProvider = cleanString(state?.mailProvider).toLowerCase();
+      const filterAfterTimestamp = mailProvider === '2925'
         ? Math.max(0, requestedAt - MAIL_2925_FILTER_LOOKBACK_MS)
         : requestedAt;
-      const pollPayload = buildKiroVerificationPollPayload(step, state, mail, filterAfterTimestamp);
 
-      if (mail.source === 'icloud-mail' && typeof ensureIcloudMailSession === 'function') {
-        await log(`步骤 ${step}：正在确认 ${mail.label || 'iCloud 邮箱'} 登录状态...`, 'info', nodeId);
-        await ensureIcloudMailSession({
-          state,
-          step,
-          actionLabel: `步骤 ${step}：确认 iCloud 邮箱登录状态`,
-        });
-      }
-
-      throwIfStopped();
-      if (mail.provider === HOTMAIL_PROVIDER) {
-        await log(`步骤 ${step}：正在通过 ${mail.label || 'Hotmail'} 轮询验证码...`, 'info', nodeId);
-        return pollHotmailVerificationCode(step, state, pollPayload);
-      }
-      if (mail.provider === LUCKMAIL_PROVIDER) {
-        await log(`步骤 ${step}：正在通过 ${mail.label || 'LuckMail'} 轮询验证码...`, 'info', nodeId);
-        return pollLuckmailVerificationCode(step, state, pollPayload);
-      }
-      if (mail.provider === CLOUDFLARE_TEMP_EMAIL_PROVIDER) {
-        await log(`步骤 ${step}：正在通过 ${mail.label || 'Cloudflare Temp Email'} 轮询验证码...`, 'info', nodeId);
-        return pollCloudflareTempEmailVerificationCode(step, state, pollPayload);
-      }
-      if (mail.provider === CLOUD_MAIL_PROVIDER) {
-        await log(`步骤 ${step}：正在通过 ${mail.label || 'Cloud Mail'} 轮询验证码...`, 'info', nodeId);
-        return pollCloudMailVerificationCode(step, state, pollPayload);
-      }
-      if (mail.provider === YYDS_MAIL_PROVIDER) {
-        await log(`步骤 ${step}：正在通过 ${mail.label || 'YYDS Mail'} 轮询验证码...`, 'info', nodeId);
-        return pollYydsMailVerificationCode(step, state, pollPayload);
-      }
-
-      if (mail.provider === '2925' && typeof ensureMail2925MailboxSession === 'function') {
-        await log(`步骤 ${step}：正在确认 ${mail.label || '2925 邮箱'} 登录状态...`, 'info', nodeId);
-        await ensureMail2925MailboxSession({
-          accountId: state.currentMail2925AccountId || null,
-          forceRelogin: false,
-          allowLoginWhenOnLoginPage: Boolean(state?.mail2925UseAccountPool),
-          expectedMailboxEmail: getExpectedMail2925MailboxEmail(state),
-          actionLabel: `步骤 ${step}：确认 2925 邮箱登录状态`,
-        });
-      } else {
-        await log(`步骤 ${step}：正在打开 ${mail.label || '邮箱'}...`, 'info', nodeId);
-        await focusOrOpenMailTab(mail);
-      }
-
-      if (typeof sendToMailContentScriptResilient !== 'function') {
-        throw new Error('Kiro 验证码步骤缺少邮箱内容脚本通信能力，无法继续执行。');
-      }
-
-      const responseTimeoutMs = getMailPollingResponseTimeoutMs(pollPayload);
-      const result = await sendToMailContentScriptResilient(
-        mail,
-        {
-          type: 'POLL_EMAIL',
-          step,
-          source: 'background',
-          payload: pollPayload,
+      return pollFlowVerificationCode({
+        actionLabel: 'Kiro 验证码',
+        filterAfterTimestamp,
+        flowId: 'kiro',
+        logStep: step,
+        logStepKey: 'kiro-submit-verification-code',
+        missingCapabilityMessage: 'Kiro 验证码步骤缺少共享邮件轮询能力，无法继续执行。',
+        nodeId: 'kiro-submit-verification-code',
+        notFoundMessage: `步骤 ${step}：邮箱轮询结束，但未获取到 Kiro 验证码。`,
+        state: {
+          ...state,
+          activeFlowId: 'kiro',
+          flowId: 'kiro',
+          visibleStep: step,
         },
-        {
-          timeoutMs: responseTimeoutMs,
-          responseTimeoutMs,
-          maxRecoveryAttempts: 2,
-          logStep: step,
-          logStepKey: 'kiro-submit-verification-code',
-        }
-      );
-
-      if (result?.error) {
-        throw new Error(result.error);
-      }
-      if (!result?.code) {
-        throw new Error(`步骤 ${step}：邮箱轮询结束，但未获取到验证码。`);
-      }
-      return result;
+        step,
+      });
     }
 
     async function executeKiroOpenRegisterPage(state = {}) {

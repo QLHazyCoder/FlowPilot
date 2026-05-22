@@ -16,12 +16,14 @@ function loadApis() {
 test('flow registry exposes canonical flow and target metadata', () => {
   const { flowRegistry } = loadApis();
 
-  assert.deepEqual(flowRegistry.getRegisteredFlowIds(), ['openai', 'kiro']);
+  assert.deepEqual(flowRegistry.getRegisteredFlowIds(), ['openai', 'kiro', 'grok']);
   assert.equal(flowRegistry.normalizeFlowId('kiro'), 'kiro');
+  assert.equal(flowRegistry.normalizeFlowId('grok'), 'grok');
   assert.equal(flowRegistry.normalizeFlowId('unknown'), 'openai');
   assert.equal(flowRegistry.getFlowLabel('openai'), 'Codex / OpenAI');
   assert.equal(flowRegistry.normalizeTargetId('openai', 'sub2api'), 'sub2api');
   assert.equal(flowRegistry.normalizeTargetId('kiro', 'anything-else'), 'kiro-rs');
+  assert.equal(flowRegistry.normalizeTargetId('grok', 'anything-else'), 'webchat2api');
   assert.deepEqual(
     flowRegistry.getVisibleGroupIds('openai', 'cpa'),
     ['openai-plus', 'openai-phone', 'openai-oauth', 'openai-step6', 'openai-target-cpa', 'service-account', 'service-email', 'service-proxy']
@@ -31,8 +33,16 @@ test('flow registry exposes canonical flow and target metadata', () => {
     ['kiro-runtime-status', 'kiro-target-kiro-rs', 'service-account', 'service-email', 'service-proxy']
   );
   assert.deepEqual(
+    flowRegistry.getVisibleGroupIds('grok', 'webchat2api'),
+    ['grok-runtime-status', 'grok-target-webchat2api', 'service-account', 'service-email', 'service-proxy']
+  );
+  assert.deepEqual(
     flowRegistry.getTargetOptions('openai').map((entry) => entry.id),
     ['cpa', 'sub2api', 'codex2api']
+  );
+  assert.deepEqual(
+    flowRegistry.getTargetOptions('grok').map((entry) => entry.id),
+    ['webchat2api']
   );
   assert.deepEqual(
     flowRegistry.getSettingsGroupDefinition('openai-plus')?.rowIds,
@@ -41,6 +51,8 @@ test('flow registry exposes canonical flow and target metadata', () => {
   assert.equal(flowRegistry.getPublicationTargetDefinition('kiro', 'kiro-rs')?.label, 'kiro.rs');
   assert.equal(flowRegistry.getFlowCapabilities('openai').supportsAccountContribution, true);
   assert.equal(flowRegistry.getFlowCapabilities('kiro').supportsAccountContribution, true);
+  assert.equal(flowRegistry.getFlowCapabilities('grok').supportsAccountContribution, false);
+  assert.deepEqual(flowRegistry.getFlowCapabilities('grok').supportedTargetIds, ['webchat2api']);
   assert.deepEqual(
     flowRegistry.getFlowCapabilities('openai').contributionAdapterIds,
     ['openai-oauth', 'openai-codex-file', 'openai-sub2api-file']
@@ -49,6 +61,7 @@ test('flow registry exposes canonical flow and target metadata', () => {
     flowRegistry.getFlowCapabilities('kiro').contributionAdapterIds,
     ['kiro-builder-id']
   );
+  assert.deepEqual(flowRegistry.getFlowCapabilities('grok').contributionAdapterIds, []);
 });
 
 test('settings schema normalizes view input into canonical nested namespaces', () => {
@@ -68,6 +81,7 @@ test('settings schema normalizes view input into canonical nested namespaces', (
     stepExecutionRangeByFlow: {
       openai: { enabled: true, fromStep: 2, toStep: 9 },
       kiro: { enabled: true, fromStep: 1, toStep: 9 },
+      grok: { enabled: true, fromStep: 2, toStep: 4 },
     },
   });
 
@@ -78,12 +92,18 @@ test('settings schema normalizes view input into canonical nested namespaces', (
   assert.equal(normalized.flows.openai.selectedTargetId, 'cpa');
   assert.equal(normalized.flows.openai.plus.plusAccountAccessStrategy, 'sub2api_codex_session');
   assert.equal(normalized.flows.kiro.selectedTargetId, 'kiro-rs');
+  assert.equal(normalized.flows.grok.selectedTargetId, 'webchat2api');
   assert.equal(normalized.flows.kiro.targets['kiro-rs'].baseUrl, 'https://kiro.example.com/admin');
   assert.equal(normalized.flows.kiro.targets['kiro-rs'].apiKey, 'secret-key');
   assert.deepEqual(normalized.flows.kiro.autoRun.stepExecutionRange, {
     enabled: true,
     fromStep: 1,
     toStep: 9,
+  });
+  assert.deepEqual(normalized.flows.grok.autoRun.stepExecutionRange, {
+    enabled: true,
+    fromStep: 2,
+    toStep: 4,
   });
 });
 
@@ -130,6 +150,11 @@ test('settings schema can project canonical state into a read view without legac
   assert.equal(view.plusAccountAccessStrategy, 'sub2api_codex_session');
   assert.equal(view.settingsSchemaVersion, 5);
   assert.equal(view.settingsState.activeFlowId, 'kiro');
+  assert.deepEqual(view.stepExecutionRangeByFlow.grok, {
+    enabled: false,
+    fromStep: 1,
+    toStep: 5,
+  });
 });
 
 test('settings schema preserves CPA session strategy in canonical state and read view', () => {
@@ -142,4 +167,100 @@ test('settings schema preserves CPA session strategy in canonical state and read
 
   assert.equal(normalized.flows.openai.plus.plusAccountAccessStrategy, 'cpa_codex_session');
   assert.equal(view.plusAccountAccessStrategy, 'cpa_codex_session');
+});
+
+test('settings schema preserves registered custom flow settings without openai/kiro hardcoding', () => {
+  const { settingsSchema } = loadApis();
+  const customFlowRegistry = {
+    DEFAULT_FLOW_ID: 'openai',
+    getRegisteredFlowIds: () => ['openai', 'kiro', 'sample'],
+    getDefaultTargetId(flowId) {
+      return flowId === 'sample' ? 'sample-target' : (flowId === 'kiro' ? 'kiro-rs' : 'cpa');
+    },
+    getFlowDefinition(flowId) {
+      if (flowId !== 'sample') {
+        return null;
+      }
+      return {
+        id: 'sample',
+        defaultTargetId: 'sample-target',
+        settingsDefaults: {
+          targets: {
+            'sample-target': {
+              endpoint: 'https://sample.example.com',
+            },
+          },
+          autoRun: {
+            stepExecutionRange: { enabled: false, fromStep: 1, toStep: 3 },
+          },
+        },
+      };
+    },
+    getTargetDefinitions(flowId) {
+      if (flowId === 'sample') {
+        return {
+          'sample-target': { id: 'sample-target', label: 'Sample Target' },
+        };
+      }
+      if (flowId === 'kiro') {
+        return {
+          'kiro-rs': { id: 'kiro-rs', label: 'kiro.rs' },
+        };
+      }
+      return {
+        cpa: { id: 'cpa', label: 'CPA' },
+        sub2api: { id: 'sub2api', label: 'SUB2API' },
+        codex2api: { id: 'codex2api', label: 'Codex2API' },
+      };
+    },
+    normalizeFlowId(value = '', fallback = 'openai') {
+      const normalized = String(value || '').trim().toLowerCase();
+      return ['openai', 'kiro', 'sample'].includes(normalized)
+        ? normalized
+        : (['openai', 'kiro', 'sample'].includes(fallback) ? fallback : 'openai');
+    },
+    normalizeTargetId(flowId, targetId = '', fallback = '') {
+      const targets = Object.keys(customFlowRegistry.getTargetDefinitions(flowId));
+      const normalized = String(targetId || '').trim().toLowerCase();
+      if (targets.includes(normalized)) {
+        return normalized;
+      }
+      if (targets.includes(fallback)) {
+        return fallback;
+      }
+      return customFlowRegistry.getDefaultTargetId(flowId);
+    },
+  };
+  const schema = settingsSchema.createSettingsSchema({ flowRegistry: customFlowRegistry });
+
+  const normalized = schema.normalizeSettingsState({
+    activeFlowId: 'sample',
+    targetId: 'sample-target',
+    settingsState: {
+      flows: {
+        sample: {
+          selectedTargetId: 'sample-target',
+          targets: {
+            'sample-target': {
+              endpoint: 'https://custom.example.com',
+            },
+          },
+          autoRun: {
+            stepExecutionRange: { enabled: true, fromStep: 2, toStep: 3 },
+          },
+        },
+      },
+    },
+  });
+  const view = schema.buildSettingsView(normalized);
+
+  assert.equal(normalized.activeFlowId, 'sample');
+  assert.equal(normalized.flows.sample.selectedTargetId, 'sample-target');
+  assert.equal(normalized.flows.sample.targets['sample-target'].endpoint, 'https://custom.example.com');
+  assert.deepEqual(view.stepExecutionRangeByFlow.sample, {
+    enabled: true,
+    fromStep: 2,
+    toStep: 3,
+  });
+  assert.equal(schema.getSelectedTargetId(normalized, 'sample'), 'sample-target');
 });

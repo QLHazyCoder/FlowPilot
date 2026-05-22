@@ -191,15 +191,44 @@
     return Boolean(normalizedAdapterId) && getContributionAdapterIds(flowId).includes(normalizedAdapterId);
   }
 
-  function assertPublishedFlowsHaveContributionAdapters(flowIds = undefined) {
+  function hasPublicationTargets(flowId = DEFAULT_FLOW_ID) {
+    if (typeof flowRegistryApi.getPublicationTargetDefinitions !== 'function') {
+      return false;
+    }
+    const definitions = flowRegistryApi.getPublicationTargetDefinitions(flowId) || {};
+    return Object.keys(definitions).length > 0;
+  }
+
+  function expectsContributionAdapter(flowId = DEFAULT_FLOW_ID) {
+    const normalizedFlowId = normalizeFlowId(flowId, DEFAULT_FLOW_ID);
+    const capabilities = typeof flowRegistryApi.getFlowCapabilities === 'function'
+      ? (flowRegistryApi.getFlowCapabilities(normalizedFlowId) || {})
+      : {};
+    return Boolean(
+      hasPublicationTargets(normalizedFlowId)
+        || capabilities.supportsAccountContribution
+        || capabilities.supportsContributionMode
+        || getContributionAdapterIds(normalizedFlowId).length
+    );
+  }
+
+  function getPublishedContributionFlowIds(flowIds = undefined) {
     const ids = Array.isArray(flowIds)
       ? flowIds
       : (typeof flowRegistryApi.getRegisteredFlowIds === 'function'
         ? flowRegistryApi.getRegisteredFlowIds()
         : Object.keys(FLOW_ADAPTER_IDS));
-    const missing = ids
+    return ids
       .map((flowId) => normalizeString(flowId).toLowerCase())
       .filter(Boolean)
+      .filter((flowId) => expectsContributionAdapter(flowId));
+  }
+
+  function assertPublishedFlowsHaveContributionAdapters(flowIds = undefined) {
+    const ids = Array.isArray(flowIds)
+      ? flowIds.map((flowId) => normalizeString(flowId).toLowerCase()).filter(Boolean)
+      : getPublishedContributionFlowIds();
+    const missing = ids
       .filter((flowId) => getContributionAdapterIds(flowId).length === 0);
     if (missing.length) {
       throw new Error(`缺少账号贡献适配器：${missing.join(', ')}`);
@@ -217,6 +246,7 @@
     getContributionAdapterIds,
     getContributionAdapters,
     getDefaultContributionAdapterId,
+    getPublishedContributionFlowIds,
     hasContributionAdapter,
     normalizeAdapterId,
     normalizeFlowId,

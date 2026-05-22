@@ -15,6 +15,11 @@ test('background imports shared source registry module', () => {
   assert.match(source, /core\/flow-kernel\/settings-schema\.js/);
   assert.match(source, /core\/flow-kernel\/source-registry\.js/);
   assert.match(source, /shared\/kiro-timeouts\.js/);
+  assert.match(source, /flows\/grok\/index\.js/);
+  assert.match(source, /flows\/grok\/workflow\.js/);
+  assert.match(source, /flows\/grok\/background\/state\.js/);
+  assert.match(source, /flows\/grok\/background\/register-runner\.js/);
+  assert.match(source, /flows\/grok\/mail-rules\.js/);
 });
 
 test('manifest loads shared source registry before content utils in static bundles', () => {
@@ -41,15 +46,38 @@ test('manifest no longer ships a static Kiro content bundle', () => {
   assert.equal(hasStaticKiroBundle, false);
 });
 
+test('manifest loads Grok flow definition in static bundles but not Grok content runtime', () => {
+  const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+  for (const entry of manifest.content_scripts || []) {
+    const scripts = Array.isArray(entry.js) ? entry.js : [];
+    if (!scripts.includes('flows/index.js')) continue;
+    assert.ok(scripts.includes('flows/kiro/index.js'));
+    assert.ok(scripts.includes('flows/grok/index.js'));
+    assert.ok(
+      scripts.indexOf('flows/kiro/index.js') < scripts.indexOf('flows/grok/index.js'),
+      'Kiro definition should load before Grok definition'
+    );
+    assert.ok(
+      scripts.indexOf('flows/grok/index.js') < scripts.indexOf('flows/index.js'),
+      'Grok definition must load before flows/index.js'
+    );
+    assert.equal(scripts.includes('flows/grok/content/register-page.js'), false);
+  }
+});
+
 test('background injects shared Kiro timeout module before Kiro content scripts', () => {
   const source = fs.readFileSync('background.js', 'utf8');
   assert.match(
     source,
-    /const KIRO_REGISTER_INJECT_FILES = \['flows\/openai\/index\.js', 'flows\/kiro\/index\.js', 'flows\/index\.js', 'core\/flow-kernel\/flow-registry\.js', 'core\/flow-kernel\/source-registry\.js', 'shared\/kiro-timeouts\.js', 'content\/utils\.js', 'flows\/kiro\/content\/register-page\.js'\];/
+    /const KIRO_REGISTER_INJECT_FILES = \['flows\/openai\/index\.js', 'flows\/kiro\/index\.js', 'flows\/grok\/index\.js', 'flows\/index\.js', 'core\/flow-kernel\/flow-registry\.js', 'core\/flow-kernel\/source-registry\.js', 'shared\/kiro-timeouts\.js', 'content\/utils\.js', 'flows\/kiro\/content\/register-page\.js'\];/
   );
   assert.match(
     source,
-    /const KIRO_DESKTOP_AUTHORIZE_INJECT_FILES = \['flows\/openai\/index\.js', 'flows\/kiro\/index\.js', 'flows\/index\.js', 'core\/flow-kernel\/flow-registry\.js', 'core\/flow-kernel\/source-registry\.js', 'shared\/kiro-timeouts\.js', 'content\/utils\.js', 'flows\/kiro\/content\/desktop-authorize-page\.js'\];/
+    /const KIRO_DESKTOP_AUTHORIZE_INJECT_FILES = \['flows\/openai\/index\.js', 'flows\/kiro\/index\.js', 'flows\/grok\/index\.js', 'flows\/index\.js', 'core\/flow-kernel\/flow-registry\.js', 'core\/flow-kernel\/source-registry\.js', 'shared\/kiro-timeouts\.js', 'content\/utils\.js', 'flows\/kiro\/content\/desktop-authorize-page\.js'\];/
+  );
+  assert.match(
+    source,
+    /const GROK_REGISTER_INJECT_FILES = \['flows\/openai\/index\.js', 'flows\/kiro\/index\.js', 'flows\/grok\/index\.js', 'flows\/index\.js', 'core\/flow-kernel\/flow-registry\.js', 'core\/flow-kernel\/source-registry\.js', 'content\/utils\.js', 'flows\/grok\/content\/register-page\.js'\];/
   );
 });
 
@@ -85,6 +113,20 @@ test('shared source registry exposes canonical Kiro sources and drivers', () => 
   );
   assert.equal(
     registry.detectSourceFromLocation({
+      url: 'https://accounts.x.ai/sign-up',
+      hostname: 'accounts.x.ai',
+    }),
+    'grok-register-page'
+  );
+  assert.equal(
+    registry.detectSourceFromLocation({
+      url: 'https://grok.com/',
+      hostname: 'grok.com',
+    }),
+    'grok-register-page'
+  );
+  assert.equal(
+    registry.detectSourceFromLocation({
       url: 'https://example.com/',
       hostname: 'example.com',
     }),
@@ -117,6 +159,22 @@ test('shared source registry exposes canonical Kiro sources and drivers', () => 
   );
   assert.equal(
     registry.matchesSourceUrlFamily(
+      'grok-register-page',
+      'https://accounts.x.ai/sign-up',
+      'https://grok.com/'
+    ),
+    true
+  );
+  assert.equal(
+    registry.matchesSourceUrlFamily(
+      'grok-register-page',
+      'https://grok.com/',
+      'https://accounts.x.ai/sign-up'
+    ),
+    true
+  );
+  assert.equal(
+    registry.matchesSourceUrlFamily(
       'kiro-desktop-authorize',
       'https://oidc.us-east-1.amazonaws.com/authorize',
       'https://view.awsapps.com/start'
@@ -137,4 +195,6 @@ test('shared source registry exposes canonical Kiro sources and drivers', () => 
   assert.equal(registry.driverAcceptsCommand('flows/kiro/background/register-runner', 'kiro-open-register-page'), true);
   assert.equal(registry.driverAcceptsCommand('flows/kiro/background/desktop-authorize-runner', 'kiro-start-desktop-authorize'), true);
   assert.equal(registry.driverAcceptsCommand('flows/kiro/background/publisher-kiro-rs', 'kiro-upload-credential'), true);
+  assert.equal(registry.driverAcceptsCommand('flows/grok/content/register-page', 'grok-submit-profile'), true);
+  assert.equal(registry.driverAcceptsCommand('flows/grok/background/register-runner', 'grok-extract-sso-cookie'), true);
 });
