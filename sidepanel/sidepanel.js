@@ -181,6 +181,10 @@ const inputCodex2ApiAdminKey = document.getElementById('input-codex2api-admin-ke
 const rowKiroRsUrl = document.getElementById('row-kiro-rs-url');
 const inputKiroRsUrl = document.getElementById('input-kiro-rs-url');
 const btnOpenKiroRsGithub = document.getElementById('btn-open-kiro-rs-github');
+const rowGrokSsoSettings = document.getElementById('row-grok-sso-settings');
+const btnExportGrokSso = document.getElementById('btn-export-grok-sso');
+const btnClearGrokSso = document.getElementById('btn-clear-grok-sso');
+const btnOpenGrokSsoGithub = document.getElementById('btn-open-grok-sso-github');
 const rowKiroRsKey = document.getElementById('row-kiro-rs-key');
 const inputKiroRsKey = document.getElementById('input-kiro-rs-key');
 const btnTestKiroRs = document.getElementById('btn-test-kiro-rs');
@@ -2553,6 +2557,23 @@ function downloadTextFile(content, fileName, mimeType = 'application/json;charse
   anchor.click();
   anchor.remove();
   setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+}
+
+function getGrokSsoValuesFromState(state = latestState) {
+  const values = [];
+  const pushValue = (value) => {
+    const normalized = String(value || '').trim();
+    if (normalized) {
+      values.push(normalized);
+    }
+  };
+
+  pushValue(state?.grokSsoCookie);
+  if (Array.isArray(state?.grokSsoCookies)) {
+    state.grokSsoCookies.forEach(pushValue);
+  }
+
+  return Array.from(new Set(values));
 }
 
 function isDoneStatus(status) {
@@ -13377,6 +13398,9 @@ function updatePanelModeUI() {
   if (typeof applyFlowSettingsGroupVisibility === 'function') {
     applyFlowSettingsGroupVisibility(visibleGroupIds);
   }
+  if (rowGrokSsoSettings) {
+    rowGrokSsoSettings.style.display = activeFlowId === 'grok' ? '' : 'none';
+  }
   if (typeof updatePlusModeUI === 'function') {
     updatePlusModeUI();
   }
@@ -15251,6 +15275,34 @@ btnGpcHelperConvertApiKey?.addEventListener('click', () => {
 
 btnOpenKiroRsGithub?.addEventListener('click', () => {
   openExternalUrl('https://github.com/QLHazyCoder/kiro.rs');
+});
+
+btnOpenGrokSsoGithub?.addEventListener('click', () => {
+  openExternalUrl('https://github.com/zqbxdev/webchat2api');
+});
+
+btnExportGrokSso?.addEventListener('click', () => {
+  const ssoValues = getGrokSsoValuesFromState(latestState);
+  if (ssoValues.length === 0) {
+    showToast('暂无可导出的 Grok SSO。', 'warn', 2200);
+    return;
+  }
+  downloadTextFile(`${ssoValues.join('\n')}\n`, 'webchat2api_grok_sso.txt', 'text/plain;charset=utf-8');
+  showToast(`已导出 ${ssoValues.length} 条 Grok SSO。`, 'success', 1800);
+});
+
+btnClearGrokSso?.addEventListener('click', async () => {
+  const nextState = {
+    grokSsoCookie: '',
+    grokSsoCookies: [],
+  };
+  syncLatestState(nextState);
+  try {
+    await chrome.storage?.local?.set?.(nextState);
+    showToast('已清空 Grok SSO。', 'success', 1800);
+  } catch (error) {
+    showToast(`清空 Grok SSO 失败：${error?.message || error}`, 'error', 3200);
+  }
 });
 
 btnGpcHelperBalance?.addEventListener('click', async () => {

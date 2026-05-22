@@ -260,6 +260,14 @@
           <button id="btn-open-kiro-rs-github" class="btn btn-ghost btn-xs data-inline-btn" type="button">GitHub</button>
         </div>
       </div>
+      <div class="data-row" id="row-grok-sso-settings" style="display:none;">
+        <span class="data-label">Grok SSO</span>
+        <div class="data-inline">
+          <button id="btn-export-grok-sso" class="btn btn-outline btn-sm data-inline-btn" type="button">导出 SSO</button>
+          <button id="btn-clear-grok-sso" class="btn btn-ghost btn-xs data-inline-btn" type="button">清空 SSO</button>
+          <button id="btn-open-grok-sso-github" class="btn btn-ghost btn-xs data-inline-btn" type="button">GitHub</button>
+        </div>
+      </div>
       <div class="data-row" id="row-kiro-rs-key" style="display:none;">
         <span class="data-label">API Key</span>
         <div class="data-inline">
@@ -1881,6 +1889,8 @@
   <script src="../flows/openai/workflow.js"></script>
   <script src="../flows/kiro/index.js"></script>
   <script src="../flows/kiro/workflow.js"></script>
+  <script src="../flows/grok/index.js"></script>
+  <script src="../flows/grok/workflow.js"></script>
   <script src="../flows/index.js"></script>
   <script src="../core/flow-kernel/flow-registry.js"></script>
   <script src="../shared/contribution-registry.js"></script>
