@@ -45,7 +45,9 @@
           continue;
         }
         const flags = String(pattern?.flags || '').replace(/[^dgimsuvy]/g, '');
-        const match = normalizedText.match(new RegExp(source, flags));
+        const regex = new RegExp(source, flags);
+        regex.lastIndex = 0;
+        const match = regex.exec(normalizedText);
         if (!match) {
           continue;
         }
@@ -252,6 +254,8 @@
       excludeCodes: filters.excludeCodes,
       senderFilters: filters.senderFilters,
       subjectFilters: filters.subjectFilters,
+      requiredKeywords: filters.requiredKeywords,
+      codePatterns: filters.codePatterns,
     });
 
     return {

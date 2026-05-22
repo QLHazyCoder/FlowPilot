@@ -194,6 +194,15 @@ test('extractVerificationCode supports runtime mail rule patterns', () => {
   );
 });
 
+test('extractVerificationCode keeps capture groups when runtime patterns use global flags', () => {
+  assert.equal(
+    extractVerificationCode('验证码 248680', {
+      codePatterns: [{ source: '(?:验证码)[：:\\s]*(\\d{6})', flags: 'gi' }],
+    }),
+    '248680'
+  );
+});
+
 test('extractVerificationCodeFromMessage reads code from the latest message subject or preview', () => {
   assert.equal(
     extractVerificationCodeFromMessage({
@@ -386,6 +395,30 @@ test('pickVerificationMessageWithTimeFallback can ignore afterTimestamp while ke
   assert.equal(result.match.message.id, 'slightly-old-mail');
   assert.equal(result.match.code, '141735');
   assert.equal(result.usedRelaxedFilters, false);
+  assert.equal(result.usedTimeFallback, true);
+});
+
+test('pickVerificationMessageWithTimeFallback preserves runtime code patterns when only time is relaxed', () => {
+  const messages = [
+    {
+      id: 'old-custom-code-mail',
+      subject: 'AWS Builder ID verification',
+      from: { emailAddress: { address: 'no-reply@signin.aws' } },
+      bodyPreview: 'Use token A661122B to continue.',
+      receivedDateTime: '2026-05-22T09:41:00.000Z',
+    },
+  ];
+
+  const result = pickVerificationMessageWithTimeFallback(messages, {
+    afterTimestamp: Date.UTC(2026, 4, 22, 9, 42, 0),
+    senderFilters: ['signin.aws'],
+    subjectFilters: ['aws'],
+    codePatterns: [{ source: 'token\\s+A(\\d{6})B', flags: 'i' }],
+    excludeCodes: [],
+  });
+
+  assert.equal(result.match.message.id, 'old-custom-code-mail');
+  assert.equal(result.match.code, '661122');
   assert.equal(result.usedTimeFallback, true);
 });
 
