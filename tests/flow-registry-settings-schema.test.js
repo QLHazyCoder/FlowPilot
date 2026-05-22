@@ -16,12 +16,14 @@ function loadApis() {
 test('flow registry exposes canonical flow and target metadata', () => {
   const { flowRegistry } = loadApis();
 
-  assert.deepEqual(flowRegistry.getRegisteredFlowIds(), ['openai', 'kiro']);
+  assert.deepEqual(flowRegistry.getRegisteredFlowIds(), ['openai', 'kiro', 'grok']);
   assert.equal(flowRegistry.normalizeFlowId('kiro'), 'kiro');
+  assert.equal(flowRegistry.normalizeFlowId('grok'), 'grok');
   assert.equal(flowRegistry.normalizeFlowId('unknown'), 'openai');
   assert.equal(flowRegistry.getFlowLabel('openai'), 'Codex / OpenAI');
   assert.equal(flowRegistry.normalizeTargetId('openai', 'sub2api'), 'sub2api');
   assert.equal(flowRegistry.normalizeTargetId('kiro', 'anything-else'), 'kiro-rs');
+  assert.equal(flowRegistry.normalizeTargetId('grok', 'anything-else'), 'webchat2api');
   assert.deepEqual(
     flowRegistry.getVisibleGroupIds('openai', 'cpa'),
     ['openai-plus', 'openai-phone', 'openai-oauth', 'openai-step6', 'openai-target-cpa', 'service-account', 'service-email', 'service-proxy']
@@ -35,12 +37,19 @@ test('flow registry exposes canonical flow and target metadata', () => {
     ['cpa', 'sub2api', 'codex2api']
   );
   assert.deepEqual(
+    flowRegistry.getTargetOptions('grok').map((entry) => [entry.id, entry.label]),
+    [['webchat2api', 'zqbxdev/webchat2api']]
+  );
+  assert.deepEqual(
     flowRegistry.getSettingsGroupDefinition('openai-plus')?.rowIds,
     ['row-plus-mode', 'row-plus-account-access-strategy', 'row-plus-payment-method']
   );
   assert.equal(flowRegistry.getPublicationTargetDefinition('kiro', 'kiro-rs')?.label, 'kiro.rs');
   assert.equal(flowRegistry.getFlowCapabilities('openai').supportsAccountContribution, true);
   assert.equal(flowRegistry.getFlowCapabilities('kiro').supportsAccountContribution, true);
+  assert.equal(flowRegistry.getFlowCapabilities('grok').stepDefinitionMode, 'grok');
+  assert.equal(flowRegistry.getFlowCapabilities('grok').supportsPlusMode, false);
+  assert.deepEqual(flowRegistry.getFlowCapabilities('grok').supportedTargetIds, ['webchat2api']);
   assert.deepEqual(
     flowRegistry.getFlowCapabilities('openai').contributionAdapterIds,
     ['openai-oauth', 'openai-codex-file', 'openai-sub2api-file']

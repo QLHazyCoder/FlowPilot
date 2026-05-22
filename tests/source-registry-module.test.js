@@ -45,11 +45,19 @@ test('background injects shared Kiro timeout module before Kiro content scripts'
   const source = fs.readFileSync('background.js', 'utf8');
   assert.match(
     source,
-    /const KIRO_REGISTER_INJECT_FILES = \['flows\/openai\/index\.js', 'flows\/kiro\/index\.js', 'flows\/index\.js', 'core\/flow-kernel\/flow-registry\.js', 'core\/flow-kernel\/source-registry\.js', 'shared\/kiro-timeouts\.js', 'content\/utils\.js', 'flows\/kiro\/content\/register-page\.js'\];/
+    /const KIRO_REGISTER_INJECT_FILES = \['flows\/openai\/index\.js', 'flows\/kiro\/index\.js', 'flows\/grok\/index\.js', 'flows\/index\.js', 'core\/flow-kernel\/flow-registry\.js', 'core\/flow-kernel\/source-registry\.js', 'shared\/kiro-timeouts\.js', 'content\/utils\.js', 'flows\/kiro\/content\/register-page\.js'\];/
   );
   assert.match(
     source,
-    /const KIRO_DESKTOP_AUTHORIZE_INJECT_FILES = \['flows\/openai\/index\.js', 'flows\/kiro\/index\.js', 'flows\/index\.js', 'core\/flow-kernel\/flow-registry\.js', 'core\/flow-kernel\/source-registry\.js', 'shared\/kiro-timeouts\.js', 'content\/utils\.js', 'flows\/kiro\/content\/desktop-authorize-page\.js'\];/
+    /const KIRO_DESKTOP_AUTHORIZE_INJECT_FILES = \['flows\/openai\/index\.js', 'flows\/kiro\/index\.js', 'flows\/grok\/index\.js', 'flows\/index\.js', 'core\/flow-kernel\/flow-registry\.js', 'core\/flow-kernel\/source-registry\.js', 'shared\/kiro-timeouts\.js', 'content\/utils\.js', 'flows\/kiro\/content\/desktop-authorize-page\.js'\];/
+  );
+});
+
+test('background injects canonical Grok content bundle', () => {
+  const source = fs.readFileSync('background.js', 'utf8');
+  assert.match(
+    source,
+    /const GROK_REGISTER_INJECT_FILES = \['flows\/openai\/index\.js', 'flows\/kiro\/index\.js', 'flows\/grok\/index\.js', 'flows\/index\.js', 'core\/flow-kernel\/flow-registry\.js', 'core\/flow-kernel\/source-registry\.js', 'content\/utils\.js', 'flows\/grok\/content\/register-page\.js'\];/
   );
 });
 
@@ -82,6 +90,13 @@ test('shared source registry exposes canonical Kiro sources and drivers', () => 
       hostname: 'signin.aws',
     }),
     'kiro-desktop-authorize'
+  );
+  assert.equal(
+    registry.detectSourceFromLocation({
+      url: 'https://accounts.x.ai/sign-up?redirect=grok-com',
+      hostname: 'accounts.x.ai',
+    }),
+    'grok-register-page'
   );
   assert.equal(
     registry.detectSourceFromLocation({
@@ -120,6 +135,15 @@ test('shared source registry exposes canonical Kiro sources and drivers', () => 
       'kiro-desktop-authorize',
       'https://oidc.us-east-1.amazonaws.com/authorize',
       'https://view.awsapps.com/start'
+    ),
+    true
+  );
+
+  assert.equal(
+    registry.matchesSourceUrlFamily(
+      'grok-register-page',
+      'https://grok.com/',
+      'https://accounts.x.ai/sign-up'
     ),
     true
   );

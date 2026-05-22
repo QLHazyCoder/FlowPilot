@@ -3,12 +3,14 @@ const fs = require('node:fs');
 const FLOW_DEFINITION_FILES = Object.freeze([
   'flows/openai/index.js',
   'flows/kiro/index.js',
+  'flows/grok/index.js',
   'flows/index.js',
 ]);
 
 const FLOW_WORKFLOW_FILES = Object.freeze([
   'flows/openai/workflow.js',
   'flows/kiro/workflow.js',
+  'flows/grok/workflow.js',
 ]);
 
 function readBundle(files = []) {

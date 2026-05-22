@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const { readFlowRegistryBundle } = require('./helpers/script-bundles.js');
 
 const sidepanelSource = fs.readFileSync('sidepanel/sidepanel.js', 'utf8');
 const sidepanelHtml = fs.readFileSync('sidepanel/sidepanel.html', 'utf8');
@@ -33,6 +34,36 @@ function extractFunction(source, name) {
   return source.slice(start, end);
 }
 
+function assertHtmlContains(snippet) {
+  assert.match(sidepanelHtml, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+}
+
+function getScriptIndex(scriptPath) {
+  const scriptTag = `<script src="../${scriptPath}"></script>`;
+  const index = sidepanelHtml.indexOf(scriptTag);
+  assert.notEqual(index, -1, `${scriptPath} should be loaded by sidepanel.html`);
+  return index;
+}
+
+test('sidepanel html loads Grok flow scripts before registry consumers', () => {
+  const grokDefinitionIndex = getScriptIndex('flows/grok/index.js');
+  const grokWorkflowIndex = getScriptIndex('flows/grok/workflow.js');
+  const flowsIndexIndex = getScriptIndex('flows/index.js');
+  const stepDefinitionsIndex = getScriptIndex('data/step-definitions.js');
+
+  assert.ok(grokDefinitionIndex < flowsIndexIndex);
+  assert.ok(grokWorkflowIndex < flowsIndexIndex);
+  assert.ok(grokWorkflowIndex < stepDefinitionsIndex);
+});
+
+test('sidepanel flow registry bundle exposes Grok as a selectable flow', () => {
+  const scope = {};
+  const flowRegistry = new Function('self', `${readFlowRegistryBundle()}; return self.MultiPageFlowRegistry;`)(scope);
+
+  assert.ok(flowRegistry.getRegisteredFlowIds().includes('grok'));
+  assert.equal(flowRegistry.getFlowLabel('grok'), 'Grok / xAI');
+});
+
 test('sidepanel html exposes flow selector and kiro source fields', () => {
   [
     'id="select-flow"',
@@ -46,14 +77,62 @@ test('sidepanel html exposes flow selector and kiro source fields', () => {
     'id="row-kiro-web-status"',
     'id="row-kiro-login-url"',
     'id="row-kiro-upload-status"',
-  ].forEach((snippet) => {
-    assert.match(sidepanelHtml, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  });
+  ].forEach(assertHtmlContains);
+});
+
+test('sidepanel html exposes Grok SSO controls with Kiro button styling', () => {
+  [
+    'id="row-grok-sso-settings"',
+    'id="btn-export-grok-sso"',
+    'id="btn-clear-grok-sso"',
+    'id="btn-open-grok-sso-github"',
+    'class="btn btn-ghost btn-xs data-inline-btn" type="button">GitHub</button>',
+  ].forEach(assertHtmlContains);
 });
 
 test('sidepanel Kiro GitHub button opens the configured fork', () => {
   assert.match(sidepanelSource, /openExternalUrl\('https:\/\/github\.com\/QLHazyCoder\/kiro\.rs'\)/);
   assert.doesNotMatch(sidepanelSource, /github\.com\/hank9999\/kiro\.rs/);
+});
+
+test('sidepanel Grok SSO GitHub button opens webchat2api', () => {
+  assert.match(sidepanelSource, /openExternalUrl\('https:\/\/github\.com\/zqbxdev\/webchat2api'\)/);
+});
+
+test('sidepanel Grok SSO export uses webchat2api filename', () => {
+  assert.match(sidepanelSource, /downloadTextFile\(`\$\{ssoValues\.join\('\\n'\)\}\\n`, 'webchat2api_grok_sso\.txt', 'text\/plain;charset=utf-8'\)/);
+  assert.doesNotMatch(sidepanelSource, /downloadTextFile\(`\$\{ssoValues\.join\('\\n'\)\}\\n`, 'xxx\.txt'/);
+});
+
+test('sidepanel Grok target selector displays webchat2api source', () => {
+  const scope = {};
+  const flowRegistry = new Function('self', `${readFlowRegistryBundle()}; return self.MultiPageFlowRegistry;`)(scope);
+
+  assert.deepEqual(flowRegistry.getTargetOptions('grok'), [
+    {
+      id: 'webchat2api',
+      label: 'zqbxdev/webchat2api',
+      groups: ['grok-target-webchat2api'],
+    },
+  ]);
+  assert.equal(flowRegistry.getTargetLabel('grok', 'webchat2api'), 'zqbxdev/webchat2api');
+});
+
+test('Grok SSO export values dedupe and remove blanks', () => {
+  const bundle = extractFunction(sidepanelSource, 'getGrokSsoValuesFromState');
+  const api = new Function(`${bundle}; return { getGrokSsoValuesFromState };`)();
+
+  assert.deepEqual(api.getGrokSsoValuesFromState({
+    grokSsoCookie: ' primary ',
+    grokSsoCookies: ['primary', '', ' secondary ', 'secondary', null],
+  }), ['primary', 'secondary']);
+});
+
+test('sidepanel clear Grok SSO only writes Grok SSO state keys', () => {
+  assert.match(sidepanelSource, /grokSsoCookie:\s*''/);
+  assert.match(sidepanelSource, /grokSsoCookies:\s*\[\]/);
+  assert.match(sidepanelSource, /chrome\.storage\?\.local\?\.set\?\.\(nextState\)/);
+  assert.doesNotMatch(sidepanelSource, /openaiAt|OpenAI AT|openAiAt/);
 });
 
 test('sidepanel step definitions rerender when active flow changes even if plus/signup settings stay the same', () => {
@@ -192,6 +271,7 @@ let latestState = {
 const DEFAULT_ACTIVE_FLOW_ID = 'openai';
 const selectFlow = { value: '' };
 const selectPanelMode = { value: '' };
+const rowGrokSsoSettings = { style: { display: 'unexpected' } };
 function normalizeFlowId(value = '', fallback = DEFAULT_ACTIVE_FLOW_ID) {
   return String(value || fallback || DEFAULT_ACTIVE_FLOW_ID).trim().toLowerCase() || DEFAULT_ACTIVE_FLOW_ID;
 }
