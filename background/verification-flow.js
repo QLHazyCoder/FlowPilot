@@ -12,6 +12,7 @@
       closeConflictingTabsForSource,
       CLOUDFLARE_TEMP_EMAIL_PROVIDER,
       CLOUD_MAIL_PROVIDER = 'cloudmail',
+      CUSTOM_MAIL_PROVIDER = 'custom',
       completeNodeFromBackground,
       confirmCustomVerificationStepBypassRequest,
       getNodeIdByStepForState,
@@ -29,6 +30,7 @@
       MAIL_2925_VERIFICATION_MAX_ATTEMPTS,
       pollCloudflareTempEmailVerificationCode,
       pollCloudMailVerificationCode,
+      pollCustomMailVerificationCode,
       pollHotmailVerificationCode,
       pollLuckmailVerificationCode,
       pollYydsMailVerificationCode,
@@ -986,6 +988,13 @@
           ...cleanPollOverrides,
         }, cleanPollOverrides, `轮询${getVerificationCodeLabel(step)}验证码邮箱`);
         return pollCloudMailVerificationCode(step, state, timedPoll.payload);
+      }
+      if (mail.provider === CUSTOM_MAIL_PROVIDER && typeof pollCustomMailVerificationCode === 'function') {
+        const timedPoll = await applyMailPollingTimeBudget(step, {
+          ...getVerificationPollPayload(step, state),
+          ...cleanPollOverrides,
+        }, cleanPollOverrides, `轮询${getVerificationCodeLabel(step)}验证码邮箱`);
+        return pollCustomMailVerificationCode(step, state, timedPoll.payload);
       }
       if (mail.provider === YYDS_MAIL_PROVIDER) {
         const timedPoll = await applyMailPollingTimeBudget(step, {

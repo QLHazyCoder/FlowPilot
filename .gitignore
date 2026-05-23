@@ -10,6 +10,7 @@
 .omx/
 /node_modules
 /.runtime
+/.env
 /docs/新步骤顺序
 __pycache__/
 *.pyc

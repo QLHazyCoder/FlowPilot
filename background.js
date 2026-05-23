@@ -670,6 +670,7 @@ const HOTMAIL_SERVICE_MODE_LOCAL = 'local';
 const DEFAULT_HOTMAIL_REMOTE_BASE_URL = '';
 const DEFAULT_HOTMAIL_LOCAL_BASE_URL = 'http://127.0.0.1:17373';
 const DEFAULT_ACCOUNT_RUN_HISTORY_HELPER_BASE_URL = DEFAULT_HOTMAIL_LOCAL_BASE_URL;
+const DEFAULT_CUSTOM_MAIL_HELPER_BASE_URL = 'http://127.0.0.1:17374';
 const HOTMAIL_LOCAL_HELPER_TIMEOUT_MS = 45000;
 const DEFAULT_LUCKMAIL_PROJECT_CODE = 'openai';
 const DEFAULT_HERO_SMS_BASE_URL = 'https://hero-sms.com/stubs/handler_api.php';
@@ -5269,6 +5270,106 @@ async function ensureHotmailAccountForFlow(options = {}) {
 function buildHotmailLocalEndpoint(baseUrl, path) {
   const normalizedBaseUrl = normalizeHotmailLocalBaseUrl(baseUrl);
   return new URL(path, `${normalizedBaseUrl}/`).toString();
+}
+
+function buildCustomMailLocalEndpoint(path) {
+  return new URL(path, `${DEFAULT_CUSTOM_MAIL_HELPER_BASE_URL}/`).toString();
+}
+
+async function requestCustomMailLocalCode(pollPayload = {}) {
+  const requestTimeoutMs = HOTMAIL_LOCAL_HELPER_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(new Error('timeout')), requestTimeoutMs);
+
+  let response;
+  try {
+    response = await fetch(buildCustomMailLocalEndpoint('/code'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        top: pollPayload.top || 20,
+        targetEmail: pollPayload.targetEmail || '',
+        senderFilters: pollPayload.senderFilters || [],
+        subjectFilters: pollPayload.subjectFilters || [],
+        requiredKeywords: pollPayload.requiredKeywords || [],
+        codePatterns: pollPayload.codePatterns || [],
+        excludeCodes: pollPayload.excludeCodes || [],
+        filterAfterTimestamp: Number(pollPayload.filterAfterTimestamp || 0) || 0,
+      }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      throw new Error(`自定义邮箱本地助手请求超时（>${Math.round(requestTimeoutMs / 1000)} 秒）`);
+    }
+    throw new Error(`自定义邮箱本地助手请求失败：${err.message}`);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  const text = await response.text();
+  let payload = {};
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    payload = { raw: text };
+  }
+
+  if (!response.ok || payload?.ok === false) {
+    const errorText = payload?.error || payload?.message || text || `HTTP ${response.status}`;
+    throw new Error(`自定义邮箱本地助手返回失败：${errorText}`);
+  }
+
+  return {
+    code: String(payload?.code || ''),
+    message: payload?.message || null,
+    usedTimeFallback: Boolean(payload?.usedTimeFallback),
+  };
+}
+
+async function pollCustomMailVerificationCode(step, state, pollPayload = {}) {
+  const maxAttempts = Number(pollPayload.maxAttempts) || 5;
+  const intervalMs = Number(pollPayload.intervalMs) || 3000;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    throwIfStopped();
+    try {
+      await addLog(`步骤 ${step}：正在通过自定义邮箱本地助手轮询验证码（${attempt}/${maxAttempts}）...`, 'info');
+      const fetchResult = await requestCustomMailLocalCode({
+        ...pollPayload,
+        targetEmail: pollPayload.targetEmail || state?.email || '',
+      });
+
+      if (fetchResult.code) {
+        if (fetchResult.usedTimeFallback) {
+          await addLog(`步骤 ${step}：自定义邮箱本地助手使用时间回退后命中验证码。`, 'warn');
+        }
+        await addLog(`步骤 ${step}：已通过自定义邮箱本地助手找到验证码：${fetchResult.code}`, 'ok');
+        return {
+          ok: true,
+          code: fetchResult.code,
+          emailTimestamp: fetchResult.message?.receivedTimestamp || Date.now(),
+          mailId: fetchResult.message?.id || '',
+        };
+      }
+
+      lastError = new Error(`步骤 ${step}：自定义邮箱本地助手暂未返回匹配验证码（${attempt}/${maxAttempts}）。`);
+      await addLog(lastError.message, attempt === maxAttempts ? 'warn' : 'info');
+    } catch (err) {
+      lastError = err;
+      await addLog(`步骤 ${step}：自定义邮箱本地助手轮询失败：${err.message}`, 'warn');
+    }
+
+    if (attempt < maxAttempts) {
+      await sleepWithStop(intervalMs);
+    }
+  }
+
+  throw lastError || new Error(`步骤 ${step}：自定义邮箱本地助手未返回新的匹配验证码。`);
 }
 
 async function requestHotmailRemoteMailbox(account, mailbox = 'INBOX') {
@@ -12537,7 +12638,7 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
         throw new Error(`自定义邮箱号池第 ${targetRun} 个邮箱不存在，请检查号池数量是否与自动轮数一致。`);
       }
       await setEmailState(queuedEmail);
-      await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱号池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试；第 4/8 步仍需手动输入验证码）===`, 'ok');
+      await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱号池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试；请确保自定义邮箱本地助手已启动）===`, 'ok');
       return queuedEmail;
     }
   }
@@ -12695,7 +12796,7 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
         throw new Error(`自定义邮箱号池第 ${targetRun} 个邮箱不存在，请检查号池数量是否与自动轮数一致。`);
       }
       await setEmailState(queuedEmail);
-      await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱号池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试；第 4/8 步仍需手动输入验证码）===`, 'ok');
+      await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱号池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试；请确保自定义邮箱本地助手已启动）===`, 'ok');
       return queuedEmail;
     }
   }
@@ -13462,6 +13563,7 @@ const verificationFlowHelpers = self.MultiPageBackgroundVerificationFlow?.create
   closeConflictingTabsForSource,
   CLOUDFLARE_TEMP_EMAIL_PROVIDER,
   CLOUD_MAIL_PROVIDER,
+  CUSTOM_MAIL_PROVIDER: 'custom',
   completeNodeFromBackground,
   confirmCustomVerificationStepBypassRequest: (step) => chrome.runtime.sendMessage({
     type: 'REQUEST_CUSTOM_VERIFICATION_BYPASS_CONFIRMATION',
@@ -13483,6 +13585,7 @@ const verificationFlowHelpers = self.MultiPageBackgroundVerificationFlow?.create
   MAIL_2925_VERIFICATION_MAX_ATTEMPTS,
   pollCloudflareTempEmailVerificationCode,
   pollCloudMailVerificationCode,
+  pollCustomMailVerificationCode,
   pollHotmailVerificationCode,
   pollLuckmailVerificationCode,
   pollYydsMailVerificationCode,

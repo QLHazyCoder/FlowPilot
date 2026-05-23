@@ -6,6 +6,42 @@ const source = fs.readFileSync('flows/openai/background/steps/fetch-signup-code.
 const globalScope = {};
 const api = new Function('self', `${source}; return self.MultiPageBackgroundStep4;`)(globalScope);
 
+test('step 4 routes custom mail provider through resolver instead of manual confirmation', async () => {
+  let bypassCalls = 0;
+  let capturedMail = null;
+  let capturedOptions = null;
+  const executor = api.createStep4Executor({
+    addLog: async () => {},
+    chrome: { tabs: { update: async () => {} } },
+    completeNodeFromBackground: async () => {},
+    confirmCustomVerificationStepBypass: async () => { bypassCalls += 1; },
+    getMailConfig: () => ({ provider: 'custom', label: '自定义邮箱' }),
+    getTabId: async () => 1,
+    HOTMAIL_PROVIDER: 'hotmail-api',
+    isTabAlive: async () => false,
+    LUCKMAIL_PROVIDER: 'luckmail-api',
+    CLOUDFLARE_TEMP_EMAIL_PROVIDER: 'cloudflare-temp-email',
+    CLOUD_MAIL_PROVIDER: 'cloudmail',
+    resolveVerificationStep: async (_step, _state, mail, options) => {
+      capturedMail = mail;
+      capturedOptions = options;
+    },
+    reuseOrCreateTab: async () => {},
+    sendToContentScript: async () => ({}),
+    sendToContentScriptResilient: async () => ({}),
+    isRetryableContentScriptTransportError: () => false,
+    shouldUseCustomRegistrationEmail: () => true,
+    STANDARD_MAIL_VERIFICATION_RESEND_INTERVAL_MS: 25000,
+    throwIfStopped: () => {},
+  });
+
+  await executor.executeStep4({ email: 'target@example.com', mailProvider: 'custom' });
+
+  assert.equal(bypassCalls, 0);
+  assert.equal(capturedMail.provider, 'custom');
+  assert.equal(capturedOptions.requestFreshCodeFirst, false);
+});
+
 test('step 4 passes a fixed 10-minute lookback window to 2925 mailbox polling', async () => {
   let capturedOptions = null;
   let ensureCalls = 0;

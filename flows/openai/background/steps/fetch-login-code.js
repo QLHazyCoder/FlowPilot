@@ -594,14 +594,6 @@
         await addLog(`步骤 ${visibleStep}：已固定当前验证码页显示邮箱 ${displayedVerificationEmail} 作为后续匹配目标。`, 'info');
       }
 
-      if (shouldUseCustomRegistrationEmail(preparedState)) {
-        await confirmCustomVerificationStepBypass(8, {
-          completionStep: visibleStep,
-          promptStep: visibleStep,
-        });
-        return { lastResendAt: latestResendAt };
-      }
-
       if (mail.source === 'icloud-mail' && typeof ensureIcloudMailSession === 'function') {
         await addLog(`步骤 ${visibleStep}：正在确认 iCloud 邮箱登录态...`, 'info');
         await ensureIcloudMailSession({
@@ -611,12 +603,21 @@
         });
       }
 
+      if (shouldUseCustomRegistrationEmail(preparedState) && mail.provider !== 'custom') {
+        await confirmCustomVerificationStepBypass(8, {
+          completionStep: visibleStep,
+          promptStep: visibleStep,
+        });
+        return { lastResendAt: latestResendAt };
+      }
+
       throwIfStopped();
       if (
         mail.provider === HOTMAIL_PROVIDER
         || mail.provider === LUCKMAIL_PROVIDER
         || mail.provider === CLOUDFLARE_TEMP_EMAIL_PROVIDER
         || mail.provider === CLOUD_MAIL_PROVIDER
+        || mail.provider === 'custom'
       ) {
         await addLog(`步骤 ${visibleStep}：正在通过 ${mail.label} 轮询验证码...`);
       } else {

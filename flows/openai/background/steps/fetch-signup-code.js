@@ -93,13 +93,13 @@
     }
 
     async function executeSignupEmailVerificationStep(state, stepStartedAt, verificationSessionKey) {
-      if (shouldUseCustomRegistrationEmail(state)) {
+      const mail = getMailConfig(state);
+      if (mail.error) throw new Error(mail.error);
+
+      if (shouldUseCustomRegistrationEmail(state) && mail.provider !== 'custom') {
         await confirmCustomVerificationStepBypass(4);
         return;
       }
-
-      const mail = getMailConfig(state);
-      if (mail.error) throw new Error(mail.error);
 
       const verificationFilterAfterTimestamp = mail.provider === '2925'
         ? Math.max(0, stepStartedAt - MAIL_2925_FILTER_LOOKBACK_MS)
@@ -120,6 +120,7 @@
         || mail.provider === LUCKMAIL_PROVIDER
         || mail.provider === CLOUDFLARE_TEMP_EMAIL_PROVIDER
         || mail.provider === CLOUD_MAIL_PROVIDER
+        || mail.provider === 'custom'
       ) {
         await addLog(`步骤 4：正在通过 ${mail.label} 轮询验证码...`);
       } else if (mail.provider === '2925') {
@@ -146,6 +147,7 @@
         LUCKMAIL_PROVIDER,
         CLOUDFLARE_TEMP_EMAIL_PROVIDER,
         CLOUD_MAIL_PROVIDER,
+        'custom',
       ].includes(mail.provider);
       const signupProfile = buildSignupProfileForVerificationStep();
 
