@@ -163,6 +163,8 @@ test('sidepanel loads live SMS country lists silently during startup', () => {
   assert.match(sidepanelSource, /loadHeroSmsCountries\(\{ silent: true \}\)/);
   assert.match(sidepanelSource, /loadFiveSimCountries\(\{ silent: true \}\)/);
   assert.match(sidepanelSource, /await loadHeroSmsCountries\(\{ silent: true \}\);/);
+  assert.doesNotMatch(heroLoader, /await loadHeroSmsOperators/);
+  assert.match(heroLoader, /refreshHeroSmsOperatorOptions\(\{ silent: true \}\)/);
   assert.doesNotMatch(sidepanelSource, /loadHeroSmsCountries\(\{ silent: true, preferFallbackOnly: true \}\)/);
   assert.doesNotMatch(sidepanelSource, /loadFiveSimCountries\(\{ silent: true, preferFallbackOnly: true \}\)/);
   assert.doesNotMatch(sidepanelSource, /console\.error\('加载 (?:HeroSMS|5sim|NexSMS) 国家列表失败：'/);

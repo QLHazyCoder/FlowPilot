@@ -7489,8 +7489,25 @@ async function loadHeroSmsCountries(options = {}) {
     showLimitToast: false,
   });
   updateHeroSmsPlatformDisplay();
-  await loadHeroSmsOperators({ silent: true }).catch(() => { });
   renderHeroSmsOperatorOptions();
+  if (typeof refreshHeroSmsOperatorOptions === 'function') {
+    refreshHeroSmsOperatorOptions({ silent: true });
+  }
+}
+
+function refreshHeroSmsOperatorOptions(options = {}) {
+  if (!selectHeroSmsOperator) {
+    return Promise.resolve(heroSmsOperatorsByCountryId);
+  }
+  return loadHeroSmsOperators(options)
+    .then(() => {
+      renderHeroSmsOperatorOptions(options?.selectedOperator);
+      return heroSmsOperatorsByCountryId;
+    })
+    .catch(() => {
+      renderHeroSmsOperatorOptions(options?.selectedOperator);
+      return heroSmsOperatorsByCountryId;
+    });
 }
 
 async function loadHeroSmsOperators(options = {}) {
@@ -7501,7 +7518,7 @@ async function loadHeroSmsOperators(options = {}) {
   }
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
     const response = await fetch(HERO_SMS_OPERATORS_URL, {
       signal: controller.signal,
       cache: 'no-store',
@@ -16704,6 +16721,9 @@ async function switchPhoneSmsProvider(nextProvider) {
   }
   if (selectHeroSmsOperator) {
     renderHeroSmsOperatorOptions(latestState?.heroSmsOperator);
+    if (typeof refreshHeroSmsOperatorOptions === 'function') {
+      refreshHeroSmsOperatorOptions({ silent: true, selectedOperator: latestState?.heroSmsOperator });
+    }
   }
   if (displayHeroSmsPriceTiers) displayHeroSmsPriceTiers.textContent = '未获取';
   if (displayPhoneSmsBalance) displayPhoneSmsBalance.textContent = '余额未获取';
@@ -16827,8 +16847,10 @@ selectPhoneSmsProvider?.addEventListener('change', async () => {
       ],
       { includePrimary: true }
     );
-    await loadHeroSmsOperators().catch(() => { });
     renderHeroSmsOperatorOptions(latestState?.heroSmsOperator);
+    if (typeof refreshHeroSmsOperatorOptions === 'function') {
+      refreshHeroSmsOperatorOptions({ selectedOperator: latestState?.heroSmsOperator });
+    }
   }
   updateHeroSmsPlatformDisplay();
   updatePhoneVerificationSettingsUI();
