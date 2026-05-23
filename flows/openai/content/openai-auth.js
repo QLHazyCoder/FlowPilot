@@ -2723,7 +2723,8 @@ async function step3_fillEmailPassword(payload) {
     logSignupPasswordDiagnostics('步骤 3：当前密码页同时存在一次性验证码入口', 'info');
   }
 
-  const signupVerificationRequestedAt = submitBtn ? Date.now() : null;
+  const isLoginPasswordPage = passwordPageInfo.mode === 'login';
+  const signupVerificationRequestedAt = submitBtn && !isLoginPasswordPage ? Date.now() : null;
   const completionPayload = {
     email,
     phoneNumber: String(payload?.phoneNumber || '').trim(),
@@ -2734,6 +2735,7 @@ async function step3_fillEmailPassword(payload) {
     passwordPageUrl: passwordPageInfo.url,
     passwordPagePath: passwordPageInfo.path,
     passwordPageMode: passwordPageInfo.mode,
+    ...(isLoginPasswordPage ? { passwordLoginFlow: true } : {}),
   };
 
   reportComplete(3, completionPayload);

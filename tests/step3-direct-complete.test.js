@@ -300,5 +300,7 @@ return {
   assert.equal(result.passwordPageUrl, 'https://auth.openai.com/log-in/password');
   assert.equal(result.passwordPagePath, '/log-in/password');
   assert.equal(result.passwordPageMode, 'login');
+  assert.equal(result.passwordLoginFlow, true);
+  assert.equal(result.signupVerificationRequestedAt, null);
   assert.equal(api.completions[0].payload.passwordPageMode, 'login');
 });

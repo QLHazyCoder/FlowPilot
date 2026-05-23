@@ -574,12 +574,7 @@ test('message router marks step 3 failed when post-submit finalize fails', async
   assert.deepStrictEqual(response, { ok: true, error: '步骤 3 提交后仍停留在密码页。' });
 });
 
-test('message router skips signup tail when phone password submit used login password page', async () => {
-  const finalizeResult = {
-    ready: true,
-    state: 'verification',
-    passwordLoginFlow: true,
-  };
+test('message router skips signup tail before finalizing when phone password submit used login password page', async () => {
   const { router, events } = createRouter({
     state: {
       signupMethod: 'phone',
@@ -597,7 +592,7 @@ test('message router skips signup tail when phone password submit used login pas
     getStepIdsForState: () => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     finalizeStep3Completion: async (payload) => {
       events.finalizePayloads.push(payload);
-      return finalizeResult;
+      throw new Error('should not finalize login password page as signup verification');
     },
   });
 
@@ -611,6 +606,7 @@ test('message router skips signup tail when phone password submit used login pas
       accountIdentifier: '+66959916439',
       signupPhoneNumber: '+66959916439',
       signupVerificationRequestedAt: 123456,
+      deferredSubmit: true,
       passwordPageUrl: 'https://auth.openai.com/log-in/password',
       passwordPagePath: '/log-in/password',
       passwordPageMode: 'login',
@@ -618,19 +614,7 @@ test('message router skips signup tail when phone password submit used login pas
   }, {});
 
   assert.deepStrictEqual(response, { ok: true });
-  assert.deepStrictEqual(events.finalizePayloads, [
-    {
-      nodeId: 'fill-password',
-      accountIdentifierType: 'phone',
-      accountIdentifier: '+66959916439',
-      signupPhoneNumber: '+66959916439',
-      signupVerificationRequestedAt: 123456,
-      passwordPageUrl: 'https://auth.openai.com/log-in/password',
-      passwordPagePath: '/log-in/password',
-      passwordPageMode: 'login',
-      step: 3,
-    },
-  ]);
+  assert.deepStrictEqual(events.finalizePayloads, []);
   assert.deepStrictEqual(events.stepStatuses, [
     { step: 3, status: 'completed' },
     { step: 4, status: 'skipped' },
@@ -650,12 +634,15 @@ test('message router skips signup tail when phone password submit used login pas
         accountIdentifierType: 'phone',
         accountIdentifier: '+66959916439',
         signupPhoneNumber: '+66959916439',
-        signupVerificationRequestedAt: 123456,
+        signupVerificationRequestedAt: null,
+        deferredSubmit: true,
         passwordPageUrl: 'https://auth.openai.com/log-in/password',
         passwordPagePath: '/log-in/password',
         passwordPageMode: 'login',
         step: 3,
-        ...finalizeResult,
+        passwordLoginFlow: true,
+        skipRegistrationFlow: true,
+        state: 'login_password_page',
       },
     },
   ]);

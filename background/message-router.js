@@ -603,6 +603,19 @@
       return isSuccessfulLoginPasswordFlowPayload(payload);
     }
 
+    function shouldSkipPhoneSignupRegistrationTailBeforePasswordFinalize(payload = {}, state = {}) {
+      if (!isPhoneSignupStepPayload(payload, state)) {
+        return false;
+      }
+      if (!Boolean(payload?.deferredSubmit)) {
+        return false;
+      }
+      if (isSignupPasswordPagePayload(payload)) {
+        return false;
+      }
+      return isLoginPasswordPagePayload(payload);
+    }
+
     async function skipPhoneSignupRegistrationTailAfterPassword(currentStep, payload = {}) {
       const latestState = await getState();
       const skippedSteps = [];
@@ -1084,7 +1097,17 @@
           }
           let completionPayload = message.payload || {};
           try {
-            if (nodeId === 'fill-password' && typeof finalizeStep3Completion === 'function') {
+            const skipStep3FinalizeForPhoneLoginPassword = nodeId === 'fill-password'
+              && shouldSkipPhoneSignupRegistrationTailBeforePasswordFinalize(completionPayload, await getState());
+            if (skipStep3FinalizeForPhoneLoginPassword) {
+              completionPayload = {
+                ...completionPayload,
+                signupVerificationRequestedAt: null,
+                passwordLoginFlow: true,
+                skipRegistrationFlow: true,
+                state: 'login_password_page',
+              };
+            } else if (nodeId === 'fill-password' && typeof finalizeStep3Completion === 'function') {
               const finalizedPayload = await finalizeStep3Completion(message.payload || {});
               if (finalizedPayload && typeof finalizedPayload === 'object') {
                 completionPayload = {
