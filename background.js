@@ -15034,6 +15034,31 @@ async function getStep5SubmitStateFromContent(options = {}) {
   return result || {};
 }
 
+async function advanceStep5PostSubmitPromptOnTab(options = {}) {
+  const result = await sendToContentScriptResilient(
+    'openai-auth',
+    {
+      type: 'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
+      source: 'background',
+      payload: {},
+    },
+    {
+      timeoutMs: options.timeoutMs ?? 15000,
+      retryDelayMs: options.retryDelayMs ?? 600,
+      responseTimeoutMs: options.responseTimeoutMs ?? (options.timeoutMs ?? 15000),
+      logMessage: options.logMessage || '步骤 5：正在检查注册完成后的弹窗按钮...',
+      logStep: 5,
+      logStepKey: options.logStepKey || 'fill-profile',
+    }
+  );
+
+  if (result?.error) {
+    throw new Error(result.error);
+  }
+
+  return result || {};
+}
+
 async function recoverStep5SubmitRetryPageOnTab(options = {}) {
   const result = await sendToContentScriptResilient(
     'openai-auth',
@@ -15107,7 +15132,9 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
       };
 
   const maxAuthRetryRecoveries = Math.max(1, Number(completionPayload?.maxAuthRetryRecoveries) || 2);
+  const maxPostSubmitPromptActions = Math.max(0, Number(completionPayload?.maxPostSubmitPromptActions) || 8);
   let authRetryRecoveryCount = 0;
+  let postSubmitPromptActionCount = 0;
   await debugLog('后台已收到资料页完成信号，准备开始最终状态复核。', {
     completionOutcome: String(completionPayload?.outcome || '').trim(),
     completionUrl: String(completionPayload?.url || '').trim(),
@@ -15117,8 +15144,36 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
   while (true) {
     const tab = await chrome.tabs.get(tabId).catch(() => null);
     const currentUrl = String(tab?.url || completionPayload?.url || '').trim();
+
+    if (postSubmitPromptActionCount < maxPostSubmitPromptActions) {
+      const promptResult = await advanceStep5PostSubmitPromptOnTab({
+        timeoutMs: 15000,
+        responseTimeoutMs: 15000,
+        retryDelayMs: 500,
+        logMessage: '步骤 5：正在处理注册完成后的跳过/继续弹窗...',
+      });
+      if (promptResult?.advanced) {
+        postSubmitPromptActionCount += 1;
+        await debugLog(`后台复核已处理注册后弹窗（${postSubmitPromptActionCount}/${maxPostSubmitPromptActions}）。`, {
+          completionOutcome: String(completionPayload?.outcome || '').trim(),
+          completionUrl: String(completionPayload?.url || '').trim(),
+          navigationStarted: Boolean(completionPayload?.navigationStarted),
+          tabUrl: currentUrl,
+          pageState: promptResult?.state,
+          level: 'warn',
+        });
+        await waitForTabStableComplete(tabId, {
+          timeoutMs: 10000,
+          retryDelayMs: 250,
+          stableMs: 500,
+          initialDelayMs: 300,
+        }).catch(() => null);
+        continue;
+      }
+    }
+
     if (currentUrl && isStep5CompletionChatgptUrl(currentUrl)) {
-      await debugLog('后台直接通过标签页 URL 确认已进入 chatgpt.com，步骤 5 完成。', {
+      await debugLog('后台确认已进入 chatgpt.com 且没有待处理的注册后弹窗，步骤 5 完成。', {
         completionOutcome: String(completionPayload?.outcome || '').trim(),
         completionUrl: String(completionPayload?.url || '').trim(),
         navigationStarted: Boolean(completionPayload?.navigationStarted),

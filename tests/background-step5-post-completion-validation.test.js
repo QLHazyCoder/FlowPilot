@@ -68,6 +68,9 @@ const chrome = {
 
 async function sendToContentScriptResilient(source, message) {
   messages.push({ source, type: message.type });
+  if (message.type === 'ADVANCE_STEP5_POST_SUBMIT_PROMPT') {
+    return { advanced: false };
+  }
   if (message.type === 'GET_STEP5_SUBMIT_STATE') {
     stateReadCount += 1;
     if (stateReadCount === 1) {
@@ -111,6 +114,7 @@ ${extractFunction('parseUrlSafely')}
 ${extractFunction('isSignupEntryHost')}
 ${extractFunction('isLikelyLoggedInChatgptHomeUrl')}
 ${extractFunction('isStep5CompletionChatgptUrl')}
+${extractFunction('advanceStep5PostSubmitPromptOnTab')}
 ${extractFunction('getStep5SubmitStateFromContent')}
 ${extractFunction('recoverStep5SubmitRetryPageOnTab')}
 ${extractFunction('validateStep5PostCompletion')}
@@ -131,7 +135,7 @@ return {
   assert.equal(result.successState, 'logged_in_home');
   assert.deepStrictEqual(
     snapshot.messages.map(({ type }) => type),
-    ['GET_STEP5_SUBMIT_STATE', 'RECOVER_STEP5_SUBMIT_RETRY_PAGE', 'GET_STEP5_SUBMIT_STATE']
+    ['ADVANCE_STEP5_POST_SUBMIT_PROMPT', 'GET_STEP5_SUBMIT_STATE', 'RECOVER_STEP5_SUBMIT_RETRY_PAGE', 'ADVANCE_STEP5_POST_SUBMIT_PROMPT', 'GET_STEP5_SUBMIT_STATE']
   );
   assert.equal(snapshot.stateReadCount, 2);
   assert.equal(
@@ -152,6 +156,9 @@ const chrome = {
 };
 
 async function sendToContentScriptResilient(source, message) {
+  if (message.type === 'ADVANCE_STEP5_POST_SUBMIT_PROMPT') {
+    return { advanced: false };
+  }
   if (message.type === 'GET_STEP5_SUBMIT_STATE') {
     return {
       retryPage: false,
@@ -178,6 +185,7 @@ ${extractFunction('parseUrlSafely')}
 ${extractFunction('isSignupEntryHost')}
 ${extractFunction('isLikelyLoggedInChatgptHomeUrl')}
 ${extractFunction('isStep5CompletionChatgptUrl')}
+${extractFunction('advanceStep5PostSubmitPromptOnTab')}
 ${extractFunction('getStep5SubmitStateFromContent')}
 ${extractFunction('recoverStep5SubmitRetryPageOnTab')}
 ${extractFunction('validateStep5PostCompletion')}
@@ -200,4 +208,78 @@ return {
     api.snapshot().logs.some(({ message }) => /非 chatgpt\.com 的步骤 5 完成候选/.test(message)),
     true
   );
+});
+
+test('step 5 post-completion validation clears chatgpt home prompts before allowing success', async () => {
+  const api = new Function(`
+const messages = [];
+let promptAdvanceCount = 0;
+let stateReadCount = 0;
+const chrome = {
+  tabs: {
+    async get() {
+      return { url: 'https://chatgpt.com/' };
+    },
+  },
+};
+
+async function sendToContentScriptResilient(source, message) {
+  messages.push({ source, type: message.type });
+  if (message.type === 'ADVANCE_STEP5_POST_SUBMIT_PROMPT') {
+    promptAdvanceCount += 1;
+    return { advanced: promptAdvanceCount <= 2, actionText: promptAdvanceCount === 1 ? '跳过' : '继续' };
+  }
+  if (message.type === 'GET_STEP5_SUBMIT_STATE') {
+    stateReadCount += 1;
+    return {
+      retryPage: false,
+      retryEnabled: false,
+      maxCheckAttemptsBlocked: false,
+      userAlreadyExistsBlocked: false,
+      successState: 'logged_in_home',
+      profileVisible: false,
+      errorText: '',
+      unknownAuthPage: false,
+      url: 'https://chatgpt.com/',
+    };
+  }
+  throw new Error('unexpected message type: ' + message.type);
+}
+
+async function addLog() {}
+async function waitForTabStableComplete() {}
+
+${extractFunction('parseUrlSafely')}
+${extractFunction('isSignupEntryHost')}
+${extractFunction('isLikelyLoggedInChatgptHomeUrl')}
+${extractFunction('isStep5CompletionChatgptUrl')}
+${extractFunction('advanceStep5PostSubmitPromptOnTab')}
+${extractFunction('getStep5SubmitStateFromContent')}
+${extractFunction('recoverStep5SubmitRetryPageOnTab')}
+${extractFunction('validateStep5PostCompletion')}
+
+return {
+  async run() {
+    return validateStep5PostCompletion(99, { maxPostSubmitPromptActions: 4 });
+  },
+  snapshot() {
+    return { messages, promptAdvanceCount, stateReadCount };
+  },
+};
+`)();
+
+  const result = await api.run();
+  const snapshot = api.snapshot();
+
+  assert.equal(result.successState, 'logged_in_home');
+  assert.deepStrictEqual(
+    snapshot.messages.map(({ type }) => type),
+    [
+      'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
+      'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
+      'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
+    ]
+  );
+  assert.equal(snapshot.promptAdvanceCount, 3);
+  assert.equal(snapshot.stateReadCount, 0);
 });

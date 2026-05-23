@@ -28,6 +28,7 @@ if (document.documentElement.getAttribute(OPENAI_AUTH_LISTENER_SENTINEL) !== '1'
       || message.type === 'GET_LOGIN_AUTH_STATE'
       || message.type === 'SUBMIT_ADD_EMAIL'
       || message.type === 'GET_STEP5_SUBMIT_STATE'
+      || message.type === 'ADVANCE_STEP5_POST_SUBMIT_PROMPT'
       || message.type === 'PREPARE_SIGNUP_VERIFICATION'
       || message.type === 'RECOVER_AUTH_RETRY_PAGE'
       || message.type === 'RECOVER_STEP5_SUBMIT_RETRY_PAGE'
@@ -135,6 +136,13 @@ async function handleCommand(message) {
       return await submitAddEmailAndContinue(message.payload);
     case 'GET_STEP5_SUBMIT_STATE':
       return getStep5SubmitState();
+    case 'ADVANCE_STEP5_POST_SUBMIT_PROMPT': {
+      const advanced = await advanceStep5PostSubmitOnboardingPage({ allowProfileVisiblePrompt: true });
+      return {
+        advanced: Boolean(advanced),
+        state: getStep5SubmitState(),
+      };
+    }
     case 'PREPARE_SIGNUP_VERIFICATION':
       return await prepareSignupVerificationFlow(message.payload);
     case 'RECOVER_AUTH_RETRY_PAGE':
