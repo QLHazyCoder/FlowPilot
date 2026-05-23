@@ -6748,6 +6748,10 @@ function getStep5PostSubmitSuccessState() {
     return null;
   }
 
+  if (typeof isStep5PostSubmitOnboardingPage === 'function' && isStep5PostSubmitOnboardingPage()) {
+    return null;
+  }
+
   if (isStep5CompletionChatgptUrl()) {
     return {
       state: 'logged_in_home',
@@ -6781,8 +6785,10 @@ function isStep5PostSubmitOnboardingPage() {
     return true;
   }
 
-  const pageText = getPageTextSnapshot();
-  return /(?:what\s+brings\s+you\s+to\s+chatgpt|tell\s+us\s+about\s+yourself|customi[sz]e\s+chatgpt|personalize\s+your\s+experience|how\s+will\s+you\s+use\s+chatgpt|which\s+best\s+describes\s+you|start\s+using\s+chatgpt|skip\s+for\s+now|入门|开始使用|告诉我们|个人化|个性化|问卷|调查|咨询|跳过|稍后|下一步)/i.test(pageText)
+  const pageText = typeof getPageTextSnapshot === 'function'
+    ? getPageTextSnapshot()
+    : String(document.body?.innerText || document.body?.textContent || '').replace(/\s+/g, ' ').trim();
+  return /(?:what\s+brings\s+you\s+to\s+chatgpt|tell\s+us\s+about\s+yourself|customi[sz]e\s+chatgpt|personalize\s+your\s+experience|how\s+will\s+you\s+use\s+chatgpt|which\s+best\s+describes\s+you|start\s+using\s+chatgpt|you(?:'|’)re\s+all\s+set|you\s+are\s+all\s+set|ready\s+to\s+go|chatgpt\s+may\s+make\s+mistakes|chats\s+may\s+be\s+reviewed|by\s+continuing\s+you\s+agree|skip\s+for\s+now|你已准备就绪|你已準備就緒|已准备就绪|已準備就緒|可能会犯错|可能會犯錯|聊天可能会被审查|聊天可能會被審查|继续操作即表示你同意|繼續操作即表示你同意|条款|條款|隐私政策|隱私政策|入门|开始使用|告诉我们|个人化|个性化|问卷|调查|咨询|跳过|稍后|下一步|继续)/i.test(pageText)
     && Boolean(findStep5PostSubmitOnboardingAction());
 }
 
