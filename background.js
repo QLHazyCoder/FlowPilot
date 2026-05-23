@@ -697,6 +697,7 @@ const DEFAULT_NEX_SMS_BASE_URL = 'https://api.nexsms.net';
 const DEFAULT_NEX_SMS_SERVICE_CODE = 'ot';
 const DEFAULT_NEX_SMS_COUNTRY_ORDER = Object.freeze([1]);
 const DEFAULT_HERO_SMS_REUSE_ENABLED = true;
+const DEFAULT_HERO_SMS_OPERATOR = 'any';
 const HERO_SMS_ACQUIRE_PRIORITY_COUNTRY = 'country';
 const HERO_SMS_ACQUIRE_PRIORITY_PRICE = 'price';
 const HERO_SMS_ACQUIRE_PRIORITY_PRICE_HIGH = 'price_high';
@@ -1423,6 +1424,7 @@ const PERSISTED_SETTING_DEFAULTS = {
   heroSmsCountryId: HERO_SMS_COUNTRY_ID,
   heroSmsCountryLabel: HERO_SMS_COUNTRY_LABEL,
   heroSmsCountryFallback: [],
+  heroSmsOperator: DEFAULT_HERO_SMS_OPERATOR,
   fiveSimApiKey: '',
   fiveSimProduct: DEFAULT_FIVE_SIM_PRODUCT,
   fiveSimCountryId: FIVE_SIM_COUNTRY_ID,
@@ -1800,6 +1802,21 @@ function normalizeHeroSmsCountryFallback(value = []) {
   }
 
   return normalized;
+}
+
+function normalizeHeroSmsOperator(value = '', fallback = DEFAULT_HERO_SMS_OPERATOR) {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '');
+  if (normalized) {
+    return normalized;
+  }
+  const fallbackNormalized = String(fallback || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '');
+  return fallbackNormalized || DEFAULT_HERO_SMS_OPERATOR;
 }
 
 
@@ -3527,6 +3544,8 @@ function normalizePersistentSettingValue(key, value) {
       return String(value || HERO_SMS_COUNTRY_LABEL).trim() || HERO_SMS_COUNTRY_LABEL;
     case 'heroSmsCountryFallback':
       return normalizeHeroSmsCountryFallback(value);
+    case 'heroSmsOperator':
+      return normalizeHeroSmsOperator(value, DEFAULT_HERO_SMS_OPERATOR);
     case 'fiveSimApiKey':
       return String(value || '');
     case 'fiveSimProduct':

@@ -73,6 +73,7 @@ test('background account history settings are normalized independently from hotm
     extractFunction('normalizePhoneCodePollMaxRounds'),
     extractFunction('normalizeHeroSmsMaxPrice'),
     extractFunction('normalizeHeroSmsCountryFallback'),
+    extractFunction('normalizeHeroSmsOperator'),
     extractFunction('normalizePhoneSmsProvider'),
     extractFunction('normalizeFiveSimCountryId'),
     extractFunction('normalizeFiveSimCountryLabel'),
@@ -114,6 +115,7 @@ const VERIFICATION_RESEND_COUNT_MIN = 0;
 const VERIFICATION_RESEND_COUNT_MAX = 20;
 const HERO_SMS_COUNTRY_ID = 52;
 const HERO_SMS_COUNTRY_LABEL = 'Thailand';
+const DEFAULT_HERO_SMS_OPERATOR = 'any';
 const PHONE_SMS_PROVIDER_HERO_SMS = 'hero-sms';
 const PHONE_SMS_PROVIDER_FIVE_SIM = '5sim';
 const PHONE_SMS_PROVIDER_NEXSMS = 'nexsms';
@@ -192,7 +194,9 @@ const PERSISTED_SETTING_DEFAULTS = {
   mailProvider: '163',
   heroSmsMinPrice: '',
   fiveSimMinPrice: '',
+  heroSmsOperator: 'any',
 };
+const PERSISTED_SETTING_KEYS = Object.keys(PERSISTED_SETTING_DEFAULTS);
 function normalizePanelMode(value) { return value === 'sub2api' ? 'sub2api' : (value === 'codex2api' ? 'codex2api' : 'cpa'); }
 function normalizeLocalCpaStep9Mode(value) { return value === 'bypass' ? 'bypass' : 'submit'; }
 function normalizeAutoRunFallbackThreadIntervalMinutes(value) { return Number(value) || 0; }
@@ -312,6 +316,8 @@ return {
     api.normalizePersistentSettingValue('heroSmsCountryFallback', [{ id: 16, label: 'United Kingdom' }, { id: 52 }]),
     [{ id: 16, label: 'United Kingdom' }, { id: 52, label: 'Country #52' }]
   );
+  assert.equal(api.normalizePersistentSettingValue('heroSmsOperator', ' AIS! '), 'ais');
+  assert.equal(api.normalizePersistentSettingValue('heroSmsOperator', ''), 'any');
   assert.equal(
     api.normalizePersistentSettingValue('accountRunHistoryHelperBaseUrl', 'http://127.0.0.1:17373/append-account-log'),
     'http://127.0.0.1:17373'
@@ -373,9 +379,11 @@ return {
   const rangePayload = api.buildPersistentSettingsPayload({
     heroSmsMinPrice: '0.023456',
     fiveSimMinPrice: '0.0789',
+    heroSmsOperator: ' AIS ',
   });
   assert.equal(rangePayload.heroSmsMinPrice, '0.0235');
   assert.equal(rangePayload.fiveSimMinPrice, '0.0789');
+  assert.equal(rangePayload.heroSmsOperator, 'ais');
   assert.deepStrictEqual(
     api.normalizePersistentSettingValue('phonePreferredActivation', {
       provider: 'nexsms',
