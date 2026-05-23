@@ -288,6 +288,43 @@ return { refreshHeroSmsOperatorOptions, renderHeroSmsOperatorOptions };
   await assert.doesNotReject(() => api.refreshHeroSmsOperatorOptions({ silent: true }));
 });
 
+test('HeroSMS operator refresh preserves the latest user selection', async () => {
+  const api = new Function(`
+const DEFAULT_HERO_SMS_COUNTRY_ID = 52;
+const DEFAULT_HERO_SMS_OPERATOR = 'any';
+let latestState = { heroSmsCountryId: 52, heroSmsOperator: 'any' };
+let heroSmsCountrySelectionOrder = [52];
+let isRenderingHeroSmsOperatorOptions = false;
+let heroSmsOperatorsByCountryId = new Map([['52', ['ais', 'dtac']]]);
+let heroSmsOperatorsLoadedAt = Date.now();
+const selectHeroSmsCountry = null;
+const selectHeroSmsCountryFallback = null;
+const selectHeroSmsOperator = {
+  value: 'any',
+  innerHTML: '',
+  options: [],
+  appendChild(option) { this.options.push(option); },
+  disabled: false,
+};
+const document = {
+  createElement() { return { value: '', textContent: '' }; },
+};
+${extractFunction('normalizeHeroSmsCountryId')}
+${extractFunction('normalizeHeroSmsOperatorValue')}
+${extractFunction('getHeroSmsOperatorCountryId')}
+${extractFunction('loadHeroSmsOperators')}
+${extractFunction('refreshHeroSmsOperatorOptions')}
+${extractFunction('renderHeroSmsOperatorOptions')}
+return { refreshHeroSmsOperatorOptions, selectHeroSmsOperator };
+`)();
+
+  const pendingRefresh = api.refreshHeroSmsOperatorOptions({ silent: true });
+  api.selectHeroSmsOperator.value = 'ais';
+  await pendingRefresh;
+
+  assert.equal(api.selectHeroSmsOperator.value, 'ais');
+});
+
 test('HeroSMS country sync does not render operator options recursively', () => {
   const syncSource = extractFunction('syncHeroSmsFallbackSelectionOrderFromSelect');
 

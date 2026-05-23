@@ -17090,10 +17090,10 @@ selectHeroSmsOperator?.addEventListener('change', () => {
   saveSettings({ silent: true }).catch(() => { });
 });
 selectHeroSmsOperator?.addEventListener('focus', () => {
-  refreshHeroSmsOperatorOptions({ silent: true, selectedOperator: selectHeroSmsOperator.value || latestState?.heroSmsOperator });
+  refreshHeroSmsOperatorOptions({ silent: true });
 });
 selectHeroSmsOperator?.addEventListener('pointerdown', () => {
-  refreshHeroSmsOperatorOptions({ silent: true, selectedOperator: selectHeroSmsOperator.value || latestState?.heroSmsOperator });
+  refreshHeroSmsOperatorOptions({ silent: true });
 });
 selectHeroSmsPreferredActivation?.addEventListener('change', () => {
   if (isPhoneSignupReuseLocked(latestState)) {
