@@ -1128,6 +1128,15 @@ test('step 5 skips post-submit prompt when about-you url remains visible', async
   const api = new Function(`
 let now = 0;
 const clicks = [];
+const submitButton = {
+  textContent: '完成帐户创建',
+  hidden: false,
+  disabled: false,
+  getAttribute(name) {
+    if (name === 'aria-disabled') return 'false';
+    return '';
+  },
+};
 const skipButton = {
   textContent: '跳过',
   hidden: false,
@@ -1145,12 +1154,12 @@ const document = {
     innerText: '欢迎使用 ChatGPT 你可以稍后完成这些设置 跳过',
   },
   querySelector(selector) {
-    if (selector === 'button[type="submit"]') return null;
+    if (selector === 'button[type="submit"]') return submitButton;
     return null;
   },
   querySelectorAll(selector) {
     if (selector === 'button, [role="button"], a, [role="link"], input[type="button"], input[type="submit"]') {
-      return [skipButton];
+      return [submitButton, skipButton];
     }
     return [];
   },
@@ -1200,6 +1209,62 @@ return {
     url: 'https://chatgpt.com/',
   });
   assert.deepStrictEqual(api.snapshot().clicks, ['跳过']);
+});
+
+test('step 5 does not treat profile create-account button as post-submit prompt', async () => {
+  const api = new Function(`
+const submitButton = {
+  textContent: '完成帐户创建',
+  hidden: false,
+  disabled: false,
+  getAttribute(name) {
+    if (name === 'aria-disabled') return 'false';
+    return '';
+  },
+};
+const location = {
+  href: 'https://auth.openai.com/about-you',
+};
+const document = {
+  body: {
+    innerText: '告诉我们你的姓名和生日 完成帐户创建',
+  },
+  querySelector() { return submitButton; },
+  querySelectorAll(selector) {
+    if (selector === 'button, [role="button"], a, [role="link"], input[type="button"], input[type="submit"]') {
+      return [submitButton];
+    }
+    return [];
+  },
+};
+
+function isVisibleElement(el) { return Boolean(el) && !el.hidden; }
+function isActionEnabled(el) { return Boolean(el) && !el.disabled && el.getAttribute?.('aria-disabled') !== 'true'; }
+function getActionText(el) { return el?.textContent || ''; }
+function getPageTextSnapshot() { return document.body.innerText; }
+function isStep5Ready() { return true; }
+
+${extractFunction('isSignupProfilePageUrl')}
+${extractFunction('getStep5ProfilePathPatterns')}
+${extractFunction('isStep5ProfilePageUrl')}
+${extractFunction('isStep5ProfileStillVisible')}
+${extractFunction('findStep5PostSubmitOnboardingAction')}
+${extractFunction('isStep5PostSubmitOnboardingPage')}
+
+return {
+  run() {
+    return {
+      action: findStep5PostSubmitOnboardingAction(),
+      page: isStep5PostSubmitOnboardingPage({ allowProfileVisiblePrompt: true }),
+    };
+  },
+};
+`)();
+
+  const result = api.run();
+
+  assert.equal(result.action, null);
+  assert.equal(result.page, false);
 });
 
 test('step 5 clicks continue on post-submit ready page before completing', async () => {

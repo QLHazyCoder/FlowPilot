@@ -6857,6 +6857,9 @@ function findStep5PostSubmitOnboardingAction() {
     if (!text) {
       continue;
     }
+    if (/(?:完成\s*(?:帐户|账户|账号)?\s*创建|创建\s*(?:帐户|账户|账号)|create\s+(?:an\s+)?account|create\s+your\s+account|complete\s+(?:account\s+)?creation|アカウント(?:を)?作成)/i.test(text)) {
+      continue;
+    }
     if (/skip|not\s+now|maybe\s+later|do\s+this\s+later|稍后|以后|跳过|スキップ|後で/i.test(text)) {
       scored.push({ el, score: 1 });
       continue;
