@@ -6843,11 +6843,18 @@ function installStep5NavigationCompletionReporter(completeOnce) {
     });
   };
 
-  window.addEventListener('pagehide', onNavigationStarted, { once: true });
+  const onPageHide = (event) => {
+    onNavigationStarted(event);
+    if (typeof completeOnce === 'function') {
+      completeOnce({ navigationStarted: true, navigationEventType: 'pagehide' });
+    }
+  };
+
+  window.addEventListener('pagehide', onPageHide, { once: true });
   window.addEventListener('beforeunload', onNavigationStarted, { once: true });
 
   return () => {
-    window.removeEventListener('pagehide', onNavigationStarted);
+    window.removeEventListener('pagehide', onPageHide);
     window.removeEventListener('beforeunload', onNavigationStarted);
   };
 }
