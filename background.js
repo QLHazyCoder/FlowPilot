@@ -31,6 +31,7 @@ importScripts(
   'background/ip-proxy-core.js',
   'background/sub2api-api.js',
   'background/cpa-api.js',
+  'background/remote-account-inject-api.js',
   'background/panel-bridge.js',
   'background/registration-email-state.js',
   'core/flow-kernel/workflow-engine.js',
@@ -72,6 +73,7 @@ importScripts(
   'flows/openai/background/steps/paypal-approve.js',
   'flows/openai/background/steps/gopay-approve.js',
   'flows/openai/background/steps/plus-return-confirm.js',
+  'flows/openai/background/steps/remote-account-inject.js',
   'flows/openai/background/steps/sub2api-session-import.js',
   'flows/openai/background/steps/cpa-session-import.js',
   'flows/openai/background/steps/oauth-login.js',
@@ -1293,6 +1295,10 @@ const PERSISTED_SETTING_DEFAULTS = {
   ipProxyRegion: '',
   codex2apiUrl: DEFAULT_CODEX2API_URL,
   codex2apiAdminKey: '',
+  remoteAccountInjectUrl: '',
+  remoteAccountInjectAdminKey: '',
+  grokRemoteAccountInjectUrl: '',
+  grokRemoteAccountInjectAdminKey: '',
   customPassword: '',
   plusModeEnabled: false,
   plusPaymentMethod: DEFAULT_PLUS_PAYMENT_METHOD,
@@ -1465,6 +1471,10 @@ const SETTINGS_SCHEMA_VIEW_KEYS = Object.freeze([
   'sub2apiDefaultProxyName',
   'codex2apiUrl',
   'codex2apiAdminKey',
+  'remoteAccountInjectUrl',
+  'remoteAccountInjectAdminKey',
+  'grokRemoteAccountInjectUrl',
+  'grokRemoteAccountInjectAdminKey',
   'customPassword',
   'signupMethod',
   'phoneVerificationEnabled',
@@ -3249,6 +3259,14 @@ function normalizePersistentSettingValue(key, value) {
       return normalizeCodex2ApiUrl(value);
     case 'codex2apiAdminKey':
       return String(value || '').trim();
+    case 'remoteAccountInjectUrl':
+      return String(value || '').trim();
+    case 'remoteAccountInjectAdminKey':
+      return String(value || '').trim();
+    case 'grokRemoteAccountInjectUrl':
+      return String(value || '').trim();
+    case 'grokRemoteAccountInjectAdminKey':
+      return String(value || '').trim();
     case 'customPassword':
       return String(value || '');
     case 'signupMethod':
@@ -3822,6 +3840,10 @@ function buildSettingsStatePatchFromFlatUpdates(updates = {}) {
   assignIfUpdated('sub2apiDefaultProxyName', ['flows', 'openai', 'targets', 'sub2api', 'sub2apiDefaultProxyName']);
   assignIfUpdated('codex2apiUrl', ['flows', 'openai', 'targets', 'codex2api', 'codex2apiUrl']);
   assignIfUpdated('codex2apiAdminKey', ['flows', 'openai', 'targets', 'codex2api', 'codex2apiAdminKey']);
+  assignIfUpdated('remoteAccountInjectUrl', ['flows', 'openai', 'remoteAccountInjectUrl']);
+  assignIfUpdated('remoteAccountInjectAdminKey', ['flows', 'openai', 'remoteAccountInjectAdminKey']);
+  assignIfUpdated('grokRemoteAccountInjectUrl', ['flows', 'grok', 'grokRemoteAccountInjectUrl']);
+  assignIfUpdated('grokRemoteAccountInjectAdminKey', ['flows', 'grok', 'grokRemoteAccountInjectAdminKey']);
   assignIfUpdated('customPassword', ['services', 'account', 'customPassword']);
   assignIfUpdated('signupMethod', ['flows', 'openai', 'signup', 'signupMethod']);
   assignIfUpdated('phoneVerificationEnabled', ['flows', 'openai', 'signup', 'phoneVerificationEnabled']);
@@ -9379,7 +9401,7 @@ function isRestartCurrentAttemptError(error) {
     return loggingStatus.isRestartCurrentAttemptError(error);
   }
   const message = String(typeof error === 'string' ? error : error?.message || '');
-  return /当前邮箱已存在，需要重新开始新一轮|SIGNUP_PHONE_PASSWORD_MISMATCH::/i.test(message);
+  return /当前邮箱已存在，需要重新开始新一轮|SIGNUP_PHONE_PASSWORD_MISMATCH::|GROK_RESTART_CURRENT_ATTEMPT::/i.test(message);
 }
 
 function isSignupPhonePasswordMismatchFailure(error) {
@@ -10913,6 +10935,7 @@ const AUTO_RUN_BACKGROUND_COMPLETED_STEP_KEYS = new Set([
   'plus-checkout-return',
   'sub2api-session-import',
   'cpa-session-import',
+  'remote-account-inject',
   'oauth-login',
   'fetch-login-code',
   'post-login-phone-verification',
@@ -10936,6 +10959,7 @@ const AUTO_RUN_BACKGROUND_COMPLETED_STEP_KEYS = new Set([
   'grok-submit-verification-code',
   'grok-submit-profile',
   'grok-extract-sso-cookie',
+  'grok-remote-sso-inject',
 ]);
 const STEP_COMPLETION_SIGNAL_STEP_KEYS = new Set([
   'fill-password',
@@ -12034,6 +12058,7 @@ const AUTO_RUN_NODE_DELAYS = Object.freeze({
   'gopay-subscription-confirm': 2000,
   'paypal-approve': 2000,
   'plus-checkout-return': 1000,
+  'remote-account-inject': 0,
   'sub2api-session-import': 0,
   'cpa-session-import': 0,
   'oauth-login': 2000,
@@ -13914,6 +13939,20 @@ const cpaSessionImportExecutor = self.MultiPageBackgroundCpaSessionImport?.creat
   throwIfStopped,
   waitForTabCompleteUntilStopped,
 });
+const remoteAccountInjectExecutor = self.MultiPageBackgroundRemoteAccountInject?.createRemoteAccountInjectExecutor({
+  addLog,
+  chrome,
+  completeNodeFromBackground,
+  ensureContentScriptReadyOnTabUntilStopped,
+  fetchImpl: typeof fetch === 'function' ? fetch.bind(globalThis) : null,
+  getTabId,
+  isTabAlive,
+  registerTab,
+  sendTabMessageUntilStopped,
+  sleepWithStop,
+  throwIfStopped,
+  waitForTabCompleteUntilStopped,
+});
 const kiroRegisterRunner = self.MultiPageBackgroundKiroRegisterRunner?.createKiroRegisterRunner({
   addLog,
   chrome,
@@ -13943,6 +13982,7 @@ const grokRegisterRunner = self.MultiPageBackgroundGrokRegisterRunner?.createGro
   chrome,
   ensureContentScriptReadyOnTab,
   completeNodeFromBackground,
+  fetchImpl: typeof fetch === 'function' ? fetch.bind(globalThis) : null,
   generatePassword,
   generateRandomName,
   getTabId,
@@ -14089,6 +14129,7 @@ const stepExecutorsByKey = {
     ? goPayApproveExecutor.executeGoPayApprove(state)
     : payPalApproveExecutor.executePayPalApprove(state),
   'plus-checkout-return': (state) => plusReturnConfirmExecutor.executePlusReturnConfirm(state),
+  'remote-account-inject': (state) => remoteAccountInjectExecutor.executeRemoteAccountInject(state),
   'sub2api-session-import': (state) => sub2ApiSessionImportExecutor.executeSub2ApiSessionImport(state),
   'cpa-session-import': (state) => cpaSessionImportExecutor.executeCpaSessionImport(state),
   'oauth-login': (state) => step7Executor.executeStep7(state),
@@ -14115,6 +14156,7 @@ const stepExecutorsByKey = {
   'grok-submit-verification-code': (state) => grokRegisterRunner.executeGrokSubmitVerificationCode(state),
   'grok-submit-profile': (state) => grokRegisterRunner.executeGrokSubmitProfile(state),
   'grok-extract-sso-cookie': (state) => grokRegisterRunner.executeGrokExtractSsoCookie(state),
+  'grok-remote-sso-inject': (state) => grokRegisterRunner.executeGrokRemoteSsoInject(state),
 };
 const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter({
   addLog,

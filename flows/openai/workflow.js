@@ -11,6 +11,7 @@
   const PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH = 'oauth';
   const PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION = 'sub2api_codex_session';
   const PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION = 'cpa_codex_session';
+  const REMOTE_ACCOUNT_INJECT_STEP_KEY = 'remote-account-inject';
   const PLUS_PAYMENT_STEP_KEY = 'paypal-approve';
   const PLUS_REGISTRATION_WAIT_STEP_KEY = 'wait-registration-success';
 
@@ -3032,6 +3033,29 @@
     return steps.filter((step) => !PLUS_PAYMENT_CHAIN_STEP_KEYS.includes(String(step?.key || '').trim()));
   }
 
+  function insertRemoteAccountInjectStep(steps = []) {
+    if (!Array.isArray(steps) || steps.some((step) => step.key === REMOTE_ACCOUNT_INJECT_STEP_KEY)) {
+      return steps;
+    }
+    const registrationWaitIndex = steps.findIndex((step) => step.key === PLUS_REGISTRATION_WAIT_STEP_KEY);
+    const oauthLoginIndex = steps.findIndex((step) => step.key === 'oauth-login');
+    if (registrationWaitIndex < 0 || oauthLoginIndex < 0 || registrationWaitIndex >= oauthLoginIndex) {
+      return steps;
+    }
+    const sourceStep = steps[registrationWaitIndex] || {};
+    const remoteStep = {
+      id: Number(sourceStep.id) + 1,
+      order: Number(sourceStep.order) + 5,
+      key: REMOTE_ACCOUNT_INJECT_STEP_KEY,
+      title: '远程注入 Access Token',
+      sourceId: 'plus-checkout',
+      driverId: 'flows/openai/background/steps/remote-account-inject',
+      command: REMOTE_ACCOUNT_INJECT_STEP_KEY,
+      flowId: 'openai',
+    };
+    return steps.flatMap((step, index) => (index === registrationWaitIndex ? [step, remoteStep] : [step]));
+  }
+
   function reindexModeStepDefinitions(steps = []) {
     return (Array.isArray(steps) ? steps : []).map((step, index) => ({
       ...step,
@@ -3200,6 +3224,7 @@
     if (isPlusMode) {
       steps = insertPlusRegistrationWaitStep(steps);
     }
+    steps = insertRemoteAccountInjectStep(steps);
     if (
       isPlusMode
       && normalizePlusPaymentMethod(options?.plusPaymentMethod || options?.paymentMethod) === PLUS_PAYMENT_METHOD_NONE
@@ -3212,9 +3237,11 @@
   function getAllSteps() {
     const keyed = new Map();
     Object.entries(STEP_VARIANTS).forEach(([variantKey, steps]) => {
-      const variantSteps = String(variantKey || '').startsWith('plus')
-        ? insertPlusRegistrationWaitStep(steps)
-        : steps;
+      const variantSteps = insertRemoteAccountInjectStep(
+        String(variantKey || '').startsWith('plus')
+          ? insertPlusRegistrationWaitStep(steps)
+          : steps
+      );
       reindexModeStepDefinitions(variantSteps).forEach((step) => {
         keyed.set(`${step.id}:${step.key}`, step);
       });

@@ -26,7 +26,7 @@ test('flow registry exposes canonical flow and target metadata', () => {
   assert.equal(flowRegistry.normalizeTargetId('grok', 'anything-else'), 'webchat2api');
   assert.deepEqual(
     flowRegistry.getVisibleGroupIds('openai', 'cpa'),
-    ['openai-plus', 'openai-phone', 'openai-oauth', 'openai-step6', 'openai-target-cpa', 'service-account', 'service-email', 'service-proxy']
+    ['openai-plus', 'openai-phone', 'openai-oauth', 'openai-step6', 'openai-remote-account-inject', 'openai-target-cpa', 'service-account', 'service-email', 'service-proxy']
   );
   assert.deepEqual(
     flowRegistry.getVisibleGroupIds('kiro', 'kiro-rs'),
@@ -47,6 +47,10 @@ test('flow registry exposes canonical flow and target metadata', () => {
   assert.deepEqual(
     flowRegistry.getSettingsGroupDefinition('openai-plus')?.rowIds,
     ['row-plus-mode', 'row-plus-account-access-strategy', 'row-plus-payment-method']
+  );
+  assert.deepEqual(
+    flowRegistry.getSettingsGroupDefinition('openai-remote-account-inject')?.rowIds,
+    ['row-remote-account-inject-url', 'row-remote-account-inject-admin-key']
   );
   assert.equal(flowRegistry.getPublicationTargetDefinition('kiro', 'kiro-rs')?.label, 'kiro.rs');
   assert.equal(flowRegistry.getFlowCapabilities('openai').supportsAccountContribution, true);
@@ -78,6 +82,10 @@ test('settings schema normalizes view input into canonical nested namespaces', (
     plusAccountAccessStrategy: 'sub2api_codex_session',
     kiroRsUrl: 'https://kiro.example.com/admin',
     kiroRsKey: 'secret-key',
+    remoteAccountInjectUrl: 'https://remote.example.com',
+    remoteAccountInjectAdminKey: 'remote-admin',
+    grokRemoteAccountInjectUrl: 'https://grok-remote.example.com',
+    grokRemoteAccountInjectAdminKey: 'grok-admin',
     stepExecutionRangeByFlow: {
       openai: { enabled: true, fromStep: 2, toStep: 9 },
       kiro: { enabled: true, fromStep: 1, toStep: 9 },
@@ -95,6 +103,15 @@ test('settings schema normalizes view input into canonical nested namespaces', (
   assert.equal(normalized.flows.grok.selectedTargetId, 'webchat2api');
   assert.equal(normalized.flows.kiro.targets['kiro-rs'].baseUrl, 'https://kiro.example.com/admin');
   assert.equal(normalized.flows.kiro.targets['kiro-rs'].apiKey, 'secret-key');
+  assert.equal(normalized.flows.openai.remoteAccountInjectUrl, 'https://remote.example.com');
+  assert.equal(normalized.flows.openai.remoteAccountInjectAdminKey, 'remote-admin');
+  assert.equal(normalized.flows.grok.grokRemoteAccountInjectUrl, 'https://grok-remote.example.com');
+  assert.equal(normalized.flows.grok.grokRemoteAccountInjectAdminKey, 'grok-admin');
+  const view = schema.buildSettingsView(normalized);
+  assert.equal(view.remoteAccountInjectUrl, 'https://remote.example.com');
+  assert.equal(view.remoteAccountInjectAdminKey, 'remote-admin');
+  assert.equal(view.grokRemoteAccountInjectUrl, 'https://grok-remote.example.com');
+  assert.equal(view.grokRemoteAccountInjectAdminKey, 'grok-admin');
   assert.deepEqual(normalized.flows.kiro.autoRun.stepExecutionRange, {
     enabled: true,
     fromStep: 1,
@@ -153,7 +170,7 @@ test('settings schema can project canonical state into a read view without legac
   assert.deepEqual(view.stepExecutionRangeByFlow.grok, {
     enabled: false,
     fromStep: 1,
-    toStep: 5,
+    toStep: 6,
   });
 });
 

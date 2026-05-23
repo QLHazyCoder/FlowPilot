@@ -39,7 +39,12 @@ test('background imports node registry and wires the rebuilt Kiro executors', ()
   assert.match(source, /'grok-submit-email': \(state\) => grokRegisterRunner\.executeGrokSubmitEmail\(state\)/);
   assert.match(source, /'grok-submit-verification-code': \(state\) => grokRegisterRunner\.executeGrokSubmitVerificationCode\(state\)/);
   assert.match(source, /'grok-submit-profile': \(state\) => grokRegisterRunner\.executeGrokSubmitProfile\(state\)/);
+  assert.match(source, /background\/remote-account-inject-api\.js/);
+  assert.match(source, /flows\/openai\/background\/steps\/remote-account-inject\.js/);
+  assert.match(source, /'remote-account-inject': \(state\) => remoteAccountInjectExecutor\.executeRemoteAccountInject\(state\)/);
+  assert.match(source, /'wait-registration-success',[\s\S]*'remote-account-inject',[\s\S]*'oauth-login'/);
   assert.match(source, /'grok-extract-sso-cookie': \(state\) => grokRegisterRunner\.executeGrokExtractSsoCookie\(state\)/);
+  assert.match(source, /'grok-remote-sso-inject': \(state\) => grokRegisterRunner\.executeGrokRemoteSsoInject\(state\)/);
 
   assert.match(
     source,
@@ -47,7 +52,7 @@ test('background imports node registry and wires the rebuilt Kiro executors', ()
   );
   assert.match(
     source,
-    /'grok-open-signup-page',[\s\S]*'grok-submit-email',[\s\S]*'grok-submit-verification-code',[\s\S]*'grok-submit-profile',[\s\S]*'grok-extract-sso-cookie'/
+    /'grok-open-signup-page',[\s\S]*'grok-submit-email',[\s\S]*'grok-submit-verification-code',[\s\S]*'grok-submit-profile',[\s\S]*'grok-extract-sso-cookie',[\s\S]*'grok-remote-sso-inject'/
   );
 });
 

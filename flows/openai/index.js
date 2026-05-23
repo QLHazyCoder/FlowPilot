@@ -47,7 +47,8 @@
     "openai-plus",
     "openai-phone",
     "openai-oauth",
-    "openai-step6"
+    "openai-step6",
+    "openai-remote-account-inject"
   ],
   "targets": {
     "cpa": {
@@ -266,6 +267,12 @@
     }
   },
   "driverDefinitions": {
+    "flows/openai/background/steps/remote-account-inject": {
+      "sourceId": "plus-checkout",
+      "commands": [
+        "remote-account-inject"
+      ]
+    },
     "flows/openai/content/openai-auth": {
       "sourceId": "openai-auth",
       "commands": [
@@ -391,6 +398,14 @@
       "label": "第六步",
       "rowIds": [
         "row-step6-cookie-settings"
+      ]
+    },
+    "openai-remote-account-inject": {
+      "id": "openai-remote-account-inject",
+      "label": "远程账号注入",
+      "rowIds": [
+        "row-remote-account-inject-url",
+        "row-remote-account-inject-admin-key"
       ]
     }
   },

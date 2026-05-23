@@ -195,6 +195,10 @@
       );
       const base = {
         selectedTargetId: defaultTargetId,
+        ...(flowId === 'grok' ? {
+          grokRemoteAccountInjectUrl: '',
+          grokRemoteAccountInjectAdminKey: '',
+        } : {}),
         targets: buildDefaultTargets(flowId),
         autoRun: {
           stepExecutionRange: getDefaultStepExecutionRange(flowId),
@@ -202,6 +206,8 @@
       };
       if (flowId === 'openai') {
         return mergePlainObjects(base, {
+          remoteAccountInjectUrl: '',
+          remoteAccountInjectAdminKey: '',
           signup: {
             signupMethod: 'email',
             phoneVerificationEnabled: false,
@@ -293,6 +299,20 @@
           ...targetState,
           baseUrl: String(targetState.baseUrl ?? defaultKiroRsUrl).trim() || defaultKiroRsUrl,
           apiKey: String(targetState.apiKey ?? ''),
+        };
+      }
+      if (flowId === 'openai') {
+        return {
+          ...targetState,
+          remoteAccountInjectUrl: String(targetState.remoteAccountInjectUrl ?? '').trim(),
+          remoteAccountInjectAdminKey: String(targetState.remoteAccountInjectAdminKey ?? '').trim(),
+        };
+      }
+      if (flowId === 'grok') {
+        return {
+          ...targetState,
+          grokRemoteAccountInjectUrl: String(targetState.grokRemoteAccountInjectUrl ?? '').trim(),
+          grokRemoteAccountInjectAdminKey: String(targetState.grokRemoteAccountInjectAdminKey ?? '').trim(),
         };
       }
       return targetState;
@@ -398,6 +418,16 @@
       };
       return {
         ...currentFlow,
+        remoteAccountInjectUrl: String(
+          input?.remoteAccountInjectUrl
+          ?? currentFlow.remoteAccountInjectUrl
+          ?? defaults.flows.openai.remoteAccountInjectUrl
+        ).trim(),
+        remoteAccountInjectAdminKey: String(
+          input?.remoteAccountInjectAdminKey
+          ?? currentFlow.remoteAccountInjectAdminKey
+          ?? defaults.flows.openai.remoteAccountInjectAdminKey
+        ).trim(),
         targets: {
           ...currentFlow.targets,
           cpa: normalizeFlowTargetState('openai', 'cpa', cpaSource, defaults.flows.openai.targets.cpa),
@@ -537,6 +567,23 @@
       if (normalized.flows.kiro) {
         normalized.flows.kiro = normalizeKiroSettings(input, defaults, normalized.flows.kiro);
       }
+      if (normalized.flows.grok) {
+        normalized.flows.grok = {
+          ...normalized.flows.grok,
+          grokRemoteAccountInjectUrl: String(
+            input?.grokRemoteAccountInjectUrl
+            ?? normalized.flows.grok.grokRemoteAccountInjectUrl
+            ?? defaults.flows.grok?.grokRemoteAccountInjectUrl
+            ?? ''
+          ).trim(),
+          grokRemoteAccountInjectAdminKey: String(
+            input?.grokRemoteAccountInjectAdminKey
+            ?? normalized.flows.grok.grokRemoteAccountInjectAdminKey
+            ?? defaults.flows.grok?.grokRemoteAccountInjectAdminKey
+            ?? ''
+          ).trim(),
+        };
+      }
       return normalized;
     }
 
@@ -601,6 +648,7 @@
       };
       const openaiState = normalizedState.flows.openai || buildDefaultFlowSettings('openai');
       const kiroState = normalizedState.flows.kiro || buildDefaultFlowSettings('kiro');
+      const grokState = normalizedState.flows.grok || buildDefaultFlowSettings('grok');
       next.activeFlowId = normalizedState.activeFlowId;
       next.targetId = getSelectedTargetId(normalizedState, normalizedState.activeFlowId);
       next.vpsUrl = openaiState.targets.cpa?.vpsUrl || '';
@@ -615,6 +663,10 @@
       next.sub2apiDefaultProxyName = openaiState.targets.sub2api?.sub2apiDefaultProxyName || '';
       next.codex2apiUrl = openaiState.targets.codex2api?.codex2apiUrl || '';
       next.codex2apiAdminKey = openaiState.targets.codex2api?.codex2apiAdminKey || '';
+      next.remoteAccountInjectUrl = openaiState.remoteAccountInjectUrl || '';
+      next.remoteAccountInjectAdminKey = openaiState.remoteAccountInjectAdminKey || '';
+      next.grokRemoteAccountInjectUrl = grokState.grokRemoteAccountInjectUrl || '';
+      next.grokRemoteAccountInjectAdminKey = grokState.grokRemoteAccountInjectAdminKey || '';
       next.customPassword = normalizedState.services.account.customPassword;
       next.signupMethod = openaiState.signup?.signupMethod || 'email';
       next.phoneVerificationEnabled = Boolean(openaiState.signup?.phoneVerificationEnabled);

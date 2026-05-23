@@ -197,4 +197,6 @@ test('shared source registry exposes canonical Kiro sources and drivers', () => 
   assert.equal(registry.driverAcceptsCommand('flows/kiro/background/publisher-kiro-rs', 'kiro-upload-credential'), true);
   assert.equal(registry.driverAcceptsCommand('flows/grok/content/register-page', 'grok-submit-profile'), true);
   assert.equal(registry.driverAcceptsCommand('flows/grok/background/register-runner', 'grok-extract-sso-cookie'), true);
+  assert.equal(registry.driverAcceptsCommand('flows/grok/background/register-runner', 'grok-remote-sso-inject'), true);
+  assert.equal(registry.driverAcceptsCommand('flows/openai/background/steps/remote-account-inject', 'remote-account-inject'), true);
 });
