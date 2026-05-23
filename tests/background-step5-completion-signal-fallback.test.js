@@ -289,6 +289,7 @@ return {
   assert.equal(result.successState, 'logged_in_home');
   assert.equal(result.recoveredByBackground, true);
   assert.equal(result.url, 'https://chatgpt.com/');
+  assert.equal(result.requireContentStateBeforeUrlSuccess, true);
   assert.equal(snapshot.promptAdvanceCount, 3);
   assert.equal(snapshot.waitCalls.length, 3);
   assert.deepStrictEqual(snapshot.completions, [
@@ -303,6 +304,7 @@ return {
       'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
       'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
       'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
+      'GET_STEP5_SUBMIT_STATE',
     ]
   );
   assert.equal(

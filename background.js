@@ -11308,6 +11308,7 @@ async function recoverFillProfileCompletionFromBackground(executeError = null) {
     step: 5,
     outcome: 'background_transport_recovered',
     navigationStarted: true,
+    requireContentStateBeforeUrlSuccess: true,
     retryableTransportError: transportMessage,
   };
   const pageState = await validateStep5PostCompletion(signupTabId, completionPayload);
@@ -15268,7 +15269,7 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
       }
     }
 
-    if (currentUrl && isStep5CompletionChatgptUrl(currentUrl)) {
+    if (!completionPayload?.requireContentStateBeforeUrlSuccess && currentUrl && isStep5CompletionChatgptUrl(currentUrl)) {
       await debugLog('后台确认已进入 chatgpt.com 且没有待处理的注册后弹窗，步骤 5 完成。', {
         completionOutcome: String(completionPayload?.outcome || '').trim(),
         completionUrl: String(completionPayload?.url || '').trim(),
