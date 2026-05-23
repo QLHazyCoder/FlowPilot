@@ -6808,8 +6808,9 @@ function getStep5PostSubmitSuccessState() {
   return null;
 }
 
-function isStep5PostSubmitOnboardingPage() {
-  if (isStep5ProfileStillVisible()) {
+function isStep5PostSubmitOnboardingPage(options = {}) {
+  const allowProfileVisiblePrompt = Boolean(options?.allowProfileVisiblePrompt);
+  if (!allowProfileVisiblePrompt && isStep5ProfileStillVisible()) {
     return false;
   }
 
@@ -6869,8 +6870,8 @@ function findStep5PostSubmitOnboardingAction() {
   return scored[0]?.el || null;
 }
 
-async function advanceStep5PostSubmitOnboardingPage() {
-  if (!isStep5PostSubmitOnboardingPage()) {
+async function advanceStep5PostSubmitOnboardingPage(options = {}) {
+  if (!isStep5PostSubmitOnboardingPage(options)) {
     return false;
   }
 
@@ -7049,7 +7050,7 @@ async function waitForStep5SubmitOutcome(options = {}) {
       return successState;
     }
 
-    if (await advanceStep5PostSubmitOnboardingPage()) {
+    if (await advanceStep5PostSubmitOnboardingPage({ allowProfileVisiblePrompt: true })) {
       lastSubmitClickAt = Date.now();
       continue;
     }

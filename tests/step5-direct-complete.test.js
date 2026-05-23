@@ -1124,6 +1124,84 @@ return {
   assert.deepStrictEqual(api.snapshot().clicks, ['Skip for now']);
 });
 
+test('step 5 skips post-submit prompt when about-you url remains visible', async () => {
+  const api = new Function(`
+let now = 0;
+const clicks = [];
+const skipButton = {
+  textContent: '跳过',
+  hidden: false,
+  disabled: false,
+  getAttribute(name) {
+    if (name === 'aria-disabled') return 'false';
+    return '';
+  },
+};
+const location = {
+  href: 'https://auth.openai.com/about-you',
+};
+const document = {
+  body: {
+    innerText: '欢迎使用 ChatGPT 你可以稍后完成这些设置 跳过',
+  },
+  querySelector(selector) {
+    if (selector === 'button[type="submit"]') return null;
+    return null;
+  },
+  querySelectorAll(selector) {
+    if (selector === 'button, [role="button"], a, [role="link"], input[type="button"], input[type="submit"]') {
+      return [skipButton];
+    }
+    return [];
+  },
+};
+
+function throwIfStopped() {}
+function log() {}
+async function sleep(ms = 0) { now += ms || 250; }
+async function humanPause() {}
+function simulateClick(el) {
+  clicks.push(el?.textContent || 'clicked');
+  location.href = 'https://chatgpt.com/';
+  document.body.innerText = 'ChatGPT';
+}
+function isVisibleElement(el) { return Boolean(el) && !el.hidden; }
+function isActionEnabled(el) { return Boolean(el) && !el.disabled && el.getAttribute?.('aria-disabled') !== 'true'; }
+function getActionText(el) { return el?.textContent || ''; }
+function getSignupAuthRetryPathPatterns() { return []; }
+function getAuthTimeoutErrorPageState() { return null; }
+async function recoverCurrentAuthRetryPage() { throw new Error('should not recover retry page'); }
+function createSignupUserAlreadyExistsError() { return new Error('user already exists'); }
+function createAuthMaxCheckAttemptsError() { return new Error('max_check_attempts'); }
+function getStep5ErrorText() { return ''; }
+function getPageTextSnapshot() { return document.body.innerText; }
+function isStep5Ready() { return true; }
+function isLikelyLoggedInChatgptHomeUrl() { return location.href === 'https://chatgpt.com/'; }
+function isOAuthConsentPage() { return false; }
+function isAddPhonePageReady() { return false; }
+
+${extractFunction('isSignupProfilePageUrl')}
+${getStep5OutcomeBundle()}
+
+return {
+  run() {
+    return waitForStep5SubmitOutcome({ timeoutMs: 3000, maxSubmitClicks: 1 });
+  },
+  snapshot() {
+    return { clicks, now };
+  },
+};
+`)();
+
+  const result = await api.run();
+
+  assert.deepStrictEqual(result, {
+    state: 'logged_in_home',
+    url: 'https://chatgpt.com/',
+  });
+  assert.deepStrictEqual(api.snapshot().clicks, ['跳过']);
+});
+
 test('step 5 clicks continue on post-submit ready page before completing', async () => {
   const api = new Function(`
 let now = 0;
