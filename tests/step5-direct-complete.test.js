@@ -1357,7 +1357,7 @@ const buttons = [
     },
   },
   {
-    textContent: '继续',
+    textContent: '同意',
     hidden: false,
     disabled: false,
     getAttribute(name) {
@@ -1371,7 +1371,7 @@ const location = {
 };
 const document = {
   body: {
-    innerText: '欢迎使用 ChatGPT 跳过',
+    innerText: '是什么促使你使用 ChatGPT？ 我们会利用这些信息提出一些可能会对你有用的建议。 学校 工作 个人任务 乐趣和娱乐 其他 下一步 跳过',
   },
   querySelector() { return null; },
   querySelectorAll(selector) {
@@ -1390,7 +1390,7 @@ function simulateClick(el) {
   clicks.push(el?.textContent || 'clicked');
   promptIndex += 1;
   document.body.innerText = promptIndex === 1
-    ? '你已准备就绪 ChatGPT 可能会犯错 继续'
+    ? '继续操作即表示你同意我们的条款，并已阅读我们的隐私政策。同意'
     : 'ChatGPT';
 }
 function isVisibleElement(el) { return Boolean(el) && !el.hidden; }
@@ -1427,7 +1427,7 @@ return {
     state: 'logged_in_home',
     url: 'https://chatgpt.com/',
   });
-  assert.deepStrictEqual(api.snapshot().clicks, ['跳过', '继续']);
+  assert.deepStrictEqual(api.snapshot().clicks, ['跳过', '同意']);
 });
 
 test('step 5 clicks agree on post-submit terms prompt before completing', async () => {
