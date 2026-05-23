@@ -445,6 +445,13 @@ test('HeroSMS operator startup paths only set value without loading options', ()
   assert.match(sidepanelSource, /selectHeroSmsOperator\?\.addEventListener\('pointerdown',/);
 });
 
+test('HeroSMS operator change syncs latest state before autosave', () => {
+  assert.match(
+    sidepanelSource,
+    /selectHeroSmsOperator\?\.addEventListener\('change',[\s\S]*?syncLatestState\(\{ heroSmsOperator: nextOperator \}\);[\s\S]*?saveSettings\(\{ silent: true \}\)/
+  );
+});
+
 test('sidepanel source wires free reusable phone save and clear actions to runtime messages', () => {
   assert.match(sidepanelSource, /const inputFreePhoneReuseEnabled = document\.getElementById\('input-free-phone-reuse-enabled'\);/);
   assert.match(sidepanelSource, /const inputFreePhoneReuseAutoEnabled = document\.getElementById\('input-free-phone-reuse-auto-enabled'\);/);

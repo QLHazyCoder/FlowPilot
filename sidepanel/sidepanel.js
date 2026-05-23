@@ -17097,7 +17097,9 @@ selectHeroSmsAcquirePriority?.addEventListener('change', () => {
   saveSettings({ silent: true }).catch(() => { });
 });
 selectHeroSmsOperator?.addEventListener('change', () => {
-  selectHeroSmsOperator.value = normalizeHeroSmsOperatorValue(selectHeroSmsOperator.value);
+  const nextOperator = normalizeHeroSmsOperatorValue(selectHeroSmsOperator.value);
+  selectHeroSmsOperator.value = nextOperator;
+  syncLatestState({ heroSmsOperator: nextOperator });
   markSettingsDirty(true);
   saveSettings({ silent: true }).catch(() => { });
 });

@@ -2135,6 +2135,28 @@
       };
     }
 
+    async function mergeLatestPhoneSettingsState(state = {}) {
+      if (typeof getState !== 'function') {
+        return state || {};
+      }
+      try {
+        const latestState = await getState();
+        if (!latestState || typeof latestState !== 'object') {
+          return state || {};
+        }
+        return {
+          ...latestState,
+          ...(state || {}),
+          heroSmsOperator: normalizeHeroSmsOperator(
+            state?.heroSmsOperator,
+            latestState?.heroSmsOperator || DEFAULT_HERO_SMS_OPERATOR
+          ),
+        };
+      } catch (_) {
+        return state || {};
+      }
+    }
+
     function parseActivationPayload(payload, fallback = null) {
       const normalizedFallback = normalizeActivation(fallback) || normalizeActivationFallback(fallback);
       const directActivation = normalizeActivation(payload);
@@ -3606,6 +3628,7 @@
     }
 
     async function requestPhoneActivation(state = {}, options = {}) {
+      state = await mergeLatestPhoneSettingsState(state);
       if (normalizePhoneSmsProvider(state?.phoneSmsProvider) === PHONE_SMS_PROVIDER_FIVE_SIM) {
         const provider = getFiveSimProviderForState(state);
         if (provider) {
@@ -5123,6 +5146,7 @@
     }
 
     async function acquirePhoneActivation(state = {}, options = {}) {
+      state = await mergeLatestPhoneSettingsState(state);
       const provider = normalizePhoneSmsProvider(state?.phoneSmsProvider || DEFAULT_PHONE_SMS_PROVIDER);
       const providerOrder = resolvePhoneProviderOrder(state, provider);
       const countryCandidates = resolveCountryCandidatesForProvider(state, provider);
