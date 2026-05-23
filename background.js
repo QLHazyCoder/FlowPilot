@@ -15132,28 +15132,112 @@ async function getStep5SubmitStateFromContent(options = {}) {
 }
 
 async function advanceStep5PostSubmitPromptOnTab(options = {}) {
-  const result = await sendToContentScriptResilient(
-    'openai-auth',
-    {
-      type: 'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
-      source: 'background',
-      payload: {},
-    },
-    {
-      timeoutMs: options.timeoutMs ?? 15000,
-      retryDelayMs: options.retryDelayMs ?? 600,
-      responseTimeoutMs: options.responseTimeoutMs ?? (options.timeoutMs ?? 15000),
-      logMessage: options.logMessage || '步骤 5：正在检查注册完成后的弹窗按钮...',
-      logStep: 5,
-      logStepKey: options.logStepKey || 'fill-profile',
-    }
-  );
+  try {
+    const result = await sendToContentScriptResilient(
+      'openai-auth',
+      {
+        type: 'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
+        source: 'background',
+        payload: {},
+      },
+      {
+        timeoutMs: options.timeoutMs ?? 15000,
+        retryDelayMs: options.retryDelayMs ?? 600,
+        responseTimeoutMs: options.responseTimeoutMs ?? (options.timeoutMs ?? 15000),
+        logMessage: options.logMessage || '步骤 5：正在检查注册完成后的弹窗按钮...',
+        logStep: 5,
+        logStepKey: options.logStepKey || 'fill-profile',
+      }
+    );
 
-  if (result?.error) {
-    throw new Error(result.error);
+    if (result?.error) {
+      throw new Error(result.error);
+    }
+
+    if (result?.advanced) {
+      return result;
+    }
+  } catch (error) {
+    await addLog(`步骤 5：页面脚本处理注册后弹窗未返回，改用后台兜底点击。${getErrorMessage(error)}`, 'warn', {
+      step: 5,
+      stepKey: options.logStepKey || 'fill-profile',
+    });
   }
 
-  return result || {};
+  const tabId = Number.isInteger(options.tabId)
+    ? options.tabId
+    : await getTabId('openai-auth').catch(() => null);
+  if (!Number.isInteger(tabId)) {
+    return { advanced: false };
+  }
+
+  try {
+    const executionResults = await chrome.scripting.executeScript({
+      target: { tabId },
+      world: 'ISOLATED',
+      func: () => {
+        const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+        const isVisible = (el) => {
+          if (!el || el.hidden) return false;
+          const rect = typeof el.getBoundingClientRect === 'function' ? el.getBoundingClientRect() : null;
+          if (rect && rect.width <= 0 && rect.height <= 0) return false;
+          const style = typeof getComputedStyle === 'function' ? getComputedStyle(el) : null;
+          return !(style && (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0'));
+        };
+        const isEnabled = (el) => Boolean(el)
+          && !el.disabled
+          && el.getAttribute?.('aria-disabled') !== 'true'
+          && el.getAttribute?.('data-disabled') !== 'true';
+        const getText = (el) => normalize([
+          el?.innerText,
+          el?.textContent,
+          el?.value,
+          el?.getAttribute?.('aria-label'),
+          el?.getAttribute?.('title'),
+          el?.getAttribute?.('data-testid'),
+          el?.getAttribute?.('data-dd-action-name'),
+        ].filter(Boolean).join(' '));
+        const pageText = normalize(document.body?.innerText || document.documentElement?.innerText || '');
+        const looksLikePostSubmitPrompt = /(?:是什么促使你使用\s*chatgpt|我们会利用这些信息|學校|学校|工作|个人任务|乐趣和娱乐|其他|你已准备就绪|可能会犯错|继续操作即表示你同意|条款|隐私政策|跳过|下一步|继续|同意|what\s+brings\s+you\s+to\s+chatgpt|you(?:'|’)re\s+all\s+set|continue|skip|agree)/i.test(pageText);
+        if (!looksLikePostSubmitPrompt) {
+          return { advanced: false, reason: 'prompt_not_detected', pageText: pageText.slice(0, 300) };
+        }
+
+        const candidates = Array.from(document.querySelectorAll('button, [role="button"], a, [role="link"], input[type="button"], input[type="submit"]'))
+          .filter((el) => isVisible(el) && isEnabled(el))
+          .map((el) => ({ el, text: getText(el) }))
+          .filter(({ text }) => text && !/(?:完成\s*(?:帐户|账户|账号)?\s*创建|创建\s*(?:帐户|账户|账号)|create\s+(?:an\s+)?account|create\s+your\s+account|complete\s+(?:account\s+)?creation)/i.test(text));
+
+        const exactSkip = candidates.find(({ text }) => /^(?:跳过|稍后|以后|skip|not\s+now|maybe\s+later)$/i.test(text));
+        const looseSkip = candidates.find(({ text }) => /(?:跳过|稍后|以后|skip|not\s+now|maybe\s+later)/i.test(text));
+        const exactContinue = candidates.find(({ text }) => /^(?:继续|下一步|同意|确认|知道了|我知道了|好的|continue|next|agree|accept|confirm|got\s+it|ok|okay|done|finish)$/i.test(text));
+        const looseContinue = candidates.find(({ text }) => /(?:继续|下一步|同意|确认|知道了|我知道了|好的|continue|next|agree|accept|confirm|got\s+it|ok|okay|done|finish)/i.test(text));
+        const target = exactSkip || looseSkip || exactContinue || looseContinue;
+        if (!target?.el) {
+          return { advanced: false, reason: 'button_not_found', buttons: candidates.map(({ text }) => text).slice(0, 20), pageText: pageText.slice(0, 300) };
+        }
+
+        target.el.scrollIntoView?.({ behavior: 'instant', block: 'center', inline: 'center' });
+        target.el.focus?.();
+        target.el.click?.();
+        return { advanced: true, actionText: target.text, fallback: true };
+      },
+    });
+    const fallbackResult = executionResults?.[0]?.result || { advanced: false };
+    if (fallbackResult?.advanced) {
+      await addLog(`步骤 5：后台兜底已点击注册后弹窗按钮“${fallbackResult.actionText || '跳过/继续'}”。`, 'warn', {
+        step: 5,
+        stepKey: options.logStepKey || 'fill-profile',
+      });
+    }
+    return fallbackResult || { advanced: false };
+  } catch (error) {
+    await addLog(`步骤 5：后台兜底点击注册后弹窗失败：${getErrorMessage(error)}`, 'warn', {
+      step: 5,
+      stepKey: options.logStepKey || 'fill-profile',
+    });
+    return { advanced: false, error: getErrorMessage(error) };
+  }
 }
 
 async function recoverStep5SubmitRetryPageOnTab(options = {}) {
@@ -15244,6 +15328,7 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
 
     if (postSubmitPromptActionCount < maxPostSubmitPromptActions) {
       const promptResult = await advanceStep5PostSubmitPromptOnTab({
+        tabId,
         timeoutMs: 15000,
         responseTimeoutMs: 15000,
         retryDelayMs: 500,

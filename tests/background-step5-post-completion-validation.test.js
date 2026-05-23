@@ -108,6 +108,10 @@ async function addLog(message, level, meta) {
   logs.push({ message, level, meta });
 }
 
+function getErrorMessage(error) {
+  return error?.message || String(error || '');
+}
+
 async function waitForTabStableComplete() {}
 
 ${extractFunction('parseUrlSafely')}
@@ -179,6 +183,10 @@ async function addLog(message, level, meta) {
   logs.push({ message, level, meta });
 }
 
+function getErrorMessage(error) {
+  return error?.message || String(error || '');
+}
+
 async function waitForTabStableComplete() {}
 
 ${extractFunction('parseUrlSafely')}
@@ -247,6 +255,7 @@ async function sendToContentScriptResilient(source, message) {
 }
 
 async function addLog() {}
+function getErrorMessage(error) { return error?.message || String(error || ''); }
 async function waitForTabStableComplete() {}
 
 ${extractFunction('parseUrlSafely')}
@@ -282,4 +291,92 @@ return {
   );
   assert.equal(snapshot.promptAdvanceCount, 3);
   assert.equal(snapshot.stateReadCount, 0);
+});
+
+test('step 5 post-completion validation falls back to direct button click when content prompt command stalls', async () => {
+  const api = new Function(`
+const messages = [];
+const logs = [];
+const fallbackClicks = [];
+let stateReadCount = 0;
+let fallbackPromptVisible = true;
+const chrome = {
+  tabs: {
+    async get() {
+      return { url: 'https://chatgpt.com/' };
+    },
+  },
+  scripting: {
+    async executeScript(details) {
+      const result = fallbackPromptVisible
+        ? { advanced: true, actionText: '跳过', fallback: true }
+        : { advanced: false, reason: 'prompt_not_detected' };
+      if (result.advanced) {
+        fallbackClicks.push(result.actionText);
+        fallbackPromptVisible = false;
+      }
+      return [{ result }];
+    },
+  },
+};
+
+async function sendToContentScriptResilient(source, message) {
+  messages.push({ source, type: message.type });
+  if (message.type === 'ADVANCE_STEP5_POST_SUBMIT_PROMPT') {
+    throw new Error('message channel is closed');
+  }
+  if (message.type === 'GET_STEP5_SUBMIT_STATE') {
+    stateReadCount += 1;
+    return {
+      retryPage: false,
+      retryEnabled: false,
+      maxCheckAttemptsBlocked: false,
+      userAlreadyExistsBlocked: false,
+      successState: 'logged_in_home',
+      profileVisible: false,
+      errorText: '',
+      unknownAuthPage: false,
+      url: 'https://chatgpt.com/',
+    };
+  }
+  throw new Error('unexpected message type: ' + message.type);
+}
+
+async function addLog(message, level, meta) { logs.push({ message, level, meta }); }
+async function waitForTabStableComplete() {}
+async function getTabId() { return 99; }
+function getErrorMessage(error) { return error?.message || String(error || ''); }
+
+${extractFunction('parseUrlSafely')}
+${extractFunction('isSignupEntryHost')}
+${extractFunction('isLikelyLoggedInChatgptHomeUrl')}
+${extractFunction('isStep5CompletionChatgptUrl')}
+${extractFunction('advanceStep5PostSubmitPromptOnTab')}
+${extractFunction('getStep5SubmitStateFromContent')}
+${extractFunction('recoverStep5SubmitRetryPageOnTab')}
+${extractFunction('validateStep5PostCompletion')}
+
+return {
+  async run() {
+    return validateStep5PostCompletion(99, {
+      maxPostSubmitPromptActions: 4,
+      requireContentStateBeforeUrlSuccess: true,
+    });
+  },
+  snapshot() {
+    return { messages, logs, fallbackClicks, stateReadCount };
+  },
+};
+`)();
+
+  const result = await api.run();
+  const snapshot = api.snapshot();
+
+  assert.equal(result.successState, 'logged_in_home');
+  assert.deepStrictEqual(snapshot.fallbackClicks, ['跳过']);
+  assert.equal(snapshot.stateReadCount, 1);
+  assert.equal(
+    snapshot.logs.some(({ message }) => /后台兜底已点击注册后弹窗按钮“跳过”/.test(message)),
+    true
+  );
 });

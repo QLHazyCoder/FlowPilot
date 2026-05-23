@@ -257,9 +257,12 @@ function getVerificationCodeTarget() {
 function getActionText(el) {
   return [
     el?.textContent,
+    el?.innerText,
     el?.value,
     el?.getAttribute?.('aria-label'),
     el?.getAttribute?.('title'),
+    el?.getAttribute?.('data-testid'),
+    el?.getAttribute?.('data-dd-action-name'),
   ]
     .filter(Boolean)
     .join(' ')
@@ -6848,6 +6851,23 @@ function isStep5PostSubmitOnboardingPage(options = {}) {
 }
 
 function findStep5PostSubmitOnboardingAction() {
+  const directButtons = Array.from(document.querySelectorAll('button, [role="button"]'));
+  const directSkipButton = directButtons.find((el) => {
+    if (!isVisibleElement(el) || !isActionEnabled(el)) return false;
+    return /^(?:跳过|稍后|以后|skip|not\s+now|maybe\s+later|do\s+this\s+later|スキップ|後で)$/i.test(getActionText(el));
+  });
+  if (directSkipButton) {
+    return directSkipButton;
+  }
+
+  const directContinueButton = directButtons.find((el) => {
+    if (!isVisibleElement(el) || !isActionEnabled(el)) return false;
+    return /^(?:继续|下一步|同意|确认|知道了|我知道了|好的|continue|next|agree|accept|confirm|got\s+it|ok|okay|done|finish)$/i.test(getActionText(el));
+  });
+  if (directContinueButton) {
+    return directContinueButton;
+  }
+
   const candidates = Array.from(document.querySelectorAll('button, [role="button"], a, [role="link"], input[type="button"], input[type="submit"]'));
   const scored = [];
 
