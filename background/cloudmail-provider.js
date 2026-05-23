@@ -223,8 +223,9 @@
         requireDomain: true,
       });
       const explicitLocalPart = String(options.localPart || '').trim().toLowerCase();
+      const legacyNameLocalPart = String(options.name || '').trim().toLowerCase();
       const nameDateTimeLocalPart = buildCloudMailNameDateTimeLocalPart(options.date);
-      const requestedLocal = explicitLocalPart || nameDateTimeLocalPart || generateCloudMailAliasLocalPart();
+      const requestedLocal = explicitLocalPart || legacyNameLocalPart || nameDateTimeLocalPart || generateCloudMailAliasLocalPart();
       const address = `${requestedLocal}@${ensuredConfig.domain}`.toLowerCase();
       const payload = { list: [{ email: address }] };
       try {
