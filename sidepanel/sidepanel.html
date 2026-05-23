@@ -308,6 +308,36 @@
           <button id="btn-clear-grok-sso" class="btn btn-ghost btn-xs data-inline-btn" type="button">清空</button>
         </div>
       </div>
+      <div class="data-row" id="row-grok-remote-account-inject-url" style="display:none;">
+        <span class="data-label">远程地址</span>
+        <input type="text" id="input-grok-remote-account-inject-url" class="data-input"
+          placeholder="webchat2api 地址，例如 http://localhost:83" />
+      </div>
+      <div class="data-row" id="row-grok-remote-account-inject-admin-key" style="display:none;">
+        <span class="data-label">管理密钥</span>
+        <div class="input-with-icon">
+          <input type="password" id="input-grok-remote-account-inject-admin-key"
+            class="data-input data-input-with-icon" placeholder="管理员密钥，留空跳过第六步" />
+          <button id="btn-toggle-grok-remote-account-inject-admin-key" class="input-icon-btn" type="button"
+            data-password-toggle="input-grok-remote-account-inject-admin-key" data-show-label="显示远程注入密钥"
+            data-hide-label="隐藏远程注入密钥" aria-label="显示远程注入密钥" title="显示远程注入密钥"></button>
+        </div>
+      </div>
+      <div class="data-row" id="row-remote-account-inject-url" style="display:none;">
+        <span class="data-label">远程地址</span>
+        <input type="text" id="input-remote-account-inject-url" class="data-input"
+          placeholder="webchat2api 地址，例如 http://localhost:83" />
+      </div>
+      <div class="data-row" id="row-remote-account-inject-admin-key" style="display:none;">
+        <span class="data-label">管理密钥</span>
+        <div class="input-with-icon">
+          <input type="password" id="input-remote-account-inject-admin-key" class="data-input data-input-with-icon"
+            placeholder="管理员密钥，留空跳过 AT 注入" />
+          <button id="btn-toggle-remote-account-inject-admin-key" class="input-icon-btn" type="button"
+            data-password-toggle="input-remote-account-inject-admin-key" data-show-label="显示远程注入密钥"
+            data-hide-label="隐藏远程注入密钥" aria-label="显示远程注入密钥" title="显示远程注入密钥"></button>
+        </div>
+      </div>
       <div class="data-row module-divider-start" id="row-custom-password">
         <span class="data-label">账户密码</span>
         <div class="input-with-icon">

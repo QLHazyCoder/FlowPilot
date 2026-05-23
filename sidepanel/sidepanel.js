@@ -197,6 +197,12 @@ const displayGrokRegisterStatus = document.getElementById('display-grok-register
 const rowGrokSsoStatus = document.getElementById('row-grok-sso-status');
 const displayGrokSsoStatus = document.getElementById('display-grok-sso-status');
 const rowGrokSsoSettings = document.getElementById('row-grok-sso-settings');
+const rowGrokRemoteAccountInject = document.getElementById('row-grok-remote-account-inject');
+const inputGrokRemoteAccountInjectUrl = document.getElementById('input-grok-remote-account-inject-url');
+const inputGrokRemoteAccountInjectAdminKey = document.getElementById('input-grok-remote-account-inject-admin-key');
+const rowRemoteAccountInject = document.getElementById('row-remote-account-inject');
+const inputRemoteAccountInjectUrl = document.getElementById('input-remote-account-inject-url');
+const inputRemoteAccountInjectAdminKey = document.getElementById('input-remote-account-inject-admin-key');
 const displayGrokSsoCookie = document.getElementById('display-grok-sso-cookie');
 const btnCopyGrokSso = document.getElementById('btn-copy-grok-sso');
 const btnExportGrokSso = document.getElementById('btn-export-grok-sso');
@@ -4939,6 +4945,18 @@ function collectSettingsPayload() {
     sub2apiUrl: inputSub2ApiUrl.value.trim(),
     sub2apiEmail: inputSub2ApiEmail.value.trim(),
     sub2apiPassword: inputSub2ApiPassword.value,
+    remoteAccountInjectUrl: (typeof inputRemoteAccountInjectUrl !== 'undefined' && inputRemoteAccountInjectUrl)
+      ? inputRemoteAccountInjectUrl.value.trim()
+      : '',
+    remoteAccountInjectAdminKey: (typeof inputRemoteAccountInjectAdminKey !== 'undefined' && inputRemoteAccountInjectAdminKey)
+      ? inputRemoteAccountInjectAdminKey.value
+      : '',
+    grokRemoteAccountInjectUrl: (typeof inputGrokRemoteAccountInjectUrl !== 'undefined' && inputGrokRemoteAccountInjectUrl)
+      ? inputGrokRemoteAccountInjectUrl.value.trim()
+      : '',
+    grokRemoteAccountInjectAdminKey: (typeof inputGrokRemoteAccountInjectAdminKey !== 'undefined' && inputGrokRemoteAccountInjectAdminKey)
+      ? inputGrokRemoteAccountInjectAdminKey.value
+      : '',
     sub2apiGroupName: selectedSub2ApiGroupName,
     sub2apiGroupNames,
     sub2apiAccountPriority: sub2apiAccountPriorityNormalizer(
@@ -11122,6 +11140,18 @@ function applySettingsState(state) {
     inputSub2ApiAccountPriority.value = String(normalizeSub2ApiAccountPriorityValue(state?.sub2apiAccountPriority));
   }
   inputSub2ApiDefaultProxy.value = state?.sub2apiDefaultProxyName || '';
+  if (typeof inputRemoteAccountInjectUrl !== 'undefined' && inputRemoteAccountInjectUrl) {
+    inputRemoteAccountInjectUrl.value = state?.remoteAccountInjectUrl || '';
+  }
+  if (typeof inputRemoteAccountInjectAdminKey !== 'undefined' && inputRemoteAccountInjectAdminKey) {
+    inputRemoteAccountInjectAdminKey.value = state?.remoteAccountInjectAdminKey || '';
+  }
+  if (typeof inputGrokRemoteAccountInjectUrl !== 'undefined' && inputGrokRemoteAccountInjectUrl) {
+    inputGrokRemoteAccountInjectUrl.value = state?.grokRemoteAccountInjectUrl || '';
+  }
+  if (typeof inputGrokRemoteAccountInjectAdminKey !== 'undefined' && inputGrokRemoteAccountInjectAdminKey) {
+    inputGrokRemoteAccountInjectAdminKey.value = state?.grokRemoteAccountInjectAdminKey || '';
+  }
   if (typeof inputKiroRsUrl !== 'undefined' && inputKiroRsUrl) {
     inputKiroRsUrl.value = String(state?.kiroRsUrl || '').trim();
   }
@@ -16138,6 +16168,18 @@ inputCodex2ApiUrl.addEventListener('input', () => {
 inputCodex2ApiUrl.addEventListener('blur', () => {
   saveSettings({ silent: true }).catch(() => { });
 });
+
+[inputRemoteAccountInjectUrl, inputRemoteAccountInjectAdminKey, inputGrokRemoteAccountInjectUrl, inputGrokRemoteAccountInjectAdminKey]
+  .filter(Boolean)
+  .forEach((input) => {
+    input.addEventListener('input', () => {
+      markSettingsDirty(true);
+      scheduleSettingsAutoSave();
+    });
+    input.addEventListener('blur', () => {
+      saveSettings({ silent: true }).catch(() => { });
+    });
+  });
 
 inputCodex2ApiAdminKey.addEventListener('input', () => {
   markSettingsDirty(true);
