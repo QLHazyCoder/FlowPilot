@@ -6834,7 +6834,7 @@ function isStep5PostSubmitOnboardingPage() {
   const pageText = typeof getPageTextSnapshot === 'function'
     ? getPageTextSnapshot()
     : String(document.body?.innerText || document.body?.textContent || '').replace(/\s+/g, ' ').trim();
-  return /(?:what\s+brings\s+you\s+to\s+chatgpt|tell\s+us\s+about\s+yourself|customi[sz]e\s+chatgpt|personalize\s+your\s+experience|how\s+will\s+you\s+use\s+chatgpt|which\s+best\s+describes\s+you|start\s+using\s+chatgpt|you(?:'|’)re\s+all\s+set|you\s+are\s+all\s+set|ready\s+to\s+go|chatgpt\s+may\s+make\s+mistakes|chats\s+may\s+be\s+reviewed|by\s+continuing\s+you\s+agree|skip\s+for\s+now|你已准备就绪|你已準備就緒|已准备就绪|已準備就緒|可能会犯错|可能會犯錯|聊天可能会被审查|聊天可能會被審查|继续操作即表示你同意|繼續操作即表示你同意|条款|條款|隐私政策|隱私政策|入门|开始使用|告诉我们|个人化|个性化|问卷|调查|咨询|跳过|稍后|下一步|继续)/i.test(pageText)
+  return /(?:what\s+brings\s+you\s+to\s+chatgpt|tell\s+us\s+about\s+yourself|customi[sz]e\s+chatgpt|personalize\s+your\s+experience|how\s+will\s+you\s+use\s+chatgpt|which\s+best\s+describes\s+you|start\s+using\s+chatgpt|you(?:'|’)re\s+all\s+set|you\s+are\s+all\s+set|ready\s+to\s+go|chatgpt\s+may\s+make\s+mistakes|chats\s+may\s+be\s+reviewed|by\s+(?:continuing|clicking|selecting)\s+you\s+agree|terms\s+of\s+use|privacy\s+policy|accept\s+(?:all\s+)?(?:terms|cookies)|got\s+it|skip\s+for\s+now|你已准备就绪|你已準備就緒|已准备就绪|已準備就緒|可能会犯错|可能會犯錯|聊天可能会被审查|聊天可能會被審查|继续操作即表示你同意|繼續操作即表示你同意|点击即表示同意|點擊即表示同意|条款|條款|隐私政策|隱私政策|服务条款|服務條款|使用条款|使用條款|接受|同意|确认|確認|知道了|我知道了|明白|入门|开始使用|告诉我们|个人化|个性化|问卷|调查|咨询|跳过|稍后|下一步|继续)/i.test(pageText)
     && Boolean(findStep5PostSubmitOnboardingAction());
 }
 
@@ -6860,7 +6860,7 @@ function findStep5PostSubmitOnboardingAction() {
       scored.push({ el, score: 1 });
       continue;
     }
-    if (/next|continue|start|done|finish|let'?s\s+go|下一步|继续|开始|完成|次へ|続行|始める/i.test(text)) {
+    if (/accept|agree|allow|confirm|got\s+it|okay?|ok|i\s+understand|next|continue|start|done|finish|let'?s\s+go|同意|接受|允许|允許|确认|確認|知道了|我知道了|明白|好的|下一步|继续|继续使用|开始|完成|次へ|続行|始める|同意する|許可|確認/i.test(text)) {
       scored.push({ el, score: 2 });
     }
   }
