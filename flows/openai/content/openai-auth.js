@@ -6999,11 +6999,13 @@ async function waitForStep5SubmitOutcome(options = {}) {
   const {
     timeoutMs = 120000,
     maxAuthRetryRecoveries = 2,
+    maxPostSubmitPromptActions = 8,
     maxSubmitClicks = 3,
     retryClickIntervalMs = 3500,
   } = options;
   const start = Date.now();
   let authRetryRecoveryCount = 0;
+  let postSubmitPromptActionCount = 0;
   let submitClickCount = 1;
   let lastSubmitClickAt = Date.now();
   let lastStep5Error = '';
@@ -7042,17 +7044,18 @@ async function waitForStep5SubmitOutcome(options = {}) {
       continue;
     }
 
+    if (postSubmitPromptActionCount < maxPostSubmitPromptActions && await advanceStep5PostSubmitOnboardingPage({ allowProfileVisiblePrompt: true })) {
+      postSubmitPromptActionCount += 1;
+      lastSubmitClickAt = Date.now();
+      continue;
+    }
+
     const successState = getStep5PostSubmitSuccessState();
     if (successState) {
       debugLog(`检测到资料提交成功状态：${successState.state || 'unknown'}`, {
         level: 'ok',
       });
       return successState;
-    }
-
-    if (await advanceStep5PostSubmitOnboardingPage({ allowProfileVisiblePrompt: true })) {
-      lastSubmitClickAt = Date.now();
-      continue;
     }
 
     const step5Error = typeof getStep5ErrorText === 'function' ? getStep5ErrorText() : '';
