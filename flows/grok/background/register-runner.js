@@ -1,6 +1,6 @@
 (function attachBackgroundGrokRegisterRunner(root, factory) {
   root.MultiPageBackgroundGrokRegisterRunner = factory(root);
-})(typeof self !== 'undefined' ? self : globalThis, function createBackgroundGrokRegisterRunnerModule() {
+})(typeof self !== 'undefined' ? self : globalThis, function createBackgroundGrokRegisterRunnerModule(root) {
   const GROK_SIGNUP_URL = 'https://accounts.x.ai/sign-up?redirect=grok-com';
   const GROK_REGISTER_PAGE_SOURCE_ID = 'grok-register-page';
   const DEFAULT_GROK_PAGE_TIMEOUT_MS = 90 * 1000;
@@ -36,6 +36,7 @@
       chrome = (typeof globalThis !== 'undefined' ? globalThis.chrome : null),
       completeNodeFromBackground,
       ensureContentScriptReadyOnTab = null,
+      fetchImpl = (...args) => fetch(...args),
       generatePassword = null,
       generateRandomName = null,
       getState = async () => ({}),
@@ -56,6 +57,8 @@
       GROK_REGISTER_INJECT_FILES = null,
       markCurrentRegistrationAccountUsed = null,
     } = deps;
+
+    let remoteAccountInjectApi = null;
 
     if (typeof completeNodeFromBackground !== 'function') {
       throw new Error('Grok register runner requires completeNodeFromBackground.');
@@ -92,6 +95,42 @@
           },
         },
       };
+    }
+
+    function getRemoteAccountInjectApi() {
+      if (remoteAccountInjectApi) {
+        return remoteAccountInjectApi;
+      }
+      const factory = deps.createRemoteAccountInjectApi
+        || root.MultiPageBackgroundRemoteAccountInjectApi?.createRemoteAccountInjectApi;
+      if (typeof factory !== 'function') {
+        throw new Error('远程账号注入接口模块未加载。');
+      }
+      remoteAccountInjectApi = factory({ fetchImpl });
+      return remoteAccountInjectApi;
+    }
+
+    function createRestartCurrentAttemptError(message) {
+      const prefix = root.MultiPageBackgroundGrokState?.GROK_RESTART_CURRENT_ATTEMPT_ERROR_PREFIX
+        || 'GROK_RESTART_CURRENT_ATTEMPT::';
+      return new Error(`${prefix}${message}`);
+    }
+
+    function isRestartCurrentAttemptError(error) {
+      const prefix = root.MultiPageBackgroundGrokState?.GROK_RESTART_CURRENT_ATTEMPT_ERROR_PREFIX
+        || 'GROK_RESTART_CURRENT_ATTEMPT::';
+      return getErrorMessage(error).startsWith(prefix);
+    }
+
+    async function markRestartCurrentAttempt(message) {
+      const latestState = await getState();
+      const patch = typeof root.MultiPageBackgroundGrokState?.buildRestartCurrentAttemptPatch === 'function'
+        ? root.MultiPageBackgroundGrokState.buildRestartCurrentAttemptPatch(latestState)
+        : {};
+      if (Object.keys(patch).length) {
+        await persistState(patch);
+      }
+      return createRestartCurrentAttemptError(message);
     }
 
     async function completeNode(nodeId, patch = {}) {
@@ -610,7 +649,7 @@
           ssoCookie = cleanString(result?.ssoCookie);
         }
         if (!ssoCookie) {
-          throw new Error('未找到 x.ai/grok sso Cookie。');
+          throw await markRestartCurrentAttempt('Grok 注册未产出 sso Cookie，需要重新开始当前轮。');
         }
 
         const latestState = await getState();
@@ -657,6 +696,10 @@
         await completeNode(nodeId, completionPatch);
       } catch (error) {
         const message = getErrorMessage(error);
+        if (isRestartCurrentAttemptError(error)) {
+          await log(`步骤 5：${message}`, 'warn', nodeId);
+          throw error;
+        }
         await persistState(buildGrokRuntimePatch({
           session: {
             lastError: message,
@@ -670,9 +713,71 @@
       }
     }
 
+    async function executeGrokRemoteSsoInject(state = {}) {
+      const nodeId = cleanString(state?.nodeId) || 'grok-remote-sso-inject';
+      const currentState = await getExecutionState(state);
+      const url = cleanString(currentState.grokRemoteAccountInjectUrl);
+      const adminKey = cleanString(currentState.grokRemoteAccountInjectAdminKey);
+      if (!url || !adminKey) {
+        await log('步骤 6：Grok 远程 SSO 注入未配置 URL 或管理员密钥，已跳过。', 'info', nodeId);
+        await completeNode(nodeId, {
+          grokRemoteSsoInjectSkipped: true,
+          grokRemoteSsoInjectReason: !url ? 'missing_url' : 'missing_admin_key',
+        });
+        return;
+      }
+
+      const ssoCookie = cleanString(
+        currentState.grokSsoCookie
+        || currentState.runtimeState?.flowState?.grok?.sso?.currentCookie
+        || currentState.flowState?.grok?.sso?.currentCookie
+      );
+      if (!ssoCookie) {
+        throw new Error('缺少 Grok SSO Cookie，请先执行步骤 5。');
+      }
+
+      try {
+        await log('步骤 6：正在将 Grok SSO 注入远程账号池...', 'info', nodeId);
+        await getRemoteAccountInjectApi().injectRemoteAccounts({
+          url,
+          adminKey,
+          timeoutMs: 30000,
+          body: {
+            accounts: [{
+              token: ssoCookie,
+              provider: 'grok',
+              type: 'basic',
+            }],
+            strategy: 'merge',
+            source_id: 'flowpilot-grok-sso',
+            source_name: 'FlowPilot Grok SSO',
+            provider: 'grok',
+          },
+        });
+        await log('步骤 6：Grok SSO 远程注入完成：已提交 1 个 SSO。', 'ok', nodeId);
+        await completeNode(nodeId, {
+          grokRemoteSsoInjectSkipped: false,
+          grokRemoteSsoInjectSubmitted: 1,
+        });
+      } catch (error) {
+        const message = getErrorMessage(error);
+        await persistState(buildGrokRuntimePatch({
+          session: {
+            lastError: message,
+          },
+          register: {
+            status: 'error',
+          },
+        }));
+        await log(`步骤 6：${message}`, 'error', nodeId);
+        throw error;
+      }
+    }
+
     return {
       executeGrokExtractSsoCookie,
       executeGrokOpenSignupPage,
+      executeGrokRemoteSsoInject,
       executeGrokSubmitEmail,
       executeGrokSubmitProfile,
       executeGrokSubmitVerificationCode,

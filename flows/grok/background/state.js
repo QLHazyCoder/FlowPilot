@@ -1,6 +1,16 @@
 (function attachBackgroundGrokState(root, factory) {
   root.MultiPageBackgroundGrokState = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createBackgroundGrokStateModule() {
+  const GROK_RESTART_CURRENT_ATTEMPT_ERROR_PREFIX = 'GROK_RESTART_CURRENT_ATTEMPT::';
+  const GROK_REGISTER_NODE_IDS = Object.freeze([
+    'grok-open-signup-page',
+    'grok-submit-email',
+    'grok-submit-verification-code',
+    'grok-submit-profile',
+    'grok-extract-sso-cookie',
+    'grok-remote-sso-inject',
+  ]);
+
   function isPlainObject(value) {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
   }
@@ -277,6 +287,7 @@
         return buildRegisterOnlyResetPatch(currentState, {});
       case 'grok-submit-profile':
       case 'grok-extract-sso-cookie':
+      case 'grok-remote-sso-inject':
         return buildSsoResetPatch(currentState);
       default:
         return {};
@@ -359,11 +370,22 @@
     return buildRuntimeStatePatch(currentState, nextRuntimeState);
   }
 
+  function buildRestartCurrentAttemptPatch(currentState = {}) {
+    return {
+      currentNodeId: '',
+      nodeStatuses: Object.fromEntries(GROK_REGISTER_NODE_IDS.map((nodeId) => [nodeId, 'pending'])),
+      ...buildFreshKeepState(currentState),
+    };
+  }
+
   return {
+    GROK_REGISTER_NODE_IDS,
+    GROK_RESTART_CURRENT_ATTEMPT_ERROR_PREFIX,
     applyNodeCompletionPayload,
     buildDefaultRuntimeState,
     buildDownstreamResetPatch,
     buildFreshKeepState,
+    buildRestartCurrentAttemptPatch,
     buildRuntimeStatePatch,
     buildSessionStatePatch,
     buildStateView,

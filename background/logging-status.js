@@ -134,7 +134,7 @@
 
     function isRestartCurrentAttemptError(error) {
       const message = String(typeof error === 'string' ? error : error?.message || '');
-      return /当前邮箱已存在，需要重新开始新一轮|SIGNUP_PHONE_PASSWORD_MISMATCH::/i.test(message);
+      return /当前邮箱已存在，需要重新开始新一轮|SIGNUP_PHONE_PASSWORD_MISMATCH::|GROK_RESTART_CURRENT_ATTEMPT::/i.test(message);
     }
 
     function isSignupUserAlreadyExistsFailure(error) {

@@ -94,6 +94,7 @@
           'grok-submit-verification-code',
           'grok-submit-profile',
           'grok-extract-sso-cookie',
+          'grok-remote-sso-inject',
         ],
       },
       'flows/grok/background/register-runner': {
@@ -104,16 +105,19 @@
           'grok-submit-verification-code',
           'grok-submit-profile',
           'grok-extract-sso-cookie',
+          'grok-remote-sso-inject',
         ],
       },
     },
     defaultTargetId: 'webchat2api',
     settingsDefaults: {
+      grokRemoteAccountInjectUrl: '',
+      grokRemoteAccountInjectAdminKey: '',
       autoRun: {
         stepExecutionRange: {
           enabled: false,
           fromStep: 1,
-          toStep: 5,
+          toStep: 6,
         },
       },
     },
@@ -123,6 +127,8 @@
         label: 'webchat2api',
         rowIds: [
           'row-grok-sso-settings',
+          'row-grok-remote-account-inject-url',
+          'row-grok-remote-account-inject-admin-key',
         ],
       },
       'grok-runtime-status': {

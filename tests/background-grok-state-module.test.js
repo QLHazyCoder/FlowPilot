@@ -156,3 +156,51 @@ test('grok downstream reset clears only the state owned by the restarted tail', 
   assert.equal(emailPatch.grokRegisterStatus, '');
   assert.equal(emailPatch.grokRegisterTabId, 7);
 });
+
+test('grok restart-current-attempt patch resets lifecycle progress to step 1', () => {
+  const api = loadGrokStateApi();
+  const patch = api.buildRestartCurrentAttemptPatch({
+    currentNodeId: 'grok-extract-sso-cookie',
+    nodeStatuses: Object.fromEntries(api.GROK_REGISTER_NODE_IDS.map((nodeId) => [nodeId, 'completed'])),
+    runtimeState: {
+      flowState: {
+        grok: {
+          session: {
+            registerTabId: 42,
+            pageState: 'profile_submitted',
+            pageUrl: 'https://accounts.x.ai/sign-up',
+            lastError: 'old-error',
+          },
+          register: {
+            email: 'grok@example.com',
+            firstName: 'Ada',
+            lastName: 'Lovelace',
+            password: 'Secret123!',
+            verificationRequestedAt: 123,
+            verificationCode: 'ABC123',
+            status: 'profile_submitted',
+            completedAt: 456,
+          },
+          sso: {
+            currentCookie: 'existing-cookie',
+            cookies: ['existing-cookie'],
+            extractedAt: 789,
+          },
+        },
+      },
+    },
+  });
+
+  assert.equal(patch.currentNodeId, '');
+  assert.deepEqual(
+    patch.nodeStatuses,
+    Object.fromEntries(api.GROK_REGISTER_NODE_IDS.map((nodeId) => [nodeId, 'pending']))
+  );
+  assert.equal(patch.grokRegisterTabId, null);
+  assert.equal(patch.grokPageState, '');
+  assert.equal(patch.grokEmail, '');
+  assert.equal(patch.grokRegisterStatus, '');
+  assert.equal(patch.grokSsoCookie, 'existing-cookie');
+  assert.deepEqual(patch.grokSsoCookies, ['existing-cookie']);
+  assert.equal(patch.runtimeState.flowState.grok.register.email, '');
+});

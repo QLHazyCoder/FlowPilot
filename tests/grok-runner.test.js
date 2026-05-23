@@ -2,9 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
-function loadGrokRunnerApi() {
+function loadGrokRunnerApi(globalScope = {}) {
   const source = fs.readFileSync('flows/grok/background/register-runner.js', 'utf8');
-  const globalScope = {};
   return new Function('self', `${source}; return self.MultiPageBackgroundGrokRegisterRunner;`)(globalScope);
 }
 
@@ -174,6 +173,183 @@ test('grok SSO extraction accumulates unique cookies without logging the secret 
   assert.deepEqual(getGrokRuntime(completedPayload).sso.cookies, ['existing-cookie', 'new-cookie']);
   assert.equal(markUsedPayload.grokSsoCookie, 'new-cookie');
   assert.equal(logs.some(({ message }) => message.includes('new-cookie')), false);
+});
+
+test('grok sso extraction failure marks retry as restart-current-attempt and resets node progress', async () => {
+  const grokStateSource = fs.readFileSync('flows/grok/background/state.js', 'utf8');
+  const globalScope = {};
+  globalScope.MultiPageBackgroundGrokState = new Function('self', `${grokStateSource}; return self.MultiPageBackgroundGrokState;`)(globalScope);
+  const api = loadGrokRunnerApi(globalScope);
+  const logs = [];
+  let completedPayload = null;
+  let currentState = {
+    activeFlowId: 'grok',
+    flowId: 'grok',
+    currentNodeId: 'grok-extract-sso-cookie',
+    nodeStatuses: Object.fromEntries(globalScope.MultiPageBackgroundGrokState.GROK_REGISTER_NODE_IDS.map((nodeId) => [nodeId, 'completed'])),
+    grokRegisterTabId: 303,
+    grokEmail: 'grok-user@example.com',
+    grokSsoCookies: ['old-cookie'],
+    runtimeState: {
+      flowState: {
+        grok: {
+          session: {
+            registerTabId: 303,
+            pageState: 'profile_submitted',
+          },
+          register: {
+            email: 'grok-user@example.com',
+            status: 'profile_submitted',
+          },
+          sso: {
+            cookies: ['old-cookie'],
+          },
+        },
+      },
+    },
+  };
+  const runner = api.createGrokRegisterRunner({
+    addLog: async (message, level) => {
+      logs.push({ message, level });
+    },
+    chrome: {
+      cookies: {
+        get: async () => null,
+      },
+      tabs: {
+        get: async (tabId) => ({ id: tabId }),
+        update: async () => {},
+      },
+    },
+    completeNodeFromBackground: async (_nodeId, payload) => {
+      completedPayload = payload;
+    },
+    ensureContentScriptReadyOnTab: async () => {},
+    getState: async () => currentState,
+    getTabId: async () => 303,
+    isTabAlive: async () => true,
+    registerTab: async () => {},
+    sendToContentScriptResilient: async () => ({ state: 'profile_submitted', ssoCookie: '' }),
+    setState: async (patch) => {
+      currentState = {
+        ...currentState,
+        ...patch,
+        nodeStatuses: patch.nodeStatuses ? { ...patch.nodeStatuses } : currentState.nodeStatuses,
+        runtimeState: patch.runtimeState ? JSON.parse(JSON.stringify(patch.runtimeState)) : currentState.runtimeState,
+      };
+    },
+    sleepWithStop: async () => {},
+    waitForTabStableComplete: async () => {},
+  });
+
+  await assert.rejects(
+    () => runner.executeGrokExtractSsoCookie({ nodeId: 'grok-extract-sso-cookie', ...currentState }),
+    /GROK_RESTART_CURRENT_ATTEMPT::Grok 注册未产出 sso Cookie/
+  );
+
+  assert.equal(completedPayload, null);
+  assert.equal(currentState.currentNodeId, '');
+  assert.deepEqual(
+    currentState.nodeStatuses,
+    Object.fromEntries(globalScope.MultiPageBackgroundGrokState.GROK_REGISTER_NODE_IDS.map((nodeId) => [nodeId, 'pending']))
+  );
+  assert.equal(currentState.grokRegisterTabId, null);
+  assert.equal(currentState.grokEmail, '');
+  assert.equal(currentState.grokRegisterStatus, '');
+  assert.equal(currentState.grokSsoCookie, '');
+  assert.deepEqual(currentState.grokSsoCookies, ['old-cookie']);
+  assert.ok(logs.some(({ message, level }) => level === 'warn' && /GROK_RESTART_CURRENT_ATTEMPT::/.test(message)));
+});
+
+test('grok remote SSO inject skips cleanly when config is missing', async () => {
+  const api = loadGrokRunnerApi();
+  const completed = [];
+  const logs = [];
+  let injectCalled = false;
+
+  const runner = api.createGrokRegisterRunner({
+    addLog: async (message, level = 'info', options = {}) => {
+      logs.push({ message, level, nodeId: options.nodeId });
+    },
+    completeNodeFromBackground: async (nodeId, payload) => {
+      completed.push({ nodeId, payload });
+    },
+    createRemoteAccountInjectApi: () => ({
+      injectRemoteAccounts: async () => {
+        injectCalled = true;
+        return { skipped: false };
+      },
+    }),
+    getState: async () => ({}),
+    setState: async () => {},
+  });
+
+  await runner.executeGrokRemoteSsoInject({
+    nodeId: 'grok-remote-sso-inject',
+    grokSsoCookie: 'sso-cookie',
+    grokRemoteAccountInjectUrl: '',
+    grokRemoteAccountInjectAdminKey: 'admin-secret',
+  });
+
+  assert.equal(injectCalled, false);
+  assert.deepEqual(completed, [{
+    nodeId: 'grok-remote-sso-inject',
+    payload: {
+      grokRemoteSsoInjectSkipped: true,
+      grokRemoteSsoInjectReason: 'missing_url',
+    },
+  }]);
+  assert.equal(logs.some((entry) => /已跳过/.test(entry.message)), true);
+});
+
+test('grok remote SSO inject posts Grok account payload', async () => {
+  const api = loadGrokRunnerApi();
+  const completed = [];
+  const injected = [];
+
+  const runner = api.createGrokRegisterRunner({
+    addLog: async () => {},
+    completeNodeFromBackground: async (nodeId, payload) => {
+      completed.push({ nodeId, payload });
+    },
+    createRemoteAccountInjectApi: () => ({
+      injectRemoteAccounts: async (options) => {
+        injected.push(options);
+        return { skipped: false };
+      },
+    }),
+    getState: async () => ({}),
+    setState: async () => {},
+  });
+
+  await runner.executeGrokRemoteSsoInject({
+    nodeId: 'grok-remote-sso-inject',
+    grokSsoCookie: 'sso-cookie',
+    grokRemoteAccountInjectUrl: 'https://remote.example.com/admin',
+    grokRemoteAccountInjectAdminKey: 'admin-secret',
+  });
+
+  assert.equal(injected.length, 1);
+  assert.equal(injected[0].url, 'https://remote.example.com/admin');
+  assert.equal(injected[0].adminKey, 'admin-secret');
+  assert.deepEqual(injected[0].body, {
+    accounts: [{
+      token: 'sso-cookie',
+      provider: 'grok',
+      type: 'basic',
+    }],
+    strategy: 'merge',
+    source_id: 'flowpilot-grok-sso',
+    source_name: 'FlowPilot Grok SSO',
+    provider: 'grok',
+  });
+  assert.deepEqual(completed, [{
+    nodeId: 'grok-remote-sso-inject',
+    payload: {
+      grokRemoteSsoInjectSkipped: false,
+      grokRemoteSsoInjectSubmitted: 1,
+    },
+  }]);
 });
 
 test('grok register runner requires background node completion dependency', () => {

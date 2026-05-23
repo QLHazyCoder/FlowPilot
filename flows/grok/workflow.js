@@ -64,6 +64,16 @@
         command: 'grok-extract-sso-cookie',
         flowId: 'grok',
       },
+      {
+        id: 6,
+        order: 60,
+        key: 'grok-remote-sso-inject',
+        title: '远程注入 SSO',
+        sourceId: 'grok-register-page',
+        driverId: 'flows/grok/background/register-runner',
+        command: 'grok-remote-sso-inject',
+        flowId: 'grok',
+      },
     ],
   });
 
