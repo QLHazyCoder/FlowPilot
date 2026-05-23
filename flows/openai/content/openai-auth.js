@@ -3024,6 +3024,29 @@ function getStep4PostVerificationState(options = {}) {
   return null;
 }
 
+async function advanceStep4PostVerificationInterstitialPage() {
+  if (typeof isStep5PostSubmitOnboardingPage !== 'function' || typeof findStep5PostSubmitOnboardingAction !== 'function') {
+    return false;
+  }
+  if (!isStep5PostSubmitOnboardingPage()) {
+    return false;
+  }
+
+  const action = findStep5PostSubmitOnboardingAction();
+  if (!action) {
+    return false;
+  }
+
+  const text = typeof getActionText === 'function'
+    ? getActionText(action)
+    : String(action?.textContent || action?.value || '').trim();
+  log(`步骤 4：检测到验证码通过后的弹窗/入门页面，正在点击“${text || '跳过/继续'}”直到进入步骤 5。`, 'warn');
+  await humanPause(350, 900);
+  simulateClick(action);
+  await sleep(1000);
+  return true;
+}
+
 function getPageTextSnapshot() {
   return (document.body?.innerText || document.body?.textContent || '')
     .replace(/\s+/g, ' ')
@@ -5016,6 +5039,12 @@ async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
     }
 
     if (step === 4) {
+      if (
+        typeof advanceStep4PostVerificationInterstitialPage === 'function'
+        && await advanceStep4PostVerificationInterstitialPage()
+      ) {
+        continue;
+      }
       const postVerificationState = getStep4PostVerificationState({ ignoreVerificationVisibility: true });
       if (postVerificationState?.state === 'logged_in_home') {
         return {
@@ -5057,6 +5086,23 @@ async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
     const signupRetryState = getCurrentAuthRetryPageState('signup');
     if (signupRetryState?.userAlreadyExistsBlocked) {
       throw createSignupUserAlreadyExistsError();
+    }
+
+    if (
+      typeof advanceStep4PostVerificationInterstitialPage === 'function'
+      && await advanceStep4PostVerificationInterstitialPage()
+    ) {
+      const postAdvanceState = getStep4PostVerificationState({ ignoreVerificationVisibility: true });
+      if (postAdvanceState?.state === 'logged_in_home') {
+        return {
+          success: true,
+          skipProfileStep: true,
+          url: postAdvanceState.url || location.href,
+        };
+      }
+      if (postAdvanceState?.state === 'step5') {
+        return { success: true };
+      }
     }
 
     const postVerificationState = getStep4PostVerificationState({ ignoreVerificationVisibility: true });

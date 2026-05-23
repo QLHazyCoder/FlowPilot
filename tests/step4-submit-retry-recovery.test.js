@@ -239,3 +239,89 @@ return {
     success: true,
   });
 });
+
+test('waitForVerificationSubmitOutcome advances post-verification interstitials until step 5', async () => {
+  const api = new Function(`
+const clicks = [];
+const skipButton = {
+  textContent: 'Skip for now',
+  hidden: false,
+  disabled: false,
+  getAttribute(name) {
+    if (name === 'aria-disabled') return 'false';
+    return '';
+  },
+};
+const location = { href: 'https://chatgpt.com/onboarding' };
+const document = {
+  body: {
+    innerText: 'What brings you to ChatGPT? Tell us about yourself. Skip for now',
+    textContent: 'What brings you to ChatGPT? Tell us about yourself. Skip for now',
+  },
+  querySelector() { return null; },
+  querySelectorAll(selector) {
+    if (selector === 'button, [role="button"], a, [role="link"], input[type="button"], input[type="submit"]') {
+      return [skipButton];
+    }
+    return [];
+  },
+};
+
+function throwIfStopped() {}
+function log() {}
+function getVerificationErrorText() { return ''; }
+function isStep5Ready() { return location.href === 'https://auth.openai.com/create-account/profile'; }
+function isStep5ProfileStillVisible() { return isStep5Ready(); }
+function isStep8Ready() { return false; }
+function isAddPhonePageReady() { return false; }
+function isVerificationPageStillVisible() { return false; }
+function getPageTextSnapshot() { return document.body.innerText; }
+function isVisibleElement(el) { return Boolean(el) && !el.hidden; }
+function isActionEnabled(el) { return Boolean(el) && !el.disabled && el.getAttribute?.('aria-disabled') !== 'true'; }
+function getActionText(el) { return el?.textContent || ''; }
+function createSignupUserAlreadyExistsError() {
+  return new Error('SIGNUP_USER_ALREADY_EXISTS::步骤 4：检测到 user_already_exists，说明当前用户已存在，当前轮将直接停止。');
+}
+function getCurrentAuthRetryPageState() {
+  return null;
+}
+async function recoverCurrentAuthRetryPage() {
+  throw new Error('should not recover retry page');
+}
+async function humanPause() {}
+function simulateClick(el) {
+  clicks.push(el?.textContent || 'clicked');
+  location.href = 'https://auth.openai.com/create-account/profile';
+  document.body.innerText = 'Tell us about you Birthday';
+  document.body.textContent = document.body.innerText;
+}
+async function sleep() {}
+
+${extractFunction('isSignupProfilePageUrl')}
+${extractFunction('isLikelyLoggedInChatgptHomeUrl')}
+${extractFunction('isStep5CompletionChatgptUrl')}
+${extractFunction('getStep5PostSubmitSuccessState')}
+${extractFunction('findStep5PostSubmitOnboardingAction')}
+${extractFunction('isStep5PostSubmitOnboardingPage')}
+${extractFunction('getStep4PostVerificationState')}
+${extractFunction('advanceStep4PostVerificationInterstitialPage')}
+${extractFunction('waitForVerificationSubmitOutcome')}
+
+return {
+  run() {
+    return waitForVerificationSubmitOutcome(4, 1000);
+  },
+  snapshot() {
+    return { clicks, href: location.href };
+  },
+};
+`)();
+
+  const result = await api.run();
+
+  assert.deepStrictEqual(result, { success: true });
+  assert.deepStrictEqual(api.snapshot(), {
+    clicks: ['Skip for now'],
+    href: 'https://auth.openai.com/create-account/profile',
+  });
+});
