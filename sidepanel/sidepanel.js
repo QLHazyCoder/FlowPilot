@@ -7515,10 +7515,7 @@ async function loadHeroSmsCountries(options = {}) {
     showLimitToast: false,
   });
   updateHeroSmsPlatformDisplay();
-  renderHeroSmsOperatorOptions();
-  if (typeof refreshHeroSmsOperatorOptions === 'function') {
-    refreshHeroSmsOperatorOptions({ silent: true });
-  }
+  setHeroSmsOperatorSelectValue(latestState?.heroSmsOperator);
 }
 
 function refreshHeroSmsOperatorOptions(options = {}) {
@@ -7619,6 +7616,20 @@ function renderHeroSmsOperatorOptions(selectedOperator = null) {
   } finally {
     isRenderingHeroSmsOperatorOptions = false;
   }
+}
+
+function setHeroSmsOperatorSelectValue(operator = latestState?.heroSmsOperator) {
+  if (!selectHeroSmsOperator) {
+    return DEFAULT_HERO_SMS_OPERATOR;
+  }
+  const normalized = normalizeHeroSmsOperatorValue(operator, DEFAULT_HERO_SMS_OPERATOR);
+  const hasOption = Array.from(selectHeroSmsOperator.options || []).some((option) => option.value === normalized);
+  if (hasOption) {
+    selectHeroSmsOperator.value = normalized;
+  } else if (selectHeroSmsOperator.options?.length) {
+    selectHeroSmsOperator.value = DEFAULT_HERO_SMS_OPERATOR;
+  }
+  return normalized;
 }
 
 function getFiveSimCountryLabelByCode(code = '') {
@@ -11547,7 +11558,7 @@ function applySettingsState(state) {
     selectHeroSmsAcquirePriority.value = normalizeHeroSmsAcquirePriority(state?.heroSmsAcquirePriority);
   }
   if (typeof selectHeroSmsOperator !== 'undefined' && selectHeroSmsOperator) {
-    renderHeroSmsOperatorOptions(state?.heroSmsOperator);
+    setHeroSmsOperatorSelectValue(state?.heroSmsOperator);
   }
   if (inputHeroSmsMaxPrice) {
     inputHeroSmsMaxPrice.value = restoredPhoneSmsProvider === PHONE_SMS_PROVIDER_FIVE_SIM
@@ -16762,10 +16773,7 @@ async function switchPhoneSmsProvider(nextProvider) {
     inputFiveSimOperator.value = normalizeFiveSimOperator(latestState?.fiveSimOperator);
   }
   if (selectHeroSmsOperator) {
-    renderHeroSmsOperatorOptions(latestState?.heroSmsOperator);
-    if (typeof refreshHeroSmsOperatorOptions === 'function') {
-      refreshHeroSmsOperatorOptions({ silent: true, selectedOperator: latestState?.heroSmsOperator });
-    }
+    setHeroSmsOperatorSelectValue(latestState?.heroSmsOperator);
   }
   if (displayHeroSmsPriceTiers) displayHeroSmsPriceTiers.textContent = '未获取';
   if (displayPhoneSmsBalance) displayPhoneSmsBalance.textContent = '余额未获取';
@@ -16889,10 +16897,7 @@ selectPhoneSmsProvider?.addEventListener('change', async () => {
       ],
       { includePrimary: true }
     );
-    renderHeroSmsOperatorOptions(latestState?.heroSmsOperator);
-    if (typeof refreshHeroSmsOperatorOptions === 'function') {
-      refreshHeroSmsOperatorOptions({ selectedOperator: latestState?.heroSmsOperator });
-    }
+    setHeroSmsOperatorSelectValue(latestState?.heroSmsOperator);
   }
   updateHeroSmsPlatformDisplay();
   updatePhoneVerificationSettingsUI();
@@ -17083,6 +17088,12 @@ selectHeroSmsOperator?.addEventListener('change', () => {
   selectHeroSmsOperator.value = normalizeHeroSmsOperatorValue(selectHeroSmsOperator.value);
   markSettingsDirty(true);
   saveSettings({ silent: true }).catch(() => { });
+});
+selectHeroSmsOperator?.addEventListener('focus', () => {
+  refreshHeroSmsOperatorOptions({ silent: true, selectedOperator: selectHeroSmsOperator.value || latestState?.heroSmsOperator });
+});
+selectHeroSmsOperator?.addEventListener('pointerdown', () => {
+  refreshHeroSmsOperatorOptions({ silent: true, selectedOperator: selectHeroSmsOperator.value || latestState?.heroSmsOperator });
 });
 selectHeroSmsPreferredActivation?.addEventListener('change', () => {
   if (isPhoneSignupReuseLocked(latestState)) {
@@ -18026,7 +18037,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         selectHeroSmsAcquirePriority.value = normalizeHeroSmsAcquirePriority(message.payload.heroSmsAcquirePriority);
       }
       if (message.payload.heroSmsOperator !== undefined && selectHeroSmsOperator) {
-        renderHeroSmsOperatorOptions(message.payload.heroSmsOperator);
+        setHeroSmsOperatorSelectValue(message.payload.heroSmsOperator);
       }
       if ((message.payload.heroSmsMaxPrice !== undefined || message.payload.fiveSimMaxPrice !== undefined) && inputHeroSmsMaxPrice) {
         inputHeroSmsMaxPrice.value = getSelectedPhoneSmsProvider() === PHONE_SMS_PROVIDER_FIVE_SIM

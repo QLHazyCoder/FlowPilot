@@ -164,7 +164,8 @@ test('sidepanel loads live SMS country lists silently during startup', () => {
   assert.match(sidepanelSource, /loadFiveSimCountries\(\{ silent: true \}\)/);
   assert.match(sidepanelSource, /await loadHeroSmsCountries\(\{ silent: true \}\);/);
   assert.doesNotMatch(heroLoader, /await loadHeroSmsOperators/);
-  assert.match(heroLoader, /refreshHeroSmsOperatorOptions\(\{ silent: true \}\)/);
+  assert.doesNotMatch(heroLoader, /refreshHeroSmsOperatorOptions\(/);
+  assert.doesNotMatch(heroLoader, /renderHeroSmsOperatorOptions\(/);
   assert.doesNotMatch(sidepanelSource, /loadHeroSmsCountries\(\{ silent: true, preferFallbackOnly: true \}\)/);
   assert.doesNotMatch(sidepanelSource, /loadFiveSimCountries\(\{ silent: true, preferFallbackOnly: true \}\)/);
   assert.doesNotMatch(sidepanelSource, /console\.error\('加载 (?:HeroSMS|5sim|NexSMS) 国家列表失败：'/);
@@ -325,6 +326,24 @@ return { displayHeroSmsPlatform, updateHeroSmsPlatformDisplay };
 
   assert.doesNotThrow(() => api.updateHeroSmsPlatformDisplay());
   assert.equal(api.displayHeroSmsPlatform.textContent, 'HeroSMS / OpenAI / Thailand');
+});
+
+test('HeroSMS operator startup paths only set value without loading options', () => {
+  assert.match(sidepanelSource, /function setHeroSmsOperatorSelectValue\(/);
+  assert.doesNotMatch(
+    sidepanelSource,
+    /renderHeroSmsOperatorOptions\(state\?\.heroSmsOperator\)/
+  );
+  assert.doesNotMatch(
+    sidepanelSource,
+    /renderHeroSmsOperatorOptions\(latestState\?\.heroSmsOperator\)/
+  );
+  assert.doesNotMatch(
+    sidepanelSource,
+    /renderHeroSmsOperatorOptions\(message\.payload\.heroSmsOperator\)/
+  );
+  assert.match(sidepanelSource, /selectHeroSmsOperator\?\.addEventListener\('focus',/);
+  assert.match(sidepanelSource, /selectHeroSmsOperator\?\.addEventListener\('pointerdown',/);
 });
 
 test('sidepanel source wires free reusable phone save and clear actions to runtime messages', () => {
@@ -1380,6 +1399,7 @@ function syncLatestState(patch) { latestState = { ...latestState, ...patch }; }
 function loadHeroSmsCountries() { return Promise.resolve(); }
 function applyHeroSmsFallbackSelection() {}
 function renderHeroSmsOperatorOptions(value) { selectHeroSmsOperator.value = normalizeHeroSmsOperatorValue(value || selectHeroSmsOperator.value); }
+${extractFunction('setHeroSmsOperatorSelectValue')}
 function updatePhoneVerificationSettingsUI() {}
 function markSettingsDirty() {}
 function saveSettings() { savedPayload = { ...latestState }; return Promise.resolve(); }
