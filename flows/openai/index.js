@@ -404,6 +404,7 @@
       "id": "openai-remote-account-inject",
       "label": "远程账号注入",
       "rowIds": [
+        "row-remote-account-inject-enabled",
         "row-remote-account-inject-url",
         "row-remote-account-inject-admin-key"
       ]

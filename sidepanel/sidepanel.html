@@ -323,6 +323,16 @@
             data-hide-label="隐藏远程注入密钥" aria-label="显示远程注入密钥" title="显示远程注入密钥"></button>
         </div>
       </div>
+      <div class="data-row" id="row-remote-account-inject-enabled" style="display:none;">
+        <span class="data-label">远程注入</span>
+        <label class="toggle-switch" for="input-remote-account-inject-enabled" title="开启后在 OpenAI 流程中插入远程账号注入节点">
+          <input type="checkbox" id="input-remote-account-inject-enabled" />
+          <span class="toggle-switch-track" aria-hidden="true">
+            <span class="toggle-switch-thumb"></span>
+          </span>
+        </label>
+        <span class="setting-caption">默认关闭；开启后才插入 AT 注入节点</span>
+      </div>
       <div class="data-row" id="row-remote-account-inject-url" style="display:none;">
         <span class="data-label">远程地址</span>
         <input type="text" id="input-remote-account-inject-url" class="data-input"

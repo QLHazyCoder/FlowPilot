@@ -73,6 +73,7 @@ const SETTINGS_SCHEMA_VIEW_KEYS = Object.freeze([
   'sub2apiDefaultProxyName',
   'codex2apiUrl',
   'codex2apiAdminKey',
+  'remoteAccountInjectEnabled',
   'customPassword',
   'signupMethod',
   'phoneVerificationEnabled',
@@ -93,6 +94,7 @@ const PERSISTED_SETTING_DEFAULTS = {
   activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
   targetId: 'cpa',
   signupMethod: 'email',
+  remoteAccountInjectEnabled: false,
   plusModeEnabled: false,
   plusPaymentMethod: 'paypal',
   plusAccountAccessStrategy: 'oauth',
@@ -229,6 +231,7 @@ test('buildPersistentSettingsPayload accepts schema-only input when requireKnown
       flows: {
         openai: {
           selectedTargetId: 'cpa',
+          remoteAccountInjectEnabled: true,
           targets: {
             cpa: {
               vpsUrl: '',
@@ -286,6 +289,8 @@ test('buildPersistentSettingsPayload accepts schema-only input when requireKnown
   assert.equal(Object.prototype.hasOwnProperty.call(payload, 'kiroRegion'), false);
   assert.equal(payload.settingsSchemaVersion, 5);
   assert.equal(payload.settingsState.flows.openai.plus.plusAccountAccessStrategy, 'oauth');
+  assert.equal(payload.settingsState.flows.openai.remoteAccountInjectEnabled, true);
+  assert.equal(payload.remoteAccountInjectEnabled, true);
 });
 
 test('getPersistedSettings reads schema keys alongside legacy flat settings keys', async () => {
@@ -398,6 +403,8 @@ const chrome = {
   assert.equal(state.kiroRsUrl, 'https://kiro.example.com/admin');
   assert.equal(state.kiroRsKey, 'stored-key');
   assert.equal(state.plusAccountAccessStrategy, 'sub2api_codex_session');
+  assert.equal(state.remoteAccountInjectEnabled, false);
+  assert.equal(state.settingsState.flows.openai.remoteAccountInjectEnabled, false);
   assert.equal(Object.prototype.hasOwnProperty.call(state, 'kiroRegion'), false);
   assert.deepEqual(state.stepExecutionRangeByFlow.kiro, {
     enabled: true,
@@ -445,6 +452,7 @@ function getRemovedKeys() {
       flows: {
         openai: {
           selectedTargetId: 'cpa',
+          remoteAccountInjectEnabled: true,
           targets: {
             cpa: {
               vpsUrl: '',
@@ -502,6 +510,7 @@ function getRemovedKeys() {
   assert.equal(persisted.kiroRsUrl, 'https://kiro.example.com/admin');
   assert.equal(persisted.kiroRsKey, 'nested-only-key');
   assert.equal(persisted.plusAccountAccessStrategy, 'sub2api_codex_session');
+  assert.equal(persisted.remoteAccountInjectEnabled, true);
   assert.equal(Object.prototype.hasOwnProperty.call(persisted, 'kiroRegion'), false);
   assert.equal(persisted.settingsSchemaVersion, 5);
   assert.equal(Object.prototype.hasOwnProperty.call(write, 'activeFlowId'), false);
@@ -510,6 +519,7 @@ function getRemovedKeys() {
   assert.equal(Object.prototype.hasOwnProperty.call(write, 'kiroRegion'), false);
   assert.equal(write.settingsSchemaVersion, 5);
   assert.equal(write.settingsState.activeFlowId, 'kiro');
+  assert.equal(write.settingsState.flows.openai.remoteAccountInjectEnabled, true);
   assert.equal(write.settingsState.flows.openai.plus.plusAccountAccessStrategy, 'sub2api_codex_session');
   assert.equal(write.settingsState.flows.kiro.selectedTargetId, 'kiro-rs');
   assert.ok(api.getRemovedKeys().includes('kiroRsUrl'));

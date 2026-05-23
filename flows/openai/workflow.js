@@ -3140,6 +3140,10 @@
     return Boolean(options?.phoneSignupReloginAfterBindEmailEnabled);
   }
 
+  function isRemoteAccountInjectEnabled(options = {}) {
+    return Boolean(options?.remoteAccountInjectEnabled);
+  }
+
   function normalizePlusAccountAccessStrategy(value = '') {
     const normalized = String(value || '').trim().toLowerCase();
     if (normalized === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
@@ -3224,7 +3228,9 @@
     if (isPlusMode) {
       steps = insertPlusRegistrationWaitStep(steps);
     }
-    steps = insertRemoteAccountInjectStep(steps);
+    if (isRemoteAccountInjectEnabled(options)) {
+      steps = insertRemoteAccountInjectStep(steps);
+    }
     if (
       isPlusMode
       && normalizePlusPaymentMethod(options?.plusPaymentMethod || options?.paymentMethod) === PLUS_PAYMENT_METHOD_NONE
@@ -3279,6 +3285,7 @@
     normalizePlusPaymentMethod,
     normalizePlusAccountAccessStrategy,
     normalizeSignupMethod,
+    isRemoteAccountInjectEnabled,
     resolveStepTitle,
   };
 });

@@ -67,68 +67,6 @@
       }
     }
 
-    function getSessionTabHostPriority(url = '') {
-      try {
-        const hostname = String(new URL(String(url || '')).hostname || '').trim().toLowerCase();
-        if (/(^|\.)chatgpt\.com$/.test(hostname)) {
-          return 0;
-        }
-        if (hostname === 'chat.openai.com') {
-          return 1;
-        }
-        if (/(^|\.)openai\.com$/.test(hostname)) {
-          return 2;
-        }
-      } catch (error) {
-        return Number.POSITIVE_INFINITY;
-      }
-      return Number.POSITIVE_INFINITY;
-    }
-
-    function getSessionTabActivityPriority(tab = {}) {
-      if (tab?.active && tab?.currentWindow) {
-        return 0;
-      }
-      if (tab?.active) {
-        return 1;
-      }
-      return 2;
-    }
-
-    function pickPreferredSessionTab(tabs = []) {
-      const candidates = (Array.isArray(tabs) ? tabs : [])
-        .filter((tab) => Number.isInteger(tab?.id) && isSupportedChatGptSessionUrl(tab.url));
-      if (!candidates.length) {
-        return null;
-      }
-
-      return candidates.reduce((best, candidate) => {
-        if (!best) {
-          return candidate;
-        }
-
-        const candidateHostPriority = getSessionTabHostPriority(candidate.url);
-        const bestHostPriority = getSessionTabHostPriority(best.url);
-        if (candidateHostPriority !== bestHostPriority) {
-          return candidateHostPriority < bestHostPriority ? candidate : best;
-        }
-
-        const candidateActivityPriority = getSessionTabActivityPriority(candidate);
-        const bestActivityPriority = getSessionTabActivityPriority(best);
-        if (candidateActivityPriority !== bestActivityPriority) {
-          return candidateActivityPriority < bestActivityPriority ? candidate : best;
-        }
-
-        const candidateLastAccessed = Number(candidate?.lastAccessed) || 0;
-        const bestLastAccessed = Number(best?.lastAccessed) || 0;
-        if (candidateLastAccessed !== bestLastAccessed) {
-          return candidateLastAccessed > bestLastAccessed ? candidate : best;
-        }
-
-        return Number(candidate.id) < Number(best.id) ? candidate : best;
-      }, null);
-    }
-
     async function readSupportedSessionTab(tabId) {
       const numericTabId = Number(tabId) || 0;
       if (!numericTabId || !chrome?.tabs?.get) {
@@ -139,18 +77,6 @@
       return tab?.id && isSupportedChatGptSessionUrl(tab.url)
         ? tab
         : null;
-    }
-
-    async function findFallbackSessionTab() {
-      if (!chrome?.tabs?.query) {
-        return null;
-      }
-
-      const activeTabs = await chrome.tabs.query({ active: true, currentWindow: true }).catch(() => []);
-      const activeMatch = pickPreferredSessionTab(activeTabs);
-      const allTabs = await chrome.tabs.query({}).catch(() => []);
-      const globalMatch = pickPreferredSessionTab(allTabs);
-      return pickPreferredSessionTab([activeMatch, globalMatch]);
     }
 
     async function resolveSessionTabId(state = {}) {
@@ -173,15 +99,7 @@
         return storedTab.id;
       }
 
-      const fallbackTab = await findFallbackSessionTab();
-      if (fallbackTab?.id) {
-        if (typeof registerTab === 'function') {
-          await registerTab(PLUS_CHECKOUT_SOURCE, fallbackTab.id);
-        }
-        return fallbackTab.id;
-      }
-
-      throw new Error('未找到可读取 ChatGPT 会话的标签页，请先打开一个已登录的 ChatGPT / OpenAI 页面。');
+      throw new Error('未找到当前流程记录的 ChatGPT 会话标签页，已停止远程注入 accessToken。');
     }
 
     async function getResolvedSessionTab(tabId, visibleStep) {

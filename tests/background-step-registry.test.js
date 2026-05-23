@@ -11,6 +11,8 @@ test('background imports node registry and wires the rebuilt Kiro executors', ()
   assert.match(source, /buildNodeRegistry\(definitions/);
   assert.match(source, /const stepRegistryCache = new Map\(\);/);
   assert.match(source, /const definitions = getNodeDefinitionsForState\(state\);/);
+  assert.match(source, /if \(Boolean\(resolvedState\?\.remoteAccountInjectEnabled\)\) \{\s*stepOptions\.remoteAccountInjectEnabled = true;\s*\}/);
+  assert.match(source, /\.\.\.\(Boolean\(\s*stepDefinitionOptions\.remoteAccountInjectEnabled[\s\S]*?state\?\.remoteAccountInjectEnabled[\s\S]*?\) \? \{ remoteAccountInjectEnabled: true \} : \{\}\),/);
   assert.match(source, /stepRegistryCache\.set\(cacheKey, buildStepRegistry\(definitions\)\)/);
 
   assert.match(source, /flows\/kiro\/background\/register-runner\.js/);

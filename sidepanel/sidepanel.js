@@ -197,10 +197,9 @@ const displayGrokRegisterStatus = document.getElementById('display-grok-register
 const rowGrokSsoStatus = document.getElementById('row-grok-sso-status');
 const displayGrokSsoStatus = document.getElementById('display-grok-sso-status');
 const rowGrokSsoSettings = document.getElementById('row-grok-sso-settings');
-const rowGrokRemoteAccountInject = document.getElementById('row-grok-remote-account-inject');
 const inputGrokRemoteAccountInjectUrl = document.getElementById('input-grok-remote-account-inject-url');
 const inputGrokRemoteAccountInjectAdminKey = document.getElementById('input-grok-remote-account-inject-admin-key');
-const rowRemoteAccountInject = document.getElementById('row-remote-account-inject');
+const inputRemoteAccountInjectEnabled = document.getElementById('input-remote-account-inject-enabled');
 const inputRemoteAccountInjectUrl = document.getElementById('input-remote-account-inject-url');
 const inputRemoteAccountInjectAdminKey = document.getElementById('input-remote-account-inject-admin-key');
 const displayGrokSsoCookie = document.getElementById('display-grok-sso-cookie');
@@ -896,10 +895,13 @@ function getStepDefinitionsForMode(plusModeEnabled = false, options = {}) {
   const accountContributionEnabled = typeof options === 'string'
     ? Boolean(typeof latestState !== 'undefined' ? latestState?.accountContributionEnabled : false)
     : Boolean(options.accountContributionEnabled ?? (typeof latestState !== 'undefined' ? latestState?.accountContributionEnabled : false));
+  const remoteAccountInjectEnabled = typeof options === 'string'
+    ? Boolean(typeof latestState !== 'undefined' ? latestState?.remoteAccountInjectEnabled : false)
+    : Boolean(options.remoteAccountInjectEnabled ?? (typeof latestState !== 'undefined' ? latestState?.remoteAccountInjectEnabled : false));
   const activeFlowId = typeof options === 'string'
     ? ((typeof latestState !== 'undefined' ? latestState?.activeFlowId : '') || defaultFlowId)
     : (options.activeFlowId || (typeof latestState !== 'undefined' ? latestState?.activeFlowId : '') || defaultFlowId);
-  return (window.MultiPageStepDefinitions?.getSteps?.({
+  const stepOptions = {
     activeFlowId: String(activeFlowId || '').trim().toLowerCase() || defaultFlowId,
     plusModeEnabled,
     plusPaymentMethod: normalizePlusPaymentMethod(rawPaymentMethod),
@@ -907,7 +909,11 @@ function getStepDefinitionsForMode(plusModeEnabled = false, options = {}) {
     signupMethod: normalizeSignupMethod(rawSignupMethod),
     phoneSignupReloginAfterBindEmailEnabled,
     accountContributionEnabled,
-  }) || [])
+  };
+  if (remoteAccountInjectEnabled) {
+    stepOptions.remoteAccountInjectEnabled = true;
+  }
+  return (window.MultiPageStepDefinitions?.getSteps?.(stepOptions) || [])
     .sort((left, right) => {
       const leftOrder = Number.isFinite(left.order) ? left.order : left.id;
       const rightOrder = Number.isFinite(right.order) ? right.order : right.id;
@@ -935,10 +941,13 @@ function getWorkflowNodesForMode(plusModeEnabled = false, options = {}) {
   const accountContributionEnabled = typeof options === 'string'
     ? Boolean(typeof latestState !== 'undefined' ? latestState?.accountContributionEnabled : false)
     : Boolean(options.accountContributionEnabled ?? (typeof latestState !== 'undefined' ? latestState?.accountContributionEnabled : false));
+  const remoteAccountInjectEnabled = typeof options === 'string'
+    ? Boolean(typeof latestState !== 'undefined' ? latestState?.remoteAccountInjectEnabled : false)
+    : Boolean(options.remoteAccountInjectEnabled ?? (typeof latestState !== 'undefined' ? latestState?.remoteAccountInjectEnabled : false));
   const activeFlowId = typeof options === 'string'
     ? ((typeof latestState !== 'undefined' ? latestState?.activeFlowId : '') || defaultFlowId)
     : (options.activeFlowId || (typeof latestState !== 'undefined' ? latestState?.activeFlowId : '') || defaultFlowId);
-  const nodes = window.MultiPageStepDefinitions?.getNodes?.({
+  const nodeOptions = {
     activeFlowId: String(activeFlowId || '').trim().toLowerCase() || defaultFlowId,
     plusModeEnabled,
     plusPaymentMethod: normalizePlusPaymentMethod(rawPaymentMethod),
@@ -946,7 +955,11 @@ function getWorkflowNodesForMode(plusModeEnabled = false, options = {}) {
     signupMethod: normalizeSignupMethod(rawSignupMethod),
     phoneSignupReloginAfterBindEmailEnabled,
     accountContributionEnabled,
-  });
+  };
+  if (remoteAccountInjectEnabled) {
+    nodeOptions.remoteAccountInjectEnabled = true;
+  }
+  const nodes = window.MultiPageStepDefinitions?.getNodes?.(nodeOptions);
   if (Array.isArray(nodes) && nodes.length) {
     return nodes.slice().sort((left, right) => {
       const leftOrder = Number.isFinite(Number(left.displayOrder)) ? Number(left.displayOrder) : 0;
@@ -1017,6 +1030,10 @@ function rebuildStepDefinitionState(plusModeEnabled = false, options = {}) {
     options.accountContributionEnabled
     ?? (typeof latestState !== 'undefined' ? latestState?.accountContributionEnabled : false)
   );
+  const remoteAccountInjectEnabled = Boolean(
+    options.remoteAccountInjectEnabled
+    ?? (typeof latestState !== 'undefined' ? latestState?.remoteAccountInjectEnabled : false)
+  );
   currentPlusPaymentMethod = normalizePlusPaymentMethod(rawPaymentMethod);
   currentPlusAccountAccessStrategy = normalizePlusAccountAccessStrategy(rawPlusAccountAccessStrategy);
   currentSignupMethod = normalizeSignupMethod(rawSignupMethod);
@@ -1036,6 +1053,7 @@ function rebuildStepDefinitionState(plusModeEnabled = false, options = {}) {
     signupMethod: currentSignupMethod,
     phoneSignupReloginAfterBindEmailEnabled: currentPhoneSignupReloginAfterBindEmailEnabled,
     accountContributionEnabled,
+    remoteAccountInjectEnabled,
   });
   const nextWorkflowNodes = typeof getWorkflowNodesForMode === 'function'
     ? getWorkflowNodesForMode(currentPlusModeEnabled, {
@@ -1045,6 +1063,7 @@ function rebuildStepDefinitionState(plusModeEnabled = false, options = {}) {
       signupMethod: currentSignupMethod,
       phoneSignupReloginAfterBindEmailEnabled: currentPhoneSignupReloginAfterBindEmailEnabled,
       accountContributionEnabled,
+      remoteAccountInjectEnabled,
     })
     : stepDefinitions.map((step) => ({
       nodeId: String(step.key || step.id || '').trim(),
@@ -4945,6 +4964,9 @@ function collectSettingsPayload() {
     sub2apiUrl: inputSub2ApiUrl.value.trim(),
     sub2apiEmail: inputSub2ApiEmail.value.trim(),
     sub2apiPassword: inputSub2ApiPassword.value,
+    remoteAccountInjectEnabled: (typeof inputRemoteAccountInjectEnabled !== 'undefined' && inputRemoteAccountInjectEnabled)
+      ? Boolean(inputRemoteAccountInjectEnabled.checked)
+      : false,
     remoteAccountInjectUrl: (typeof inputRemoteAccountInjectUrl !== 'undefined' && inputRemoteAccountInjectUrl)
       ? inputRemoteAccountInjectUrl.value.trim()
       : '',
@@ -10872,6 +10894,10 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
     options.accountContributionEnabled
       ?? (typeof latestState !== 'undefined' ? latestState?.accountContributionEnabled : false)
   );
+  const nextRemoteAccountInjectEnabled = Boolean(
+    options.remoteAccountInjectEnabled
+      ?? (typeof latestState !== 'undefined' ? latestState?.remoteAccountInjectEnabled : false)
+  );
   const nextPaymentMethod = normalizePlusPaymentMethod(rawPaymentMethod);
   const nextActiveFlowId = String(
     options.activeFlowId
@@ -10890,6 +10916,7 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
     plusAccountAccessStrategy: nextPlusAccountAccessStrategy,
     signupMethod: nextSignupMethod,
     phoneSignupReloginAfterBindEmailEnabled: nextPhoneSignupReloginAfterBindEmailEnabled,
+    remoteAccountInjectEnabled: Boolean(options.remoteAccountInjectEnabled ?? latestState?.remoteAccountInjectEnabled),
   });
   const paymentTitleChanged = Boolean(nextPlusModeEnabled && currentPaymentStep && nextPaymentTitle && currentPaymentStep.title !== nextPaymentTitle);
   const shouldRender = Boolean(options.render)
@@ -10898,6 +10925,7 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
     || nextPlusAccountAccessStrategy !== currentPlusAccountAccessStrategy
     || nextSignupMethod !== currentSignupMethod
     || nextPhoneSignupReloginAfterBindEmailEnabled !== currentPhoneSignupReloginAfterBindEmailEnabled
+    || nextRemoteAccountInjectEnabled !== Boolean(typeof latestState !== 'undefined' ? latestState?.remoteAccountInjectEnabled : false)
     || nextAccountContributionEnabled !== Boolean(typeof latestState !== 'undefined' ? latestState?.accountContributionEnabled : false)
     || nextActiveFlowId !== currentFlowId
     || paymentTitleChanged;
@@ -10912,6 +10940,7 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
     signupMethod: nextSignupMethod,
     phoneSignupReloginAfterBindEmailEnabled: nextPhoneSignupReloginAfterBindEmailEnabled,
     accountContributionEnabled: nextAccountContributionEnabled,
+    remoteAccountInjectEnabled: nextRemoteAccountInjectEnabled,
   });
   renderStepsList();
 }
@@ -10939,6 +10968,7 @@ function syncStepDefinitionsFromUiState(stateOverrides = {}) {
     signupMethod: stepDefinitionState.signupMethod,
     phoneSignupReloginAfterBindEmailEnabled: Boolean(nextState?.phoneSignupReloginAfterBindEmailEnabled),
     accountContributionEnabled: Boolean(nextState?.accountContributionEnabled),
+    remoteAccountInjectEnabled: Boolean(nextState?.remoteAccountInjectEnabled),
   });
   return stepDefinitionState;
 }
@@ -10963,6 +10993,7 @@ function applySettingsState(state) {
       signupMethod: stepDefinitionState.signupMethod,
       phoneSignupReloginAfterBindEmailEnabled: Boolean(state?.phoneSignupReloginAfterBindEmailEnabled),
       accountContributionEnabled: Boolean(state?.accountContributionEnabled),
+      remoteAccountInjectEnabled: Boolean(state?.remoteAccountInjectEnabled),
     });
   }
   const fallbackIpProxyService = '711proxy';
@@ -11140,6 +11171,9 @@ function applySettingsState(state) {
     inputSub2ApiAccountPriority.value = String(normalizeSub2ApiAccountPriorityValue(state?.sub2apiAccountPriority));
   }
   inputSub2ApiDefaultProxy.value = state?.sub2apiDefaultProxyName || '';
+  if (typeof inputRemoteAccountInjectEnabled !== 'undefined' && inputRemoteAccountInjectEnabled) {
+    inputRemoteAccountInjectEnabled.checked = Boolean(state?.remoteAccountInjectEnabled);
+  }
   if (typeof inputRemoteAccountInjectUrl !== 'undefined' && inputRemoteAccountInjectUrl) {
     inputRemoteAccountInjectUrl.value = state?.remoteAccountInjectUrl || '';
   }
@@ -15425,6 +15459,16 @@ inputPlusModeEnabled?.addEventListener('change', () => {
   syncStepDefinitionsForMode(stepDefinitionState.plusModeEnabled, getSelectedPlusPaymentMethod(), {
     render: true,
     signupMethod: stepDefinitionState.signupMethod,
+  });
+  markSettingsDirty(true);
+  saveSettings({ silent: true }).catch(() => { });
+});
+
+inputRemoteAccountInjectEnabled?.addEventListener('change', () => {
+  syncStepDefinitionsForMode(Boolean(inputPlusModeEnabled?.checked), getSelectedPlusPaymentMethod(), {
+    render: true,
+    remoteAccountInjectEnabled: Boolean(inputRemoteAccountInjectEnabled.checked),
+    signupMethod: getSelectedSignupMethod(),
   });
   markSettingsDirty(true);
   saveSettings({ silent: true }).catch(() => { });

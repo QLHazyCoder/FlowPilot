@@ -931,6 +931,10 @@ function buildResolvedStepDefinitionState(state = {}) {
     plusModeEnabled: stepDefinitionOptions.plusModeEnabled === undefined
       ? plusModeEnabled
       : Boolean(stepDefinitionOptions.plusModeEnabled),
+    ...(Boolean(
+      stepDefinitionOptions.remoteAccountInjectEnabled
+      ?? state?.remoteAccountInjectEnabled
+    ) ? { remoteAccountInjectEnabled: true } : {}),
     plusPaymentMethod,
     plusAccountAccessStrategy: normalizePlusAccountAccessStrategy(
       stepDefinitionOptions.plusAccountAccessStrategy
@@ -949,14 +953,18 @@ function getStepDefinitionsForState(state = {}) {
   if (rootScope.MultiPageStepDefinitions?.getSteps) {
     const defaultFlowId = typeof DEFAULT_ACTIVE_FLOW_ID === 'string' ? DEFAULT_ACTIVE_FLOW_ID : 'openai';
     const activeFlowId = String(resolvedState?.activeFlowId || '').trim().toLowerCase() || defaultFlowId;
-    const definitions = rootScope.MultiPageStepDefinitions.getSteps({
+    const stepOptions = {
       activeFlowId,
       plusModeEnabled: Boolean(resolvedState?.plusModeEnabled),
       plusPaymentMethod: normalizePlusPaymentMethod(resolvedState?.plusPaymentMethod),
       plusAccountAccessStrategy: normalizePlusAccountAccessStrategy(resolvedState?.plusAccountAccessStrategy),
       signupMethod: getSignupMethodForStepDefinitions(resolvedState),
       phoneSignupReloginAfterBindEmailEnabled: Boolean(resolvedState?.phoneSignupReloginAfterBindEmailEnabled),
-    });
+    };
+    if (Boolean(resolvedState?.remoteAccountInjectEnabled)) {
+      stepOptions.remoteAccountInjectEnabled = true;
+    }
+    const definitions = rootScope.MultiPageStepDefinitions.getSteps(stepOptions);
     if (Array.isArray(definitions)) {
       return definitions;
     }
@@ -1295,6 +1303,7 @@ const PERSISTED_SETTING_DEFAULTS = {
   ipProxyRegion: '',
   codex2apiUrl: DEFAULT_CODEX2API_URL,
   codex2apiAdminKey: '',
+  remoteAccountInjectEnabled: false,
   remoteAccountInjectUrl: '',
   remoteAccountInjectAdminKey: '',
   grokRemoteAccountInjectUrl: '',
@@ -1471,6 +1480,7 @@ const SETTINGS_SCHEMA_VIEW_KEYS = Object.freeze([
   'sub2apiDefaultProxyName',
   'codex2apiUrl',
   'codex2apiAdminKey',
+  'remoteAccountInjectEnabled',
   'remoteAccountInjectUrl',
   'remoteAccountInjectAdminKey',
   'grokRemoteAccountInjectUrl',
@@ -3259,6 +3269,8 @@ function normalizePersistentSettingValue(key, value) {
       return normalizeCodex2ApiUrl(value);
     case 'codex2apiAdminKey':
       return String(value || '').trim();
+    case 'remoteAccountInjectEnabled':
+      return Boolean(value);
     case 'remoteAccountInjectUrl':
       return String(value || '').trim();
     case 'remoteAccountInjectAdminKey':
@@ -3840,6 +3852,7 @@ function buildSettingsStatePatchFromFlatUpdates(updates = {}) {
   assignIfUpdated('sub2apiDefaultProxyName', ['flows', 'openai', 'targets', 'sub2api', 'sub2apiDefaultProxyName']);
   assignIfUpdated('codex2apiUrl', ['flows', 'openai', 'targets', 'codex2api', 'codex2apiUrl']);
   assignIfUpdated('codex2apiAdminKey', ['flows', 'openai', 'targets', 'codex2api', 'codex2apiAdminKey']);
+  assignIfUpdated('remoteAccountInjectEnabled', ['flows', 'openai', 'remoteAccountInjectEnabled']);
   assignIfUpdated('remoteAccountInjectUrl', ['flows', 'openai', 'remoteAccountInjectUrl']);
   assignIfUpdated('remoteAccountInjectAdminKey', ['flows', 'openai', 'remoteAccountInjectAdminKey']);
   assignIfUpdated('grokRemoteAccountInjectUrl', ['flows', 'grok', 'grokRemoteAccountInjectUrl']);

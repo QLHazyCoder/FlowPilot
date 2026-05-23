@@ -7,6 +7,52 @@ function loadRemoteAccountInjectStepModule() {
   return new Function('self', `${source}; return self.MultiPageBackgroundRemoteAccountInject;`)({});
 }
 
+test('OpenAI remote account inject step does not scan arbitrary ChatGPT tabs', async () => {
+  const moduleApi = loadRemoteAccountInjectStepModule();
+  const queryCalls = [];
+  let sentMessage = false;
+
+  const executor = moduleApi.createRemoteAccountInjectExecutor({
+    addLog: async () => {},
+    chrome: {
+      tabs: {
+        get: async () => null,
+        query: async (query) => {
+          queryCalls.push(query);
+          return [{ id: 12, url: 'https://chatgpt.com/' }];
+        },
+      },
+    },
+    completeNodeFromBackground: async () => {},
+    createRemoteAccountInjectApi: () => ({
+      injectRemoteAccounts: async () => ({ skipped: false }),
+    }),
+    ensureContentScriptReadyOnTabUntilStopped: async () => {},
+    getTabId: async () => null,
+    isTabAlive: async () => false,
+    registerTab: async () => {},
+    sendTabMessageUntilStopped: async () => {
+      sentMessage = true;
+      return { accessToken: 'openai-access-token' };
+    },
+    sleepWithStop: async () => {},
+    throwIfStopped: () => {},
+    waitForTabCompleteUntilStopped: async () => {},
+  });
+
+  await assert.rejects(
+    () => executor.executeRemoteAccountInject({
+      nodeId: 'remote-account-inject',
+      visibleStep: 7,
+      remoteAccountInjectUrl: 'https://remote.example.com/panel',
+      remoteAccountInjectAdminKey: 'admin-secret',
+    }),
+    /当前流程记录的 ChatGPT 会话标签页/
+  );
+  assert.deepEqual(queryCalls, []);
+  assert.equal(sentMessage, false);
+});
+
 test('OpenAI remote account inject step skips cleanly when config is missing', async () => {
   const moduleApi = loadRemoteAccountInjectStepModule();
   const logs = [];

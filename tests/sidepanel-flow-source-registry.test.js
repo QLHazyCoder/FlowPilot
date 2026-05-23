@@ -54,6 +54,8 @@ test('sidepanel html exposes flow selector and kiro source fields', () => {
     'id="input-grok-remote-account-inject-url"',
     'id="row-grok-remote-account-inject-admin-key"',
     'id="input-grok-remote-account-inject-admin-key"',
+    'id="row-remote-account-inject-enabled"',
+    'id="input-remote-account-inject-enabled"',
     'id="row-remote-account-inject-url"',
     'id="input-remote-account-inject-url"',
     'id="row-remote-account-inject-admin-key"',
@@ -74,6 +76,18 @@ test('sidepanel html exposes flow selector and kiro source fields', () => {
     sidepanelHtml.indexOf('<script src="../flows/grok/workflow.js"></script>')
       < sidepanelHtml.indexOf('<script src="../flows/index.js"></script>')
   );
+});
+
+test('sidepanel wires OpenAI remote account inject toggle through DOM, save payload, and step refresh', () => {
+  assert.match(sidepanelSource, /const inputRemoteAccountInjectEnabled = document\.getElementById\('input-remote-account-inject-enabled'\)/);
+  assert.match(sidepanelSource, /remoteAccountInjectEnabled:\s*\(typeof inputRemoteAccountInjectEnabled !== 'undefined' && inputRemoteAccountInjectEnabled\)\s*\?\s*Boolean\(inputRemoteAccountInjectEnabled\.checked\)\s*:\s*false/);
+  assert.match(sidepanelSource, /inputRemoteAccountInjectEnabled\.checked = Boolean\(state\?\.remoteAccountInjectEnabled\)/);
+  assert.match(sidepanelSource, /inputRemoteAccountInjectEnabled\?\.addEventListener\('change'/);
+  assert.match(sidepanelSource, /remoteAccountInjectEnabled:\s*Boolean\(inputRemoteAccountInjectEnabled\.checked\)/);
+  assert.match(sidepanelSource, /const stepOptions = \{/);
+  assert.match(sidepanelSource, /if \(remoteAccountInjectEnabled\) \{\s*stepOptions\.remoteAccountInjectEnabled = true;\s*\}/);
+  assert.match(sidepanelSource, /const nodeOptions = \{/);
+  assert.match(sidepanelSource, /if \(remoteAccountInjectEnabled\) \{\s*nodeOptions\.remoteAccountInjectEnabled = true;\s*\}/);
 });
 
 test('sidepanel Grok SSO clear action goes through background message instead of direct storage writes', () => {

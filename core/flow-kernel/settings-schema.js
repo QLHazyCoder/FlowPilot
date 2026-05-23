@@ -206,6 +206,7 @@
       };
       if (flowId === 'openai') {
         return mergePlainObjects(base, {
+          remoteAccountInjectEnabled: false,
           remoteAccountInjectUrl: '',
           remoteAccountInjectAdminKey: '',
           signup: {
@@ -299,20 +300,6 @@
           ...targetState,
           baseUrl: String(targetState.baseUrl ?? defaultKiroRsUrl).trim() || defaultKiroRsUrl,
           apiKey: String(targetState.apiKey ?? ''),
-        };
-      }
-      if (flowId === 'openai') {
-        return {
-          ...targetState,
-          remoteAccountInjectUrl: String(targetState.remoteAccountInjectUrl ?? '').trim(),
-          remoteAccountInjectAdminKey: String(targetState.remoteAccountInjectAdminKey ?? '').trim(),
-        };
-      }
-      if (flowId === 'grok') {
-        return {
-          ...targetState,
-          grokRemoteAccountInjectUrl: String(targetState.grokRemoteAccountInjectUrl ?? '').trim(),
-          grokRemoteAccountInjectAdminKey: String(targetState.grokRemoteAccountInjectAdminKey ?? '').trim(),
         };
       }
       return targetState;
@@ -418,6 +405,11 @@
       };
       return {
         ...currentFlow,
+        remoteAccountInjectEnabled: Boolean(
+          input?.remoteAccountInjectEnabled
+          ?? currentFlow.remoteAccountInjectEnabled
+          ?? defaults.flows.openai.remoteAccountInjectEnabled
+        ),
         remoteAccountInjectUrl: String(
           input?.remoteAccountInjectUrl
           ?? currentFlow.remoteAccountInjectUrl
@@ -663,6 +655,7 @@
       next.sub2apiDefaultProxyName = openaiState.targets.sub2api?.sub2apiDefaultProxyName || '';
       next.codex2apiUrl = openaiState.targets.codex2api?.codex2apiUrl || '';
       next.codex2apiAdminKey = openaiState.targets.codex2api?.codex2apiAdminKey || '';
+      next.remoteAccountInjectEnabled = Boolean(openaiState.remoteAccountInjectEnabled);
       next.remoteAccountInjectUrl = openaiState.remoteAccountInjectUrl || '';
       next.remoteAccountInjectAdminKey = openaiState.remoteAccountInjectAdminKey || '';
       next.grokRemoteAccountInjectUrl = grokState.grokRemoteAccountInjectUrl || '';
