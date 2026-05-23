@@ -481,7 +481,7 @@ test('generated email helper uses the regular temp email domain when random subd
     name: requests[0].body.name,
     domain: 'mail.example.com',
   });
-  assert.match(requests[0].body.name, /^[a-z0-9]+$/);
+  assert.match(requests[0].body.name, /^[a-z]+[0-9]{14}$/);
 });
 
 test('generated email helper requests random subdomain creation while preserving the returned address', async () => {
