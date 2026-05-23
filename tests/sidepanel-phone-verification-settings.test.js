@@ -229,6 +229,7 @@ const DEFAULT_HERO_SMS_COUNTRY_ID = 52;
 const DEFAULT_HERO_SMS_OPERATOR = 'any';
 let latestState = { heroSmsCountryId: 52, heroSmsOperator: 'ais' };
 let heroSmsCountrySelectionOrder = [52];
+let isRenderingHeroSmsOperatorOptions = false;
 const selectHeroSmsCountry = null;
 const selectHeroSmsCountryFallback = null;
 const heroSmsOperatorsByCountryId = new Map([['52', ['ais', 'dtac']]]);
@@ -267,6 +268,7 @@ const DEFAULT_HERO_SMS_COUNTRY_ID = 52;
 const DEFAULT_HERO_SMS_OPERATOR = 'any';
 let latestState = { heroSmsCountryId: 52, heroSmsOperator: 'ais' };
 let heroSmsCountrySelectionOrder = [52];
+let isRenderingHeroSmsOperatorOptions = false;
 const selectHeroSmsCountry = null;
 const selectHeroSmsCountryFallback = null;
 const selectHeroSmsOperator = null;
@@ -283,6 +285,46 @@ return { refreshHeroSmsOperatorOptions, renderHeroSmsOperatorOptions };
 
   assert.doesNotThrow(() => api.renderHeroSmsOperatorOptions('ais'));
   await assert.doesNotReject(() => api.refreshHeroSmsOperatorOptions({ silent: true }));
+});
+
+test('HeroSMS country sync does not render operator options recursively', () => {
+  const syncSource = extractFunction('syncHeroSmsFallbackSelectionOrderFromSelect');
+
+  assert.doesNotMatch(syncSource, /renderHeroSmsOperatorOptions\(/);
+});
+
+test('HeroSMS platform display does not synchronize country selection', () => {
+  const api = new Function(`
+const PHONE_SMS_PROVIDER_FIVE_SIM = '5sim';
+const PHONE_SMS_PROVIDER_NEXSMS = 'nexsms';
+const DEFAULT_HERO_SMS_COUNTRY_ID = 52;
+const DEFAULT_HERO_SMS_COUNTRY_LABEL = 'Thailand';
+const DEFAULT_FIVE_SIM_COUNTRY_ID = 'thailand';
+const DEFAULT_FIVE_SIM_COUNTRY_LABEL = 'Thailand';
+const DEFAULT_NEX_SMS_COUNTRY_ORDER = [1];
+let latestState = { phoneSmsProvider: 'hero-sms', heroSmsCountryId: 52, heroSmsCountryLabel: 'Thailand' };
+let heroSmsCountrySelectionOrder = [52];
+const selectHeroSmsCountry = null;
+const selectHeroSmsCountryFallback = null;
+const displayHeroSmsPlatform = { textContent: '' };
+const inputHeroSmsApiKey = { placeholder: '' };
+function getSelectedPhoneSmsProvider() { return 'hero-sms'; }
+function getPhoneSmsProviderLabel() { return 'HeroSMS'; }
+function getSelectedFiveSimCountries() { return []; }
+function getSelectedNexSmsCountries() { return []; }
+function getHeroSmsCountryLabelById(id) { return id === '52' ? 'Thailand' : ''; }
+function syncHeroSmsFallbackSelectionOrderFromSelect() {
+  throw new Error('updateHeroSmsPlatformDisplay must not sync country selection');
+}
+${extractFunction('normalizeHeroSmsCountryId')}
+${extractFunction('normalizeHeroSmsCountryLabel')}
+${extractFunction('peekSelectedHeroSmsCountryOption')}
+${extractFunction('updateHeroSmsPlatformDisplay')}
+return { displayHeroSmsPlatform, updateHeroSmsPlatformDisplay };
+`)();
+
+  assert.doesNotThrow(() => api.updateHeroSmsPlatformDisplay());
+  assert.equal(api.displayHeroSmsPlatform.textContent, 'HeroSMS / OpenAI / Thailand');
 });
 
 test('sidepanel source wires free reusable phone save and clear actions to runtime messages', () => {
