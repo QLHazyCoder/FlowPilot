@@ -325,6 +325,68 @@ return { refreshHeroSmsOperatorOptions, selectHeroSmsOperator };
   assert.equal(api.selectHeroSmsOperator.value, 'ais');
 });
 
+test('HeroSMS operator value setter keeps selected operator even before options load', () => {
+  const api = new Function(`
+const DEFAULT_HERO_SMS_OPERATOR = 'any';
+let latestState = { heroSmsOperator: 'ais' };
+const selectHeroSmsOperator = {
+  value: 'any',
+  options: [{ value: 'any', textContent: '不限（any）' }],
+  appendChild(option) { this.options.push(option); },
+};
+const document = {
+  createElement() { return { value: '', textContent: '' }; },
+};
+${extractFunction('normalizeHeroSmsOperatorValue')}
+${extractFunction('setHeroSmsOperatorSelectValue')}
+return { setHeroSmsOperatorSelectValue, selectHeroSmsOperator };
+`)();
+
+  api.setHeroSmsOperatorSelectValue('ais');
+
+  assert.equal(api.selectHeroSmsOperator.value, 'ais');
+  assert.deepStrictEqual(
+    api.selectHeroSmsOperator.options.map((option) => option.value),
+    ['any', 'ais']
+  );
+});
+
+test('HeroSMS operator rendering keeps current operator when API list misses it', () => {
+  const api = new Function(`
+const DEFAULT_HERO_SMS_COUNTRY_ID = 52;
+const DEFAULT_HERO_SMS_OPERATOR = 'any';
+let latestState = { heroSmsCountryId: 52, heroSmsOperator: 'ais' };
+let heroSmsCountrySelectionOrder = [52];
+let isRenderingHeroSmsOperatorOptions = false;
+const selectHeroSmsCountry = null;
+const selectHeroSmsCountryFallback = null;
+const heroSmsOperatorsByCountryId = new Map([['52', ['dtac']]]);
+const selectHeroSmsOperator = {
+  value: 'ais',
+  innerHTML: '',
+  options: [],
+  appendChild(option) { this.options.push(option); },
+  disabled: false,
+};
+const document = {
+  createElement() { return { value: '', textContent: '' }; },
+};
+${extractFunction('normalizeHeroSmsCountryId')}
+${extractFunction('normalizeHeroSmsOperatorValue')}
+${extractFunction('getHeroSmsOperatorCountryId')}
+${extractFunction('renderHeroSmsOperatorOptions')}
+return { renderHeroSmsOperatorOptions, selectHeroSmsOperator };
+`)();
+
+  api.renderHeroSmsOperatorOptions();
+
+  assert.equal(api.selectHeroSmsOperator.value, 'ais');
+  assert.deepStrictEqual(
+    api.selectHeroSmsOperator.options.map((option) => option.value),
+    ['any', 'dtac', 'ais']
+  );
+});
+
 test('HeroSMS country sync does not render operator options recursively', () => {
   const syncSource = extractFunction('syncHeroSmsFallbackSelectionOrderFromSelect');
 

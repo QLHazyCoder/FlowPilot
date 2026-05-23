@@ -7611,7 +7611,15 @@ function renderHeroSmsOperatorOptions(selectedOperator = null) {
       selectHeroSmsOperator.appendChild(option);
     });
     const hasCurrent = Array.from(selectHeroSmsOperator.options).some((option) => option.value === currentValue);
-    selectHeroSmsOperator.value = hasCurrent ? currentValue : DEFAULT_HERO_SMS_OPERATOR;
+    if (!hasCurrent && currentValue && currentValue !== DEFAULT_HERO_SMS_OPERATOR) {
+      const selectedOption = typeof document !== 'undefined' && document?.createElement
+        ? document.createElement('option')
+        : { value: '', textContent: '' };
+      selectedOption.value = currentValue;
+      selectedOption.textContent = currentValue;
+      selectHeroSmsOperator.appendChild(selectedOption);
+    }
+    selectHeroSmsOperator.value = currentValue || DEFAULT_HERO_SMS_OPERATOR;
     selectHeroSmsOperator.disabled = operators.length === 0;
   } finally {
     isRenderingHeroSmsOperatorOptions = false;
@@ -7624,11 +7632,15 @@ function setHeroSmsOperatorSelectValue(operator = latestState?.heroSmsOperator) 
   }
   const normalized = normalizeHeroSmsOperatorValue(operator, DEFAULT_HERO_SMS_OPERATOR);
   const hasOption = Array.from(selectHeroSmsOperator.options || []).some((option) => option.value === normalized);
-  if (hasOption) {
-    selectHeroSmsOperator.value = normalized;
-  } else if (selectHeroSmsOperator.options?.length) {
-    selectHeroSmsOperator.value = DEFAULT_HERO_SMS_OPERATOR;
+  if (!hasOption && normalized && normalized !== DEFAULT_HERO_SMS_OPERATOR) {
+    const selectedOption = typeof document !== 'undefined' && document?.createElement
+      ? document.createElement('option')
+      : { value: '', textContent: '' };
+    selectedOption.value = normalized;
+    selectedOption.textContent = normalized;
+    selectHeroSmsOperator.appendChild(selectedOption);
   }
+  selectHeroSmsOperator.value = normalized;
   return normalized;
 }
 
