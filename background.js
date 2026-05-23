@@ -11284,6 +11284,48 @@ async function finalizeDeferredStepExecutionError(step, error) {
   return finalizeDeferredNodeExecutionError(nodeId, error);
 }
 
+async function recoverFillProfileCompletionFromBackground(executeError = null) {
+  const transportMessage = getErrorMessage(executeError);
+  await addLog('步骤 5：资料提交后页面通信中断，正在通过后台复核最终状态...', 'warn', {
+    step: 5,
+    stepKey: 'fill-profile',
+  });
+
+  const signupTabId = await getTabId('openai-auth');
+  if (!signupTabId) {
+    throw new Error('步骤 5：资料提交后页面通信中断，且缺少认证页标签页，无法通过后台复核最终状态。');
+  }
+
+  await waitForTabStableComplete(signupTabId, {
+    timeoutMs: 120000,
+    retryDelayMs: 300,
+    stableMs: 1000,
+    initialDelayMs: 800,
+  });
+
+  const completionPayload = {
+    nodeId: 'fill-profile',
+    step: 5,
+    outcome: 'background_transport_recovered',
+    navigationStarted: true,
+    retryableTransportError: transportMessage,
+  };
+  const pageState = await validateStep5PostCompletion(signupTabId, completionPayload);
+  const recoveredPayload = {
+    ...completionPayload,
+    ...(pageState?.successState ? { successState: pageState.successState } : {}),
+    ...(pageState?.url ? { url: pageState.url } : {}),
+    recoveredByBackground: true,
+  };
+
+  await addLog('步骤 5 [调试] 资料页完成信号丢失，后台复核已确认成功。', 'ok', {
+    step: 5,
+    stepKey: 'fill-profile',
+  });
+  notifyNodeComplete('fill-profile', recoveredPayload);
+  return recoveredPayload;
+}
+
 async function executeNodeViaCompletionSignal(nodeId, timeoutMs = 0) {
   const normalizedNodeId = String(nodeId || '').trim();
   const executionState = await getState();
@@ -11306,6 +11348,60 @@ async function executeNodeViaCompletionSignal(nodeId, timeoutMs = 0) {
     if (isStopError(err) || !isRetryableContentScriptTransportError(err)) {
       notifyNodeError(normalizedNodeId, getErrorMessage(err));
     }
+  }
+
+  const shouldTryStep5BackgroundRecovery = (
+    normalizedNodeId === 'fill-profile'
+    && executeError
+    && isRetryableContentScriptTransportError(executeError)
+  );
+  if (shouldTryStep5BackgroundRecovery) {
+    const taggedCompletionPromise = completionResultPromise.then((result) => ({
+      source: 'completion',
+      ...result,
+    }));
+    const taggedBackgroundRecoveryPromise = recoverFillProfileCompletionFromBackground(executeError).then(
+      (payload) => ({
+        source: 'background-recovery',
+        ok: true,
+        payload,
+      }),
+      (error) => ({
+        source: 'background-recovery',
+        ok: false,
+        error,
+      }),
+    );
+
+    const firstResult = await Promise.race([
+      taggedCompletionPromise,
+      taggedBackgroundRecoveryPromise,
+    ]);
+
+    if (firstResult.ok) {
+      console.warn(
+        LOG_PREFIX,
+        `[executeNodeViaCompletionSignal] node ${normalizedNodeId} completed after deferred execute error: ${getErrorMessage(executeError)}`
+      );
+      return firstResult.payload;
+    }
+
+    const alternateResult = firstResult.source === 'completion'
+      ? await taggedBackgroundRecoveryPromise
+      : await taggedCompletionPromise;
+    if (alternateResult.ok) {
+      console.warn(
+        LOG_PREFIX,
+        `[executeNodeViaCompletionSignal] node ${normalizedNodeId} completed after deferred execute error: ${getErrorMessage(executeError)}`
+      );
+      return alternateResult.payload;
+    }
+
+    const recoveryError = firstResult.source === 'background-recovery'
+      ? firstResult.error
+      : alternateResult.error;
+    await finalizeDeferredNodeExecutionError(normalizedNodeId, recoveryError || executeError);
+    throw recoveryError || executeError;
   }
 
   const completionResult = await completionResultPromise;
