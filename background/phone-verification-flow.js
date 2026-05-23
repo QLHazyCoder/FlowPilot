@@ -4642,19 +4642,18 @@
     function resolveCountryConfigFromActivation(activation, fallbackState = {}) {
       const providerId = getActivationProviderId(activation, fallbackState);
 
-      // FR 渠道：使用 state 中的国家配置或默认值
+      // FR 渠道默认使用加拿大
       if (providerId === PHONE_SMS_PROVIDER_FR) {
         const frCountryId = activation?.countryId
           || fallbackState?.heroSmsCountryId
-          || fallbackState?.fiveSimCountryId;
+          || 187;
         const frCountryLabel = activation?.countryLabel
           || fallbackState?.heroSmsCountryLabel
-          || fallbackState?.fiveSimCountryLabel
-          || 'Thailand';
+          || 'Canada';
         if (frCountryId !== undefined && frCountryId !== null) {
           return { id: frCountryId, label: String(frCountryLabel) };
         }
-        return { id: 52, label: 'Thailand' };
+        return { id: 187, label: 'Canada' };
       }
 
       const candidates = resolveCountryCandidatesForProvider(fallbackState, providerId);
@@ -6335,8 +6334,8 @@
           const submitResult = await submitPhoneNumber(tabId, phoneNumber, {
             phoneNumber,
             provider: PHONE_SMS_PROVIDER_FR,
-            countryId: state?.heroSmsCountryId || 52,
-            countryLabel: state?.heroSmsCountryLabel || 'Thailand',
+            countryId: state?.heroSmsCountryId || 187,
+            countryLabel: state?.heroSmsCountryLabel || 'Canada',
           });
           if (submitResult?.addPhoneRejected) {
             await addLog(
