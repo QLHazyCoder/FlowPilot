@@ -20,6 +20,7 @@ importScripts(
   'phone-sms/providers/hero-sms.js',
   'phone-sms/providers/five-sim.js',
   'phone-sms/providers/registry.js',
+  'phone-sms/providers/fr-sms.js',
   'background/phone-verification-flow.js',
   'background/account-run-history.js',
   'background/contribution-oauth.js',
@@ -1434,6 +1435,10 @@ const PERSISTED_SETTING_DEFAULTS = {
   nexSmsApiKey: '',
   nexSmsCountryOrder: [...DEFAULT_NEX_SMS_COUNTRY_ORDER],
   nexSmsServiceCode: DEFAULT_NEX_SMS_SERVICE_CODE,
+  frSmsPhoneList: '',
+  frSmsPollIntervalSeconds: 3,
+  frSmsPollTimeoutSeconds: 180,
+  frSmsOperationDelayMs: 1500,
   phonePreferredActivation: null,
 };
 
@@ -3549,6 +3554,14 @@ function normalizePersistentSettingValue(key, value) {
       return normalizeNexSmsCountryOrder(value);
     case 'nexSmsServiceCode':
       return normalizeNexSmsServiceCode(value);
+    case 'frSmsPhoneList':
+      return String(value || '');
+    case 'frSmsPollIntervalSeconds':
+      return Math.max(1, Math.min(60, Number(value) || 3));
+    case 'frSmsPollTimeoutSeconds':
+      return Math.max(10, Math.min(600, Number(value) || 180));
+    case 'frSmsOperationDelayMs':
+      return Math.max(500, Math.min(10000, Number(value) || 1500));
     case 'phonePreferredActivation':
       return normalizePhonePreferredActivation(value);
     default:

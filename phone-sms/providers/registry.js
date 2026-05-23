@@ -5,11 +5,13 @@
   const PROVIDER_HERO_SMS = 'hero-sms';
   const PROVIDER_FIVE_SIM = '5sim';
   const PROVIDER_NEXSMS = 'nexsms';
+  const PROVIDER_FR_SMS = 'fr';
   const DEFAULT_PROVIDER = PROVIDER_HERO_SMS;
   const DEFAULT_PROVIDER_ORDER = Object.freeze([
     PROVIDER_HERO_SMS,
     PROVIDER_FIVE_SIM,
     PROVIDER_NEXSMS,
+    PROVIDER_FR_SMS,
   ]);
   const PROVIDER_DEFINITIONS = Object.freeze({
     [PROVIDER_HERO_SMS]: Object.freeze({
@@ -26,6 +28,11 @@
       id: PROVIDER_NEXSMS,
       label: 'NexSMS',
       moduleKey: 'PhoneSmsNexSmsProvider',
+    }),
+    [PROVIDER_FR_SMS]: Object.freeze({
+      id: PROVIDER_FR_SMS,
+      label: 'FR',
+      moduleKey: 'PhoneSmsFrSmsProvider',
     }),
   });
 
@@ -125,6 +132,7 @@
     PROVIDER_HERO_SMS,
     PROVIDER_FIVE_SIM,
     PROVIDER_NEXSMS,
+    PROVIDER_FR_SMS,
     DEFAULT_PROVIDER,
     DEFAULT_PROVIDER_ORDER,
     PROVIDER_DEFINITIONS,

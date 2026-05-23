@@ -83,11 +83,13 @@
     const PHONE_SMS_PROVIDER_HERO_SMS = PHONE_SMS_PROVIDER_HERO;
     const PHONE_SMS_PROVIDER_FIVE_SIM = PHONE_SMS_PROVIDER_5SIM;
     const PHONE_SMS_PROVIDER_NEXSMS = 'nexsms';
+    const PHONE_SMS_PROVIDER_FR = 'fr';
     const DEFAULT_PHONE_SMS_PROVIDER = PHONE_SMS_PROVIDER_HERO;
     const DEFAULT_PHONE_SMS_PROVIDER_ORDER = Object.freeze([
       PHONE_SMS_PROVIDER_HERO,
       PHONE_SMS_PROVIDER_5SIM,
       PHONE_SMS_PROVIDER_NEXSMS,
+      PHONE_SMS_PROVIDER_FR,
     ]);
     const MAX_PHONE_REUSABLE_POOL = 12;
     const PHONE_CODE_TIMEOUT_ERROR_PREFIX = 'PHONE_CODE_TIMEOUT::';
@@ -190,6 +192,9 @@
       }
       if (normalized === PHONE_SMS_PROVIDER_NEXSMS) {
         return PHONE_SMS_PROVIDER_NEXSMS;
+      }
+      if (normalized === PHONE_SMS_PROVIDER_FR) {
+        return PHONE_SMS_PROVIDER_FR;
       }
       return PHONE_SMS_PROVIDER_HERO;
     }
@@ -934,6 +939,9 @@
       }
       if (provider === PHONE_SMS_PROVIDER_NEXSMS) {
         return 'NexSMS';
+      }
+      if (provider === PHONE_SMS_PROVIDER_FR) {
+        return 'FR';
       }
       return 'HeroSMS';
     }
@@ -4624,11 +4632,31 @@
       if (normalizePhoneSmsProvider(providerId) === PHONE_SMS_PROVIDER_NEXSMS) {
         return resolveNexSmsCountryCandidates(state);
       }
+      if (normalizePhoneSmsProvider(providerId) === PHONE_SMS_PROVIDER_FR) {
+        // FR 渠道使用 HeroSMS 国家配置
+        return resolveCountryCandidates(state);
+      }
       return resolveCountryCandidates(state);
     }
 
     function resolveCountryConfigFromActivation(activation, fallbackState = {}) {
       const providerId = getActivationProviderId(activation, fallbackState);
+
+      // FR 渠道：使用 state 中的国家配置或默认值
+      if (providerId === PHONE_SMS_PROVIDER_FR) {
+        const frCountryId = activation?.countryId
+          || fallbackState?.heroSmsCountryId
+          || fallbackState?.fiveSimCountryId;
+        const frCountryLabel = activation?.countryLabel
+          || fallbackState?.heroSmsCountryLabel
+          || fallbackState?.fiveSimCountryLabel
+          || 'Thailand';
+        if (frCountryId !== undefined && frCountryId !== null) {
+          return { id: frCountryId, label: String(frCountryLabel) };
+        }
+        return { id: 52, label: 'Thailand' };
+      }
+
       const candidates = resolveCountryCandidatesForProvider(fallbackState, providerId);
       if (activation && typeof activation === 'object') {
         if (providerId === PHONE_SMS_PROVIDER_FIVE_SIM) {
@@ -6254,10 +6282,201 @@
       });
     }
 
+    // FR 渠道：完全独立的手机验证码流程
+    // 从用户粘贴的 phone|url 列表中逐行消费，不依赖任何接码平台
+    async function executeFrPhoneVerificationFlow(tabId, state, visibleStep) {
+      const phoneListText = String(state?.frSmsPhoneList || '').trim();
+      if (!phoneListText) {
+        throw new Error(`步骤 ${visibleStep}：FR 渠道需要先在侧边栏填写号码列表（格式：手机号|验证码获取地址）。`);
+      }
+
+      const frModule = (typeof self !== 'undefined' ? self : globalThis)?.PhoneSmsFrSmsProvider;
+      const parseFn = frModule?.parseFrLines || (() => []);
+      const extractCodeFn = frModule?.extractCode || ((text) => {
+        const m = String(text || '').match(/\b(\d{4,8})\b/);
+        return m ? m[1] : '';
+      });
+
+      const allEntries = parseFn(phoneListText);
+      if (!allEntries.length) {
+        throw new Error(`步骤 ${visibleStep}：FR 号码列表解析后为空，请检查格式（每行：手机号|验证码URL）。`);
+      }
+
+      const pollIntervalMs = Math.max(1000,
+        (Number(state?.frSmsPollIntervalSeconds) || 3) * 1000);
+      const pollTimeoutMs = Math.max(10000,
+        (Number(state?.frSmsPollTimeoutSeconds) || 180) * 1000);
+      const operationDelayMs = Math.max(500,
+        Number(state?.frSmsOperationDelayMs) || 1500);
+      const fetchImpl = typeof fetch === 'function' ? fetch.bind(globalThis) : null;
+      if (!fetchImpl) {
+        throw new Error('FR 渠道需要 fetch API 支持。');
+      }
+
+      await addLog(
+        `步骤 ${visibleStep}：FR 渠道启动，共 ${allEntries.length} 条号码待尝试。轮询间隔 ${pollIntervalMs / 1000}秒，超时 ${pollTimeoutMs / 1000}秒。`,
+        'info'
+      );
+
+      for (let i = 0; i < allEntries.length; i++) {
+        throwIfStopped();
+        const entry = allEntries[i];
+        const phoneNumber = entry.phone;
+        const codeUrl = entry.url;
+
+        await addLog(
+          `步骤 ${visibleStep}：FR [${i + 1}/${allEntries.length}] 尝试号码 ${phoneNumber}，验证码地址 ${codeUrl}`,
+          'info'
+        );
+
+        // 1. 填手机号
+        try {
+          await addLog(`步骤 ${visibleStep}：FR 正在填写手机号 ${phoneNumber}...`, 'info');
+          const submitResult = await submitPhoneNumber(tabId, phoneNumber, {
+            phoneNumber,
+            provider: PHONE_SMS_PROVIDER_FR,
+            countryId: state?.heroSmsCountryId || 52,
+            countryLabel: state?.heroSmsCountryLabel || 'Thailand',
+          });
+          if (submitResult?.addPhoneRejected) {
+            await addLog(
+              `步骤 ${visibleStep}：FR 号码 ${phoneNumber} 被页面拒绝：${submitResult.errorText || submitResult.url || '未知原因'}，尝试下一个。`,
+              'warn'
+            );
+            continue;
+          }
+          // 操作不要太快
+          await sleepWithStop(operationDelayMs);
+        } catch (error) {
+          if (isStopRequestedError(error)) throw error;
+          await addLog(
+            `步骤 ${visibleStep}：FR 填写手机号 ${phoneNumber} 失败：${error?.message || error}，尝试下一个。`,
+            'warn'
+          );
+          continue;
+        }
+
+        // 2. 轮询验证码
+        let code = '';
+        try {
+          await addLog(
+            `步骤 ${visibleStep}：FR 开始轮询验证码 ${codeUrl}（间隔 ${pollIntervalMs / 1000}s，超时 ${pollTimeoutMs / 1000}s）...`,
+            'info'
+          );
+          const startTime = Date.now();
+          let roundCount = 0;
+          let lastText = '';
+
+          while (Date.now() - startTime < pollTimeoutMs) {
+            throwIfStopped();
+            roundCount += 1;
+            await sleepWithStop(pollIntervalMs);
+
+            try {
+              const resp = await fetchImpl(codeUrl, { method: 'GET' });
+              const text = await resp.text();
+              lastText = text;
+              code = extractCodeFn(text);
+
+              if (code) {
+                await addLog(
+                  `步骤 ${visibleStep}：FR [第 ${roundCount} 轮] 获取到验证码 ${code}`,
+                  'ok'
+                );
+                break;
+              }
+
+              if (frModule?.isNoCodeResponse && frModule.isNoCodeResponse(text)) {
+                await addLog(
+                  `步骤 ${visibleStep}：FR [第 ${roundCount} 轮] 暂无验证码，${pollIntervalMs / 1000}秒后重试...`,
+                  'info'
+                );
+              } else {
+                const preview = text.length > 80 ? `${text.substring(0, 80)}...` : text;
+                await addLog(
+                  `步骤 ${visibleStep}：FR [第 ${roundCount} 轮] 响应中未提取到验证码：${preview}`,
+                  'warn'
+                );
+              }
+            } catch (fetchError) {
+              lastText = fetchError?.message || String(fetchError);
+              await addLog(
+                `步骤 ${visibleStep}：FR [第 ${roundCount} 轮] 请求出错：${lastText}`,
+                'warn'
+              );
+            }
+          }
+
+          if (!code) {
+            const preview = lastText ? `，最后响应：${lastText.substring(0, 120)}` : '';
+            await addLog(
+              `步骤 ${visibleStep}：FR 号码 ${phoneNumber} 验证码轮询超时${preview}，尝试下一个。`,
+              'warn'
+            );
+            continue;
+          }
+        } catch (error) {
+          if (isStopRequestedError(error)) throw error;
+          await addLog(
+            `步骤 ${visibleStep}：FR 轮询验证码异常：${error?.message || error}，尝试下一个。`,
+            'warn'
+          );
+          continue;
+        }
+
+        // 3. 填验证码
+        try {
+          await setPhoneRuntimeState({
+            [PHONE_VERIFICATION_CODE_STATE_KEY]: String(code || '').trim(),
+            signupPhoneVerificationRequestedAt: Date.now(),
+            signupPhoneVerificationPurpose: 'login',
+          });
+          await addLog(`步骤 ${visibleStep}：FR 正在提交验证码 ${code}...`, 'info');
+          // 操作不要太快
+          await sleepWithStop(operationDelayMs);
+          const submitResult = await submitPhoneVerificationCode(tabId, code);
+
+          if (submitResult?.invalidCode) {
+            await addLog(
+              `步骤 ${visibleStep}：FR 验证码 ${code} 无效：${submitResult.errorText || ''}，尝试下一个。`,
+              'warn'
+            );
+            continue;
+          }
+
+          await addLog(`步骤 ${visibleStep}：FR 验证码 ${code} 提交成功！`, 'ok');
+          // 标记当前条目已使用
+          entry.used = true;
+          return {
+            code,
+            phoneNumber,
+            provider: PHONE_SMS_PROVIDER_FR,
+            frEntryUsed: true,
+          };
+        } catch (error) {
+          if (isStopRequestedError(error)) throw error;
+          await addLog(
+            `步骤 ${visibleStep}：FR 提交验证码失败：${error?.message || error}，尝试下一个。`,
+            'warn'
+          );
+          continue;
+        }
+      }
+
+      throw new Error(`步骤 ${visibleStep}：FR 渠道已尝试全部 ${allEntries.length} 条号码，均未成功。`);
+    }
+
     async function completeLoginPhoneVerificationFlow(tabId, options = {}) {
       const visibleStep = normalizeLogStep(options?.visibleStep || options?.step) || 8;
       return withPhoneVerificationLogContext({ step: visibleStep, stepKey: 'fetch-login-code' }, async () => {
         let state = options?.state || await getState();
+
+        // FR 渠道：完全独立的手机验证流程
+        const currentProvider = normalizePhoneSmsProvider(state?.phoneSmsProvider);
+        if (currentProvider === PHONE_SMS_PROVIDER_FR) {
+          return executeFrPhoneVerificationFlow(tabId, state, visibleStep);
+        }
+
         const baseActivation = normalizeActivation(
           options?.activation
           || state?.signupPhoneCompletedActivation
@@ -6375,6 +6594,19 @@
       activePhoneVerificationLogStep = normalizeLogStep(options.visibleStep || options.step) || 9;
       activePhoneVerificationLogStepKey = 'phone-verification';
       let state = await getState();
+
+      // FR 渠道：完全独立的手机验证流程
+      const currentProvider = normalizePhoneSmsProvider(state?.phoneSmsProvider);
+      if (currentProvider === PHONE_SMS_PROVIDER_FR) {
+        const visibleStep = activePhoneVerificationLogStep;
+        try {
+          return await executeFrPhoneVerificationFlow(tabId, state, visibleStep);
+        } finally {
+          activePhoneVerificationLogStep = previousLogStep;
+          activePhoneVerificationLogStepKey = previousLogStepKey;
+        }
+      }
+
       let activation = normalizeActivation(state[PHONE_ACTIVATION_STATE_KEY]);
       let pageState = initialPageState || await readPhonePageState(tabId);
       let shouldCancelActivation = false;

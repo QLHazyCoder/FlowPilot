@@ -1436,6 +1436,7 @@
                 <option value="hero-sms">HeroSMS</option>
                 <option value="5sim">5sim</option>
                 <option value="nexsms">NexSMS</option>
+                <option value="fr">FR</option>
               </select>
             </div>
             <div class="data-row" id="row-phone-sms-provider-order" style="display:none;">
@@ -1445,6 +1446,7 @@
                   <option value="hero-sms" selected>HeroSMS</option>
                   <option value="5sim" selected>5sim</option>
                   <option value="nexsms" selected>NexSMS</option>
+                  <option value="fr" selected>FR</option>
                 </select>
                 <div class="hero-sms-country-mainline">
                   <div id="phone-sms-provider-order-menu-shell" class="hero-sms-country-menu">
@@ -1592,6 +1594,36 @@
               <span class="data-label">服务代码</span>
               <input type="text" id="input-nex-sms-service-code" class="data-input mono"
                 placeholder="ot" />
+            </div>
+            <!-- FR 渠道设置（独立，不依赖其他接码平台） -->
+            <div class="data-row" id="row-fr-sms-phone-list" style="display:none;">
+              <span class="data-label">号码列表</span>
+              <textarea id="input-fr-sms-phone-list" class="data-input mono"
+                placeholder="每行一条：手机号|验证码URL&#10;例如：&#10;15879103243|http://fr88.site/api/msgForeign?code=14794481d9cdf52b&#10;15879104578|http://fr88.site/api/msgForeign?code=dbe4718bd1cc9bdd"
+                rows="6" style="resize:vertical;min-height:80px;"></textarea>
+              <span class="data-value hero-sms-country-note">格式为 手机号|验证码获取地址，每行一条。验证码地址返回纯文本。</span>
+            </div>
+            <div class="data-row" id="row-fr-sms-debug" style="display:none;">
+              <span class="data-label">调试</span>
+              <div class="data-inline">
+                <button id="btn-fr-sms-debug" class="btn btn-outline btn-sm data-inline-btn" type="button">调试 FR 步骤</button>
+                <span id="display-fr-sms-debug-info" class="data-value mono" style="margin-left:8px;"></span>
+              </div>
+            </div>
+            <div class="data-row" id="row-fr-sms-poll-interval" style="display:none;">
+              <span class="data-label">轮询间隔(秒)</span>
+              <input type="number" id="input-fr-sms-poll-interval" class="data-input auto-delay-input mono"
+                placeholder="3" min="1" max="60" step="1" title="验证码轮询间隔秒数" />
+            </div>
+            <div class="data-row" id="row-fr-sms-poll-timeout" style="display:none;">
+              <span class="data-label">轮询超时(秒)</span>
+              <input type="number" id="input-fr-sms-poll-timeout" class="data-input auto-delay-input mono"
+                placeholder="180" min="10" max="600" step="1" title="验证码轮询超时秒数" />
+            </div>
+            <div class="data-row" id="row-fr-sms-operation-delay" style="display:none;">
+              <span class="data-label">操作间隔(毫秒)</span>
+              <input type="number" id="input-fr-sms-operation-delay" class="data-input auto-delay-input mono"
+                placeholder="1500" min="500" max="10000" step="100" title="每次页面操作之间的延迟毫秒数，不要太快" />
             </div>
             <div class="data-row" id="row-hero-sms-max-price" style="display:none;">
               <span class="data-label">价格区间</span>
@@ -1871,6 +1903,7 @@
   <script src="../gopay-utils.js"></script>
   <script src="../phone-sms/providers/hero-sms.js"></script>
   <script src="../phone-sms/providers/five-sim.js"></script>
+  <script src="../phone-sms/providers/fr-sms.js"></script>
   <script src="../phone-sms/providers/registry.js"></script>
   <script src="../icloud-utils.js"></script>
   <script src="../mail-provider-utils.js"></script>

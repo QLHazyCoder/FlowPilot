@@ -527,6 +527,18 @@ const displayNexSmsCountryFallbackOrder = document.getElementById('display-nex-s
 const displayPhoneSmsProviderOrder = document.getElementById('display-phone-sms-provider-order');
 const btnSaveFreeReusablePhone = document.getElementById('btn-save-free-reusable-phone');
 const btnClearFreeReusablePhone = document.getElementById('btn-clear-free-reusable-phone');
+// FR 渠道 UI 元素
+const rowFrSmsPhoneList = document.getElementById('row-fr-sms-phone-list');
+const inputFrSmsPhoneList = document.getElementById('input-fr-sms-phone-list');
+const rowFrSmsDebug = document.getElementById('row-fr-sms-debug');
+const btnFrSmsDebug = document.getElementById('btn-fr-sms-debug');
+const displayFrSmsDebugInfo = document.getElementById('display-fr-sms-debug-info');
+const rowFrSmsPollInterval = document.getElementById('row-fr-sms-poll-interval');
+const inputFrSmsPollInterval = document.getElementById('input-fr-sms-poll-interval');
+const rowFrSmsPollTimeout = document.getElementById('row-fr-sms-poll-timeout');
+const inputFrSmsPollTimeout = document.getElementById('input-fr-sms-poll-timeout');
+const rowFrSmsOperationDelay = document.getElementById('row-fr-sms-operation-delay');
+const inputFrSmsOperationDelay = document.getElementById('input-fr-sms-operation-delay');
 const rowAccountRunHistoryHelperBaseUrl = document.getElementById('row-account-run-history-helper-base-url');
 const inputAccountRunHistoryHelperBaseUrl = document.getElementById('input-account-run-history-helper-base-url');
 const autoStartModal = document.getElementById('auto-start-modal');
@@ -645,11 +657,13 @@ const PHONE_SMS_PROVIDER_HERO = 'hero-sms';
 const PHONE_SMS_PROVIDER_FIVE_SIM = '5sim';
 const PHONE_SMS_PROVIDER_HERO_SMS = PHONE_SMS_PROVIDER_HERO;
 const PHONE_SMS_PROVIDER_NEXSMS = 'nexsms';
+const PHONE_SMS_PROVIDER_FR = 'fr';
 const DEFAULT_PHONE_SMS_PROVIDER = PHONE_SMS_PROVIDER_HERO;
 const DEFAULT_PHONE_SMS_PROVIDER_ORDER = Object.freeze([
   PHONE_SMS_PROVIDER_HERO,
   PHONE_SMS_PROVIDER_FIVE_SIM,
   PHONE_SMS_PROVIDER_NEXSMS,
+  PHONE_SMS_PROVIDER_FR,
 ]);
 const DEFAULT_FIVE_SIM_COUNTRY_ORDER = Object.freeze(['thailand']);
 const DEFAULT_FIVE_SIM_OPERATOR = 'any';
@@ -5049,6 +5063,19 @@ function collectSettingsPayload() {
     fiveSimCountryFallback,
     fiveSimMaxPrice: fiveSimMaxPriceValue,
     fiveSimMinPrice: fiveSimMinPriceValue,
+    // FR 渠道设置
+    frSmsPhoneList: typeof inputFrSmsPhoneList !== 'undefined' && inputFrSmsPhoneList
+      ? String(inputFrSmsPhoneList.value || '')
+      : String(latestState?.frSmsPhoneList || ''),
+    frSmsPollIntervalSeconds: typeof inputFrSmsPollInterval !== 'undefined' && inputFrSmsPollInterval
+      ? Math.max(1, Math.min(60, Number(inputFrSmsPollInterval.value) || 3))
+      : Number(latestState?.frSmsPollIntervalSeconds || 3),
+    frSmsPollTimeoutSeconds: typeof inputFrSmsPollTimeout !== 'undefined' && inputFrSmsPollTimeout
+      ? Math.max(10, Math.min(600, Number(inputFrSmsPollTimeout.value) || 180))
+      : Number(latestState?.frSmsPollTimeoutSeconds || 180),
+    frSmsOperationDelayMs: typeof inputFrSmsOperationDelay !== 'undefined' && inputFrSmsOperationDelay
+      ? Math.max(500, Math.min(10000, Number(inputFrSmsOperationDelay.value) || 1500))
+      : Number(latestState?.frSmsOperationDelayMs || 1500),
   };
 }
 
@@ -5112,12 +5139,18 @@ function normalizePhoneSmsProvider(value = '') {
   const nexSmsProvider = typeof PHONE_SMS_PROVIDER_NEXSMS !== 'undefined'
     ? PHONE_SMS_PROVIDER_NEXSMS
     : 'nexsms';
+  const frProvider = typeof PHONE_SMS_PROVIDER_FR !== 'undefined'
+    ? PHONE_SMS_PROVIDER_FR
+    : 'fr';
   const normalized = String(value || '').trim().toLowerCase();
   if (normalized === PHONE_SMS_PROVIDER_FIVE_SIM) {
     return PHONE_SMS_PROVIDER_FIVE_SIM;
   }
   if (normalized === nexSmsProvider) {
     return nexSmsProvider;
+  }
+  if (normalized === frProvider) {
+    return frProvider;
   }
   return PHONE_SMS_PROVIDER_HERO_SMS;
 }
@@ -9316,6 +9349,7 @@ function updatePhoneVerificationSettingsUI() {
   const heroProviderValue = typeof PHONE_SMS_PROVIDER_HERO !== 'undefined' ? PHONE_SMS_PROVIDER_HERO : 'hero-sms';
   const fiveSimProviderValue = typeof PHONE_SMS_PROVIDER_FIVE_SIM !== 'undefined' ? PHONE_SMS_PROVIDER_FIVE_SIM : '5sim';
   const nexSmsProviderValue = typeof PHONE_SMS_PROVIDER_NEXSMS !== 'undefined' ? PHONE_SMS_PROVIDER_NEXSMS : 'nexsms';
+  const frProviderValue = typeof PHONE_SMS_PROVIDER_FR !== 'undefined' ? PHONE_SMS_PROVIDER_FR : 'fr';
   const providerOrderForDisplay = resolveNormalizedProviderOrderForRuntime(latestState || {});
   const provider = providerOrderForDisplay[0] || (
     typeof getSelectedPhoneSmsProvider === 'function'
@@ -9325,6 +9359,7 @@ function updatePhoneVerificationSettingsUI() {
   const heroProvider = provider === heroProviderValue;
   const fiveSimProvider = provider === fiveSimProviderValue;
   const nexSmsProvider = provider === nexSmsProviderValue;
+  const frProvider = provider === frProviderValue;
   if (rowPhoneVerificationEnabled) {
     rowPhoneVerificationEnabled.style.display = canShowPhoneSettings ? '' : 'none';
   }
@@ -9360,6 +9395,11 @@ function updatePhoneVerificationSettingsUI() {
     typeof rowNexSmsCountry !== 'undefined' ? rowNexSmsCountry : null,
     typeof rowNexSmsCountryFallback !== 'undefined' ? rowNexSmsCountryFallback : null,
     typeof rowNexSmsServiceCode !== 'undefined' ? rowNexSmsServiceCode : null,
+    typeof rowFrSmsPhoneList !== 'undefined' ? rowFrSmsPhoneList : null,
+    typeof rowFrSmsDebug !== 'undefined' ? rowFrSmsDebug : null,
+    typeof rowFrSmsPollInterval !== 'undefined' ? rowFrSmsPollInterval : null,
+    typeof rowFrSmsPollTimeout !== 'undefined' ? rowFrSmsPollTimeout : null,
+    typeof rowFrSmsOperationDelay !== 'undefined' ? rowFrSmsOperationDelay : null,
     typeof rowHeroSmsMaxPrice !== 'undefined' ? rowHeroSmsMaxPrice : null,
     typeof rowFiveSimOperator !== 'undefined' ? rowFiveSimOperator : null,
     typeof rowPhoneCodeSettingsGroup !== 'undefined' ? rowPhoneCodeSettingsGroup : null,
@@ -9393,6 +9433,12 @@ function updatePhoneVerificationSettingsUI() {
   if (rowNexSmsCountry) rowNexSmsCountry.style.display = showSettings && nexSmsProvider ? '' : 'none';
   if (rowNexSmsCountryFallback) rowNexSmsCountryFallback.style.display = showSettings && nexSmsProvider ? '' : 'none';
   if (rowNexSmsServiceCode) rowNexSmsServiceCode.style.display = showSettings && nexSmsProvider ? '' : 'none';
+  // FR 渠道特有行
+  if (rowFrSmsPhoneList) rowFrSmsPhoneList.style.display = showSettings && frProvider ? '' : 'none';
+  if (rowFrSmsDebug) rowFrSmsDebug.style.display = showSettings && frProvider ? '' : 'none';
+  if (rowFrSmsPollInterval) rowFrSmsPollInterval.style.display = showSettings && frProvider ? '' : 'none';
+  if (rowFrSmsPollTimeout) rowFrSmsPollTimeout.style.display = showSettings && frProvider ? '' : 'none';
+  if (rowFrSmsOperationDelay) rowFrSmsOperationDelay.style.display = showSettings && frProvider ? '' : 'none';
   if (rowFiveSimOperator) {
     rowFiveSimOperator.style.display = showSettings && fiveSimProvider ? '' : 'none';
   }
@@ -11332,6 +11378,19 @@ function applySettingsState(state) {
     inputNexSmsServiceCode.value = typeof normalizeNexSmsServiceCodeValue === 'function'
       ? normalizeNexSmsServiceCodeValue(state?.nexSmsServiceCode || defaultNexSmsServiceCode)
       : String(state?.nexSmsServiceCode || defaultNexSmsServiceCode).trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '') || defaultNexSmsServiceCode;
+  }
+  // FR 渠道设置恢复
+  if (typeof inputFrSmsPhoneList !== 'undefined' && inputFrSmsPhoneList) {
+    inputFrSmsPhoneList.value = String(state?.frSmsPhoneList || '');
+  }
+  if (typeof inputFrSmsPollInterval !== 'undefined' && inputFrSmsPollInterval) {
+    inputFrSmsPollInterval.value = String(state?.frSmsPollIntervalSeconds || 3);
+  }
+  if (typeof inputFrSmsPollTimeout !== 'undefined' && inputFrSmsPollTimeout) {
+    inputFrSmsPollTimeout.value = String(state?.frSmsPollTimeoutSeconds || 180);
+  }
+  if (typeof inputFrSmsOperationDelay !== 'undefined' && inputFrSmsOperationDelay) {
+    inputFrSmsOperationDelay.value = String(state?.frSmsOperationDelayMs || 1500);
   }
   if (typeof inputHeroSmsReuseEnabled !== 'undefined' && inputHeroSmsReuseEnabled) {
     inputHeroSmsReuseEnabled.checked = normalizeHeroSmsReuseEnabledValue(
@@ -17021,6 +17080,113 @@ inputPhoneCodePollMaxRounds?.addEventListener('blur', () => {
   );
   saveSettings({ silent: true }).catch(() => { });
 });
+
+// FR 渠道调试按钮
+btnFrSmsDebug?.addEventListener('click', async () => {
+  const phoneList = String(inputFrSmsPhoneList?.value || '').trim();
+  if (!phoneList) {
+    if (typeof showToast === 'function') {
+      showToast('FR 调试：请先在号码列表中粘贴 phone|url 内容。', 'warn', 2500);
+    }
+    return;
+  }
+  const frModule = (typeof self !== 'undefined' ? self : globalThis)?.PhoneSmsFrSmsProvider;
+  const parseFn = frModule?.parseFrLines || (typeof parseFrLines === 'function' ? parseFrLines : null);
+  if (!parseFn) {
+    if (typeof showToast === 'function') {
+      showToast('FR 调试：FR 模块未加载。', 'error', 2500);
+    }
+    return;
+  }
+  const entries = parseFn(phoneList);
+  if (!entries.length) {
+    if (typeof showToast === 'function') {
+      showToast('FR 调试：未能解析出有效的 phone|url 条目。', 'warn', 2500);
+    }
+    return;
+  }
+  if (typeof addLog === 'function') {
+    await addLog(`FR 调试：共解析到 ${entries.length} 条记录，开始逐条请求验证码...`, 'info');
+  }
+  const fetchFn = typeof fetch === 'function' ? fetch.bind(globalThis) : null;
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    if (typeof addLog === 'function') {
+      await addLog(`FR 调试 [${i + 1}/${entries.length}] 号码 ${entry.phone} → 请求 ${entry.url}`, 'info');
+    }
+    if (displayFrSmsDebugInfo) {
+      displayFrSmsDebugInfo.textContent = `正在请求: ${entry.url}`;
+    }
+    try {
+      if (!fetchFn) {
+        throw new Error('fetch 不可用');
+      }
+      const resp = await fetchFn(entry.url, { method: 'GET' });
+      const text = await resp.text();
+      const code = frModule?.extractCode
+        ? frModule.extractCode(text)
+        : (text.match(/\b(\d{4,8})\b/) || [])[1] || '';
+      if (typeof addLog === 'function') {
+        const preview = text.length > 100 ? text.substring(0, 100) + '...' : text;
+        await addLog(`FR 调试 [${i + 1}/${entries.length}] 响应: ${preview} → 验证码: ${code || '(未提取到)'}`, code ? 'ok' : 'warn');
+      }
+      if (displayFrSmsDebugInfo) {
+        displayFrSmsDebugInfo.textContent = code
+          ? `验证码: ${code}`
+          : '未提取到验证码';
+      }
+    } catch (err) {
+      if (typeof addLog === 'function') {
+        await addLog(`FR 调试 [${i + 1}/${entries.length}] 请求失败: ${err?.message || err}`, 'error');
+      }
+      if (displayFrSmsDebugInfo) {
+        displayFrSmsDebugInfo.textContent = `请求失败: ${err?.message || err}`;
+      }
+    }
+    // 每条之间延迟一下
+    await new Promise((r) => setTimeout(r, 800));
+  }
+  if (typeof addLog === 'function') {
+    await addLog('FR 调试：完成。', 'ok');
+  }
+  if (typeof showToast === 'function') {
+    showToast('FR 调试完成，详情见日志。', 'info', 2000);
+  }
+});
+
+// FR 渠道自动保存
+inputFrSmsPhoneList?.addEventListener('input', () => {
+  markSettingsDirty(true);
+  scheduleSettingsAutoSave();
+});
+inputFrSmsPhoneList?.addEventListener('blur', () => {
+  saveSettings({ silent: true }).catch(() => { });
+});
+inputFrSmsPollInterval?.addEventListener('input', () => {
+  markSettingsDirty(true);
+  scheduleSettingsAutoSave();
+});
+inputFrSmsPollInterval?.addEventListener('blur', () => {
+  inputFrSmsPollInterval.value = String(Math.max(1, Math.min(60, Number(inputFrSmsPollInterval.value) || 3)));
+  saveSettings({ silent: true }).catch(() => { });
+});
+inputFrSmsPollTimeout?.addEventListener('input', () => {
+  markSettingsDirty(true);
+  scheduleSettingsAutoSave();
+});
+inputFrSmsPollTimeout?.addEventListener('blur', () => {
+  inputFrSmsPollTimeout.value = String(Math.max(10, Math.min(600, Number(inputFrSmsPollTimeout.value) || 180)));
+  saveSettings({ silent: true }).catch(() => { });
+});
+inputFrSmsOperationDelay?.addEventListener('input', () => {
+  markSettingsDirty(true);
+  scheduleSettingsAutoSave();
+});
+inputFrSmsOperationDelay?.addEventListener('blur', () => {
+  inputFrSmsOperationDelay.value = String(Math.max(500, Math.min(10000, Number(inputFrSmsOperationDelay.value) || 1500)));
+  saveSettings({ silent: true }).catch(() => { });
+});
+
 selectHeroSmsCountry?.addEventListener('change', () => {
   syncHeroSmsFallbackSelectionOrderFromSelect({
     enforceMax: true,
