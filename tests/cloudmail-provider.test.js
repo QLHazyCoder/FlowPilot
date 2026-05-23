@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+require('../background/email-local-part-helpers.js');
 require('../background/cloudmail-provider.js');
 
 function createProviderApi(options = {}) {
@@ -276,8 +277,8 @@ test('fetchCloudMailAddress builds random english name plus current date-time lo
     cloudMailDomain: 'example.com',
   };
   const email = await api.fetchCloudMailAddress(state, {
-    date: '2026-05-17T08:09:10',
+    date: '2026-05-17T08:09:10.123',
   });
 
-  assert.match(email, /^[a-z]+20260517080910@example\.com$/);
+  assert.match(email, /^[a-z]+20260517080910123@example\.com$/);
 });

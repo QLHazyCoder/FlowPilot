@@ -3,13 +3,15 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
 function loadGeneratedEmailHelpersApi() {
+  const localPartHelpersSource = fs.readFileSync('background/email-local-part-helpers.js', 'utf8');
   const source = fs.readFileSync('background/generated-email-helpers.js', 'utf8');
   const globalScope = {};
-  return new Function('self', `${source}; return self.MultiPageGeneratedEmailHelpers;`)(globalScope);
+  return new Function('self', `${localPartHelpersSource}; ${source}; return self.MultiPageGeneratedEmailHelpers;`)(globalScope);
 }
 
 test('background imports generated email helper module', () => {
   const source = fs.readFileSync('background.js', 'utf8');
+  assert.match(source, /importScripts\([\s\S]*'background\/email-local-part-helpers\.js'/);
   assert.match(source, /importScripts\([\s\S]*'background\/generated-email-helpers\.js'/);
 });
 
@@ -481,7 +483,7 @@ test('generated email helper uses the regular temp email domain when random subd
     name: requests[0].body.name,
     domain: 'mail.example.com',
   });
-  assert.match(requests[0].body.name, /^[a-z]+[0-9]{14}$/);
+  assert.match(requests[0].body.name, /^[a-z]+[0-9]{17}$/);
 });
 
 test('generated email helper requests random subdomain creation while preserving the returned address', async () => {
