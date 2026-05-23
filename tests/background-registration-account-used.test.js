@@ -104,3 +104,61 @@ return { markCurrentRegistrationAccountUsed, patchCalls, logs };
   assert.equal(api.patchCalls[0].updates.used, true);
   assert.equal(api.logs.some((entry) => /Hotmail 账号已标记为已用/.test(entry.message)), true);
 });
+
+test('markCurrentRegistrationAccountUsed removes successful custom mail provider pool email', async () => {
+  const bundle = extractFunction('markCurrentRegistrationAccountUsed');
+  const factory = new Function(`
+const removedCalls = [];
+const logs = [];
+async function getState() {
+  return {
+    mailProvider: 'custom',
+    email: 'first@example.com',
+    customMailProviderPool: ['first@example.com', 'second@example.com'],
+  };
+}
+function isHotmailProvider() {
+  return false;
+}
+function isLuckmailProvider() {
+  return false;
+}
+function getCurrentLuckmailPurchase() {
+  return null;
+}
+async function patchHotmailAccount() {}
+async function setLuckmailPurchaseUsedState() {}
+async function clearLuckmailRuntimeState() {}
+async function patchMail2925Account() {}
+async function finalizeIcloudAliasAfterSuccessfulFlow() {
+  return { handled: false };
+}
+async function markCurrentCustomEmailPoolEntryUsed() {
+  return { updated: false };
+}
+async function removeCurrentCustomMailProviderPoolEmail(state, options) {
+  removedCalls.push({ state, options });
+  return { updated: true, customMailProviderPool: ['second@example.com'] };
+}
+async function addLog(message, level) {
+  logs.push({ message, level });
+}
+
+${bundle}
+
+return { markCurrentRegistrationAccountUsed, removedCalls, logs };
+`);
+  const api = factory();
+
+  const result = await api.markCurrentRegistrationAccountUsed({ email: 'stale@example.com' }, {
+    logPrefix: '流程完成',
+    level: 'ok',
+  });
+
+  assert.equal(result.updated, true);
+  assert.equal(api.removedCalls.length, 1);
+  assert.equal(api.removedCalls[0].state.email, 'first@example.com');
+  assert.deepEqual(api.removedCalls[0].state.customMailProviderPool, ['first@example.com', 'second@example.com']);
+  assert.equal(api.removedCalls[0].options.logPrefix, '流程完成：自定义邮箱号池');
+  assert.equal(api.removedCalls[0].options.level, 'ok');
+});

@@ -2725,6 +2725,14 @@ async function markCurrentRegistrationAccountUsed(state = {}, options = {}) {
     updated = Boolean(result?.updated) || updated;
   }
 
+  if (typeof removeCurrentCustomMailProviderPoolEmail === 'function') {
+    const result = await removeCurrentCustomMailProviderPoolEmail(latestState, {
+      logPrefix: `${reasonPrefix}：自定义邮箱号池`,
+      level: options.level || 'warn',
+    });
+    updated = Boolean(result?.updated) || updated;
+  }
+
   return { updated };
 }
 
@@ -2742,6 +2750,33 @@ function getCustomMailProviderPoolEmailForRun(state = {}, targetRun = 1) {
   const entries = getCustomMailProviderPool(state);
   const numericRun = Math.max(1, Math.floor(Number(targetRun) || 1));
   return entries[numericRun - 1] || '';
+}
+
+async function removeCurrentCustomMailProviderPoolEmail(state = {}, options = {}) {
+  if (String(state?.mailProvider || '').trim().toLowerCase() !== 'custom') {
+    return { updated: false };
+  }
+
+  const currentEmail = String(state?.email || '').trim().toLowerCase();
+  if (!currentEmail) {
+    return { updated: false };
+  }
+
+  const currentPool = getCustomMailProviderPool(state);
+  if (!currentPool.length || !currentPool.includes(currentEmail)) {
+    return { updated: false };
+  }
+
+  const nextPool = currentPool.filter((email) => email !== currentEmail);
+  await setPersistentSettings({ customMailProviderPool: nextPool });
+  await setState({ customMailProviderPool: nextPool });
+  broadcastDataUpdate({ customMailProviderPool: nextPool });
+  const logPrefix = String(options.logPrefix || '').trim() || '自定义邮箱号池：流程成功后';
+  await addLog(`${logPrefix}已从号池删除 ${currentEmail}，下轮将使用下一个邮箱。`, options.level || 'ok');
+  return {
+    updated: true,
+    customMailProviderPool: nextPool,
+  };
 }
 
 function normalizePanelMode(value = '') {
@@ -14253,6 +14288,7 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   listIcloudAliases,
   listLuckmailPurchasesForManagement,
   markCurrentCustomEmailPoolEntryUsed,
+  removeCurrentCustomMailProviderPoolEmail,
   markCurrentRegistrationAccountUsed,
   getCurrentMail2925Account,
   normalizeHotmailAccounts,

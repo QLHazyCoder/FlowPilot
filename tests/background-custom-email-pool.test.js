@@ -59,6 +59,7 @@ const bundle = [
   extractFunction('getCustomEmailPoolEmailForRun'),
   extractFunction('getCustomMailProviderPool'),
   extractFunction('getCustomMailProviderPoolEmailForRun'),
+  extractFunction('removeCurrentCustomMailProviderPoolEmail'),
   extractFunction('getEmailGeneratorLabel'),
 ].join('\n');
 
@@ -76,6 +77,7 @@ return {
   getCustomEmailPoolEmailForRun,
   getCustomMailProviderPool,
   getCustomMailProviderPoolEmailForRun,
+  removeCurrentCustomMailProviderPoolEmail,
   getEmailGeneratorLabel,
 };
 `)();
@@ -122,6 +124,51 @@ test('background selects the matching custom provider pool email for the current
   assert.equal(api.getCustomMailProviderPoolEmailForRun(state, 1), 'first@example.com');
   assert.equal(api.getCustomMailProviderPoolEmailForRun(state, 3), 'third@example.com');
   assert.equal(api.getCustomMailProviderPoolEmailForRun(state, 4), '');
+});
+
+test('background removes successful custom provider pool email and keeps the next email first', async () => {
+  const persistentUpdates = [];
+  const stateUpdates = [];
+  const broadcasts = [];
+  const logs = [];
+  const api = new Function(`
+const CUSTOM_EMAIL_POOL_GENERATOR = 'custom-pool';
+const CLOUDFLARE_TEMP_EMAIL_GENERATOR = 'cloudflare-temp-email';
+const persistentUpdates = arguments[0];
+const stateUpdates = arguments[1];
+const broadcasts = arguments[2];
+const logs = arguments[3];
+async function setPersistentSettings(updates) { persistentUpdates.push(updates); }
+async function setState(updates) { stateUpdates.push(updates); }
+function broadcastDataUpdate(updates) { broadcasts.push(updates); }
+async function addLog(message, level) { logs.push({ message, level }); }
+
+${bundle}
+
+return { removeCurrentCustomMailProviderPoolEmail };
+`)(persistentUpdates, stateUpdates, broadcasts, logs);
+
+  const result = await api.removeCurrentCustomMailProviderPoolEmail({
+    mailProvider: 'custom',
+    email: 'first@example.com',
+    customMailProviderPool: ['first@example.com', 'second@example.com', 'third@example.com'],
+  }, {
+    logPrefix: '流程完成：自定义邮箱号池',
+    level: 'ok',
+  });
+
+  assert.equal(result.updated, true);
+  assert.deepEqual(result.customMailProviderPool, ['second@example.com', 'third@example.com']);
+  assert.deepEqual(persistentUpdates.at(-1), {
+    customMailProviderPool: ['second@example.com', 'third@example.com'],
+  });
+  assert.deepEqual(stateUpdates.at(-1), {
+    customMailProviderPool: ['second@example.com', 'third@example.com'],
+  });
+  assert.deepEqual(broadcasts.at(-1), {
+    customMailProviderPool: ['second@example.com', 'third@example.com'],
+  });
+  assert.equal(logs.some((entry) => /已从号池删除 first@example\.com/.test(entry.message)), true);
 });
 
 test('background derives active custom email pool from structured entries', () => {
