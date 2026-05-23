@@ -83,6 +83,41 @@ test('phone verification helper requests HeroSMS numbers with fixed OpenAI and T
   assert.equal(requests[1].searchParams.get('api_key'), 'demo-key');
 });
 
+test('phone verification helper includes HeroSMS operator only when explicitly selected', async () => {
+  const requests = [];
+  const helpers = api.createPhoneVerificationHelpers({
+    addLog: async () => {},
+    ensureStep8SignupPageReady: async () => {},
+    fetchImpl: async (url) => {
+      const parsedUrl = new URL(url);
+      requests.push(parsedUrl);
+      const action = parsedUrl.searchParams.get('action');
+      if (action === 'getPrices') {
+        return {
+          ok: true,
+          text: async () => buildHeroSmsPricesPayload(),
+        };
+      }
+      return {
+        ok: true,
+        text: async () => 'ACCESS_NUMBER:123456:66959916439',
+      };
+    },
+    getState: async () => ({ heroSmsApiKey: 'demo-key' }),
+    sendToContentScriptResilient: async () => ({}),
+    setState: async () => {},
+    sleepWithStop: async () => {},
+    throwIfStopped: () => {},
+  });
+
+  await helpers.requestPhoneActivation({ heroSmsApiKey: 'demo-key', heroSmsOperator: ' AIS ' });
+  await helpers.requestPhoneActivation({ heroSmsApiKey: 'demo-key', heroSmsOperator: 'any' });
+
+  const numberRequests = requests.filter((request) => request.searchParams.get('action') === 'getNumber');
+  assert.equal(numberRequests[0].searchParams.get('operator'), 'ais');
+  assert.equal(numberRequests[1].searchParams.has('operator'), false);
+});
+
 test('signup phone helper persists signup runtime state without touching add-phone activation', async () => {
   const setStateCalls = [];
   let currentState = {

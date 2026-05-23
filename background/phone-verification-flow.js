@@ -23,6 +23,7 @@
       DEFAULT_FIVE_SIM_BASE_URL = 'https://5sim.net/v1',
       DEFAULT_FIVE_SIM_PRODUCT = 'openai',
       DEFAULT_FIVE_SIM_OPERATOR = 'any',
+      DEFAULT_HERO_SMS_OPERATOR = 'any',
       DEFAULT_FIVE_SIM_COUNTRY_ORDER = ['thailand'],
       DEFAULT_NEX_SMS_BASE_URL = 'https://api.nexsms.net',
       DEFAULT_NEX_SMS_COUNTRY_ORDER = [1],
@@ -546,6 +547,21 @@
 
     function normalizeCountryLabel(value = '', fallback = HERO_SMS_COUNTRY_LABEL) {
       return String(value || '').trim() || fallback;
+    }
+
+    function normalizeHeroSmsOperator(value = '', fallback = DEFAULT_HERO_SMS_OPERATOR) {
+      const normalized = String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, '');
+      if (normalized) {
+        return normalized;
+      }
+      const fallbackNormalized = String(fallback || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, '');
+      return fallbackNormalized || DEFAULT_HERO_SMS_OPERATOR;
     }
 
     function inferHeroSmsCountryFromPhoneNumber(phoneNumber = '') {
@@ -2100,6 +2116,7 @@
         provider,
         apiKey,
         baseUrl: normalizeUrl(state.heroSmsBaseUrl, DEFAULT_HERO_SMS_BASE_URL),
+        operator: normalizeHeroSmsOperator(state.heroSmsOperator, DEFAULT_HERO_SMS_OPERATOR),
         countryCandidates: resolveCountryCandidates(state),
       };
     }
@@ -2113,6 +2130,7 @@
         provider: PHONE_SMS_PROVIDER_HERO,
         apiKey,
         baseUrl: normalizeUrl(state.heroSmsBaseUrl, DEFAULT_HERO_SMS_BASE_URL),
+        operator: normalizeHeroSmsOperator(state.heroSmsOperator, DEFAULT_HERO_SMS_OPERATOR),
         countryCandidates: resolveCountryCandidates(state),
       };
     }
@@ -2537,6 +2555,10 @@
         service: HERO_SMS_SERVICE_CODE,
         country: countryConfig.id,
       };
+      const operator = normalizeHeroSmsOperator(config?.operator, DEFAULT_HERO_SMS_OPERATOR);
+      if (operator && operator !== DEFAULT_HERO_SMS_OPERATOR) {
+        query.operator = operator;
+      }
       if (options.maxPrice !== null && options.maxPrice !== undefined) {
         query.maxPrice = options.maxPrice;
         if (options.fixedPrice !== false) {

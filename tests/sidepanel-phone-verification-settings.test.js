@@ -85,6 +85,8 @@ test('sidepanel html exposes phone verification toggle and multi-provider SMS ro
   assert.match(html, /id="row-phone-sms-provider-order-actions"/);
   assert.match(html, /id="btn-phone-sms-provider-order-reset"/);
   assert.match(html, /id="row-hero-sms-platform"/);
+  assert.match(html, /id="row-hero-sms-operator"/);
+  assert.match(html, /id="select-hero-sms-operator"/);
   assert.match(html, /id="select-phone-sms-provider"/);
   assert.match(html, /\.\.\/phone-sms\/providers\/hero-sms\.js/);
   assert.match(html, /\.\.\/phone-sms\/providers\/five-sim\.js/);
@@ -193,6 +195,30 @@ return { parseHeroSmsCountryPayload };
     ids({ value: Object.values(keyedPayload) }),
     [6, 52]
   );
+});
+
+test('HeroSMS operator parser accepts countryOperators payload from the live API', () => {
+  const api = new Function(`
+const DEFAULT_HERO_SMS_COUNTRY_ID = 52;
+const DEFAULT_HERO_SMS_OPERATOR = 'any';
+${extractFunction('normalizeHeroSmsCountryId')}
+${extractFunction('normalizeHeroSmsOperatorValue')}
+${extractFunction('parseHeroSmsOperatorsPayload')}
+return { parseHeroSmsOperatorsPayload };
+`)();
+
+  const parsed = api.parseHeroSmsOperatorsPayload({
+    status: 'success',
+    countryOperators: {
+      52: ['AIS', 'dtac', 'ais', 'true-move'],
+      153: ['ogero', 'alfa', 'touch'],
+      bad: ['ignored'],
+    },
+  });
+
+  assert.deepStrictEqual(parsed.get('52'), ['ais', 'dtac', 'true-move']);
+  assert.deepStrictEqual(parsed.get('153'), ['ogero', 'alfa', 'touch']);
+  assert.equal(parsed.has('0'), false);
 });
 
 test('sidepanel source wires free reusable phone save and clear actions to runtime messages', () => {
@@ -660,6 +686,7 @@ const rowHeroSmsPlatform = { style: { display: 'none' } };
 const rowHeroSmsCountry = { style: { display: 'none' } };
 const rowHeroSmsCountryFallback = { style: { display: 'none' } };
 const rowHeroSmsAcquirePriority = { style: { display: 'none' } };
+const rowHeroSmsOperator = { style: { display: 'none' } };
 const rowHeroSmsApiKey = { style: { display: 'none' } };
 const rowHeroSmsMaxPrice = { style: { display: 'none' } };
 const rowFiveSimApiKey = { style: { display: 'none' } };
@@ -742,6 +769,7 @@ return {
   rowHeroSmsCountry,
   rowHeroSmsCountryFallback,
   rowHeroSmsAcquirePriority,
+  rowHeroSmsOperator,
   rowHeroSmsApiKey,
   rowHeroSmsMaxPrice,
   rowFiveSimApiKey,
@@ -990,6 +1018,7 @@ const inputVerificationResendCount = { value: '4' };
 const inputHeroSmsApiKey = { value: 'demo-key' };
 const inputFiveSimApiKey = { value: 'five-sim-key' };
 const inputFiveSimOperator = { value: 'any' };
+const selectHeroSmsOperator = { value: 'ais' };
 const inputFiveSimProduct = { value: 'openai' };
 const inputNexSmsApiKey = { value: 'nex-key' };
 const inputNexSmsServiceCode = { value: 'ot' };
@@ -1037,6 +1066,7 @@ const PHONE_REPLACEMENT_LIMIT_MIN = 1;
 const PHONE_REPLACEMENT_LIMIT_MAX = 20;
 const DEFAULT_HERO_SMS_COUNTRY_ID = 52;
 const DEFAULT_HERO_SMS_COUNTRY_LABEL = 'Thailand';
+const DEFAULT_HERO_SMS_OPERATOR = 'any';
 const PHONE_SMS_PROVIDER_HERO_SMS = 'hero-sms';
 const PHONE_SMS_PROVIDER_FIVE_SIM = '5sim';
 const PHONE_SMS_PROVIDER_NEXSMS = 'nexsms';
@@ -1104,6 +1134,7 @@ ${extractFunction('normalizeHeroSmsReuseEnabledValue')}
 ${extractFunction('normalizeHeroSmsAcquirePriority')}
 ${extractFunction('normalizeHeroSmsCountryId')}
 ${extractFunction('normalizeHeroSmsCountryLabel')}
+${extractFunction('normalizeHeroSmsOperatorValue')}
 ${extractFunction('getSelectedHeroSmsCountryOption')}
 ${extractFunction('normalizeSignupMethod')}
 ${extractFunction('isPhoneSignupReuseLocked')}
@@ -1150,6 +1181,7 @@ return { collectSettingsPayload };
   assert.equal(payload.heroSmsMinPrice, '0.03');
   assert.equal(payload.heroSmsMaxPrice, '0.12');
   assert.equal(payload.heroSmsPreferredPrice, '0.0512');
+  assert.equal(payload.heroSmsOperator, 'ais');
   assert.deepStrictEqual(payload.phonePreferredActivation, {
     provider: 'hero-sms',
     activationId: 'stored-activation',
@@ -1197,6 +1229,7 @@ const DEFAULT_FIVE_SIM_COUNTRY_LABEL = '越南 (Vietnam)';
 const DEFAULT_FIVE_SIM_OPERATOR = 'any';
 const DEFAULT_HERO_SMS_COUNTRY_ID = 52;
 const DEFAULT_HERO_SMS_COUNTRY_LABEL = 'Thailand';
+const DEFAULT_HERO_SMS_OPERATOR = 'any';
 const FIVE_SIM_SUPPORTED_COUNTRY_ID_SET = new Set(['indonesia', 'thailand', 'vietnam']);
 const HERO_SMS_SUPPORTED_COUNTRY_ID_SET = new Set(['6', '52', '10']);
 const selectPhoneSmsProvider = { value: 'hero-sms', dataset: { activeProvider: 'hero-sms' } };
@@ -1204,6 +1237,7 @@ const inputHeroSmsApiKey = { value: 'hero-live' };
 const inputHeroSmsMinPrice = { value: '0.03' };
 const inputHeroSmsMaxPrice = { value: '0.22' };
 const inputFiveSimOperator = { value: 'any' };
+const selectHeroSmsOperator = { value: 'ais', innerHTML: '', options: [], appendChild(option) { this.options.push(option); }, disabled: false };
 const displayHeroSmsPriceTiers = { textContent: '' };
 const displayPhoneSmsBalance = { textContent: '' };
 const rowHeroSmsPriceTiers = { style: { display: '' } };
@@ -1223,6 +1257,7 @@ ${extractFunction('normalizePhoneSmsMinPriceValue')}
 ${extractFunction('normalizePhoneSmsMaxPriceValue')}
 ${extractFunction('normalizeHeroSmsCountryId')}
 ${extractFunction('normalizeHeroSmsCountryLabel')}
+${extractFunction('normalizeHeroSmsOperatorValue')}
 ${extractFunction('normalizeHeroSmsCountryFallbackList')}
 ${extractFunction('normalizeFiveSimCountryFallbackList')}
 function getSelectedHeroSmsCountryOption() {
@@ -1238,6 +1273,7 @@ function syncHeroSmsFallbackSelectionOrderFromSelect() {
 function syncLatestState(patch) { latestState = { ...latestState, ...patch }; }
 function loadHeroSmsCountries() { return Promise.resolve(); }
 function applyHeroSmsFallbackSelection() {}
+function renderHeroSmsOperatorOptions(value) { selectHeroSmsOperator.value = normalizeHeroSmsOperatorValue(value || selectHeroSmsOperator.value); }
 function updatePhoneVerificationSettingsUI() {}
 function markSettingsDirty() {}
 function saveSettings() { savedPayload = { ...latestState }; return Promise.resolve(); }

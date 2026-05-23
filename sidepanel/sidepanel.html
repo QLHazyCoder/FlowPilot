@@ -1500,6 +1500,15 @@
                 <option value="price_high">高价优先（同价按国家顺序）</option>
               </select>
             </div>
+            <div class="data-row" id="row-hero-sms-operator" style="display:none;">
+              <span class="data-label">运营商</span>
+              <div class="data-inline hero-sms-country-stack">
+                <select id="select-hero-sms-operator" class="data-input mono">
+                  <option value="any" selected>不限（any）</option>
+                </select>
+                <span class="data-value hero-sms-country-note">按主国家从 HeroSMS 接口获取；不限时不附加 operator 参数。</span>
+              </div>
+            </div>
             <div class="data-row" id="row-hero-sms-api-key" style="display:none;">
               <span class="data-label">接码 API</span>
               <div class="input-with-icon">
