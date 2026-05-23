@@ -1436,6 +1436,7 @@ const PERSISTED_SETTING_DEFAULTS = {
   nexSmsCountryOrder: [...DEFAULT_NEX_SMS_COUNTRY_ORDER],
   nexSmsServiceCode: DEFAULT_NEX_SMS_SERVICE_CODE,
   frSmsPhoneList: '',
+  frSmsFailedEntries: [],
   frSmsPollIntervalSeconds: 3,
   frSmsPollTimeoutSeconds: 180,
   frSmsOperationDelayMs: 1500,
@@ -3556,6 +3557,8 @@ function normalizePersistentSettingValue(key, value) {
       return normalizeNexSmsServiceCode(value);
     case 'frSmsPhoneList':
       return String(value || '');
+    case 'frSmsFailedEntries':
+      return Array.isArray(value) ? value.slice(0, 200) : [];
     case 'frSmsPollIntervalSeconds':
       return Math.max(1, Math.min(60, Number(value) || 3));
     case 'frSmsPollTimeoutSeconds':

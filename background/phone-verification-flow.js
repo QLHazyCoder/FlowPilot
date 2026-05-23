@@ -6296,6 +6296,39 @@
         return m ? m[1] : '';
       });
 
+      // 从号码列表中移除指定条目，持久化到 state
+      const removeFrPhoneFromList = async (phoneNumber, reason = '') => {
+        const currentState = await getState().catch(() => state);
+        const currentList = String(currentState?.frSmsPhoneList || '').trim();
+        const lines = currentList.split(/[\r\n]+/);
+        const filtered = lines.filter((line) => {
+          const trimmed = line.trim();
+          if (!trimmed) return false;
+          const pipeIndex = trimmed.indexOf('|');
+          if (pipeIndex < 0) return false;
+          const phone = trimmed.substring(0, pipeIndex).trim().replace(/[^\d+]/g, '');
+          return phone !== phoneNumber;
+        });
+        const updatedList = filtered.join('\n');
+        const failedEntries = Array.isArray(currentState?.frSmsFailedEntries)
+          ? currentState.frSmsFailedEntries.slice()
+          : [];
+        failedEntries.push({ phone: phoneNumber, reason, removedAt: Date.now() });
+        // 最多保留 200 条失败记录
+        if (failedEntries.length > 200) {
+          failedEntries.splice(0, failedEntries.length - 200);
+        }
+        if (typeof setState === 'function') {
+          await setState({
+            frSmsPhoneList: updatedList,
+            frSmsFailedEntries: failedEntries,
+          });
+        }
+        if (typeof broadcastDataUpdate === 'function') {
+          broadcastDataUpdate({ frSmsPhoneList: updatedList });
+        }
+      };
+
       const allEntries = parseFn(phoneListText);
       if (!allEntries.length) {
         throw new Error(`步骤 ${visibleStep}：FR 号码列表解析后为空，请检查格式（每行：手机号|验证码URL）。`);
@@ -6339,9 +6372,10 @@
           });
           if (submitResult?.addPhoneRejected) {
             await addLog(
-              `步骤 ${visibleStep}：FR 号码 ${phoneNumber} 被页面拒绝：${submitResult.errorText || submitResult.url || '未知原因'}，尝试下一个。`,
+              `步骤 ${visibleStep}：FR 号码 ${phoneNumber} 被页面拒绝：${submitResult.errorText || submitResult.url || '未知原因'}，已从池中移除，尝试下一个。`,
               'warn'
             );
+            await removeFrPhoneFromList(phoneNumber, `页面拒绝: ${submitResult.errorText || submitResult.url || '未知原因'}`);
             continue;
           }
           // 操作不要太快
@@ -6349,9 +6383,10 @@
         } catch (error) {
           if (isStopRequestedError(error)) throw error;
           await addLog(
-            `步骤 ${visibleStep}：FR 填写手机号 ${phoneNumber} 失败：${error?.message || error}，尝试下一个。`,
+            `步骤 ${visibleStep}：FR 填写手机号 ${phoneNumber} 失败：${error?.message || error}，已从池中移除，尝试下一个。`,
             'warn'
           );
+          await removeFrPhoneFromList(phoneNumber, `填写失败: ${error?.message || error}`);
           continue;
         }
 
@@ -6409,17 +6444,19 @@
           if (!code) {
             const preview = lastText ? `，最后响应：${lastText.substring(0, 120)}` : '';
             await addLog(
-              `步骤 ${visibleStep}：FR 号码 ${phoneNumber} 验证码轮询超时${preview}，尝试下一个。`,
+              `步骤 ${visibleStep}：FR 号码 ${phoneNumber} 验证码轮询超时${preview}，已从池中移除，尝试下一个。`,
               'warn'
             );
+            await removeFrPhoneFromList(phoneNumber, '验证码轮询超时');
             continue;
           }
         } catch (error) {
           if (isStopRequestedError(error)) throw error;
           await addLog(
-            `步骤 ${visibleStep}：FR 轮询验证码异常：${error?.message || error}，尝试下一个。`,
+            `步骤 ${visibleStep}：FR 轮询验证码异常：${error?.message || error}，已从池中移除，尝试下一个。`,
             'warn'
           );
+          await removeFrPhoneFromList(phoneNumber, `轮询异常: ${error?.message || error}`);
           continue;
         }
 
@@ -6437,15 +6474,18 @@
 
           if (submitResult?.invalidCode) {
             await addLog(
-              `步骤 ${visibleStep}：FR 验证码 ${code} 无效：${submitResult.errorText || ''}，尝试下一个。`,
+              `步骤 ${visibleStep}：FR 验证码 ${code} 无效：${submitResult.errorText || ''}，已从池中移除，尝试下一个。`,
               'warn'
             );
+            await removeFrPhoneFromList(phoneNumber, `验证码无效: ${submitResult.errorText || ''}`);
             continue;
           }
 
           await addLog(`步骤 ${visibleStep}：FR 验证码 ${code} 提交成功！`, 'ok');
           // 标记当前条目已使用
           entry.used = true;
+          // 成功后也从池中移除该条目
+          await removeFrPhoneFromList(phoneNumber, '验证成功已使用');
           return {
             code,
             phoneNumber,
@@ -6455,9 +6495,10 @@
         } catch (error) {
           if (isStopRequestedError(error)) throw error;
           await addLog(
-            `步骤 ${visibleStep}：FR 提交验证码失败：${error?.message || error}，尝试下一个。`,
+            `步骤 ${visibleStep}：FR 提交验证码失败：${error?.message || error}，已从池中移除，尝试下一个。`,
             'warn'
           );
+          await removeFrPhoneFromList(phoneNumber, `提交验证码失败: ${error?.message || error}`);
           continue;
         }
       }
