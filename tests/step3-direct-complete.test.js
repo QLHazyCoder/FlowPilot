@@ -211,6 +211,9 @@ return {
   assert.deepStrictEqual(result, beforeSubmit.completions[0].payload);
   assert.equal(result.email, 'user@example.com');
   assert.equal(result.deferredSubmit, true);
+  assert.equal(result.passwordPageUrl, 'https://auth.openai.com/create-account/password');
+  assert.equal(result.passwordPagePath, '/create-account/password');
+  assert.equal(result.passwordPageMode, 'signup');
   assert.equal(typeof result.signupVerificationRequestedAt, 'number');
   assert.equal(beforeSubmit.events.includes('report:true'), true);
   assert.equal(beforeSubmit.events.includes('operation:submit-signup-password:start'), false);
@@ -232,4 +235,70 @@ return {
   const afterSubmit = api.snapshot();
   assert.deepStrictEqual(afterSubmit.clicks, ['Continue']);
   assert.equal(afterSubmit.events.includes('delay:submit-signup-password:2000'), true);
+});
+
+test('step 3 marks login password page from log-in URL', async () => {
+  const api = new Function(`
+const completions = [];
+const scheduled = [];
+const snapshot = {
+  state: 'password_page',
+  passwordInput: { value: '', hidden: false },
+  submitButton: { textContent: 'Continue', hidden: false },
+  displayedEmail: '',
+  url: 'https://auth.openai.com/log-in/password',
+};
+const window = {
+  setTimeout(fn, ms) {
+    scheduled.push({ fn, ms });
+    return scheduled.length;
+  },
+  CodexOperationDelay: {
+    async performOperationWithDelay(metadata, operation) {
+      return operation();
+    },
+  },
+};
+const location = {
+  href: 'https://auth.openai.com/log-in/password',
+  pathname: '/log-in/password',
+};
+function inspectSignupEntryState() { return snapshot; }
+function ensureSignupPasswordPageReady() { return { ready: true }; }
+function getSignupPasswordSubmitButton() { return snapshot.submitButton; }
+async function waitForElementByText() { return null; }
+function fillInput(input, value) { input.value = value; }
+async function humanPause() {}
+async function sleep() {}
+function throwIfStopped() {}
+function isStopError() { return false; }
+function log() {}
+function logSignupPasswordDiagnostics() {}
+function reportComplete(step, payload) { completions.push({ step, payload }); }
+function simulateClick() {}
+function getOperationDelayRunner() { return window.CodexOperationDelay.performOperationWithDelay; }
+
+${extractFunction('step3_fillEmailPassword')}
+
+return {
+  run() {
+    return step3_fillEmailPassword({
+      accountIdentifierType: 'phone',
+      accountIdentifier: '+66959916439',
+      phoneNumber: '+66959916439',
+      password: 'Secret123!',
+    });
+  },
+  completions,
+};
+`)();
+
+  const result = await api.run();
+
+  assert.equal(result.accountIdentifierType, 'phone');
+  assert.equal(result.accountIdentifier, '+66959916439');
+  assert.equal(result.passwordPageUrl, 'https://auth.openai.com/log-in/password');
+  assert.equal(result.passwordPagePath, '/log-in/password');
+  assert.equal(result.passwordPageMode, 'login');
+  assert.equal(api.completions[0].payload.passwordPageMode, 'login');
 });

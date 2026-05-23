@@ -577,6 +577,226 @@ test('message router marks step 3 failed when post-submit finalize fails', async
   assert.deepStrictEqual(response, { ok: true, error: '步骤 3 提交后仍停留在密码页。' });
 });
 
+test('message router skips signup tail when phone password submit used login password page', async () => {
+  const finalizeResult = {
+    ready: true,
+    state: 'verification',
+    passwordLoginFlow: true,
+  };
+  const { router, events } = createRouter({
+    state: {
+      signupMethod: 'phone',
+      accountIdentifierType: 'phone',
+      accountIdentifier: '+66959916439',
+      signupPhoneNumber: '+66959916439',
+      stepStatuses: {
+        3: 'running',
+        4: 'pending',
+        5: 'pending',
+        6: 'pending',
+        7: 'pending',
+      },
+    },
+    getStepIdsForState: () => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    finalizeStep3Completion: async (payload) => {
+      events.finalizePayloads.push(payload);
+      return finalizeResult;
+    },
+  });
+
+  const response = await router.handleMessage({
+    type: 'NODE_COMPLETE',
+    nodeId: 'fill-password',
+    source: 'openai-auth',
+    payload: {
+      nodeId: 'fill-password',
+      accountIdentifierType: 'phone',
+      accountIdentifier: '+66959916439',
+      signupPhoneNumber: '+66959916439',
+      signupVerificationRequestedAt: 123456,
+      passwordPageUrl: 'https://auth.openai.com/log-in/password',
+      passwordPagePath: '/log-in/password',
+      passwordPageMode: 'login',
+    },
+  }, {});
+
+  assert.deepStrictEqual(response, { ok: true });
+  assert.deepStrictEqual(events.finalizePayloads, [
+    {
+      nodeId: 'fill-password',
+      accountIdentifierType: 'phone',
+      accountIdentifier: '+66959916439',
+      signupPhoneNumber: '+66959916439',
+      signupVerificationRequestedAt: 123456,
+      passwordPageUrl: 'https://auth.openai.com/log-in/password',
+      passwordPagePath: '/log-in/password',
+      passwordPageMode: 'login',
+      step: 3,
+    },
+  ]);
+  assert.deepStrictEqual(events.stepStatuses, [
+    { step: 3, status: 'completed' },
+    { step: 4, status: 'skipped' },
+    { step: 5, status: 'skipped' },
+    { step: 6, status: 'skipped' },
+  ]);
+  assert.deepStrictEqual(events.signupPhoneSilentStates, ['+66959916439']);
+  assert.equal(events.stateUpdates.some((updates) => updates.signupVerificationRequestedAt === 123456), false);
+  assert.equal(events.stateUpdates.some((updates) => updates.signupVerificationRequestedAt === null), true);
+  assert.equal(events.logs.some(({ message }) => /手机号密码提交后已确认账号进入登录后续状态/.test(message)), true);
+  assert.deepStrictEqual(events.notifyCompletions, [
+    {
+      step: 3,
+      nodeId: 'fill-password',
+      payload: {
+        nodeId: 'fill-password',
+        accountIdentifierType: 'phone',
+        accountIdentifier: '+66959916439',
+        signupPhoneNumber: '+66959916439',
+        signupVerificationRequestedAt: 123456,
+        passwordPageUrl: 'https://auth.openai.com/log-in/password',
+        passwordPagePath: '/log-in/password',
+        passwordPageMode: 'login',
+        step: 3,
+        ...finalizeResult,
+      },
+    },
+  ]);
+});
+
+test('message router keeps signup tail when phone password submit used create-account page', async () => {
+  const finalizeResult = {
+    ready: true,
+    state: 'verification',
+  };
+  const { router, events } = createRouter({
+    state: {
+      signupMethod: 'phone',
+      accountIdentifierType: 'phone',
+      accountIdentifier: '+66959916439',
+      signupPhoneNumber: '+66959916439',
+      stepStatuses: {
+        3: 'running',
+        4: 'pending',
+        5: 'pending',
+        6: 'pending',
+        7: 'pending',
+      },
+    },
+    getStepIdsForState: () => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    finalizeStep3Completion: async (payload) => {
+      events.finalizePayloads.push(payload);
+      return finalizeResult;
+    },
+  });
+
+  const response = await router.handleMessage({
+    type: 'NODE_COMPLETE',
+    nodeId: 'fill-password',
+    source: 'openai-auth',
+    payload: {
+      nodeId: 'fill-password',
+      accountIdentifierType: 'phone',
+      accountIdentifier: '+66959916439',
+      signupPhoneNumber: '+66959916439',
+      signupVerificationRequestedAt: 123456,
+      passwordPageUrl: 'https://auth.openai.com/create-account/password',
+      passwordPagePath: '/create-account/password',
+      passwordPageMode: 'signup',
+    },
+  }, {});
+
+  assert.deepStrictEqual(response, { ok: true });
+  assert.deepStrictEqual(events.stepStatuses, [
+    { step: 3, status: 'completed' },
+  ]);
+  assert.equal(events.stateUpdates.some((updates) => updates.signupVerificationRequestedAt === 123456), true);
+  assert.equal(events.stateUpdates.some((updates) => updates.signupVerificationRequestedAt === null), false);
+  assert.equal(events.logs.some(({ message }) => /手机号密码提交后已确认账号进入登录后续状态/.test(message)), false);
+  assert.deepStrictEqual(events.notifyCompletions, [
+    {
+      step: 3,
+      nodeId: 'fill-password',
+      payload: {
+        nodeId: 'fill-password',
+        accountIdentifierType: 'phone',
+        accountIdentifier: '+66959916439',
+        signupPhoneNumber: '+66959916439',
+        signupVerificationRequestedAt: 123456,
+        passwordPageUrl: 'https://auth.openai.com/create-account/password',
+        passwordPagePath: '/create-account/password',
+        passwordPageMode: 'signup',
+        step: 3,
+        ...finalizeResult,
+      },
+    },
+  ]);
+});
+
+test('message router keeps signup tail when phone password submit lacks login password page url', async () => {
+  const finalizeResult = {
+    ready: true,
+    state: 'oauth_consent_page',
+    directOAuthConsentPage: true,
+  };
+  const { router, events } = createRouter({
+    state: {
+      signupMethod: 'phone',
+      accountIdentifierType: 'phone',
+      accountIdentifier: '+66959916439',
+      signupPhoneNumber: '+66959916439',
+      stepStatuses: {
+        3: 'running',
+        4: 'pending',
+        5: 'pending',
+        6: 'pending',
+        7: 'pending',
+      },
+    },
+    getStepIdsForState: () => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    finalizeStep3Completion: async (payload) => {
+      events.finalizePayloads.push(payload);
+      return finalizeResult;
+    },
+  });
+
+  const response = await router.handleMessage({
+    type: 'NODE_COMPLETE',
+    nodeId: 'fill-password',
+    source: 'openai-auth',
+    payload: {
+      nodeId: 'fill-password',
+      accountIdentifierType: 'phone',
+      accountIdentifier: '+66959916439',
+      signupPhoneNumber: '+66959916439',
+      signupVerificationRequestedAt: 123456,
+    },
+  }, {});
+
+  assert.deepStrictEqual(response, { ok: true });
+  assert.deepStrictEqual(events.stepStatuses, [
+    { step: 3, status: 'completed' },
+  ]);
+  assert.equal(events.stateUpdates.some((updates) => updates.signupVerificationRequestedAt === 123456), true);
+  assert.equal(events.stateUpdates.some((updates) => updates.signupVerificationRequestedAt === null), false);
+  assert.equal(events.logs.some(({ message }) => /手机号密码提交后已确认账号进入登录后续状态/.test(message)), false);
+  assert.deepStrictEqual(events.notifyCompletions, [
+    {
+      step: 3,
+      nodeId: 'fill-password',
+      payload: {
+        nodeId: 'fill-password',
+        accountIdentifierType: 'phone',
+        accountIdentifier: '+66959916439',
+        signupPhoneNumber: '+66959916439',
+        signupVerificationRequestedAt: 123456,
+        step: 3,
+        ...finalizeResult,
+      },
+    },
+  ]);
+});
+
 test('message router does not duplicate step 3 mismatch failure log after finalize already failed', async () => {
   const mismatchError = 'SIGNUP_PHONE_PASSWORD_MISMATCH::步骤 3：检测到注册手机号或密码不正确，需要重新开始当前轮。页面提示：Incorrect phone number or password';
   const state = {

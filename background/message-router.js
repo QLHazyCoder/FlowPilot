@@ -526,6 +526,116 @@
         || status === 'skipped';
     }
 
+    function isPhoneSignupStepPayload(payload = {}, state = {}) {
+      const payloadIdentifierType = String(payload?.accountIdentifierType || '').trim().toLowerCase();
+      if (payloadIdentifierType === 'email') {
+        return false;
+      }
+
+      const stateIdentifierType = String(state?.accountIdentifierType || '').trim().toLowerCase();
+      return payloadIdentifierType === 'phone'
+        || Boolean(resolveSignupPhonePayload(payload))
+        || stateIdentifierType === 'phone'
+        || Boolean(String(state?.signupPhoneNumber || '').trim())
+        || Boolean(state?.signupPhoneActivation)
+        || Boolean(state?.signupPhoneCompletedActivation);
+    }
+
+    function isLoginPasswordPagePayload(payload = {}) {
+      const passwordPageMode = String(payload?.passwordPageMode || '').trim().toLowerCase();
+      if (passwordPageMode === 'login') {
+        return true;
+      }
+      const rawPath = String(payload?.passwordPagePath || '').trim();
+      if (/\/log-in\/password(?:[/?#]|$)/i.test(rawPath)) {
+        return true;
+      }
+      const rawUrl = String(payload?.passwordPageUrl || '').trim();
+      if (!rawUrl) {
+        return false;
+      }
+      try {
+        return /\/log-in\/password(?:[/?#]|$)/i.test(new URL(rawUrl).pathname || '');
+      } catch {
+        return /\/log-in\/password(?:[/?#]|$)/i.test(rawUrl);
+      }
+    }
+
+    function isSignupPasswordPagePayload(payload = {}) {
+      const passwordPageMode = String(payload?.passwordPageMode || '').trim().toLowerCase();
+      if (passwordPageMode === 'signup') {
+        return true;
+      }
+      const rawPath = String(payload?.passwordPagePath || '').trim();
+      if (/\/(?:create-account|u\/signup|signup)\/password(?:[/?#]|$)/i.test(rawPath)) {
+        return true;
+      }
+      const rawUrl = String(payload?.passwordPageUrl || '').trim();
+      if (!rawUrl) {
+        return false;
+      }
+      try {
+        return /\/(?:create-account|u\/signup|signup)\/password(?:[/?#]|$)/i.test(new URL(rawUrl).pathname || '');
+      } catch {
+        return /\/(?:create-account|u\/signup|signup)\/password(?:[/?#]|$)/i.test(rawUrl);
+      }
+    }
+
+    function isSuccessfulLoginPasswordFlowPayload(payload = {}) {
+      if (!isLoginPasswordPagePayload(payload)) {
+        return false;
+      }
+      const state = String(payload?.state || payload?.successState || '').trim().toLowerCase();
+      return Boolean(payload?.ready)
+        || Boolean(payload?.alreadyVerified)
+        || Boolean(payload?.passwordLoginFlow)
+        || state === 'verification'
+        || state === 'verification_page'
+        || state === 'phone_verification_page'
+        || state === 'oauth_consent_page'
+        || state === 'logged_in_home';
+    }
+
+    function shouldSkipPhoneSignupRegistrationTailAfterPassword(payload = {}, state = {}) {
+      if (!isPhoneSignupStepPayload(payload, state)) {
+        return false;
+      }
+      if (isSignupPasswordPagePayload(payload)) {
+        return false;
+      }
+      return isSuccessfulLoginPasswordFlowPayload(payload);
+    }
+
+    async function skipPhoneSignupRegistrationTailAfterPassword(currentStep, payload = {}) {
+      const latestState = await getState();
+      const skippedSteps = [];
+      for (const stepKey of ['fetch-signup-code', 'fill-profile', 'wait-registration-success']) {
+        const skippedStep = findStepByKeyAfter(currentStep, stepKey, latestState);
+        if (!skippedStep) {
+          continue;
+        }
+        const status = getNodeStatusByStep(skippedStep, latestState);
+        if (isStepProtectedFromAutoSkip(status)) {
+          continue;
+        }
+        await setNodeStatusByStep(skippedStep, 'skipped', latestState);
+        skippedSteps.push(skippedStep);
+      }
+
+      await setState({ signupVerificationRequestedAt: null });
+      if (skippedSteps.length) {
+        await addLog(
+          `步骤 ${currentStep}：手机号密码提交后已确认账号进入登录后续状态，已自动跳过步骤 ${skippedSteps.join('/')}，流程将直接进入 OAuth 后续节点。`,
+          'warn',
+          { step: currentStep, stepKey: 'fill-password' }
+        );
+      }
+      return {
+        ...payload,
+        skipRegistrationFlow: true,
+      };
+    }
+
     function findStepByKeyAfter(currentOrder, targetKey, state = {}) {
       const activeStepIds = typeof getStepIdsForState === 'function'
         ? getStepIdsForState(state)
@@ -850,15 +960,20 @@
           break;
         case 3:
           await syncStepAccountIdentityFromPayload(payload);
-          if (payload.signupVerificationRequestedAt) {
-            await setState({ signupVerificationRequestedAt: payload.signupVerificationRequestedAt });
-          }
-          if (payload.skipProfileStep) {
+          {
             const latestState = await getState();
-            const step5Status = getNodeStatusByStep(5, latestState);
-            if (step5Status !== 'running' && step5Status !== 'completed' && step5Status !== 'manual_completed') {
-              await setNodeStatusByStep(5, 'skipped', latestState);
-              await addLog('步骤 3：页面已直接进入已登录态，已自动跳过步骤 5。', 'warn');
+            const skipRegistrationTail = shouldSkipPhoneSignupRegistrationTailAfterPassword(payload, latestState);
+            if (payload.signupVerificationRequestedAt && !skipRegistrationTail) {
+              await setState({ signupVerificationRequestedAt: payload.signupVerificationRequestedAt });
+            }
+            if (skipRegistrationTail) {
+              await skipPhoneSignupRegistrationTailAfterPassword(step, payload);
+            } else if (payload.skipProfileStep) {
+              const step5Status = getNodeStatusByStep(5, latestState);
+              if (step5Status !== 'running' && step5Status !== 'completed' && step5Status !== 'manual_completed') {
+                await setNodeStatusByStep(5, 'skipped', latestState);
+                await addLog('步骤 3：页面已直接进入已登录态，已自动跳过步骤 5。', 'warn');
+              }
             }
           }
           if (payload.loginVerificationRequestedAt) {
@@ -970,9 +1085,16 @@
             notifyNodeError(nodeId, '流程已被用户停止。');
             return { ok: true };
           }
+          let completionPayload = message.payload || {};
           try {
             if (nodeId === 'fill-password' && typeof finalizeStep3Completion === 'function') {
-              await finalizeStep3Completion(message.payload || {});
+              const finalizedPayload = await finalizeStep3Completion(message.payload || {});
+              if (finalizedPayload && typeof finalizedPayload === 'object') {
+                completionPayload = {
+                  ...completionPayload,
+                  ...finalizedPayload,
+                };
+              }
             }
           } catch (error) {
             if (typeof isCloudflareSecurityBlockedError === 'function' && isCloudflareSecurityBlockedError(error)) {
@@ -1007,11 +1129,11 @@
               stepKey: nodeId,
             });
           }
-          await handleStepData(resolvedStep, message.payload);
+          await handleStepData(resolvedStep, completionPayload);
           if (isFinalNode && typeof appendAccountRunRecord === 'function') {
             await appendAccountRunRecord('success', completionState);
           }
-          notifyNodeComplete(nodeId, message.payload);
+          notifyNodeComplete(nodeId, completionPayload);
           return { ok: true };
         }
 
