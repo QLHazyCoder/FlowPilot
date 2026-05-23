@@ -2989,6 +2989,9 @@ function isStep5CompletionChatgptUrl(rawUrl = location.href) {
     }
 
     const path = String(parsed.pathname || '');
+    if (/^\/(?:onboarding|questionnaire|survey|personalization|personalize|getting-started|welcome|consult)(?:[/?#]|$)/i.test(path)) {
+      return false;
+    }
     return !/^\/(?:auth\/|create-account\/|email-verification|log-in|add-phone)(?:[/?#]|$)/i.test(path);
   } catch {
     return false;
@@ -6755,6 +6758,83 @@ function getStep5PostSubmitSuccessState() {
   return null;
 }
 
+function isStep5PostSubmitOnboardingPage() {
+  if (isStep5ProfileStillVisible()) {
+    return false;
+  }
+
+  let host = '';
+  let path = '';
+  try {
+    const parsed = new URL(String(location.href || '').trim());
+    host = String(parsed.hostname || '').toLowerCase();
+    path = String(parsed.pathname || '').toLowerCase();
+  } catch {
+    return false;
+  }
+
+  if (!['chatgpt.com', 'www.chatgpt.com', 'chat.openai.com', 'auth.openai.com', 'auth0.openai.com', 'accounts.openai.com'].includes(host)) {
+    return false;
+  }
+
+  if (/\/(?:onboarding|questionnaire|survey|personalization|personalize|getting-started|welcome|consult)(?:[/?#]|$)/i.test(path)) {
+    return true;
+  }
+
+  const pageText = getPageTextSnapshot();
+  return /(?:what\s+brings\s+you\s+to\s+chatgpt|tell\s+us\s+about\s+yourself|customi[sz]e\s+chatgpt|personalize\s+your\s+experience|how\s+will\s+you\s+use\s+chatgpt|which\s+best\s+describes\s+you|start\s+using\s+chatgpt|skip\s+for\s+now|入门|开始使用|告诉我们|个人化|个性化|问卷|调查|咨询|跳过|稍后|下一步)/i.test(pageText)
+    && Boolean(findStep5PostSubmitOnboardingAction());
+}
+
+function findStep5PostSubmitOnboardingAction() {
+  const candidates = Array.from(document.querySelectorAll('button, [role="button"], a, [role="link"], input[type="button"], input[type="submit"]'));
+  const scored = [];
+
+  for (const el of candidates) {
+    if (!isVisibleElement(el) || !isActionEnabled(el)) {
+      continue;
+    }
+    const text = typeof getActionText === 'function'
+      ? getActionText(el)
+      : [el?.textContent, el?.value, el?.getAttribute?.('aria-label'), el?.getAttribute?.('title')]
+        .filter(Boolean)
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    if (!text) {
+      continue;
+    }
+    if (/skip|not\s+now|maybe\s+later|do\s+this\s+later|稍后|以后|跳过|スキップ|後で/i.test(text)) {
+      scored.push({ el, score: 1 });
+      continue;
+    }
+    if (/next|continue|start|done|finish|let'?s\s+go|下一步|继续|开始|完成|次へ|続行|始める/i.test(text)) {
+      scored.push({ el, score: 2 });
+    }
+  }
+
+  scored.sort((a, b) => a.score - b.score);
+  return scored[0]?.el || null;
+}
+
+async function advanceStep5PostSubmitOnboardingPage() {
+  if (!isStep5PostSubmitOnboardingPage()) {
+    return false;
+  }
+
+  const action = findStep5PostSubmitOnboardingAction();
+  if (!action) {
+    return false;
+  }
+
+  const text = typeof getActionText === 'function' ? getActionText(action) : String(action?.textContent || action?.value || '').trim();
+  log(`步骤 5：检测到注册后的咨询/入门页面，正在点击“${text || '跳过/下一步'}”继续流程。`, 'warn');
+  await humanPause(350, 900);
+  simulateClick(action);
+  await sleep(1000);
+  return true;
+}
+
 function getStep5SubmitState() {
   const retryState = getStep5AuthRetryPageState();
   const successState = getStep5PostSubmitSuccessState();
@@ -6915,6 +6995,11 @@ async function waitForStep5SubmitOutcome(options = {}) {
         level: 'ok',
       });
       return successState;
+    }
+
+    if (await advanceStep5PostSubmitOnboardingPage()) {
+      lastSubmitClickAt = Date.now();
+      continue;
     }
 
     const step5Error = typeof getStep5ErrorText === 'function' ? getStep5ErrorText() : '';

@@ -63,6 +63,9 @@ function getStep5OutcomeBundle() {
     extractFunction('isStep5ProfileStillVisible'),
     extractFunction('isStep5CompletionChatgptUrl'),
     extractFunction('getStep5PostSubmitSuccessState'),
+    extractFunction('findStep5PostSubmitOnboardingAction'),
+    extractFunction('isStep5PostSubmitOnboardingPage'),
+    extractFunction('advanceStep5PostSubmitOnboardingPage'),
     extractFunction('installStep5NavigationCompletionReporter'),
     extractFunction('waitForStep5SubmitOutcome'),
   ].join('\n');
@@ -1044,6 +1047,81 @@ return {
     url: 'https://chatgpt.com/',
   });
   assert.equal(api.snapshot().recoverCalls, 1);
+});
+
+test('step 5 advances post-submit onboarding survey page before completing', async () => {
+  const api = new Function(`
+let now = 0;
+const clicks = [];
+const skipButton = {
+  textContent: 'Skip for now',
+  hidden: false,
+  disabled: false,
+  getAttribute(name) {
+    if (name === 'aria-disabled') return 'false';
+    return '';
+  },
+};
+const location = {
+  href: 'https://chatgpt.com/onboarding',
+};
+const document = {
+  body: {
+    innerText: 'What brings you to ChatGPT? Tell us about yourself. Skip for now',
+  },
+  querySelector() { return null; },
+  querySelectorAll(selector) {
+    if (selector === 'button, [role="button"], a, [role="link"], input[type="button"], input[type="submit"]') {
+      return [skipButton];
+    }
+    return [];
+  },
+};
+
+function throwIfStopped() {}
+function log() {}
+async function sleep(ms = 0) { now += ms || 250; }
+async function humanPause() {}
+function simulateClick(el) {
+  clicks.push(el?.textContent || 'clicked');
+  location.href = 'https://chatgpt.com/';
+  document.body.innerText = 'ChatGPT';
+}
+function isVisibleElement(el) { return Boolean(el) && !el.hidden; }
+function isActionEnabled(el) { return Boolean(el) && !el.disabled && el.getAttribute?.('aria-disabled') !== 'true'; }
+function getActionText(el) { return el?.textContent || ''; }
+function getSignupAuthRetryPathPatterns() { return []; }
+function getAuthTimeoutErrorPageState() { return null; }
+async function recoverCurrentAuthRetryPage() { throw new Error('should not recover retry page'); }
+function createSignupUserAlreadyExistsError() { return new Error('user already exists'); }
+function createAuthMaxCheckAttemptsError() { return new Error('max_check_attempts'); }
+function getStep5ErrorText() { return ''; }
+function getPageTextSnapshot() { return document.body.innerText; }
+function isStep5Ready() { return false; }
+function isLikelyLoggedInChatgptHomeUrl() { return location.href === 'https://chatgpt.com/'; }
+function isOAuthConsentPage() { return false; }
+function isAddPhonePageReady() { return false; }
+
+${extractFunction('isSignupProfilePageUrl')}
+${getStep5OutcomeBundle()}
+
+return {
+  run() {
+    return waitForStep5SubmitOutcome({ timeoutMs: 3000 });
+  },
+  snapshot() {
+    return { clicks, now };
+  },
+};
+`)();
+
+  const result = await api.run();
+
+  assert.deepStrictEqual(result, {
+    state: 'logged_in_home',
+    url: 'https://chatgpt.com/',
+  });
+  assert.deepStrictEqual(api.snapshot().clicks, ['Skip for now']);
 });
 
 test('step 5 does not treat unknown auth page as left_profile success', () => {
