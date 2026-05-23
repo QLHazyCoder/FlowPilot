@@ -223,6 +223,68 @@ return { parseHeroSmsOperatorsPayload };
   assert.equal(parsed.has('0'), false);
 });
 
+test('HeroSMS operator rendering does not re-enter country synchronization', () => {
+  const api = new Function(`
+const DEFAULT_HERO_SMS_COUNTRY_ID = 52;
+const DEFAULT_HERO_SMS_OPERATOR = 'any';
+let latestState = { heroSmsCountryId: 52, heroSmsOperator: 'ais' };
+let heroSmsCountrySelectionOrder = [52];
+const selectHeroSmsCountry = null;
+const selectHeroSmsCountryFallback = null;
+const heroSmsOperatorsByCountryId = new Map([['52', ['ais', 'dtac']]]);
+const selectHeroSmsOperator = {
+  value: 'ais',
+  innerHTML: '',
+  options: [],
+  appendChild(option) { this.options.push(option); },
+  disabled: false,
+};
+const document = {
+  createElement() { return { value: '', textContent: '' }; },
+};
+function getSelectedHeroSmsCountryOption() {
+  throw new Error('renderHeroSmsOperatorOptions must not sync country selection');
+}
+${extractFunction('normalizeHeroSmsCountryId')}
+${extractFunction('normalizeHeroSmsOperatorValue')}
+${extractFunction('getHeroSmsOperatorCountryId')}
+${extractFunction('renderHeroSmsOperatorOptions')}
+return { renderHeroSmsOperatorOptions, selectHeroSmsOperator };
+`)();
+
+  api.renderHeroSmsOperatorOptions('dtac');
+
+  assert.equal(api.selectHeroSmsOperator.value, 'dtac');
+  assert.deepStrictEqual(
+    api.selectHeroSmsOperator.options.map((option) => option.value),
+    ['any', 'ais', 'dtac']
+  );
+});
+
+test('HeroSMS operator helpers tolerate panels without the new operator select', async () => {
+  const api = new Function(`
+const DEFAULT_HERO_SMS_COUNTRY_ID = 52;
+const DEFAULT_HERO_SMS_OPERATOR = 'any';
+let latestState = { heroSmsCountryId: 52, heroSmsOperator: 'ais' };
+let heroSmsCountrySelectionOrder = [52];
+const selectHeroSmsCountry = null;
+const selectHeroSmsCountryFallback = null;
+const selectHeroSmsOperator = null;
+let heroSmsOperatorsByCountryId = new Map([['52', ['ais']]]);
+let heroSmsOperatorsLoadedAt = Date.now();
+${extractFunction('normalizeHeroSmsCountryId')}
+${extractFunction('normalizeHeroSmsOperatorValue')}
+${extractFunction('getHeroSmsOperatorCountryId')}
+${extractFunction('loadHeroSmsOperators')}
+${extractFunction('refreshHeroSmsOperatorOptions')}
+${extractFunction('renderHeroSmsOperatorOptions')}
+return { refreshHeroSmsOperatorOptions, renderHeroSmsOperatorOptions };
+`)();
+
+  assert.doesNotThrow(() => api.renderHeroSmsOperatorOptions('ais'));
+  await assert.doesNotReject(() => api.refreshHeroSmsOperatorOptions({ silent: true }));
+});
+
 test('sidepanel source wires free reusable phone save and clear actions to runtime messages', () => {
   assert.match(sidepanelSource, /const inputFreePhoneReuseEnabled = document\.getElementById\('input-free-phone-reuse-enabled'\);/);
   assert.match(sidepanelSource, /const inputFreePhoneReuseAutoEnabled = document\.getElementById\('input-free-phone-reuse-auto-enabled'\);/);

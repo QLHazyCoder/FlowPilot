@@ -7510,6 +7510,20 @@ function refreshHeroSmsOperatorOptions(options = {}) {
     });
 }
 
+function getHeroSmsOperatorCountryId() {
+  const countrySelect = selectHeroSmsCountry || selectHeroSmsCountryFallback;
+  if (heroSmsCountrySelectionOrder.length) {
+    return normalizeHeroSmsCountryId(heroSmsCountrySelectionOrder[0], DEFAULT_HERO_SMS_COUNTRY_ID);
+  }
+  const selectedOption = countrySelect
+    ? Array.from(countrySelect.options || []).find((option) => option.selected)
+    : null;
+  return normalizeHeroSmsCountryId(
+    selectedOption?.value || latestState?.heroSmsCountryId,
+    DEFAULT_HERO_SMS_COUNTRY_ID
+  );
+}
+
 async function loadHeroSmsOperators(options = {}) {
   const silent = Boolean(options?.silent);
   const force = Boolean(options?.force);
@@ -7556,10 +7570,7 @@ function renderHeroSmsOperatorOptions(selectedOperator = null) {
       : (selectHeroSmsOperator.value || latestState?.heroSmsOperator),
     DEFAULT_HERO_SMS_OPERATOR
   );
-  const selectedCountry = typeof getSelectedHeroSmsCountryOption === 'function'
-    ? getSelectedHeroSmsCountryOption()
-    : { id: DEFAULT_HERO_SMS_COUNTRY_ID };
-  const countryId = String(normalizeHeroSmsCountryId(selectedCountry?.id, DEFAULT_HERO_SMS_COUNTRY_ID));
+  const countryId = String(getHeroSmsOperatorCountryId());
   const operators = heroSmsOperatorsByCountryId instanceof Map
     ? (heroSmsOperatorsByCountryId.get(countryId) || [])
     : [];
