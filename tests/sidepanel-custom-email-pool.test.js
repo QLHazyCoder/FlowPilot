@@ -194,6 +194,13 @@ test('sidepanel syncs custom mail provider pool from background data updates', (
   );
 });
 
+test('sidepanel syncs current registration email from background data updates', () => {
+  assert.match(
+    source,
+    /message\.payload\.email !== undefined && inputEmail[\s\S]*inputEmail\.value = message\.payload\.email \|\| ''/
+  );
+});
+
 test('sidepanel custom verification dialog exposes add-phone action for step 8', async () => {
   const bundle = [
     extractFunction('getCustomVerificationPromptCopy'),

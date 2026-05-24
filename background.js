@@ -2768,14 +2768,27 @@ async function removeCurrentCustomMailProviderPoolEmail(state = {}, options = {}
   }
 
   const nextPool = currentPool.filter((email) => email !== currentEmail);
+  const nextEmail = nextPool[0] || null;
   await setPersistentSettings({ customMailProviderPool: nextPool });
+  await setEmailStateSilently(nextEmail, {
+    source: nextEmail ? 'custom-mail-provider-pool-next' : 'custom-mail-provider-pool-empty',
+  });
   await setState({ customMailProviderPool: nextPool });
-  broadcastDataUpdate({ customMailProviderPool: nextPool });
+  broadcastDataUpdate({
+    customMailProviderPool: nextPool,
+    email: nextEmail,
+  });
   const logPrefix = String(options.logPrefix || '').trim() || '自定义邮箱号池：流程成功后';
-  await addLog(`${logPrefix}已从号池删除 ${currentEmail}，下轮将使用下一个邮箱。`, options.level || 'ok');
+  await addLog(
+    nextEmail
+      ? `${logPrefix}已从号池删除 ${currentEmail}，下轮将使用 ${nextEmail}。`
+      : `${logPrefix}已从号池删除 ${currentEmail}，号池已为空。`,
+    options.level || 'ok'
+  );
   return {
     updated: true,
     customMailProviderPool: nextPool,
+    email: nextEmail,
   };
 }
 
@@ -12785,10 +12798,6 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
     return null;
   }
 
-  if (currentState.email) {
-    return currentState.email;
-  }
-
   if (isCustomMailProvider(currentState)) {
     const poolSize = getCustomMailProviderPool(currentState).length;
     if (poolSize > 0) {
@@ -12800,6 +12809,10 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
       await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱号池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试；请确保自定义邮箱本地助手已启动）===`, 'ok');
       return queuedEmail;
     }
+  }
+
+  if (currentState.email) {
+    return currentState.email;
   }
 
   if (isCustomEmailPoolGenerator(currentState)) {

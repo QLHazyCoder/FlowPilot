@@ -126,6 +126,16 @@ test('background selects the matching custom provider pool email for the current
   assert.equal(api.getCustomMailProviderPoolEmailForRun(state, 4), '');
 });
 
+test('auto email readiness checks custom provider pool before reusing stale current email', () => {
+  const ensureAutoEmailReadySource = extractFunction('ensureAutoEmailReady');
+  const staleEmailReuseIndex = ensureAutoEmailReadySource.indexOf('if (currentState.email)');
+  const customProviderPoolIndex = ensureAutoEmailReadySource.indexOf('if (isCustomMailProvider(currentState))');
+
+  assert.notEqual(staleEmailReuseIndex, -1);
+  assert.notEqual(customProviderPoolIndex, -1);
+  assert.equal(customProviderPoolIndex < staleEmailReuseIndex, true);
+});
+
 test('background removes successful custom provider pool email and keeps the next email first', async () => {
   const persistentUpdates = [];
   const stateUpdates = [];
@@ -142,6 +152,11 @@ async function setPersistentSettings(updates) { persistentUpdates.push(updates);
 async function setState(updates) { stateUpdates.push(updates); }
 function broadcastDataUpdate(updates) { broadcasts.push(updates); }
 async function addLog(message, level) { logs.push({ message, level }); }
+async function getState() { return { email: 'first@example.com' }; }
+async function setEmailStateSilently(email) {
+  stateUpdates.push({ email });
+  broadcasts.push({ email });
+}
 
 ${bundle}
 
@@ -159,6 +174,7 @@ return { removeCurrentCustomMailProviderPoolEmail };
 
   assert.equal(result.updated, true);
   assert.deepEqual(result.customMailProviderPool, ['second@example.com', 'third@example.com']);
+  assert.equal(result.email, 'second@example.com');
   assert.deepEqual(persistentUpdates.at(-1), {
     customMailProviderPool: ['second@example.com', 'third@example.com'],
   });
@@ -167,8 +183,9 @@ return { removeCurrentCustomMailProviderPoolEmail };
   });
   assert.deepEqual(broadcasts.at(-1), {
     customMailProviderPool: ['second@example.com', 'third@example.com'],
+    email: 'second@example.com',
   });
-  assert.equal(logs.some((entry) => /已从号池删除 first@example\.com/.test(entry.message)), true);
+  assert.equal(logs.some((entry) => /已从号池删除 first@example\.com，下轮将使用 second@example\.com/.test(entry.message)), true);
 });
 
 test('background derives active custom email pool from structured entries', () => {

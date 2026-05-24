@@ -17887,6 +17887,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           setManagedAliasBaseEmailInputForProvider('2925', latestState);
         }
       }
+      if (message.payload.email !== undefined && inputEmail) {
+        inputEmail.value = message.payload.email || '';
+      }
       if (message.payload.customEmailPoolEntries !== undefined || message.payload.customEmailPool !== undefined) {
         setCustomEmailPoolEntriesState(restoreCustomEmailPoolEntriesFromState({
           ...latestState,
