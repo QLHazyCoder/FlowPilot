@@ -187,6 +187,13 @@ test('sidepanel queues custom email pool refresh when the pool row is visible', 
   );
 });
 
+test('sidepanel syncs custom mail provider pool from background data updates', () => {
+  assert.match(
+    source,
+    /message\.payload\.customMailProviderPool !== undefined[\s\S]*inputCustomMailProviderPool\.value = normalizeCustomEmailPoolEntries\(message\.payload\.customMailProviderPool\)\.join\('\\n'\)/
+  );
+});
+
 test('sidepanel custom verification dialog exposes add-phone action for step 8', async () => {
   const bundle = [
     extractFunction('getCustomVerificationPromptCopy'),

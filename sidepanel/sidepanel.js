@@ -17895,6 +17895,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         syncRunCountFromConfiguredEmailPool();
         queueCustomEmailPoolRefresh();
       }
+      if (message.payload.customMailProviderPool !== undefined) {
+        if (inputCustomMailProviderPool) {
+          inputCustomMailProviderPool.value = normalizeCustomEmailPoolEntries(message.payload.customMailProviderPool).join('\n');
+        }
+        syncRunCountFromConfiguredEmailPool();
+      }
       if (message.payload.luckmailApiKey !== undefined) {
         inputLuckmailApiKey.value = message.payload.luckmailApiKey || '';
       }
