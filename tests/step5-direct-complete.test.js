@@ -1267,6 +1267,54 @@ return {
   assert.equal(result.page, false);
 });
 
+test('step 5 post-submit prompt detection skips heavy page text scan when no action exists', () => {
+  const api = new Function(`
+let pageTextReads = 0;
+const location = {
+  href: 'https://chatgpt.com/',
+};
+const document = {
+  body: {
+    innerText: 'ChatGPT home with a very large conversation tree',
+  },
+  querySelector() { return null; },
+  querySelectorAll(selector) {
+    if (selector === 'button, [role="button"]') return [];
+    if (selector === 'button, [role="button"], a, [role="link"], input[type="button"], input[type="submit"]') return [];
+    return [];
+  },
+};
+
+function isVisibleElement(el) { return Boolean(el) && !el.hidden; }
+function isActionEnabled(el) { return Boolean(el) && !el.disabled && el.getAttribute?.('aria-disabled') !== 'true'; }
+function getActionText(el) { return el?.textContent || ''; }
+function getPageTextSnapshot() {
+  pageTextReads += 1;
+  return document.body.innerText;
+}
+function isStep5Ready() { return false; }
+
+${extractFunction('isSignupProfilePageUrl')}
+${extractFunction('getStep5ProfilePathPatterns')}
+${extractFunction('isStep5ProfilePageUrl')}
+${extractFunction('isStep5ProfileStillVisible')}
+${extractFunction('findStep5PostSubmitOnboardingAction')}
+${extractFunction('isStep5PostSubmitOnboardingPage')}
+
+return {
+  run() {
+    return isStep5PostSubmitOnboardingPage({ allowProfileVisiblePrompt: true });
+  },
+  snapshot() {
+    return { pageTextReads };
+  },
+};
+`)();
+
+  assert.equal(api.run(), false);
+  assert.equal(api.snapshot().pageTextReads, 0);
+});
+
 test('step 5 clicks continue on post-submit ready page before completing', async () => {
   const api = new Function(`
 let now = 0;

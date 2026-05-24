@@ -15231,16 +15231,20 @@ async function advanceStep5PostSubmitPromptOnTab(options = {}) {
           el?.getAttribute?.('data-testid'),
           el?.getAttribute?.('data-dd-action-name'),
         ].filter(Boolean).join(' '));
-        const pageText = normalize(document.body?.innerText || document.documentElement?.innerText || '');
-        const looksLikePostSubmitPrompt = /(?:是什么促使你使用\s*chatgpt|我们会利用这些信息|學校|学校|工作|个人任务|乐趣和娱乐|其他|你已准备就绪|可能会犯错|继续操作即表示你同意|条款|隐私政策|跳过|下一步|继续|同意|what\s+brings\s+you\s+to\s+chatgpt|you(?:'|’)re\s+all\s+set|continue|skip|agree)/i.test(pageText);
-        if (!looksLikePostSubmitPrompt) {
-          return { advanced: false, fallback: true, reason: 'prompt_not_detected', pageText: pageText.slice(0, 300) };
-        }
-
         const candidates = Array.from(document.querySelectorAll('button, [role="button"], a, [role="link"], input[type="button"], input[type="submit"]'))
           .filter((el) => isVisible(el) && isEnabled(el))
           .map((el) => ({ el, text: getText(el) }))
           .filter(({ text }) => text && !/(?:完成\s*(?:帐户|账户|账号)?\s*创建|创建\s*(?:帐户|账户|账号)|create\s+(?:an\s+)?account|create\s+your\s+account|complete\s+(?:account\s+)?creation)/i.test(text));
+
+        if (candidates.length === 0) {
+          return { advanced: false, fallback: true, reason: 'prompt_not_detected' };
+        }
+
+        const pageText = normalize(document.body?.innerText || document.documentElement?.innerText || '');
+        const looksLikePostSubmitPrompt = /(?:是什么促使你使用\s*chatgpt|我们会利用这些信息|學校|学校|工作|个人任务|乐趣和娱乐|其他|你已准备就绪|可能会犯错|继续操作即表示你同意|条款|隐私政策|跳过|下一步|继续|同意|what\s+brings\s+you\s+to\s+chatgpt|you(?:'|’)re\s+all\s+set|continue|skip|agree)/i.test(pageText);
+        if (!looksLikePostSubmitPrompt) {
+          return { advanced: false, fallback: true, reason: 'prompt_not_detected', buttons: candidates.map(({ text }) => text).slice(0, 20) };
+        }
 
         const exactSkip = candidates.find(({ text }) => /^(?:跳过|稍后|以后|skip|not\s+now|maybe\s+later)$/i.test(text));
         const looseSkip = candidates.find(({ text }) => /(?:跳过|稍后|以后|skip|not\s+now|maybe\s+later)/i.test(text));
