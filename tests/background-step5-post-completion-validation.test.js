@@ -298,8 +298,7 @@ test('step 5 post-completion validation falls back to direct button click when c
 const messages = [];
 const logs = [];
 const fallbackClicks = [];
-let stateReadCount = 0;
-let fallbackPromptVisible = true;
+let fallbackRound = 0;
 const chrome = {
   tabs: {
     async get() {
@@ -308,12 +307,14 @@ const chrome = {
   },
   scripting: {
     async executeScript(details) {
-      const result = fallbackPromptVisible
+      fallbackRound += 1;
+      const result = fallbackRound === 1
         ? { advanced: true, actionText: '跳过', fallback: true }
-        : { advanced: false, reason: 'prompt_not_detected' };
+        : fallbackRound === 2
+          ? { advanced: true, actionText: '继续', fallback: true }
+          : { advanced: false, fallback: true, reason: 'prompt_not_detected' };
       if (result.advanced) {
         fallbackClicks.push(result.actionText);
-        fallbackPromptVisible = false;
       }
       return [{ result }];
     },
@@ -326,18 +327,7 @@ async function sendToContentScriptResilient(source, message) {
     throw new Error('message channel is closed');
   }
   if (message.type === 'GET_STEP5_SUBMIT_STATE') {
-    stateReadCount += 1;
-    return {
-      retryPage: false,
-      retryEnabled: false,
-      maxCheckAttemptsBlocked: false,
-      userAlreadyExistsBlocked: false,
-      successState: 'logged_in_home',
-      profileVisible: false,
-      errorText: '',
-      unknownAuthPage: false,
-      url: 'https://chatgpt.com/',
-    };
+    throw new Error('content script still not ready');
   }
   throw new Error('unexpected message type: ' + message.type);
 }
@@ -364,7 +354,7 @@ return {
     });
   },
   snapshot() {
-    return { messages, logs, fallbackClicks, stateReadCount };
+    return { messages, logs, fallbackClicks };
   },
 };
 `)();
@@ -373,10 +363,14 @@ return {
   const snapshot = api.snapshot();
 
   assert.equal(result.successState, 'logged_in_home');
-  assert.deepStrictEqual(snapshot.fallbackClicks, ['跳过']);
-  assert.equal(snapshot.stateReadCount, 1);
+  assert.equal(result.recoveredByFallback, true);
+  assert.deepStrictEqual(snapshot.fallbackClicks, ['跳过', '继续']);
   assert.equal(
     snapshot.logs.some(({ message }) => /后台兜底已点击注册后弹窗按钮“跳过”/.test(message)),
+    true
+  );
+  assert.equal(
+    snapshot.logs.some(({ message, level }) => /后台兜底已点击注册后弹窗按钮“继续”/.test(message) && level === 'info'),
     true
   );
 });

@@ -1710,4 +1710,5 @@ return {
   const result = api.run();
   assert.equal(result.completionCount, 0);
   assert.equal(result.events.some((entry) => entry.type === 'log' && /检测到页面开始导航/.test(entry.message)), true);
+  assert.equal(result.events.some((entry) => entry.type === 'log' && /检测到页面开始导航/.test(entry.message) && entry.level === 'warn'), false);
 });

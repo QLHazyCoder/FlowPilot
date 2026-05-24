@@ -6912,7 +6912,7 @@ async function advanceStep5PostSubmitOnboardingPage(options = {}) {
   }
 
   const text = typeof getActionText === 'function' ? getActionText(action) : String(action?.textContent || action?.value || '').trim();
-  log(`步骤 5：检测到注册后的咨询/入门页面，正在点击“${text || '跳过/下一步'}”继续流程。`, 'warn');
+  log(`步骤 5：检测到注册后的咨询/入门页面，正在点击“${text || '跳过/下一步'}”继续流程。`, 'info');
   await humanPause(350, 900);
   simulateClick(action);
   await sleep(1000);
@@ -7003,7 +7003,7 @@ function installStep5NavigationCompletionReporter(completeOnce) {
   const onNavigationStarted = (event) => {
     const eventType = String(event?.type || 'navigation').trim() || 'navigation';
     debugLog(`检测到页面开始导航（event=${eventType}）。`, {
-      level: 'warn',
+      level: 'info',
     });
   };
 

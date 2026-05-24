@@ -15158,7 +15158,7 @@ async function advanceStep5PostSubmitPromptOnTab(options = {}) {
       return result;
     }
   } catch (error) {
-    await addLog(`步骤 5：页面脚本处理注册后弹窗未返回，改用后台兜底点击。${getErrorMessage(error)}`, 'warn', {
+    await addLog(`步骤 5：页面脚本处理注册后弹窗未返回，改用后台兜底点击。${getErrorMessage(error)}`, 'info', {
       step: 5,
       stepKey: options.logStepKey || 'fill-profile',
     });
@@ -15200,7 +15200,7 @@ async function advanceStep5PostSubmitPromptOnTab(options = {}) {
         const pageText = normalize(document.body?.innerText || document.documentElement?.innerText || '');
         const looksLikePostSubmitPrompt = /(?:是什么促使你使用\s*chatgpt|我们会利用这些信息|學校|学校|工作|个人任务|乐趣和娱乐|其他|你已准备就绪|可能会犯错|继续操作即表示你同意|条款|隐私政策|跳过|下一步|继续|同意|what\s+brings\s+you\s+to\s+chatgpt|you(?:'|’)re\s+all\s+set|continue|skip|agree)/i.test(pageText);
         if (!looksLikePostSubmitPrompt) {
-          return { advanced: false, reason: 'prompt_not_detected', pageText: pageText.slice(0, 300) };
+          return { advanced: false, fallback: true, reason: 'prompt_not_detected', pageText: pageText.slice(0, 300) };
         }
 
         const candidates = Array.from(document.querySelectorAll('button, [role="button"], a, [role="link"], input[type="button"], input[type="submit"]'))
@@ -15214,7 +15214,7 @@ async function advanceStep5PostSubmitPromptOnTab(options = {}) {
         const looseContinue = candidates.find(({ text }) => /(?:继续|下一步|同意|确认|知道了|我知道了|好的|continue|next|agree|accept|confirm|got\s+it|ok|okay|done|finish)/i.test(text));
         const target = exactSkip || looseSkip || exactContinue || looseContinue;
         if (!target?.el) {
-          return { advanced: false, reason: 'button_not_found', buttons: candidates.map(({ text }) => text).slice(0, 20), pageText: pageText.slice(0, 300) };
+          return { advanced: false, fallback: true, reason: 'button_not_found', buttons: candidates.map(({ text }) => text).slice(0, 20), pageText: pageText.slice(0, 300) };
         }
 
         target.el.scrollIntoView?.({ behavior: 'instant', block: 'center', inline: 'center' });
@@ -15225,7 +15225,7 @@ async function advanceStep5PostSubmitPromptOnTab(options = {}) {
     });
     const fallbackResult = executionResults?.[0]?.result || { advanced: false };
     if (fallbackResult?.advanced) {
-      await addLog(`步骤 5：后台兜底已点击注册后弹窗按钮“${fallbackResult.actionText || '跳过/继续'}”。`, 'warn', {
+      await addLog(`步骤 5：后台兜底已点击注册后弹窗按钮“${fallbackResult.actionText || '跳过/继续'}”。`, 'info', {
         step: 5,
         stepKey: options.logStepKey || 'fill-profile',
       });
@@ -15316,6 +15316,7 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
   const maxPostSubmitPromptActions = Math.max(0, Number(completionPayload?.maxPostSubmitPromptActions) || 8);
   let authRetryRecoveryCount = 0;
   let postSubmitPromptActionCount = 0;
+  let lastPromptResult = null;
   await debugLog('后台已收到资料页完成信号，准备开始最终状态复核。', {
     completionOutcome: String(completionPayload?.outcome || '').trim(),
     completionUrl: String(completionPayload?.url || '').trim(),
@@ -15334,6 +15335,7 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
         retryDelayMs: 500,
         logMessage: '步骤 5：正在处理注册完成后的跳过/继续弹窗...',
       });
+      lastPromptResult = promptResult || null;
       if (promptResult?.advanced) {
         postSubmitPromptActionCount += 1;
         await debugLog(`后台复核已处理注册后弹窗（${postSubmitPromptActionCount}/${maxPostSubmitPromptActions}）。`, {
@@ -15342,7 +15344,7 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
           navigationStarted: Boolean(completionPayload?.navigationStarted),
           tabUrl: currentUrl,
           pageState: promptResult?.state,
-          level: 'warn',
+          level: 'info',
         });
         await waitForTabStableComplete(tabId, {
           timeoutMs: 10000,
@@ -15365,6 +15367,29 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
       return {
         successState: 'logged_in_home',
         url: currentUrl,
+      };
+    }
+
+    if (
+      completionPayload?.requireContentStateBeforeUrlSuccess
+      && currentUrl
+      && isStep5CompletionChatgptUrl(currentUrl)
+      && postSubmitPromptActionCount > 0
+      && lastPromptResult?.fallback
+      && lastPromptResult?.reason === 'prompt_not_detected'
+    ) {
+      await debugLog('后台兜底确认注册后弹窗已处理完，当前已进入 chatgpt.com 正常首页，步骤 5 完成。', {
+        completionOutcome: String(completionPayload?.outcome || '').trim(),
+        completionUrl: String(completionPayload?.url || '').trim(),
+        navigationStarted: Boolean(completionPayload?.navigationStarted),
+        tabUrl: currentUrl,
+        pageState: lastPromptResult,
+        level: 'ok',
+      });
+      return {
+        successState: 'logged_in_home',
+        url: currentUrl,
+        recoveredByFallback: true,
       };
     }
 
