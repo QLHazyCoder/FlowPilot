@@ -636,6 +636,37 @@ test('signup flow helper waits for the signup entry tab to settle for step 2 bef
   });
 });
 
+test('openSignupEntryTab forces a fresh auth tab for step 1 but can reuse for later steps', async () => {
+  const calls = [];
+  const helpers = signupFlowApi.createSignupFlowHelpers({
+    addLog: async () => {},
+    chrome: {},
+    ensureContentScriptReadyOnTab: async () => {},
+    ensureHotmailAccountForFlow: async () => ({}),
+    ensureLuckmailPurchaseForFlow: async () => ({}),
+    isGeneratedAliasProvider: () => false,
+    isHotmailProvider: () => false,
+    isLuckmailProvider: () => false,
+    isSignupEmailVerificationPageUrl: () => false,
+    isSignupPasswordPageUrl: () => false,
+    reuseOrCreateTab: async (_source, _url, options) => {
+      calls.push({ ...options });
+      return calls.length;
+    },
+    sendToContentScriptResilient: async () => ({ ready: true }),
+    setEmailState: async () => {},
+    SIGNUP_ENTRY_URL: 'https://chatgpt.com/',
+    OPENAI_AUTH_INJECT_FILES: ['flows/openai/content/openai-auth.js'],
+    waitForTabUrlMatch: async () => null,
+  });
+
+  await helpers.openSignupEntryTab(1);
+  await helpers.openSignupEntryTab(2);
+
+  assert.equal(calls[0].forceNew, true);
+  assert.equal(calls[1].forceNew, false);
+});
+
 test('signup flow helper accepts phone signup landing on login password page', async () => {
   let ensureCalls = 0;
   let passwordReadyChecks = 0;

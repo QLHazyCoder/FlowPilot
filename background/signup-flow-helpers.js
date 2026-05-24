@@ -60,6 +60,7 @@
       const tabId = await reuseOrCreateTab('openai-auth', SIGNUP_ENTRY_URL, {
         inject: OPENAI_AUTH_INJECT_FILES,
         injectSource: 'openai-auth',
+        forceNew: Number(step) === 1,
       });
 
       await waitForSignupEntryTabToSettle(tabId, step);

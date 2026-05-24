@@ -2970,6 +2970,21 @@ function syncLatestState(nextState) {
     normalizedNextState.activeFlowId = normalizedFlowId;
     normalizedNextState.flowId = normalizedFlowId;
   }
+
+  const shouldSyncStepDefinitions = [
+    'activeFlowId',
+    'flowId',
+    'plusModeEnabled',
+    'plusPaymentMethod',
+    'plusAccountAccessStrategy',
+    'signupMethod',
+    'phoneSignupReloginAfterBindEmailEnabled',
+    'accountContributionEnabled',
+  ].some((key) => Object.prototype.hasOwnProperty.call(normalizedNextState, key));
+  if (shouldSyncStepDefinitions && typeof syncStepDefinitionsFromUiState === 'function') {
+    syncStepDefinitionsFromUiState(normalizedNextState);
+  }
+
   const mergedNodeStatuses = normalizedNextState?.nodeStatuses
     ? getStoredNodeStatuses({
       nodeStatuses: { ...NODE_DEFAULT_STATUSES, ...(latestState?.nodeStatuses || {}), ...normalizedNextState.nodeStatuses },
@@ -11710,11 +11725,6 @@ async function restoreState() {
       displayLocalhostUrl.textContent = state.localhostUrl;
       displayLocalhostUrl.classList.add('has-value');
     }
-    if (state.nodeStatuses) {
-      for (const [nodeId, status] of Object.entries(state.nodeStatuses)) {
-        updateNodeUI(nodeId, status);
-      }
-    }
 
     if (state.logs) {
       for (const entry of state.logs) {
@@ -13629,6 +13639,9 @@ function updatePanelModeUI() {
 function updateNodeUI(nodeId, status) {
   const normalizedNodeId = String(nodeId || '').trim();
   if (!normalizedNodeId) return;
+  if (Array.isArray(NODE_IDS) && NODE_IDS.length && !NODE_IDS.includes(normalizedNodeId)) {
+    return;
+  }
   syncLatestState({
     nodeStatuses: {
       ...getStoredNodeStatuses(),

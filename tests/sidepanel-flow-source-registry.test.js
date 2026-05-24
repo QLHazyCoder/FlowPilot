@@ -177,6 +177,123 @@ return {
   assert.equal(api.getCalls()[0].targetId, 'kiro-rs');
 });
 
+test('syncLatestState rebuilds workflow nodes before filtering incoming node statuses', () => {
+  const bundle = [
+    extractFunction(sidepanelSource, 'syncLatestState'),
+  ].join('\n');
+
+  const api = new Function(`
+let latestState = {
+  activeFlowId: 'openai',
+  flowId: 'openai',
+  nodeStatuses: { 'open-chatgpt': 'completed' },
+};
+const DEFAULT_ACTIVE_FLOW_ID = 'openai';
+let NODE_IDS = ['open-chatgpt'];
+let NODE_DEFAULT_STATUSES = { 'open-chatgpt': 'pending' };
+const calls = [];
+function normalizeFlowId(value = '', fallback = DEFAULT_ACTIVE_FLOW_ID) {
+  return String(value || fallback || DEFAULT_ACTIVE_FLOW_ID).trim().toLowerCase() || DEFAULT_ACTIVE_FLOW_ID;
+}
+function syncStepDefinitionsFromUiState(stateOverrides = {}) {
+  calls.push({ type: 'sync-definitions', activeFlowId: stateOverrides.activeFlowId || stateOverrides.flowId });
+  if ((stateOverrides.activeFlowId || stateOverrides.flowId) === 'kiro') {
+    NODE_IDS = ['kiro-open-register-page', 'kiro-submit-email'];
+    NODE_DEFAULT_STATUSES = {
+      'kiro-open-register-page': 'pending',
+      'kiro-submit-email': 'pending',
+    };
+  }
+}
+function getStoredNodeStatuses(state = {}) {
+  const source = { ...NODE_DEFAULT_STATUSES, ...(state?.nodeStatuses || {}) };
+  return Object.fromEntries(NODE_IDS.map((nodeId) => [nodeId, source[nodeId] || 'pending']));
+}
+function renderAccountRecords(state) {
+  calls.push({ type: 'render', state: { ...state } });
+}
+${bundle}
+return {
+  syncLatestState,
+  getLatestState() {
+    return latestState;
+  },
+  getCalls() {
+    return calls;
+  },
+};
+`)();
+
+  api.syncLatestState({
+    activeFlowId: 'kiro',
+    nodeStatuses: {
+      'open-chatgpt': 'completed',
+      'kiro-open-register-page': 'running',
+    },
+  });
+
+  assert.deepStrictEqual(api.getLatestState().nodeStatuses, {
+    'kiro-open-register-page': 'running',
+    'kiro-submit-email': 'pending',
+  });
+  assert.equal(Object.prototype.hasOwnProperty.call(api.getLatestState().nodeStatuses, 'open-chatgpt'), false);
+  assert.deepStrictEqual(api.getCalls()[0], { type: 'sync-definitions', activeFlowId: 'kiro' });
+});
+
+test('updateNodeUI ignores stale nodes outside the current workflow', () => {
+  const bundle = [
+    extractFunction(sidepanelSource, 'updateNodeUI'),
+  ].join('\n');
+
+  const api = new Function(`
+let latestState = {
+  nodeStatuses: {
+    'kiro-open-register-page': 'pending',
+    'kiro-submit-email': 'pending',
+  },
+};
+const NODE_IDS = ['kiro-open-register-page', 'kiro-submit-email'];
+const calls = [];
+function getStoredNodeStatuses() {
+  return { ...latestState.nodeStatuses };
+}
+function syncLatestState(nextState = {}) {
+  calls.push({ type: 'sync', nextState });
+  latestState = { ...latestState, ...nextState };
+}
+function renderSingleNodeStatus(nodeId, status) {
+  calls.push({ type: 'render-single', nodeId, status });
+}
+function updateButtonStates() {
+  calls.push({ type: 'buttons' });
+}
+function updateProgressCounter() {
+  calls.push({ type: 'progress' });
+}
+function updateConfigMenuControls() {
+  calls.push({ type: 'config' });
+}
+${bundle}
+return {
+  updateNodeUI,
+  getLatestState() {
+    return latestState;
+  },
+  getCalls() {
+    return calls;
+  },
+};
+`)();
+
+  api.updateNodeUI('open-chatgpt', 'completed');
+
+  assert.deepStrictEqual(api.getLatestState().nodeStatuses, {
+    'kiro-open-register-page': 'pending',
+    'kiro-submit-email': 'pending',
+  });
+  assert.deepStrictEqual(api.getCalls(), []);
+});
+
 test('updatePanelModeUI reapplies dynamic Plus and phone visibility after flow group visibility', () => {
   const bundle = [
     extractFunction(sidepanelSource, 'updatePanelModeUI'),
