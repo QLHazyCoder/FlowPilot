@@ -1473,6 +1473,7 @@
                 <option value="hero-sms">HeroSMS</option>
                 <option value="5sim">5sim</option>
                 <option value="nexsms">NexSMS</option>
+                <option value="madao">MaDao</option>
               </select>
             </div>
             <div class="data-row" id="row-phone-sms-provider-order" style="display:none;">
@@ -1482,6 +1483,7 @@
                   <option value="hero-sms" selected>HeroSMS</option>
                   <option value="5sim" selected>5sim</option>
                   <option value="nexsms" selected>NexSMS</option>
+                  <option value="madao">MaDao</option>
                 </select>
                 <div class="hero-sms-country-mainline">
                   <div id="phone-sms-provider-order-menu-shell" class="hero-sms-country-menu">
@@ -1629,6 +1631,73 @@
               <span class="data-label">服务代码</span>
               <input type="text" id="input-nex-sms-service-code" class="data-input mono"
                 placeholder="ot" />
+            </div>
+            <div class="data-row" id="row-madao-base-url" style="display:none;">
+              <span class="data-label">MaDao 地址</span>
+              <input type="text" id="input-madao-base-url" class="data-input mono" placeholder="http://127.0.0.1:7822" />
+            </div>
+            <div class="data-row" id="row-madao-http-secret" style="display:none;">
+              <span class="data-label">MaDao 密钥</span>
+              <div class="input-with-icon">
+                <input type="password" id="input-madao-http-secret" class="data-input data-input-with-icon mono" placeholder="Bearer Secret（可空）" />
+                <button id="btn-toggle-madao-http-secret" class="input-icon-btn" type="button"
+                  data-password-toggle="input-madao-http-secret" data-show-label="显示 MaDao 密钥"
+                  data-hide-label="隐藏 MaDao 密钥" aria-label="显示 MaDao 密钥" title="显示 MaDao 密钥"></button>
+              </div>
+            </div>
+            <div class="data-row" id="row-madao-mode" style="display:none;">
+              <span class="data-label">接码模式</span>
+              <select id="select-madao-mode" class="data-select mono">
+                <option value="routing_plan">路由方案</option>
+                <option value="direct">直连参数</option>
+              </select>
+            </div>
+            <div class="data-row" id="row-madao-provider-id" style="display:none;">
+              <span class="data-label">服务商</span>
+              <select id="select-madao-provider-id" class="data-select mono">
+                <option value="">请先刷新服务商</option>
+              </select>
+            </div>
+            <div class="data-row" id="row-madao-routing-plan-id" style="display:none;">
+              <span class="data-label">路由方案</span>
+              <div class="data-inline data-value-actions">
+                <select id="select-madao-routing-plan-id" class="data-select mono">
+                  <option value="">请先刷新路由方案</option>
+                </select>
+                <button id="btn-madao-refresh-routing-plans" class="btn btn-ghost btn-xs data-inline-btn" type="button">刷新</button>
+              </div>
+            </div>
+            <div class="data-row" id="row-madao-service-name" style="display:none;">
+              <span class="data-label">服务名</span>
+              <span id="display-madao-service-name" class="data-value mono">openai</span>
+            </div>
+            <div class="data-row" id="row-madao-country" style="display:none;">
+              <span class="data-label">国家</span>
+              <div class="data-inline data-value-actions">
+                <select id="select-madao-country" class="data-select mono">
+                  <option value="">自动 / 未指定</option>
+                </select>
+                <button id="btn-madao-refresh-countries" class="btn btn-ghost btn-xs data-inline-btn" type="button">刷新</button>
+              </div>
+            </div>
+            <div class="data-row" id="row-madao-options" style="display:none;">
+              <span class="data-label">接码参数</span>
+              <div class="data-inline data-value-actions">
+                <label class="toggle-switch" for="input-madao-auto-pick-country" title="允许 MaDao 自动选择国家">
+                  <input type="checkbox" id="input-madao-auto-pick-country" />
+                  <span class="toggle-switch-track" aria-hidden="true">
+                    <span class="toggle-switch-thumb"></span>
+                  </span>
+                </label>
+                <span class="data-value mono">自动国家</span>
+                <label class="toggle-switch" for="input-madao-reuse-phone" title="允许 MaDao 使用复用能力">
+                  <input type="checkbox" id="input-madao-reuse-phone" />
+                  <span class="toggle-switch-track" aria-hidden="true">
+                    <span class="toggle-switch-thumb"></span>
+                  </span>
+                </label>
+                <span class="data-value mono">允许复用</span>
+              </div>
             </div>
             <div class="data-row" id="row-hero-sms-max-price" style="display:none;">
               <span class="data-label">价格区间</span>
@@ -1908,6 +1977,7 @@
   <script src="../gopay-utils.js"></script>
   <script src="../phone-sms/providers/hero-sms.js"></script>
   <script src="../phone-sms/providers/five-sim.js"></script>
+  <script src="../phone-sms/providers/madao.js"></script>
   <script src="../phone-sms/providers/registry.js"></script>
   <script src="../icloud-utils.js"></script>
   <script src="../mail-provider-utils.js"></script>

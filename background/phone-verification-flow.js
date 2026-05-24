@@ -83,11 +83,13 @@
     const PHONE_SMS_PROVIDER_HERO_SMS = PHONE_SMS_PROVIDER_HERO;
     const PHONE_SMS_PROVIDER_FIVE_SIM = PHONE_SMS_PROVIDER_5SIM;
     const PHONE_SMS_PROVIDER_NEXSMS = 'nexsms';
+    const PHONE_SMS_PROVIDER_MADAO = 'madao';
     const DEFAULT_PHONE_SMS_PROVIDER = PHONE_SMS_PROVIDER_HERO;
     const DEFAULT_PHONE_SMS_PROVIDER_ORDER = Object.freeze([
       PHONE_SMS_PROVIDER_HERO,
       PHONE_SMS_PROVIDER_5SIM,
       PHONE_SMS_PROVIDER_NEXSMS,
+      PHONE_SMS_PROVIDER_MADAO,
     ]);
     const MAX_PHONE_REUSABLE_POOL = 12;
     const PHONE_CODE_TIMEOUT_ERROR_PREFIX = 'PHONE_CODE_TIMEOUT::';
@@ -190,6 +192,9 @@
       }
       if (normalized === PHONE_SMS_PROVIDER_NEXSMS) {
         return PHONE_SMS_PROVIDER_NEXSMS;
+      }
+      if (normalized === PHONE_SMS_PROVIDER_MADAO) {
+        return PHONE_SMS_PROVIDER_MADAO;
       }
       return PHONE_SMS_PROVIDER_HERO;
     }
@@ -935,7 +940,54 @@
       if (provider === PHONE_SMS_PROVIDER_NEXSMS) {
         return 'NexSMS';
       }
+      if (provider === PHONE_SMS_PROVIDER_MADAO) {
+        return 'MaDao';
+      }
       return 'HeroSMS';
+    }
+
+    function getMaDaoProviderForState() {
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      return rootScope.PhoneSmsMaDaoProvider || null;
+    }
+
+    function resolveMaDaoPriceRange(state = {}) {
+      const minPrice = normalizeHeroSmsPriceLimit(state?.madaoMinPrice);
+      const maxPrice = normalizeHeroSmsPriceLimit(state?.madaoMaxPrice);
+      return {
+        minPrice,
+        maxPrice,
+        invalidRange: minPrice !== null && maxPrice !== null && minPrice > maxPrice,
+      };
+    }
+
+    async function requestMaDaoActivation(state = {}, options = {}) {
+      const provider = getMaDaoProviderForState();
+      if (!provider?.acquireActivation) {
+        throw new Error('MaDao 接码模块未加载。');
+      }
+      const madaoMode = String(state?.madaoMode || '').trim().toLowerCase() === 'direct'
+        ? 'direct'
+        : 'routing_plan';
+      const priceRange = resolveMaDaoPriceRange(state);
+      if (priceRange.invalidRange) {
+        throw new Error(
+          `MaDao 价格区间无效：最低购买价 ${priceRange.minPrice} 高于价格上限 ${priceRange.maxPrice}。`
+        );
+      }
+      return provider.acquireActivation(state, {
+        providerId: madaoMode === 'direct' ? state?.madaoProviderId : '',
+        routingPlanId: madaoMode === 'routing_plan' ? state?.madaoRoutingPlanId : '',
+        service: state?.madaoServiceName || DEFAULT_FIVE_SIM_PRODUCT,
+        country: madaoMode === 'direct' ? (state?.madaoCountry || '') : '',
+        autoPickCountry: madaoMode === 'direct' ? state?.madaoAutoPickCountry : true,
+        reusePhone: madaoMode === 'direct' ? state?.madaoReusePhone : true,
+        minPrice: madaoMode === 'direct' ? priceRange.minPrice : null,
+        maxPrice: madaoMode === 'direct' ? priceRange.maxPrice : null,
+      }, {
+        fetchImpl,
+        requestTimeoutMs: DEFAULT_PHONE_REQUEST_TIMEOUT_MS,
+      });
     }
 
     function formatStep9Reason(reason = '') {
@@ -2056,6 +2108,13 @@
 
     function resolvePhoneConfig(state = {}) {
       const provider = normalizePhoneSmsProvider(state?.phoneSmsProvider || DEFAULT_PHONE_SMS_PROVIDER);
+      if (provider === PHONE_SMS_PROVIDER_MADAO) {
+        return {
+          provider,
+          baseUrl: String(state?.madaoBaseUrl || 'http://127.0.0.1:7822').trim() || 'http://127.0.0.1:7822',
+          countryCandidates: [],
+        };
+      }
       if (provider === PHONE_SMS_PROVIDER_5SIM) {
         const apiKey = normalizeApiKey(state.fiveSimApiKey || state.heroSmsApiKey);
         if (!apiKey) {
@@ -3584,6 +3643,9 @@
     }
 
     async function requestPhoneActivation(state = {}, options = {}) {
+      if (normalizePhoneSmsProvider(state?.phoneSmsProvider) === PHONE_SMS_PROVIDER_MADAO) {
+        return requestMaDaoActivation(state, options);
+      }
       if (normalizePhoneSmsProvider(state?.phoneSmsProvider) === PHONE_SMS_PROVIDER_FIVE_SIM) {
         const provider = getFiveSimProviderForState(state);
         if (provider) {
@@ -4007,6 +4069,18 @@
           throw createPhoneSmsActionFailureError('NexSMS close activation', describeNexSmsPayload(payload) || 'empty response');
         }
         return describeNexSmsPayload(payload);
+      }
+      if (config.provider === PHONE_SMS_PROVIDER_MADAO) {
+        const provider = getMaDaoProviderForState();
+        if (!provider?.releaseActivation) {
+          throw new Error('MaDao 接码模块未加载。');
+        }
+        const action = normalizedStatus === 6 ? 'finish' : 'cancel';
+        const payload = await provider.releaseActivation(state, normalizedActivation, action, {
+          fetchImpl,
+          requestTimeoutMs: DEFAULT_PHONE_REQUEST_TIMEOUT_MS,
+        });
+        return String(payload?.message || action).trim() || action;
       }
       const payload = await fetchHeroSmsPayload(config, {
         action: 'setStatus',
@@ -4495,6 +4569,60 @@
           }
           await emitWaitingForCode(text || 'PENDING');
           await sleepWithStop(intervalMs);
+        }
+
+        throw buildPhoneCodeTimeoutError(lastResponse);
+      }
+
+      if (config.provider === PHONE_SMS_PROVIDER_MADAO) {
+        const provider = getMaDaoProviderForState();
+        if (!provider?.pollActivation) {
+          throw new Error('MaDao 接码模块未加载。');
+        }
+        while (Date.now() - start < timeoutMs) {
+          if (maxRounds > 0 && pollCount >= maxRounds) {
+            break;
+          }
+          throwIfStopped();
+          const payload = await provider.pollActivation(state, normalizedActivation, {
+            fetchImpl,
+            requestTimeoutMs: DEFAULT_PHONE_REQUEST_TIMEOUT_MS,
+          });
+          const statusText = String(payload?.status || '').trim();
+          const mappedStatus = provider.mapTicketStatus
+            ? provider.mapTicketStatus(statusText)
+            : String(statusText || '').trim().toLowerCase();
+          lastResponse = String(payload?.message || statusText || '').trim();
+          pollCount += 1;
+
+          if (mappedStatus === 'code_received') {
+            const directCode = extractVerificationCode(payload?.code || payload?.message || '');
+            if (directCode) {
+              return directCode;
+            }
+            throw new Error('MaDao 返回 code_received，但未提供验证码。');
+          }
+
+          if (mappedStatus === 'waiting_code' || mappedStatus === 'pending') {
+            if (typeof options.onStatus === 'function') {
+              await options.onStatus({
+                activation: normalizedActivation,
+                elapsedMs: Date.now() - start,
+                pollCount,
+                statusText: statusText || 'WAITING_CODE',
+                timeoutMs,
+              });
+            }
+            await emitWaitingForCode(statusText || 'WAITING_CODE');
+            await sleepWithStop(intervalMs);
+            continue;
+          }
+
+          if (mappedStatus === 'cancelled' || mappedStatus === 'failed' || mappedStatus === 'finished') {
+            throw new Error(`MaDao 订单在收到短信前已结束：${statusText || mappedStatus}`);
+          }
+
+          throw new Error(`MaDao 返回未知状态：${statusText || mappedStatus || 'unknown'}`);
         }
 
         throw buildPhoneCodeTimeoutError(lastResponse);

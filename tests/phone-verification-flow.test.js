@@ -83,6 +83,195 @@ test('phone verification helper requests HeroSMS numbers with fixed OpenAI and T
   assert.equal(requests[1].searchParams.get('api_key'), 'demo-key');
 });
 
+test('phone verification helper requests number through MaDao backend when selected', async () => {
+  const requests = [];
+  const madaoSource = fs.readFileSync('phone-sms/providers/madao.js', 'utf8');
+  const madaoModule = new Function('self', `${madaoSource}; return self.PhoneSmsMaDaoProvider;`)({});
+  globalScope.PhoneSmsMaDaoProvider = madaoModule;
+  const helpers = api.createPhoneVerificationHelpers({
+    addLog: async () => {},
+    ensureStep8SignupPageReady: async () => {},
+    fetchImpl: async (url, init = {}) => {
+      requests.push({ url: String(url), init });
+      return {
+        ok: true,
+        text: async () => JSON.stringify({
+          ticket_id: 'madao-ticket-1',
+          provider: 'herosms',
+          service: 'openai',
+          country: 'TH',
+          phone_number: '+66950001111',
+          acquire_path: 'fresh_acquire',
+          status: 'waiting_code',
+        }),
+      };
+    },
+    getState: async () => ({
+      phoneSmsProvider: 'madao',
+      madaoMode: 'direct',
+      madaoBaseUrl: 'http://127.0.0.1:7822',
+      madaoHttpSecret: 'demo-secret',
+      madaoProviderId: 'herosms',
+      madaoServiceName: 'openai',
+      madaoCountry: 'TH',
+      madaoAutoPickCountry: false,
+      madaoReusePhone: true,
+    }),
+    sendToContentScriptResilient: async () => ({}),
+    setState: async () => {},
+    sleepWithStop: async () => {},
+    throwIfStopped: () => {},
+  });
+
+  const activation = await helpers.requestPhoneActivation({
+    phoneSmsProvider: 'madao',
+    madaoMode: 'direct',
+    madaoBaseUrl: 'http://127.0.0.1:7822',
+    madaoHttpSecret: 'demo-secret',
+    madaoProviderId: 'herosms',
+    madaoServiceName: 'openai',
+    madaoCountry: 'TH',
+    madaoAutoPickCountry: false,
+    madaoReusePhone: true,
+  });
+
+  assert.equal(activation.provider, 'madao');
+  assert.equal(activation.activationId, 'madao-ticket-1');
+  assert.equal(activation.phoneNumber, '+66950001111');
+  assert.equal(activation.madaoProviderId, 'herosms');
+  assert.equal(requests.length, 1);
+  assert.match(requests[0].url, /\/api\/acquire$/);
+  assert.equal(requests[0].init.method, 'POST');
+  assert.match(String(requests[0].init.headers.Authorization || ''), /^Bearer demo-secret$/);
+  const requestBody = JSON.parse(String(requests[0].init.body || '{}'));
+  assert.equal(requestBody.provider, 'herosms');
+  assert.equal(requestBody.service, 'openai');
+  assert.equal(requestBody.country, 'TH');
+  assert.equal(requestBody.auto_pick_country, false);
+  assert.equal(requestBody.reuse_phone, true);
+});
+
+test('phone verification helper requests number through MaDao routing plan without direct parameters', async () => {
+  const requests = [];
+  const madaoSource = fs.readFileSync('phone-sms/providers/madao.js', 'utf8');
+  const madaoModule = new Function('self', `${madaoSource}; return self.PhoneSmsMaDaoProvider;`)({});
+  globalScope.PhoneSmsMaDaoProvider = madaoModule;
+  const helpers = api.createPhoneVerificationHelpers({
+    addLog: async () => {},
+    ensureStep8SignupPageReady: async () => {},
+    fetchImpl: async (url, init = {}) => {
+      requests.push({ url: String(url), init });
+      return {
+        ok: true,
+        text: async () => JSON.stringify({
+          ticket_id: 'madao-ticket-routing-1',
+          provider: 'herosms',
+          service: 'openai',
+          country: 'TH',
+          phone_number: '+66950002222',
+          routing_plan_id: 'openai-plan',
+          routing_plan_name: 'OpenAI Plan',
+          acquire_path: 'fresh_acquire',
+          status: 'waiting_code',
+        }),
+      };
+    },
+    getState: async () => ({
+      phoneSmsProvider: 'madao',
+      madaoMode: 'routing_plan',
+      madaoBaseUrl: 'http://127.0.0.1:7822',
+      madaoHttpSecret: 'demo-secret',
+      madaoRoutingPlanId: 'openai-plan',
+      madaoServiceName: 'openai',
+      madaoProviderId: 'herosms',
+      madaoCountry: 'TH',
+      madaoAutoPickCountry: false,
+      madaoReusePhone: false,
+    }),
+    sendToContentScriptResilient: async () => ({}),
+    setState: async () => {},
+    sleepWithStop: async () => {},
+    throwIfStopped: () => {},
+  });
+
+  const activation = await helpers.requestPhoneActivation({
+    phoneSmsProvider: 'madao',
+    madaoMode: 'routing_plan',
+    madaoBaseUrl: 'http://127.0.0.1:7822',
+    madaoHttpSecret: 'demo-secret',
+    madaoRoutingPlanId: 'openai-plan',
+    madaoServiceName: 'openai',
+    madaoProviderId: 'herosms',
+    madaoCountry: 'TH',
+    madaoAutoPickCountry: false,
+    madaoReusePhone: false,
+  });
+
+  assert.equal(activation.provider, 'madao');
+  assert.equal(activation.activationId, 'madao-ticket-routing-1');
+  assert.equal(activation.madaoRoutingPlanId, 'openai-plan');
+  const requestBody = JSON.parse(String(requests[0].init.body || '{}'));
+  assert.equal(requestBody.provider, 'auto');
+  assert.equal(requestBody.routing_plan_id, 'openai-plan');
+  assert.equal(requestBody.service, 'openai');
+  assert.equal('country' in requestBody, false);
+  assert.equal('auto_pick_country' in requestBody, false);
+  assert.equal('reuse_phone' in requestBody, false);
+});
+
+test('phone verification helper polls code through MaDao backend', async () => {
+  const madaoSource = fs.readFileSync('phone-sms/providers/madao.js', 'utf8');
+  const madaoModule = new Function('self', `${madaoSource}; return self.PhoneSmsMaDaoProvider;`)({});
+  globalScope.PhoneSmsMaDaoProvider = madaoModule;
+  const helpers = api.createPhoneVerificationHelpers({
+    addLog: async () => {},
+    ensureStep8SignupPageReady: async () => {},
+    fetchImpl: async (url) => {
+      const parsedUrl = new URL(url);
+      if (!/\/api\/poll$/.test(parsedUrl.pathname)) {
+        throw new Error(`Unexpected MaDao path: ${parsedUrl.pathname}`);
+      }
+      return {
+        ok: true,
+        text: async () => JSON.stringify({
+          ticket_id: 'madao-ticket-1',
+          provider: 'herosms',
+          status: 'code_received',
+          code: '123456',
+          message: 'code ready',
+        }),
+      };
+    },
+    getOAuthFlowStepTimeoutMs: async (fallback) => fallback,
+    getState: async () => ({
+      phoneSmsProvider: 'madao',
+      madaoBaseUrl: 'http://127.0.0.1:7822',
+    }),
+    sendToContentScriptResilient: async () => ({}),
+    setState: async () => {},
+    sleepWithStop: async () => {},
+    throwIfStopped: () => {},
+  });
+
+  const code = await helpers.pollPhoneActivationCode(
+    { phoneSmsProvider: 'madao', madaoBaseUrl: 'http://127.0.0.1:7822' },
+    {
+      activationId: 'madao-ticket-1',
+      phoneNumber: '+66950001111',
+      provider: 'madao',
+      serviceCode: 'openai',
+      countryId: 'TH',
+    },
+    {
+      timeoutMs: 5000,
+      intervalMs: 10,
+      maxRounds: 1,
+    }
+  );
+
+  assert.equal(code, '123456');
+});
+
 test('signup phone helper persists signup runtime state without touching add-phone activation', async () => {
   const setStateCalls = [];
   let currentState = {

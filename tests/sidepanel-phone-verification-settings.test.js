@@ -88,6 +88,7 @@ test('sidepanel html exposes phone verification toggle and multi-provider SMS ro
   assert.match(html, /id="select-phone-sms-provider"/);
   assert.match(html, /\.\.\/phone-sms\/providers\/hero-sms\.js/);
   assert.match(html, /\.\.\/phone-sms\/providers\/five-sim\.js/);
+  assert.match(html, /\.\.\/phone-sms\/providers\/madao\.js/);
   assert.match(html, /\.\.\/phone-sms\/providers\/registry\.js/);
   assert.match(html, /<option value="hero-sms">HeroSMS<\/option>/);
   assert.match(html, /<option value="5sim">5sim<\/option>/);
@@ -138,6 +139,7 @@ test('sidepanel html exposes phone verification toggle and multi-provider SMS ro
   assert.match(html, /id="row-five-sim-product"/);
   assert.match(html, /id="input-five-sim-product"/);
   assert.match(html, /<option value="nexsms">/);
+  assert.match(html, /<option value="madao">MaDao<\/option>/);
   assert.match(html, /id="row-nex-sms-api-key"/);
   assert.match(html, /id="input-nex-sms-api-key"/);
   assert.match(html, /id="row-nex-sms-country"/);
@@ -145,6 +147,25 @@ test('sidepanel html exposes phone verification toggle and multi-provider SMS ro
   assert.match(html, /id="row-nex-sms-country-fallback"/);
   assert.match(html, /id="row-nex-sms-service-code"/);
   assert.match(html, /id="input-nex-sms-service-code"/);
+  assert.match(html, /id="row-madao-base-url"/);
+  assert.match(html, /id="input-madao-base-url"/);
+  assert.match(html, /id="row-madao-http-secret"/);
+  assert.match(html, /id="input-madao-http-secret"/);
+  assert.match(html, /id="row-madao-mode"/);
+  assert.match(html, /id="select-madao-mode"/);
+  assert.match(html, /id="row-madao-provider-id"/);
+  assert.match(html, /id="select-madao-provider-id"/);
+  assert.match(html, /id="row-madao-routing-plan-id"/);
+  assert.match(html, /id="select-madao-routing-plan-id"/);
+  assert.match(html, /id="btn-madao-refresh-routing-plans"/);
+  assert.match(html, /id="row-madao-service-name"/);
+  assert.match(html, /id="display-madao-service-name"/);
+  assert.match(html, /id="row-madao-country"/);
+  assert.match(html, /id="select-madao-country"/);
+  assert.match(html, /id="btn-madao-refresh-countries"/);
+  assert.match(html, /id="row-madao-options"/);
+  assert.match(html, /id="input-madao-auto-pick-country"/);
+  assert.match(html, /id="input-madao-reuse-phone"/);
   assert.doesNotMatch(html, /id="input-account-run-history-text-enabled"/);
 });
 
@@ -671,6 +692,14 @@ const rowNexSmsApiKey = { style: { display: 'none' } };
 const rowNexSmsCountry = { style: { display: 'none' } };
 const rowNexSmsCountryFallback = { style: { display: 'none' } };
 const rowNexSmsServiceCode = { style: { display: 'none' } };
+const rowMaDaoBaseUrl = { style: { display: 'none' } };
+const rowMaDaoHttpSecret = { style: { display: 'none' } };
+const rowMaDaoMode = { style: { display: 'none' } };
+const rowMaDaoProviderId = { style: { display: 'none' } };
+const rowMaDaoRoutingPlanId = { style: { display: 'none' } };
+const rowMaDaoServiceName = { style: { display: 'none' } };
+const rowMaDaoCountry = { style: { display: 'none' } };
+const rowMaDaoOptions = { style: { display: 'none' } };
 const rowHeroSmsRuntimePair = { style: { display: 'none' } };
 const rowHeroSmsCurrentNumber = { style: { display: 'none' } };
 const rowHeroSmsCurrentCountdown = { style: { display: 'none' } };
@@ -696,7 +725,11 @@ const btnSaveFreeReusablePhone = { disabled: false };
 const btnClearFreeReusablePhone = { disabled: false };
 const PHONE_SMS_PROVIDER_HERO_SMS = 'hero-sms';
 const PHONE_SMS_PROVIDER_FIVE_SIM = '5sim';
+const PHONE_SMS_PROVIDER_MADAO = 'madao';
 const PHONE_SMS_PROVIDER_NEXSMS = 'nexsms';
+const MADAO_MODE_ROUTING_PLAN = 'routing_plan';
+const MADAO_MODE_DIRECT = 'direct';
+const selectMaDaoMode = { value: 'routing_plan' };
 function getSelectedPhoneSmsProvider() { return selectPhoneSmsProvider.value; }
 function isFiveSimProviderSelected() { return getSelectedPhoneSmsProvider() === PHONE_SMS_PROVIDER_FIVE_SIM; }
 function updateHeroSmsPlatformDisplay() {}
@@ -716,6 +749,7 @@ function isAutoRunLockedPhase() { return false; }
 function isAutoRunScheduledPhase() { return false; }
 
 ${extractFunction('normalizeSignupMethod')}
+${extractFunction('normalizeMaDaoModeValue')}
 ${extractFunction('normalizeHeroSmsReuseEnabledValue')}
 ${extractFunction('isPhoneSignupReuseLocked')}
 ${extractFunction('getStoredPhoneSmsReuseEnabled')}
@@ -753,6 +787,14 @@ return {
   rowNexSmsCountry,
   rowNexSmsCountryFallback,
   rowNexSmsServiceCode,
+  rowMaDaoBaseUrl,
+  rowMaDaoHttpSecret,
+  rowMaDaoMode,
+  rowMaDaoProviderId,
+  rowMaDaoRoutingPlanId,
+  rowMaDaoServiceName,
+  rowMaDaoCountry,
+  rowMaDaoOptions,
   rowHeroSmsRuntimePair,
   rowHeroSmsCurrentNumber,
   rowHeroSmsCurrentCountdown,
@@ -776,6 +818,7 @@ return {
   inputFreeReusablePhone,
   btnSaveFreeReusablePhone,
   btnClearFreeReusablePhone,
+  selectMaDaoMode,
   setSelectedPhoneSmsProvider(value) { selectPhoneSmsProvider.value = value; },
   updatePhoneVerificationSettingsUI,
 };
@@ -915,6 +958,26 @@ return {
   assert.equal(api.rowNexSmsCountry.style.display, '');
   assert.equal(api.rowNexSmsCountryFallback.style.display, '');
   assert.equal(api.rowNexSmsServiceCode.style.display, '');
+
+  api.setSelectedPhoneSmsProvider('madao');
+  api.updatePhoneVerificationSettingsUI();
+  assert.equal(api.rowMaDaoBaseUrl.style.display, '');
+  assert.equal(api.rowMaDaoHttpSecret.style.display, '');
+  assert.equal(api.rowMaDaoMode.style.display, '');
+  assert.equal(api.rowMaDaoRoutingPlanId.style.display, '');
+  assert.equal(api.rowMaDaoServiceName.style.display, '');
+  assert.equal(api.rowMaDaoProviderId.style.display, 'none');
+  assert.equal(api.rowMaDaoCountry.style.display, 'none');
+  assert.equal(api.rowMaDaoOptions.style.display, 'none');
+  assert.equal(api.rowHeroSmsMaxPrice.style.display, 'none');
+
+  api.selectMaDaoMode.value = 'direct';
+  api.updatePhoneVerificationSettingsUI();
+  assert.equal(api.rowMaDaoRoutingPlanId.style.display, 'none');
+  assert.equal(api.rowMaDaoProviderId.style.display, '');
+  assert.equal(api.rowMaDaoCountry.style.display, '');
+  assert.equal(api.rowMaDaoOptions.style.display, '');
+  assert.equal(api.rowHeroSmsMaxPrice.style.display, '');
 });
 
 test('collectSettingsPayload keeps local helper sync enabled while persisting sms toggle state', () => {
@@ -993,6 +1056,15 @@ const inputFiveSimOperator = { value: 'any' };
 const inputFiveSimProduct = { value: 'openai' };
 const inputNexSmsApiKey = { value: 'nex-key' };
 const inputNexSmsServiceCode = { value: 'ot' };
+const inputMaDaoBaseUrl = { value: 'http://127.0.0.1:7822' };
+const inputMaDaoHttpSecret = { value: 'secret' };
+const selectMaDaoMode = { value: 'routing_plan' };
+const selectMaDaoProviderId = { value: '' };
+const selectMaDaoRoutingPlanId = { value: '' };
+const displayMaDaoServiceName = { textContent: '' };
+const selectMaDaoCountry = { value: '' };
+const inputMaDaoAutoPickCountry = { checked: true };
+const inputMaDaoReusePhone = { checked: true };
 const inputHeroSmsReuseEnabled = { checked: true };
 const selectHeroSmsAcquirePriority = { value: 'price' };
 function getSelectedPhonePreferredActivation() {
@@ -1021,6 +1093,7 @@ const DEFAULT_PHONE_CODE_WAIT_SECONDS = 60;
 const DEFAULT_PHONE_CODE_TIMEOUT_WINDOWS = 2;
 const DEFAULT_PHONE_CODE_POLL_INTERVAL_SECONDS = 5;
 const DEFAULT_PHONE_CODE_POLL_MAX_ROUNDS = 4;
+const DEFAULT_ACTIVE_FLOW_ID = 'openai';
 const PHONE_CODE_WAIT_SECONDS_MIN = 15;
 const PHONE_CODE_WAIT_SECONDS_MAX = 300;
 const PHONE_CODE_TIMEOUT_WINDOWS_MIN = 1;
@@ -1039,7 +1112,12 @@ const DEFAULT_HERO_SMS_COUNTRY_ID = 52;
 const DEFAULT_HERO_SMS_COUNTRY_LABEL = 'Thailand';
 const PHONE_SMS_PROVIDER_HERO_SMS = 'hero-sms';
 const PHONE_SMS_PROVIDER_FIVE_SIM = '5sim';
+const PHONE_SMS_PROVIDER_MADAO = 'madao';
 const PHONE_SMS_PROVIDER_NEXSMS = 'nexsms';
+const MADAO_MODE_ROUTING_PLAN = 'routing_plan';
+const MADAO_MODE_DIRECT = 'direct';
+const MADAO_DEFAULT_BASE_URL = 'http://127.0.0.1:7822';
+const MADAO_FLOW_SERVICE_MAP = { openai: 'openai' };
 const DEFAULT_PHONE_SMS_PROVIDER = PHONE_SMS_PROVIDER_HERO_SMS;
 const SIGNUP_METHOD_EMAIL = 'email';
 const SIGNUP_METHOD_PHONE = 'phone';
@@ -1079,6 +1157,11 @@ function normalizePlusAccountAccessStrategy(value = '') { return String(value ||
 function resolvePlusAccountAccessStrategyForTarget(value = '') { return normalizePlusAccountAccessStrategy(value); }
 ${extractFunction('normalizePhoneSmsProvider')}
 ${extractFunction('normalizePhoneSmsProviderValue')}
+${extractFunction('normalizeMaDaoModeValue')}
+${extractFunction('normalizeMaDaoProviderIdValue')}
+${extractFunction('normalizeMaDaoRoutingPlanIdValue')}
+${extractFunction('normalizeMaDaoCountryValue')}
+${extractFunction('resolveMaDaoServiceName')}
 ${extractFunction('normalizeFiveSimCountryCode')}
 ${extractFunction('normalizeFiveSimCountryOrderValue')}
 ${extractFunction('normalizeFiveSimProductValue')}
@@ -1174,17 +1257,19 @@ return { collectSettingsPayload };
 
 test('switchPhoneSmsProvider saves API keys independently when the select value has already changed', async () => {
   const api = new Function(`
-let latestState = {
-  phoneSmsProvider: 'hero-sms',
-  heroSmsApiKey: 'hero-old',
-  fiveSimApiKey: 'five-old',
-  heroSmsMinPrice: '0.04',
-  heroSmsMaxPrice: '0.11',
-  fiveSimMinPrice: '0.88',
-  fiveSimMaxPrice: '12',
-  heroSmsCountryId: 52,
-  heroSmsCountryLabel: 'Thailand',
-  heroSmsCountryFallback: [],
+  let latestState = {
+    phoneSmsProvider: 'hero-sms',
+    heroSmsApiKey: 'hero-old',
+    fiveSimApiKey: 'five-old',
+    heroSmsMinPrice: '0.04',
+    heroSmsMaxPrice: '0.11',
+    fiveSimMinPrice: '0.88',
+    fiveSimMaxPrice: '12',
+    madaoMinPrice: '0.66',
+    madaoMaxPrice: '0.99',
+    heroSmsCountryId: 52,
+    heroSmsCountryLabel: 'Thailand',
+    heroSmsCountryFallback: [],
   fiveSimCountryId: 'vietnam',
   fiveSimCountryLabel: '越南 (Vietnam)',
   fiveSimCountryFallback: [],
@@ -1192,6 +1277,7 @@ let latestState = {
 };
 const PHONE_SMS_PROVIDER_HERO_SMS = 'hero-sms';
 const PHONE_SMS_PROVIDER_FIVE_SIM = '5sim';
+const PHONE_SMS_PROVIDER_MADAO = 'madao';
 const DEFAULT_FIVE_SIM_COUNTRY_ID = 'vietnam';
 const DEFAULT_FIVE_SIM_COUNTRY_LABEL = '越南 (Vietnam)';
 const DEFAULT_FIVE_SIM_OPERATOR = 'any';
@@ -1283,6 +1369,596 @@ return {
   assert.equal(api.savedPayload.fiveSimApiKey, 'five-live');
   assert.equal(api.savedPayload.heroSmsMinPrice, '0.03');
   assert.equal(api.savedPayload.fiveSimMinPrice, '0.88');
+});
+
+test('collectSettingsPayload stores MaDao price range from shared price inputs when provider is madao', () => {
+  const normalizeIcloudTargetMailboxType = (value) => value || 'none';
+  const normalizeIcloudForwardMailProvider = (value) => value || '';
+  const api = new Function('normalizeIcloudTargetMailboxType', 'normalizeIcloudForwardMailProvider', `
+const window = {};
+const PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH = 'oauth';
+const PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION = 'sub2api_codex_session';
+const DEFAULT_PLUS_ACCOUNT_ACCESS_STRATEGY = PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH;
+let latestState = {
+  accountContributionEnabled: false,
+  mail2925UseAccountPool: false,
+  currentMail2925AccountId: '',
+  heroSmsMinPrice: '0.0444',
+  heroSmsMaxPrice: '0.1555',
+  fiveSimMinPrice: '0.3333',
+  fiveSimMaxPrice: '0.6666',
+  madaoMinPrice: '0.7',
+  madaoMaxPrice: '0.9',
+  phoneSmsReuseEnabled: true,
+  heroSmsReuseEnabled: true,
+  freePhoneReuseEnabled: false,
+  freePhoneReuseAutoEnabled: false,
+};
+let cloudflareDomainEditMode = false;
+let cloudflareTempEmailDomainEditMode = false;
+const selectCfDomain = { value: '' };
+const selectTempEmailDomain = { value: '' };
+const selectPanelMode = { value: 'cpa' };
+const inputVpsUrl = { value: '' };
+const inputVpsPassword = { value: '' };
+const inputSub2ApiUrl = { value: '' };
+const inputSub2ApiEmail = { value: '' };
+const inputSub2ApiPassword = { value: '' };
+const inputSub2ApiGroup = { value: '' };
+const inputSub2ApiDefaultProxy = { value: '' };
+const inputCodex2ApiUrl = { value: '' };
+const inputCodex2ApiAdminKey = { value: '' };
+const inputPassword = { value: '' };
+const selectMailProvider = { value: '163' };
+const selectEmailGenerator = { value: 'duck' };
+const checkboxAutoDeleteIcloud = { checked: false };
+const selectIcloudHostPreference = { value: 'auto' };
+const selectIcloudTargetMailboxType = { value: 'none' };
+const selectIcloudForwardMailProvider = { value: '' };
+const selectIcloudFetchMode = { value: 'reuse_existing' };
+const inputAccountRunHistoryHelperBaseUrl = { value: 'http://127.0.0.1:17373' };
+const inputPhoneVerificationEnabled = { checked: true };
+const selectPhoneSmsProvider = { value: 'madao' };
+const selectPhoneSmsProviderOrder = {};
+const inputHeroSmsApiKey = { value: 'hero-key' };
+const inputFiveSimApiKey = { value: 'five-key' };
+const inputNexSmsApiKey = { value: 'nex-key' };
+const inputMaDaoBaseUrl = { value: 'http://127.0.0.1:7822' };
+const inputMaDaoHttpSecret = { value: 'secret' };
+const selectMaDaoMode = { value: 'direct' };
+const selectMaDaoProviderId = { value: 'herosms' };
+const selectMaDaoRoutingPlanId = { value: 'plan-1' };
+const displayMaDaoServiceName = { textContent: '' };
+const selectMaDaoCountry = { value: 'TH' };
+const inputMaDaoAutoPickCountry = { checked: false };
+const inputMaDaoReusePhone = { checked: true };
+const inputHeroSmsReuseEnabled = { checked: true };
+const inputFreePhoneReuseEnabled = { checked: false };
+const inputFreePhoneReuseAutoEnabled = { checked: false };
+const selectHeroSmsAcquirePriority = { value: 'price' };
+const inputHeroSmsMinPrice = { value: '0.23' };
+const inputHeroSmsMaxPrice = { value: '0.45' };
+const inputHeroSmsPreferredPrice = { value: '' };
+const inputPhoneReplacementLimit = { value: '3' };
+const inputPhoneCodeWaitSeconds = { value: '60' };
+const inputPhoneCodeTimeoutWindows = { value: '2' };
+const inputPhoneCodePollIntervalSeconds = { value: '5' };
+const inputPhoneCodePollMaxRounds = { value: '12' };
+const inputVerificationResendCount = { value: '1' };
+const inputFiveSimOperator = { value: 'any' };
+const inputFiveSimProduct = { value: 'openai' };
+const inputNexSmsServiceCode = { value: 'ot' };
+const inputPhoneSignupReloginAfterBindEmail = { checked: false };
+const inputAutoSkipFailures = { checked: false };
+const inputAutoSkipFailuresThreadIntervalMinutes = { value: '30' };
+const inputAutoDelayEnabled = { checked: false };
+const inputAutoDelayMinutes = { value: '5' };
+const inputAutoStepDelaySeconds = { value: '0' };
+const inputOAuthFlowTimeoutEnabled = { checked: true };
+const inputMail2925UseAccountPool = { checked: false };
+const inputInbucketHost = { value: '' };
+const inputInbucketMailbox = { value: '' };
+const inputCustomMailProviderPool = { value: '' };
+const inputCustomEmailPool = { value: '' };
+const inputTempEmailBaseUrl = { value: '' };
+const inputTempEmailAdminAuth = { value: '' };
+const inputTempEmailCustomAuth = { value: '' };
+const inputTempEmailReceiveMailbox = { value: '' };
+const inputTempEmailUseRandomSubdomain = { checked: false };
+const inputCloudMailBaseUrl = { value: '' };
+const inputCloudMailAdminEmail = { value: '' };
+const inputCloudMailAdminPassword = { value: '' };
+const inputCloudMailReceiveMailbox = { value: '' };
+const inputCloudMailDomain = { value: '' };
+const inputYydsMailApiKey = { value: '' };
+const inputYydsMailBaseUrl = { value: '' };
+const inputHotmailRemoteBaseUrl = { value: '' };
+const inputHotmailLocalBaseUrl = { value: '' };
+const inputLuckmailApiKey = { value: '' };
+const inputLuckmailBaseUrl = { value: '' };
+const selectLuckmailEmailType = { value: 'default' };
+const inputLuckmailDomain = { value: '' };
+const inputContributionNickname = { value: '' };
+const inputContributionQq = { value: '' };
+const inputSub2ApiAccountPriority = { value: '1' };
+function getSelectedMail2925Mode() { return 'random'; }
+function getSelectedLocalCpaStep9Mode() { return 'manual'; }
+function getCloudflareDomainsFromState() { return { domains: [], activeDomain: '' }; }
+function normalizeCloudflareDomainValue(value) { return String(value || '').trim(); }
+function getCloudflareTempEmailDomainsFromState() { return { domains: [], activeDomain: '' }; }
+function normalizeCloudflareTempEmailDomainValue(value) { return String(value || '').trim(); }
+function getSelectedIpProxyEnabledSafe() { return false; }
+function normalizeIpProxyServiceSafe() { return '711proxy'; }
+function getSelectedIpProxyModeSafe() { return 'account'; }
+function normalizeIpProxyModeSafe(value) { return value; }
+function normalizeIpProxyServiceProfilesSafe(value) { return value; }
+function normalizeIpProxyAccountListSafe(value) { return value; }
+function normalizeIpProxyAccountSessionPrefixSafe(value) { return value; }
+function normalizeIpProxyAccountLifeMinutesSafe(value) { return value; }
+function normalizeIpProxyPoolTargetCountSafe(value) { return Number(value || 20); }
+function normalizeIpProxyPortSafe(value) { return value; }
+function normalizeIpProxyProtocolSafe(value) { return value || 'http'; }
+function normalizeIpProxyAutoSyncIntervalMinutesSafe(value) { return Number(value || 0); }
+function getSelectedSignupMethod() { return 'email'; }
+function isPhoneSignupReuseLocked() { return false; }
+function getStoredPhoneSmsReuseEnabled() { return true; }
+function getStoredFreePhoneReuseEnabled() { return false; }
+function getStoredFreePhoneReuseAutoEnabled() { return false; }
+function normalizeHeroSmsReuseEnabledValue(value) { return Boolean(value); }
+function normalizeHeroSmsAcquirePriority(value) { return value || 'country'; }
+function normalizeHeroSmsMaxPriceValue(value = '') {
+  const numeric = Number(String(value || '').trim());
+  return Number.isFinite(numeric) && numeric > 0 ? numeric.toFixed(4).replace(/0+$/,'').replace(/\\.$/,'') : '';
+}
+function normalizeFiveSimMaxPriceValue(value = '') { return normalizeHeroSmsMaxPriceValue(value); }
+function normalizePhoneSmsProvider(value = '') {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === '5sim' || normalized === 'nexsms' || normalized === 'madao') return normalized;
+  return 'hero-sms';
+}
+function normalizeMaDaoModeValue(value = '') { return String(value || '').trim().toLowerCase() === 'direct' ? 'direct' : 'routing_plan'; }
+function normalizeMaDaoProviderIdValue(value = '') { return String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, ''); }
+function normalizeMaDaoRoutingPlanIdValue(value = '') { return String(value || '').trim(); }
+function normalizeMaDaoCountryValue(value = '') {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return '';
+  const lowered = trimmed.toLowerCase();
+  if (lowered === 'any' || lowered === 'local') return lowered;
+  if (/^[a-z]{2}$/i.test(trimmed)) return trimmed.toUpperCase();
+  return lowered;
+}
+function normalizeMaDaoCountryLabel(value = '', fallback = '') {
+  const trimmed = String(value || '').trim();
+  if (trimmed) return trimmed;
+  const canonical = normalizeMaDaoCountryValue(fallback);
+  if (canonical === 'TH') return 'Thailand';
+  if (canonical === 'US') return 'United States';
+  if (canonical === 'GB') return 'United Kingdom';
+  return canonical;
+}
+function resolveMaDaoServiceName() { return 'openai'; }
+function normalizePhoneSmsProviderOrderValue(value = [], fallback = []) { return Array.isArray(value) ? value : fallback; }
+function getSelectedPhoneSmsProviderOrder() { return ['madao', 'hero-sms']; }
+function normalizePhoneSmsMaxPriceValue(value = '', provider = getSelectedPhoneSmsProvider()) { return normalizeHeroSmsMaxPriceValue(value); }
+function normalizePhoneSmsMinPriceValue(value = '', provider = getSelectedPhoneSmsProvider()) { return normalizeHeroSmsMaxPriceValue(value); }
+function normalizeFiveSimCountryId(value = '', fallback = 'thailand') { return String(value || fallback); }
+function normalizeFiveSimCountryLabel(value = '', fallback = 'Thailand') { return String(value || fallback); }
+function normalizeFiveSimCountryCode(value = '', fallback = 'thailand') { return String(value || fallback); }
+function normalizeFiveSimProductValue(value = '') { return String(value || '').trim().toLowerCase() || 'openai'; }
+function normalizeFiveSimOperator(value = '') { return String(value || '').trim().toLowerCase() || 'any'; }
+function normalizeNexSmsServiceCodeValue(value = '') { return String(value || '').trim().toLowerCase() || 'ot'; }
+function normalizeNexSmsCountryIdValue(value, fallback = -1) { const n = Number(value); return Number.isFinite(n) ? n : fallback; }
+function normalizeNexSmsCountryOrderValue(value = []) { return Array.isArray(value) ? value : []; }
+function getSelectedHeroSmsCountryOption() { return { id: 52, label: 'Thailand' }; }
+function syncHeroSmsFallbackSelectionOrderFromSelect() { return [{ id: 52, label: 'Thailand' }]; }
+function getSelectedFiveSimCountries() { return [{ id: 'thailand', code: 'thailand', label: 'Thailand' }]; }
+function getSelectedNexSmsCountries() { return [{ id: 1, label: 'Country #1' }]; }
+function getSelectedPhoneSmsProvider() { return normalizePhoneSmsProvider(selectPhoneSmsProvider.value); }
+function normalizeHeroSmsCountryId(value, fallback = 52) { const n = Number(value); return Number.isFinite(n) && n > 0 ? n : fallback; }
+function normalizeHeroSmsCountryLabel(value = '', fallback = 'Thailand') { return String(value || fallback); }
+function normalizeHeroSmsCountryFallbackList(value = []) { return Array.isArray(value) ? value : []; }
+function normalizeFiveSimCountryFallbackList(value = []) { return Array.isArray(value) ? value : []; }
+function getSelectedPlusPaymentMethod() { return 'paypal'; }
+function resolvePlusAccountAccessStrategyForTargetSafe(value) { return value; }
+function getSelectedTargetId() { return 'cpa'; }
+function getSelectedFlowId() { return 'openai'; }
+function normalizePanelMode(value = '') { return value || 'cpa'; }
+function normalizeCloudflareTempEmailBaseUrlValue(value = '') { return value; }
+function normalizeCloudflareTempEmailReceiveMailboxValue(value = '') { return value; }
+function normalizeCloudMailBaseUrlInput(value = '') { return value; }
+function normalizeCloudMailReceiveMailboxInput(value = '') { return value; }
+function normalizeCloudMailDomainInput(value = '') { return value; }
+function normalizeYydsBaseUrlValue(value = '') { return value; }
+function normalizeAutoRunThreadIntervalMinutes(value) { return Number(value || 30); }
+function normalizeAutoDelayMinutes(value) { return Number(value || 0); }
+function normalizeAutoStepDelaySeconds(value) { return value === '' ? null : Number(value || 0); }
+function formatAutoStepDelayInputValue(value) { return String(value || '0'); }
+function normalizeVerificationResendCount(value, fallback = 1) { return Number(value || fallback); }
+function normalizePhoneVerificationReplacementLimit(value) { return Number(value || 3); }
+function normalizePhoneCodeWaitSecondsValue(value) { return Number(value || 60); }
+function normalizePhoneCodeTimeoutWindowsValue(value) { return Number(value || 2); }
+function normalizePhoneCodePollIntervalSecondsValue(value) { return Number(value || 5); }
+function normalizePhoneCodePollMaxRoundsValue(value) { return Number(value || 12); }
+function buildManagedAliasBaseEmailPayload() { return {}; }
+function getActiveCustomEmailPoolEmails() { return []; }
+function getNormalizedCustomEmailPoolEntriesState() { return []; }
+function normalizeCustomEmailPoolEntries() { return []; }
+function getPayPalAccounts() { return []; }
+function getCurrentPayPalAccount() { return null; }
+function getSelectedCloudflareTempEmailLookupMode() { return 'receive-mailbox'; }
+function normalizeLuckmailBaseUrl(value = '') { return value; }
+function normalizeLuckmailEmailType(value = '') { return value || 'default'; }
+function getSelectedHotmailServiceMode() { return 'remote'; }
+function getSelectedCloudflareDomain() { return ''; }
+function getSelectedCloudflareTempEmailDomain() { return ''; }
+function getFlowRegistry() { return null; }
+function normalizeTargetIdForFlow(_flowId, targetId = '', fallback = 'kiro-rs') { return targetId || fallback; }
+function normalizePlusHostedCheckoutOauthDelaySeconds(value) { return Number(value || 3); }
+function normalizePlusAccountAccessStrategy(value = '') { return value || 'oauth'; }
+function resolveCurrentSidepanelCapabilities() { return null; }
+function buildStepExecutionRangeByFlowPayload(value = {}) { return value; }
+function getSelectedGpcHelperPhoneMode() { return 'manual'; }
+function normalizeGpcHelperPhoneModeValue(value = '') { return value || 'manual'; }
+function normalizeGpcOtpChannelSafe(value = '') { return value || 'whatsapp'; }
+function normalizeGpcLocalSmsHelperBaseUrlSafe(value = '') { return value; }
+function normalizeManagedAliasBaseEmailInput(value = '') { return value; }
+function normalizeAccountRunHistoryHelperBaseUrlValue(value = '') { return value; }
+function normalizeSub2ApiAccountPriorityValue(value = '') { return Number(value || 1); }
+function getSelectedCustomVerificationBypassMode() { return 'manual'; }
+const DEFAULT_SIGNUP_METHOD = 'email';
+const DEFAULT_VERIFICATION_RESEND_COUNT = 1;
+const DEFAULT_PHONE_VERIFICATION_REPLACEMENT_LIMIT = 3;
+const DEFAULT_PHONE_CODE_WAIT_SECONDS = 60;
+const DEFAULT_PHONE_CODE_TIMEOUT_WINDOWS = 2;
+const DEFAULT_PHONE_CODE_POLL_INTERVAL_SECONDS = 5;
+const DEFAULT_PHONE_CODE_POLL_MAX_ROUNDS = 12;
+const DEFAULT_PHONE_VERIFICATION_ENABLED = true;
+const DEFAULT_PHONE_SIGNUP_RELOGIN_AFTER_BIND_EMAIL_ENABLED = false;
+const DEFAULT_HERO_SMS_ACQUIRE_PRIORITY = 'country';
+const HERO_SMS_ACQUIRE_PRIORITY_COUNTRY = 'country';
+const PHONE_SMS_PROVIDER_HERO_SMS = 'hero-sms';
+const PHONE_SMS_PROVIDER_FIVE_SIM = '5sim';
+const PHONE_SMS_PROVIDER_MADAO = 'madao';
+const PHONE_SMS_PROVIDER_NEXSMS = 'nexsms';
+const MADAO_MODE_ROUTING_PLAN = 'routing_plan';
+const MADAO_MODE_DIRECT = 'direct';
+const MADAO_DEFAULT_BASE_URL = 'http://127.0.0.1:7822';
+const DEFAULT_FIVE_SIM_PRODUCT = 'openai';
+const DEFAULT_NEX_SMS_SERVICE_CODE = 'ot';
+const DEFAULT_NEX_SMS_COUNTRY_ORDER = [1];
+const DEFAULT_FIVE_SIM_OPERATOR = 'any';
+const DEFAULT_FIVE_SIM_COUNTRY_ID = 'thailand';
+const DEFAULT_FIVE_SIM_COUNTRY_LABEL = 'Thailand';
+const inputHostedCheckoutVerificationUrl = { value: '' };
+const inputHostedCheckoutPhone = { value: '' };
+const inputPlusHostedCheckoutOauthDelaySeconds = { value: '3' };
+const selectHeroSmsPreferredActivation = { value: '' };
+function getSelectedPhonePreferredActivation() { return null; }
+${extractFunction('collectSettingsPayload')}
+return { collectSettingsPayload };
+`)(normalizeIcloudTargetMailboxType, normalizeIcloudForwardMailProvider);
+
+  const payload = api.collectSettingsPayload();
+  assert.equal(payload.phoneSmsProvider, 'madao');
+  assert.equal(payload.madaoMode, 'direct');
+  assert.equal(payload.madaoProviderId, 'herosms');
+  assert.equal(payload.madaoRoutingPlanId, '');
+  assert.equal(payload.madaoServiceName, 'openai');
+  assert.equal(payload.madaoCountry, 'TH');
+  assert.equal(payload.madaoMinPrice, '0.23');
+  assert.equal(payload.madaoMaxPrice, '0.45');
+  assert.equal(payload.heroSmsMinPrice, '0.0444');
+  assert.equal(payload.heroSmsMaxPrice, '0.1555');
+  assert.equal(payload.fiveSimMinPrice, '0.3333');
+  assert.equal(payload.fiveSimMaxPrice, '0.6666');
+});
+
+test('collectSettingsPayload clears direct MaDao parameters in routing plan mode', () => {
+  const normalizeIcloudTargetMailboxType = (value) => value || 'none';
+  const normalizeIcloudForwardMailProvider = (value) => value || '';
+  const api = new Function('normalizeIcloudTargetMailboxType', 'normalizeIcloudForwardMailProvider', `
+const window = {};
+const PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH = 'oauth';
+const PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION = 'sub2api_codex_session';
+const DEFAULT_PLUS_ACCOUNT_ACCESS_STRATEGY = PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH;
+let latestState = { accountContributionEnabled: false };
+let cloudflareDomainEditMode = false;
+let cloudflareTempEmailDomainEditMode = false;
+const selectCfDomain = { value: '' };
+const selectTempEmailDomain = { value: '' };
+const selectPanelMode = { value: 'cpa' };
+const inputVpsUrl = { value: '' };
+const inputVpsPassword = { value: '' };
+const inputSub2ApiUrl = { value: '' };
+const inputSub2ApiEmail = { value: '' };
+const inputSub2ApiPassword = { value: '' };
+const inputSub2ApiGroup = { value: '' };
+const inputSub2ApiDefaultProxy = { value: '' };
+const inputCodex2ApiUrl = { value: '' };
+const inputCodex2ApiAdminKey = { value: '' };
+const inputPassword = { value: '' };
+const selectMailProvider = { value: '163' };
+const selectEmailGenerator = { value: 'duck' };
+const checkboxAutoDeleteIcloud = { checked: false };
+const selectIcloudHostPreference = { value: 'auto' };
+const selectIcloudTargetMailboxType = { value: 'none' };
+const selectIcloudForwardMailProvider = { value: '' };
+const selectIcloudFetchMode = { value: 'reuse_existing' };
+const inputAccountRunHistoryHelperBaseUrl = { value: '' };
+const inputPhoneVerificationEnabled = { checked: true };
+const selectPhoneSmsProvider = { value: 'madao' };
+const selectPhoneSmsProviderOrder = {};
+const inputHeroSmsApiKey = { value: '' };
+const inputFiveSimApiKey = { value: '' };
+const inputNexSmsApiKey = { value: '' };
+const inputMaDaoBaseUrl = { value: 'http://127.0.0.1:7822' };
+const inputMaDaoHttpSecret = { value: 'secret' };
+const selectMaDaoMode = { value: 'routing_plan' };
+const selectMaDaoProviderId = { value: 'herosms' };
+const selectMaDaoRoutingPlanId = { value: 'openai-plan' };
+const displayMaDaoServiceName = { textContent: '' };
+const selectMaDaoCountry = { value: 'TH' };
+const inputMaDaoAutoPickCountry = { checked: false };
+const inputMaDaoReusePhone = { checked: false };
+const inputHeroSmsReuseEnabled = { checked: true };
+const inputFreePhoneReuseEnabled = { checked: false };
+const inputFreePhoneReuseAutoEnabled = { checked: false };
+const selectHeroSmsAcquirePriority = { value: 'price' };
+const inputHeroSmsMinPrice = { value: '0.23' };
+const inputHeroSmsMaxPrice = { value: '0.45' };
+const inputHeroSmsPreferredPrice = { value: '' };
+const inputPhoneReplacementLimit = { value: '3' };
+const inputPhoneCodeWaitSeconds = { value: '60' };
+const inputPhoneCodeTimeoutWindows = { value: '2' };
+const inputPhoneCodePollIntervalSeconds = { value: '5' };
+const inputPhoneCodePollMaxRounds = { value: '12' };
+const inputVerificationResendCount = { value: '1' };
+const inputFiveSimOperator = { value: 'any' };
+const inputFiveSimProduct = { value: 'openai' };
+const inputNexSmsServiceCode = { value: 'ot' };
+const inputPhoneSignupReloginAfterBindEmail = { checked: false };
+const inputAutoSkipFailures = { checked: false };
+const inputAutoSkipFailuresThreadIntervalMinutes = { value: '30' };
+const inputAutoDelayEnabled = { checked: false };
+const inputAutoDelayMinutes = { value: '5' };
+const inputAutoStepDelaySeconds = { value: '0' };
+const inputOAuthFlowTimeoutEnabled = { checked: true };
+const inputMail2925UseAccountPool = { checked: false };
+const inputInbucketHost = { value: '' };
+const inputInbucketMailbox = { value: '' };
+const inputCustomMailProviderPool = { value: '' };
+const inputCustomEmailPool = { value: '' };
+const inputTempEmailBaseUrl = { value: '' };
+const inputTempEmailAdminAuth = { value: '' };
+const inputTempEmailCustomAuth = { value: '' };
+const inputTempEmailReceiveMailbox = { value: '' };
+const inputTempEmailUseRandomSubdomain = { checked: false };
+const inputCloudMailBaseUrl = { value: '' };
+const inputCloudMailAdminEmail = { value: '' };
+const inputCloudMailAdminPassword = { value: '' };
+const inputCloudMailReceiveMailbox = { value: '' };
+const inputCloudMailDomain = { value: '' };
+const inputYydsMailApiKey = { value: '' };
+const inputYydsMailBaseUrl = { value: '' };
+const inputHotmailRemoteBaseUrl = { value: '' };
+const inputHotmailLocalBaseUrl = { value: '' };
+const inputLuckmailApiKey = { value: '' };
+const inputLuckmailBaseUrl = { value: '' };
+const selectLuckmailEmailType = { value: 'default' };
+const inputLuckmailDomain = { value: '' };
+const inputContributionNickname = { value: '' };
+const inputContributionQq = { value: '' };
+const inputSub2ApiAccountPriority = { value: '1' };
+function getSelectedMail2925Mode() { return 'random'; }
+function getSelectedLocalCpaStep9Mode() { return 'manual'; }
+function getCloudflareDomainsFromState() { return { domains: [], activeDomain: '' }; }
+function normalizeCloudflareDomainValue(value) { return String(value || '').trim(); }
+function getCloudflareTempEmailDomainsFromState() { return { domains: [], activeDomain: '' }; }
+function normalizeCloudflareTempEmailDomainValue(value) { return String(value || '').trim(); }
+function getSelectedIpProxyEnabledSafe() { return false; }
+function normalizeIpProxyServiceSafe() { return '711proxy'; }
+function getSelectedIpProxyModeSafe() { return 'account'; }
+function normalizeIpProxyModeSafe(value) { return value; }
+function normalizeIpProxyServiceProfilesSafe(value) { return value; }
+function normalizeIpProxyAccountListSafe(value) { return value; }
+function normalizeIpProxyAccountSessionPrefixSafe(value) { return value; }
+function normalizeIpProxyAccountLifeMinutesSafe(value) { return value; }
+function normalizeIpProxyPoolTargetCountSafe(value) { return Number(value || 20); }
+function normalizeIpProxyPortSafe(value) { return value; }
+function normalizeIpProxyProtocolSafe(value) { return value || 'http'; }
+function normalizeIpProxyAutoSyncIntervalMinutesSafe(value) { return Number(value || 0); }
+function getSelectedSignupMethod() { return 'email'; }
+function isPhoneSignupReuseLocked() { return false; }
+function getStoredPhoneSmsReuseEnabled() { return true; }
+function getStoredFreePhoneReuseEnabled() { return false; }
+function getStoredFreePhoneReuseAutoEnabled() { return false; }
+function normalizeHeroSmsReuseEnabledValue(value) { return Boolean(value); }
+function normalizeHeroSmsAcquirePriority(value) { return value || 'country'; }
+function normalizeHeroSmsMaxPriceValue(value = '') {
+  const numeric = Number(String(value || '').trim());
+  return Number.isFinite(numeric) && numeric > 0 ? numeric.toFixed(4).replace(/0+$/,'').replace(/\\.$/,'') : '';
+}
+function normalizeFiveSimMaxPriceValue(value = '') { return normalizeHeroSmsMaxPriceValue(value); }
+function normalizePhoneSmsProvider(value = '') {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === '5sim' || normalized === 'nexsms' || normalized === 'madao') return normalized;
+  return 'hero-sms';
+}
+function normalizeMaDaoModeValue(value = '') { return String(value || '').trim().toLowerCase() === 'direct' ? 'direct' : 'routing_plan'; }
+function normalizeMaDaoProviderIdValue(value = '') { return String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, ''); }
+function normalizeMaDaoRoutingPlanIdValue(value = '') { return String(value || '').trim(); }
+function normalizeMaDaoCountryValue(value = '') {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return '';
+  const lowered = trimmed.toLowerCase();
+  if (lowered === 'any' || lowered === 'local') return lowered;
+  if (/^[a-z]{2}$/i.test(trimmed)) return trimmed.toUpperCase();
+  return lowered;
+}
+function normalizeMaDaoCountryLabel(value = '', fallback = '') {
+  const trimmed = String(value || '').trim();
+  if (trimmed) return trimmed;
+  const canonical = normalizeMaDaoCountryValue(fallback);
+  if (canonical === 'TH') return 'Thailand';
+  if (canonical === 'US') return 'United States';
+  if (canonical === 'GB') return 'United Kingdom';
+  return canonical;
+}
+function resolveMaDaoServiceName() { return 'openai'; }
+function normalizePhoneSmsProviderOrderValue(value = [], fallback = []) { return Array.isArray(value) ? value : fallback; }
+function getSelectedPhoneSmsProviderOrder() { return ['madao']; }
+function normalizePhoneSmsMaxPriceValue(value = '', provider = getSelectedPhoneSmsProvider()) { return normalizeHeroSmsMaxPriceValue(value); }
+function normalizePhoneSmsMinPriceValue(value = '', provider = getSelectedPhoneSmsProvider()) { return normalizeHeroSmsMaxPriceValue(value); }
+function normalizeFiveSimCountryId(value = '', fallback = 'thailand') { return String(value || fallback); }
+function normalizeFiveSimCountryLabel(value = '', fallback = 'Thailand') { return String(value || fallback); }
+function normalizeFiveSimCountryCode(value = '', fallback = 'thailand') { return String(value || fallback); }
+function normalizeFiveSimProductValue(value = '') { return String(value || '').trim().toLowerCase() || 'openai'; }
+function normalizeFiveSimOperator(value = '') { return String(value || '').trim().toLowerCase() || 'any'; }
+function normalizeNexSmsServiceCodeValue(value = '') { return String(value || '').trim().toLowerCase() || 'ot'; }
+function normalizeNexSmsCountryIdValue(value, fallback = -1) { const n = Number(value); return Number.isFinite(n) ? n : fallback; }
+function normalizeNexSmsCountryOrderValue(value = []) { return Array.isArray(value) ? value : []; }
+function getSelectedHeroSmsCountryOption() { return { id: 52, label: 'Thailand' }; }
+function syncHeroSmsFallbackSelectionOrderFromSelect() { return [{ id: 52, label: 'Thailand' }]; }
+function getSelectedFiveSimCountries() { return [{ id: 'thailand', code: 'thailand', label: 'Thailand' }]; }
+function getSelectedNexSmsCountries() { return [{ id: 1, label: 'Country #1' }]; }
+function getSelectedPhoneSmsProvider() { return normalizePhoneSmsProvider(selectPhoneSmsProvider.value); }
+function normalizeHeroSmsCountryId(value, fallback = 52) { const n = Number(value); return Number.isFinite(n) && n > 0 ? n : fallback; }
+function normalizeHeroSmsCountryLabel(value = '', fallback = 'Thailand') { return String(value || fallback); }
+function normalizeHeroSmsCountryFallbackList(value = []) { return Array.isArray(value) ? value : []; }
+function normalizeFiveSimCountryFallbackList(value = []) { return Array.isArray(value) ? value : []; }
+function getSelectedPlusPaymentMethod() { return 'paypal'; }
+function resolvePlusAccountAccessStrategyForTargetSafe(value) { return value; }
+function getSelectedTargetId() { return 'cpa'; }
+function getSelectedFlowId() { return 'openai'; }
+function normalizePanelMode(value = '') { return value || 'cpa'; }
+function normalizeCloudflareTempEmailBaseUrlValue(value = '') { return value; }
+function normalizeCloudflareTempEmailReceiveMailboxValue(value = '') { return value; }
+function normalizeCloudMailBaseUrlInput(value = '') { return value; }
+function normalizeCloudMailReceiveMailboxInput(value = '') { return value; }
+function normalizeCloudMailDomainInput(value = '') { return value; }
+function normalizeYydsBaseUrlValue(value = '') { return value; }
+function normalizeAutoRunThreadIntervalMinutes(value) { return Number(value || 30); }
+function normalizeAutoDelayMinutes(value) { return Number(value || 0); }
+function normalizeAutoStepDelaySeconds(value) { return value === '' ? null : Number(value || 0); }
+function formatAutoStepDelayInputValue(value) { return String(value || '0'); }
+function normalizeVerificationResendCount(value, fallback = 1) { return Number(value || fallback); }
+function normalizePhoneVerificationReplacementLimit(value) { return Number(value || 3); }
+function normalizePhoneCodeWaitSecondsValue(value) { return Number(value || 60); }
+function normalizePhoneCodeTimeoutWindowsValue(value) { return Number(value || 2); }
+function normalizePhoneCodePollIntervalSecondsValue(value) { return Number(value || 5); }
+function normalizePhoneCodePollMaxRoundsValue(value) { return Number(value || 12); }
+function buildManagedAliasBaseEmailPayload() { return {}; }
+function getActiveCustomEmailPoolEmails() { return []; }
+function getNormalizedCustomEmailPoolEntriesState() { return []; }
+function normalizeCustomEmailPoolEntries() { return []; }
+function getPayPalAccounts() { return []; }
+function getCurrentPayPalAccount() { return null; }
+function getSelectedCloudflareTempEmailLookupMode() { return 'receive-mailbox'; }
+function normalizeLuckmailBaseUrl(value = '') { return value; }
+function normalizeLuckmailEmailType(value = '') { return value || 'default'; }
+function getSelectedHotmailServiceMode() { return 'remote'; }
+function getSelectedCloudflareDomain() { return ''; }
+function getSelectedCloudflareTempEmailDomain() { return ''; }
+function getFlowRegistry() { return null; }
+function normalizeTargetIdForFlow(_flowId, targetId = '', fallback = 'kiro-rs') { return targetId || fallback; }
+function normalizePlusHostedCheckoutOauthDelaySeconds(value) { return Number(value || 3); }
+function normalizePlusAccountAccessStrategy(value = '') { return value || 'oauth'; }
+function resolveCurrentSidepanelCapabilities() { return null; }
+function buildStepExecutionRangeByFlowPayload(value = {}) { return value; }
+function getSelectedGpcHelperPhoneMode() { return 'manual'; }
+function normalizeGpcHelperPhoneModeValue(value = '') { return value || 'manual'; }
+function normalizeGpcOtpChannelSafe(value = '') { return value || 'whatsapp'; }
+function normalizeGpcLocalSmsHelperBaseUrlSafe(value = '') { return value; }
+function normalizeManagedAliasBaseEmailInput(value = '') { return value; }
+function normalizeAccountRunHistoryHelperBaseUrlValue(value = '') { return value; }
+function normalizeSub2ApiAccountPriorityValue(value = '') { return Number(value || 1); }
+function getSelectedCustomVerificationBypassMode() { return 'manual'; }
+const DEFAULT_SIGNUP_METHOD = 'email';
+const DEFAULT_VERIFICATION_RESEND_COUNT = 1;
+const DEFAULT_PHONE_VERIFICATION_REPLACEMENT_LIMIT = 3;
+const DEFAULT_PHONE_CODE_WAIT_SECONDS = 60;
+const DEFAULT_PHONE_CODE_TIMEOUT_WINDOWS = 2;
+const DEFAULT_PHONE_CODE_POLL_INTERVAL_SECONDS = 5;
+const DEFAULT_PHONE_CODE_POLL_MAX_ROUNDS = 12;
+const DEFAULT_PHONE_VERIFICATION_ENABLED = true;
+const DEFAULT_PHONE_SIGNUP_RELOGIN_AFTER_BIND_EMAIL_ENABLED = false;
+const DEFAULT_HERO_SMS_ACQUIRE_PRIORITY = 'country';
+const HERO_SMS_ACQUIRE_PRIORITY_COUNTRY = 'country';
+const PHONE_SMS_PROVIDER_HERO_SMS = 'hero-sms';
+const PHONE_SMS_PROVIDER_FIVE_SIM = '5sim';
+const PHONE_SMS_PROVIDER_MADAO = 'madao';
+const PHONE_SMS_PROVIDER_NEXSMS = 'nexsms';
+const MADAO_MODE_ROUTING_PLAN = 'routing_plan';
+const MADAO_MODE_DIRECT = 'direct';
+const MADAO_DEFAULT_BASE_URL = 'http://127.0.0.1:7822';
+const DEFAULT_FIVE_SIM_PRODUCT = 'openai';
+const DEFAULT_NEX_SMS_SERVICE_CODE = 'ot';
+const DEFAULT_NEX_SMS_COUNTRY_ORDER = [1];
+const DEFAULT_FIVE_SIM_OPERATOR = 'any';
+const DEFAULT_FIVE_SIM_COUNTRY_ID = 'thailand';
+const DEFAULT_FIVE_SIM_COUNTRY_LABEL = 'Thailand';
+const inputHostedCheckoutVerificationUrl = { value: '' };
+const inputHostedCheckoutPhone = { value: '' };
+const inputPlusHostedCheckoutOauthDelaySeconds = { value: '3' };
+const selectHeroSmsPreferredActivation = { value: '' };
+function getSelectedPhonePreferredActivation() { return null; }
+${extractFunction('collectSettingsPayload')}
+return { collectSettingsPayload };
+`)(normalizeIcloudTargetMailboxType, normalizeIcloudForwardMailProvider);
+
+  const payload = api.collectSettingsPayload();
+  assert.equal(payload.madaoMode, 'routing_plan');
+  assert.equal(payload.madaoRoutingPlanId, 'openai-plan');
+  assert.equal(payload.madaoProviderId, '');
+  assert.equal(payload.madaoCountry, '');
+  assert.equal(payload.madaoAutoPickCountry, true);
+  assert.equal(payload.madaoReusePhone, true);
+});
+
+test('resolvePhoneActivationCountryLabel formats MaDao ISO country codes through MaDao options', () => {
+  const api = new Function(`
+const PHONE_SMS_PROVIDER_HERO = 'hero-sms';
+const PHONE_SMS_PROVIDER_HERO_SMS = 'hero-sms';
+const PHONE_SMS_PROVIDER_FIVE_SIM = '5sim';
+const PHONE_SMS_PROVIDER_NEXSMS = 'nexsms';
+const PHONE_SMS_PROVIDER_MADAO = 'madao';
+let latestState = {};
+const madaoCountryOptionsState = [
+  { value: 'TH', label: 'Thailand' },
+  { value: 'US', label: 'United States' },
+];
+function normalizePhoneSmsProviderValue(value = '') { return String(value || '').trim().toLowerCase() || 'hero-sms'; }
+function normalizePhoneSmsProvider(value = '') { return normalizePhoneSmsProviderValue(value); }
+function normalizeFiveSimCountryCode(value = '', fallback = '') { return String(value || fallback); }
+function normalizeNexSmsCountryId(value, fallback = -1) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+function normalizeHeroSmsCountryId(value, fallback = 52) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+function normalizeHeroSmsCountryLabel(value = '', fallback = 'Thailand') { return String(value || fallback); }
+function getHeroSmsCountryLabelById() { return 'Thailand'; }
+${extractFunction('normalizeMaDaoCountryValue')}
+${extractFunction('normalizeMaDaoCountryLabel')}
+${extractFunction('normalizePhoneActivationState')}
+${extractFunction('resolvePhoneActivationCountryLabel')}
+return { resolvePhoneActivationCountryLabel };
+`)();
+
+  assert.equal(
+    api.resolvePhoneActivationCountryLabel({
+      provider: 'madao',
+      activationId: 'madao-1',
+      phoneNumber: '+66950003333',
+      countryId: 'TH',
+      countryLabel: '',
+      successfulUses: 0,
+      maxUses: 1,
+    }),
+    'Thailand'
+  );
 });
 
 test('formatPhoneSmsPriceEntriesSummary treats HeroSMS physicalCount=0 as out of stock even when count is positive', () => {

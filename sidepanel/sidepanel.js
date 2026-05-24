@@ -465,6 +465,14 @@ const rowNexSmsApiKey = document.getElementById('row-nex-sms-api-key');
 const rowNexSmsCountry = document.getElementById('row-nex-sms-country');
 const rowNexSmsCountryFallback = document.getElementById('row-nex-sms-country-fallback');
 const rowNexSmsServiceCode = document.getElementById('row-nex-sms-service-code');
+const rowMaDaoBaseUrl = document.getElementById('row-madao-base-url');
+const rowMaDaoHttpSecret = document.getElementById('row-madao-http-secret');
+const rowMaDaoMode = document.getElementById('row-madao-mode');
+const rowMaDaoProviderId = document.getElementById('row-madao-provider-id');
+const rowMaDaoRoutingPlanId = document.getElementById('row-madao-routing-plan-id');
+const rowMaDaoServiceName = document.getElementById('row-madao-service-name');
+const rowMaDaoCountry = document.getElementById('row-madao-country');
+const rowMaDaoOptions = document.getElementById('row-madao-options');
 const rowHeroSmsRuntimePair = document.getElementById('row-hero-sms-runtime-pair');
 const rowHeroSmsCurrentNumber = document.getElementById('row-hero-sms-current-number');
 const rowHeroSmsCurrentCountdown = document.getElementById('row-hero-sms-current-countdown');
@@ -490,6 +498,18 @@ const inputFiveSimProduct = document.getElementById('input-five-sim-product');
 const inputNexSmsApiKey = document.getElementById('input-nex-sms-api-key');
 const btnToggleNexSmsApiKey = document.getElementById('btn-toggle-nex-sms-api-key');
 const inputNexSmsServiceCode = document.getElementById('input-nex-sms-service-code');
+const inputMaDaoBaseUrl = document.getElementById('input-madao-base-url');
+const inputMaDaoHttpSecret = document.getElementById('input-madao-http-secret');
+const btnToggleMaDaoHttpSecret = document.getElementById('btn-toggle-madao-http-secret');
+const selectMaDaoMode = document.getElementById('select-madao-mode');
+const selectMaDaoProviderId = document.getElementById('select-madao-provider-id');
+const selectMaDaoRoutingPlanId = document.getElementById('select-madao-routing-plan-id');
+const btnMaDaoRefreshRoutingPlans = document.getElementById('btn-madao-refresh-routing-plans');
+const displayMaDaoServiceName = document.getElementById('display-madao-service-name');
+const selectMaDaoCountry = document.getElementById('select-madao-country');
+const btnMaDaoRefreshCountries = document.getElementById('btn-madao-refresh-countries');
+const inputMaDaoAutoPickCountry = document.getElementById('input-madao-auto-pick-country');
+const inputMaDaoReusePhone = document.getElementById('input-madao-reuse-phone');
 const inputHeroSmsMinPrice = document.getElementById('input-hero-sms-min-price');
 const inputHeroSmsMaxPrice = document.getElementById('input-hero-sms-max-price');
 const inputHeroSmsPreferredPrice = document.getElementById('input-hero-sms-preferred-price');
@@ -659,17 +679,28 @@ const PHONE_SMS_PROVIDER_HERO = 'hero-sms';
 const PHONE_SMS_PROVIDER_FIVE_SIM = '5sim';
 const PHONE_SMS_PROVIDER_HERO_SMS = PHONE_SMS_PROVIDER_HERO;
 const PHONE_SMS_PROVIDER_NEXSMS = 'nexsms';
+const PHONE_SMS_PROVIDER_MADAO = 'madao';
+const MADAO_MODE_ROUTING_PLAN = 'routing_plan';
+const MADAO_MODE_DIRECT = 'direct';
+const MADAO_DEFAULT_BASE_URL = 'http://127.0.0.1:7822';
 const DEFAULT_PHONE_SMS_PROVIDER = PHONE_SMS_PROVIDER_HERO;
 const DEFAULT_PHONE_SMS_PROVIDER_ORDER = Object.freeze([
   PHONE_SMS_PROVIDER_HERO,
   PHONE_SMS_PROVIDER_FIVE_SIM,
   PHONE_SMS_PROVIDER_NEXSMS,
+  PHONE_SMS_PROVIDER_MADAO,
 ]);
 const DEFAULT_FIVE_SIM_COUNTRY_ORDER = Object.freeze(['thailand']);
 const DEFAULT_FIVE_SIM_OPERATOR = 'any';
 const DEFAULT_FIVE_SIM_PRODUCT = 'openai';
 const DEFAULT_NEX_SMS_COUNTRY_ORDER = Object.freeze([1]);
 const DEFAULT_NEX_SMS_SERVICE_CODE = 'ot';
+const MADAO_FLOW_SERVICE_MAP = Object.freeze({
+  openai: 'openai',
+});
+let madaoRoutingPlanOptionsState = [];
+let madaoProviderOptionsState = [];
+let madaoCountryOptionsState = [];
 const HERO_SMS_COUNTRY_SELECTION_MAX = 3;
 const DEFAULT_HERO_SMS_REUSE_ENABLED = true;
 const HERO_SMS_ACQUIRE_PRIORITY_COUNTRY = 'country';
@@ -4548,6 +4579,31 @@ function collectSettingsPayload() {
   const nexSmsApiKeyValue = typeof inputNexSmsApiKey !== 'undefined' && inputNexSmsApiKey
     ? String(inputNexSmsApiKey.value || '')
     : String(latestState?.nexSmsApiKey || '');
+  const madaoBaseUrlValue = typeof inputMaDaoBaseUrl !== 'undefined' && inputMaDaoBaseUrl
+    ? String(inputMaDaoBaseUrl.value || '').trim()
+    : String(latestState?.madaoBaseUrl || MADAO_DEFAULT_BASE_URL).trim();
+  const madaoHttpSecretValue = typeof inputMaDaoHttpSecret !== 'undefined' && inputMaDaoHttpSecret
+    ? String(inputMaDaoHttpSecret.value || '').trim()
+    : String(latestState?.madaoHttpSecret || '').trim();
+  const madaoModeValue = typeof selectMaDaoMode !== 'undefined' && selectMaDaoMode
+    ? normalizeMaDaoModeValue(selectMaDaoMode.value)
+    : normalizeMaDaoModeValue(latestState?.madaoMode);
+  const madaoProviderIdValue = typeof selectMaDaoProviderId !== 'undefined' && selectMaDaoProviderId
+    ? normalizeMaDaoProviderIdValue(selectMaDaoProviderId.value || '')
+    : normalizeMaDaoProviderIdValue(latestState?.madaoProviderId || '');
+  const madaoRoutingPlanIdValue = typeof selectMaDaoRoutingPlanId !== 'undefined' && selectMaDaoRoutingPlanId
+    ? normalizeMaDaoRoutingPlanIdValue(selectMaDaoRoutingPlanId.value || '')
+    : normalizeMaDaoRoutingPlanIdValue(latestState?.madaoRoutingPlanId || '');
+  const madaoServiceNameValue = resolveMaDaoServiceName(latestState);
+  const madaoCountryValue = typeof selectMaDaoCountry !== 'undefined' && selectMaDaoCountry
+    ? normalizeMaDaoCountryValue(selectMaDaoCountry.value || '')
+    : normalizeMaDaoCountryValue(latestState?.madaoCountry || '');
+  const madaoAutoPickCountryValue = typeof inputMaDaoAutoPickCountry !== 'undefined' && inputMaDaoAutoPickCountry
+    ? Boolean(inputMaDaoAutoPickCountry.checked)
+    : Boolean(latestState?.madaoAutoPickCountry ?? true);
+  const madaoReusePhoneValue = typeof inputMaDaoReusePhone !== 'undefined' && inputMaDaoReusePhone
+    ? Boolean(inputMaDaoReusePhone.checked)
+    : Boolean(latestState?.madaoReusePhone ?? true);
   const defaultHeroSmsReuseEnabled = typeof DEFAULT_HERO_SMS_REUSE_ENABLED !== 'undefined'
     ? DEFAULT_HERO_SMS_REUSE_ENABLED
     : true;
@@ -4626,12 +4682,18 @@ function collectSettingsPayload() {
   const fiveSimMaxPriceValue = phoneSmsProviderValue === PHONE_SMS_PROVIDER_FIVE_SIM
     ? currentPhoneSmsMaxPriceValue
     : normalizeFiveSimMaxPriceValue(latestState?.fiveSimMaxPrice || '');
-  const heroSmsMinPriceValue = phoneSmsProviderValue === PHONE_SMS_PROVIDER_FIVE_SIM
-    ? normalizePhoneSmsMinPriceValueSafe(latestState?.heroSmsMinPrice || '', PHONE_SMS_PROVIDER_HERO_SMS)
-    : currentPhoneSmsMinPriceValue;
+  const heroSmsMinPriceValue = phoneSmsProviderValue === PHONE_SMS_PROVIDER_HERO_SMS
+    ? currentPhoneSmsMinPriceValue
+    : normalizePhoneSmsMinPriceValueSafe(latestState?.heroSmsMinPrice || '', PHONE_SMS_PROVIDER_HERO_SMS);
   const fiveSimMinPriceValue = phoneSmsProviderValue === PHONE_SMS_PROVIDER_FIVE_SIM
     ? currentPhoneSmsMinPriceValue
     : normalizePhoneSmsMinPriceValueSafe(latestState?.fiveSimMinPrice || '', PHONE_SMS_PROVIDER_FIVE_SIM);
+  const madaoMaxPriceValue = phoneSmsProviderValue === PHONE_SMS_PROVIDER_MADAO
+    ? currentPhoneSmsMaxPriceValue
+    : normalizeHeroSmsMaxPriceValue(latestState?.madaoMaxPrice || '');
+  const madaoMinPriceValue = phoneSmsProviderValue === PHONE_SMS_PROVIDER_MADAO
+    ? currentPhoneSmsMinPriceValue
+    : normalizePhoneSmsMinPriceValueSafe(latestState?.madaoMinPrice || '', PHONE_SMS_PROVIDER_MADAO);
   const defaultFiveSimProduct = typeof DEFAULT_FIVE_SIM_PRODUCT !== 'undefined'
     ? DEFAULT_FIVE_SIM_PRODUCT
     : 'openai';
@@ -5184,6 +5246,17 @@ function collectSettingsPayload() {
     nexSmsApiKey: nexSmsApiKeyValue,
     nexSmsCountryOrder: nexSmsCountryOrderValue,
     nexSmsServiceCode: nexSmsServiceCodeValue,
+    madaoBaseUrl: madaoBaseUrlValue || MADAO_DEFAULT_BASE_URL,
+    madaoHttpSecret: madaoHttpSecretValue,
+    madaoMode: madaoModeValue,
+    madaoProviderId: madaoModeValue === MADAO_MODE_DIRECT ? madaoProviderIdValue : '',
+    madaoRoutingPlanId: madaoModeValue === MADAO_MODE_ROUTING_PLAN ? madaoRoutingPlanIdValue : '',
+    madaoServiceName: madaoServiceNameValue || 'openai',
+    madaoCountry: madaoModeValue === MADAO_MODE_DIRECT ? madaoCountryValue : '',
+    madaoAutoPickCountry: madaoModeValue === MADAO_MODE_DIRECT ? madaoAutoPickCountryValue : true,
+    madaoReusePhone: madaoModeValue === MADAO_MODE_DIRECT ? madaoReusePhoneValue : true,
+    madaoMinPrice: madaoMinPriceValue,
+    madaoMaxPrice: madaoMaxPriceValue,
     phoneSmsReuseEnabled: phoneSmsReuseEnabledValue,
     heroSmsReuseEnabled: heroSmsReuseEnabledValue,
     freePhoneReuseEnabled: freePhoneReuseEnabledValue,
@@ -5269,12 +5342,18 @@ function normalizePhoneSmsProvider(value = '') {
   const nexSmsProvider = typeof PHONE_SMS_PROVIDER_NEXSMS !== 'undefined'
     ? PHONE_SMS_PROVIDER_NEXSMS
     : 'nexsms';
+  const madaoProvider = typeof PHONE_SMS_PROVIDER_MADAO !== 'undefined'
+    ? PHONE_SMS_PROVIDER_MADAO
+    : 'madao';
   const normalized = String(value || '').trim().toLowerCase();
   if (normalized === PHONE_SMS_PROVIDER_FIVE_SIM) {
     return PHONE_SMS_PROVIDER_FIVE_SIM;
   }
   if (normalized === nexSmsProvider) {
     return nexSmsProvider;
+  }
+  if (normalized === madaoProvider) {
+    return madaoProvider;
   }
   return PHONE_SMS_PROVIDER_HERO_SMS;
 }
@@ -5305,7 +5384,17 @@ function getPhoneSmsProviderLabel(provider = getSelectedPhoneSmsProvider()) {
   if (typeof window !== 'undefined' && window.PhoneSmsProviderRegistry?.getProviderLabel) {
     return window.PhoneSmsProviderRegistry.getProviderLabel(provider);
   }
-  return normalizePhoneSmsProvider(provider) === PHONE_SMS_PROVIDER_FIVE_SIM ? '5sim' : 'HeroSMS';
+  const normalized = normalizePhoneSmsProvider(provider);
+  if (normalized === PHONE_SMS_PROVIDER_FIVE_SIM) {
+    return '5sim';
+  }
+  if (normalized === (typeof PHONE_SMS_PROVIDER_NEXSMS !== 'undefined' ? PHONE_SMS_PROVIDER_NEXSMS : 'nexsms')) {
+    return 'NexSMS';
+  }
+  if (normalized === (typeof PHONE_SMS_PROVIDER_MADAO !== 'undefined' ? PHONE_SMS_PROVIDER_MADAO : 'madao')) {
+    return 'MaDao';
+  }
+  return 'HeroSMS';
 }
 
 function isFiveSimProviderSelected() {
@@ -5320,8 +5409,12 @@ function normalizePhoneSmsCountryId(value, provider = getSelectedPhoneSmsProvide
 }
 
 function normalizePhoneSmsCountryLabel(value = '', provider = getSelectedPhoneSmsProvider()) {
-  if (normalizePhoneSmsProvider(provider) === PHONE_SMS_PROVIDER_FIVE_SIM) {
+  const normalizedProvider = normalizePhoneSmsProvider(provider);
+  if (normalizedProvider === PHONE_SMS_PROVIDER_FIVE_SIM) {
     return normalizeFiveSimCountryLabel(value);
+  }
+  if (normalizedProvider === PHONE_SMS_PROVIDER_MADAO) {
+    return normalizeMaDaoCountryLabel(value);
   }
   return normalizeHeroSmsCountryLabel(value);
 }
@@ -5813,6 +5906,221 @@ function normalizeNexSmsServiceCodeValue(value = '') {
     .toLowerCase()
     .replace(/[^a-z0-9_-]/g, '');
   return normalized || DEFAULT_NEX_SMS_SERVICE_CODE;
+}
+
+function normalizeMaDaoModeValue(value = '') {
+  return String(value || '').trim().toLowerCase() === MADAO_MODE_DIRECT
+    ? MADAO_MODE_DIRECT
+    : MADAO_MODE_ROUTING_PLAN;
+}
+
+function normalizeMaDaoProviderIdValue(value = '') {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '');
+}
+
+function normalizeMaDaoRoutingPlanIdValue(value = '') {
+  return String(value || '').trim();
+}
+
+function normalizeMaDaoCountryValue(value = '') {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) {
+    return '';
+  }
+  const lowered = trimmed.toLowerCase();
+  if (lowered === 'any' || lowered === 'local') {
+    return lowered;
+  }
+  if (/^[a-z]{2}$/i.test(trimmed)) {
+    return trimmed.toUpperCase();
+  }
+  return lowered;
+}
+
+function normalizeMaDaoCountryLabel(value = '', fallback = '') {
+  const trimmed = String(value || '').trim();
+  if (trimmed) {
+    return trimmed;
+  }
+  const canonical = normalizeMaDaoCountryValue(fallback);
+  if (!canonical) {
+    return '';
+  }
+  if (canonical === 'any') {
+    return 'All countries';
+  }
+  if (canonical === 'local') {
+    return 'Local';
+  }
+  if (/^[A-Z]{2}$/.test(canonical) && typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function') {
+    try {
+      const displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
+      const resolved = displayNames.of(canonical);
+      if (resolved) {
+        return resolved;
+      }
+    } catch { }
+  }
+  return canonical;
+}
+
+function syncMaDaoServiceNameDisplay(state = latestState) {
+  if (typeof displayMaDaoServiceName !== 'undefined' && displayMaDaoServiceName) {
+    displayMaDaoServiceName.textContent = resolveMaDaoServiceName(state);
+  }
+}
+
+function resolveMaDaoServiceName(state = latestState) {
+  const flowId = typeof getSelectedFlowId === 'function'
+    ? getSelectedFlowId(state)
+    : String(state?.activeFlowId || state?.flowId || DEFAULT_ACTIVE_FLOW_ID).trim().toLowerCase();
+  return MADAO_FLOW_SERVICE_MAP[flowId] || 'openai';
+}
+
+function buildMaDaoHeaders(baseUrl = '', httpSecret = '') {
+  const headers = {
+    Accept: 'application/json',
+  };
+  const normalizedSecret = String(httpSecret || '').trim();
+  if (normalizedSecret) {
+    headers.Authorization = `Bearer ${normalizedSecret}`;
+  }
+  return headers;
+}
+
+function buildMaDaoUrl(path = '', baseUrl = MADAO_DEFAULT_BASE_URL) {
+  return new URL(String(path || '').replace(/^\/+/, ''), `${String(baseUrl || MADAO_DEFAULT_BASE_URL).trim().replace(/\/+$/, '')}/`).toString();
+}
+
+function setSelectOptions(selectEl, items = [], options = {}) {
+  if (!selectEl) {
+    return;
+  }
+  const placeholder = String(options.placeholder || '').trim();
+  const includeEmpty = options.includeEmpty !== false;
+  const emptyValue = options.emptyValue !== undefined ? String(options.emptyValue) : '';
+  const currentValue = String(options.value !== undefined ? options.value : selectEl.value || '').trim();
+  selectEl.innerHTML = '';
+  if (includeEmpty) {
+    const emptyOption = document.createElement('option');
+    emptyOption.value = emptyValue;
+    emptyOption.textContent = placeholder || '请选择';
+    selectEl.appendChild(emptyOption);
+  }
+  (Array.isArray(items) ? items : []).forEach((item) => {
+    const option = document.createElement('option');
+    option.value = String(item?.value || '').trim();
+    option.textContent = String(item?.label || item?.value || '').trim() || option.value;
+    if (item?.hint) {
+      option.title = String(item.hint || '').trim();
+    }
+    selectEl.appendChild(option);
+  });
+  const values = new Set(Array.from(selectEl.options || []).map((option) => String(option.value || '').trim()));
+  selectEl.value = values.has(currentValue) ? currentValue : (includeEmpty ? emptyValue : (Array.from(values)[0] || ''));
+}
+
+async function fetchMaDaoJson(path = '', options = {}) {
+  const baseUrl = typeof inputMaDaoBaseUrl !== 'undefined' && inputMaDaoBaseUrl
+    ? String(inputMaDaoBaseUrl.value || '').trim() || MADAO_DEFAULT_BASE_URL
+    : String(latestState?.madaoBaseUrl || MADAO_DEFAULT_BASE_URL).trim() || MADAO_DEFAULT_BASE_URL;
+  const httpSecret = typeof inputMaDaoHttpSecret !== 'undefined' && inputMaDaoHttpSecret
+    ? String(inputMaDaoHttpSecret.value || '').trim()
+    : String(latestState?.madaoHttpSecret || '').trim();
+  const response = await fetch(buildMaDaoUrl(path, baseUrl), {
+    method: options.method || 'GET',
+    headers: {
+      ...buildMaDaoHeaders(baseUrl, httpSecret),
+      ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    },
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    cache: 'no-store',
+  });
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : null;
+  if (!response.ok) {
+    const message = String(payload?.message || payload?.error || response.statusText || `HTTP ${response.status}`).trim();
+    throw new Error(message || 'MaDao 请求失败');
+  }
+  return payload;
+}
+
+async function loadMaDaoRoutingPlans(options = {}) {
+  const payload = await fetchMaDaoJson('/api/routing-plans');
+  const plans = Array.isArray(payload?.plans) ? payload.plans : [];
+  const serviceName = resolveMaDaoServiceName(latestState);
+  madaoRoutingPlanOptionsState = plans
+    .filter((plan) => Boolean(plan?.enabled))
+    .filter((plan) => !serviceName || String(plan?.service || '').trim().toLowerCase() === serviceName)
+    .map((plan) => ({
+      value: String(plan?.id || '').trim(),
+      label: String(plan?.name || plan?.id || '').trim(),
+      hint: String(plan?.description || '').trim(),
+      service: String(plan?.service || '').trim().toLowerCase(),
+    }))
+    .filter((item) => item.value);
+  setSelectOptions(selectMaDaoRoutingPlanId, madaoRoutingPlanOptionsState, {
+    placeholder: '请选择路由方案',
+    value: latestState?.madaoRoutingPlanId || '',
+  });
+  if (!options.silent && typeof showToast === 'function') {
+    showToast('已刷新 MaDao 路由方案。', 'info', 1600);
+  }
+  return madaoRoutingPlanOptionsState;
+}
+
+async function loadMaDaoProviders(options = {}) {
+  const payload = await fetchMaDaoJson('/api/providers');
+  const providers = Array.isArray(payload?.providers) ? payload.providers : [];
+  madaoProviderOptionsState = providers
+    .filter((provider) => Boolean(provider?.enabled))
+    .map((provider) => ({
+      value: normalizeMaDaoProviderIdValue(provider?.id || ''),
+      label: String(provider?.name || provider?.id || '').trim(),
+      hint: String(provider?.protocol_label || provider?.description || '').trim(),
+      defaultCountry: normalizeMaDaoCountryValue(provider?.default_country || ''),
+    }))
+    .filter((item) => item.value);
+  setSelectOptions(selectMaDaoProviderId, madaoProviderOptionsState, {
+    placeholder: '请选择服务商',
+    value: latestState?.madaoProviderId || '',
+  });
+  if (!options.silent && typeof showToast === 'function') {
+    showToast('已刷新 MaDao 服务商。', 'info', 1600);
+  }
+  return madaoProviderOptionsState;
+}
+
+async function loadMaDaoCountries(options = {}) {
+  const providerId = normalizeMaDaoProviderIdValue(
+    typeof selectMaDaoProviderId !== 'undefined' && selectMaDaoProviderId
+      ? selectMaDaoProviderId.value
+      : latestState?.madaoProviderId
+  );
+  if (!providerId) {
+    madaoCountryOptionsState = [];
+    setSelectOptions(selectMaDaoCountry, [], {
+      placeholder: '请先选择服务商',
+      value: '',
+    });
+    return [];
+  }
+  const payload = await fetchMaDaoJson(`/api/providers/${encodeURIComponent(providerId)}/countries`);
+  madaoCountryOptionsState = (Array.isArray(payload?.items) ? payload.items : [])
+    .map((item) => ({
+      value: normalizeMaDaoCountryValue(item?.value || ''),
+      label: normalizeMaDaoCountryLabel(item?.label || '', item?.value || ''),
+      hint: String(item?.hint || '').trim(),
+    }))
+    .filter((item) => item.value);
+  setSelectOptions(selectMaDaoCountry, madaoCountryOptionsState, {
+    placeholder: '自动 / 未指定',
+    value: latestState?.madaoCountry || '',
+  });
+  if (!options.silent && typeof showToast === 'function') {
+    showToast('已刷新 MaDao 国家列表。', 'info', 1600);
+  }
+  return madaoCountryOptionsState;
 }
 
 function normalizeFiveSimCountryLabel(value = '', fallback = 'Thailand') {
@@ -6770,13 +7078,36 @@ function updateHeroSmsPlatformDisplay() {
     ? (getSelectedFiveSimCountries()[0] || { id: DEFAULT_FIVE_SIM_COUNTRY_ID, label: DEFAULT_FIVE_SIM_COUNTRY_LABEL })
     : (provider === PHONE_SMS_PROVIDER_NEXSMS
       ? (getSelectedNexSmsCountries()[0] || { id: DEFAULT_NEX_SMS_COUNTRY_ORDER[0], label: `Country #${DEFAULT_NEX_SMS_COUNTRY_ORDER[0]}` })
-      : getSelectedHeroSmsCountryOption());
+      : (provider === PHONE_SMS_PROVIDER_MADAO
+        ? {
+          label: normalizeMaDaoModeValue(selectMaDaoMode?.value || latestState?.madaoMode) === MADAO_MODE_ROUTING_PLAN
+            ? (madaoRoutingPlanOptionsState.find((item) => item.value === normalizeMaDaoRoutingPlanIdValue(selectMaDaoRoutingPlanId?.value || latestState?.madaoRoutingPlanId || ''))?.label || '')
+            : (madaoCountryOptionsState.find((item) => item.value === normalizeMaDaoCountryValue(selectMaDaoCountry?.value || latestState?.madaoCountry || ''))?.label || ''),
+        }
+        : getSelectedHeroSmsCountryOption()));
   const countryText = selected?.label ? ` / ${selected.label}` : '';
-  displayHeroSmsPlatform.textContent = `${getPhoneSmsProviderLabel(provider)} / OpenAI${countryText}`;
+  const serviceText = provider === PHONE_SMS_PROVIDER_MADAO ? resolveMaDaoServiceName(latestState) : 'OpenAI';
+  displayHeroSmsPlatform.textContent = `${getPhoneSmsProviderLabel(provider)} / ${serviceText}${countryText}`;
   if (inputHeroSmsApiKey) {
     inputHeroSmsApiKey.placeholder = provider === PHONE_SMS_PROVIDER_FIVE_SIM
       ? '请输入 5sim API Key'
       : (provider === PHONE_SMS_PROVIDER_NEXSMS ? '请输入 NexSMS API Key' : '请输入 HeroSMS API Key');
+  }
+}
+
+async function refreshMaDaoReferenceData(options = {}) {
+  try {
+    syncMaDaoServiceNameDisplay(latestState);
+    await loadMaDaoProviders({ silent: true });
+    if (normalizeMaDaoModeValue(selectMaDaoMode?.value || latestState?.madaoMode) === MADAO_MODE_ROUTING_PLAN) {
+      await loadMaDaoRoutingPlans({ silent: true });
+    } else {
+      await loadMaDaoCountries({ silent: true });
+    }
+  } catch (error) {
+    if (!options.silent && typeof showToast === 'function') {
+      showToast(`刷新 MaDao 枚举失败：${error?.message || error}`, 'warn', 2200);
+    }
   }
 }
 
@@ -7124,6 +7455,10 @@ function normalizePhoneActivationState(record = {}) {
       record.countryCode || record.countryId || '',
       ''
     );
+  } else if (provider === PHONE_SMS_PROVIDER_MADAO) {
+    normalized.countryId = normalizeMaDaoCountryValue(
+      record.countryCode || record.countryId || ''
+    );
   } else if (provider === PHONE_SMS_PROVIDER_NEXSMS) {
     normalized.countryId = normalizeNexSmsCountryId(record.countryId, -1);
   } else {
@@ -7164,6 +7499,11 @@ function resolvePhoneActivationCountryLabel(activation = null) {
   if (normalized.provider === PHONE_SMS_PROVIDER_FIVE_SIM) {
     return String(normalized.countryId || '').trim();
   }
+  if (normalized.provider === PHONE_SMS_PROVIDER_MADAO) {
+    const countryId = normalizeMaDaoCountryValue(normalized.countryId || '');
+    const matched = madaoCountryOptionsState.find((item) => item.value === countryId);
+    return normalizeMaDaoCountryLabel(matched?.label || '', countryId);
+  }
   if (normalized.provider === PHONE_SMS_PROVIDER_NEXSMS) {
     const countryId = normalizeNexSmsCountryId(normalized.countryId, -1);
     return countryId >= 0 ? `Country #${countryId}` : '';
@@ -7180,6 +7520,9 @@ function getPhoneSmsProviderLabel(provider = '') {
   }
   if (normalized === PHONE_SMS_PROVIDER_NEXSMS) {
     return 'NexSMS';
+  }
+  if (normalized === PHONE_SMS_PROVIDER_MADAO) {
+    return 'MaDao';
   }
   return 'HeroSMS';
 }
@@ -8558,9 +8901,18 @@ async function previewHeroSmsPriceTiers() {
 
   const previews = [];
   for (const provider of providerOrder) {
-    if (provider === fiveSimProviderValue) {
+  if (provider === fiveSimProviderValue) {
       const lines = await buildFiveSimPricePreviewLines({ providerLabel: '5sim' });
       previews.push(...lines, '');
+      continue;
+    }
+    if (provider === PHONE_SMS_PROVIDER_MADAO) {
+      previews.push(
+        'MaDao：',
+        normalizeMaDaoModeValue(selectMaDaoMode?.value || latestState?.madaoMode) === MADAO_MODE_ROUTING_PLAN
+          ? '路由方案模式下请在 MaDao 内查看方案明细价格。'
+          : '直连参数模式下请在 MaDao 控制台或 provider 资源接口中查看价格。'
+      , '');
       continue;
     }
     if (provider === nexSmsProviderValue) {
@@ -8769,6 +9121,11 @@ async function previewPhoneSmsBalance() {
     return;
   }
   const provider = getSelectedPhoneSmsProvider();
+  if (provider === PHONE_SMS_PROVIDER_MADAO) {
+    displayPhoneSmsBalance.textContent = 'MaDao 模式请在 MaDao 控制台查看余额。';
+    if (rowHeroSmsPriceTiers) rowHeroSmsPriceTiers.style.display = '';
+    return;
+  }
   const apiKey = String(inputHeroSmsApiKey?.value || '').trim();
   if (!apiKey) {
     displayPhoneSmsBalance.textContent = '请先填写接码 API Key';
@@ -9473,6 +9830,7 @@ function updatePhoneVerificationSettingsUI() {
   const heroProviderValue = typeof PHONE_SMS_PROVIDER_HERO !== 'undefined' ? PHONE_SMS_PROVIDER_HERO : 'hero-sms';
   const fiveSimProviderValue = typeof PHONE_SMS_PROVIDER_FIVE_SIM !== 'undefined' ? PHONE_SMS_PROVIDER_FIVE_SIM : '5sim';
   const nexSmsProviderValue = typeof PHONE_SMS_PROVIDER_NEXSMS !== 'undefined' ? PHONE_SMS_PROVIDER_NEXSMS : 'nexsms';
+  const madaoProviderValue = typeof PHONE_SMS_PROVIDER_MADAO !== 'undefined' ? PHONE_SMS_PROVIDER_MADAO : 'madao';
   const providerOrderForDisplay = resolveNormalizedProviderOrderForRuntime(latestState || {});
   const provider = providerOrderForDisplay[0] || (
     typeof getSelectedPhoneSmsProvider === 'function'
@@ -9482,6 +9840,10 @@ function updatePhoneVerificationSettingsUI() {
   const heroProvider = provider === heroProviderValue;
   const fiveSimProvider = provider === fiveSimProviderValue;
   const nexSmsProvider = provider === nexSmsProviderValue;
+  const madaoProvider = provider === madaoProviderValue;
+  const madaoMode = normalizeMaDaoModeValue(
+    (typeof selectMaDaoMode !== 'undefined' && selectMaDaoMode ? selectMaDaoMode.value : latestState?.madaoMode)
+  );
   if (rowPhoneVerificationEnabled) {
     rowPhoneVerificationEnabled.style.display = canShowPhoneSettings ? '' : 'none';
   }
@@ -9517,6 +9879,14 @@ function updatePhoneVerificationSettingsUI() {
     typeof rowNexSmsCountry !== 'undefined' ? rowNexSmsCountry : null,
     typeof rowNexSmsCountryFallback !== 'undefined' ? rowNexSmsCountryFallback : null,
     typeof rowNexSmsServiceCode !== 'undefined' ? rowNexSmsServiceCode : null,
+    typeof rowMaDaoBaseUrl !== 'undefined' ? rowMaDaoBaseUrl : null,
+    typeof rowMaDaoHttpSecret !== 'undefined' ? rowMaDaoHttpSecret : null,
+    typeof rowMaDaoMode !== 'undefined' ? rowMaDaoMode : null,
+    typeof rowMaDaoProviderId !== 'undefined' ? rowMaDaoProviderId : null,
+    typeof rowMaDaoRoutingPlanId !== 'undefined' ? rowMaDaoRoutingPlanId : null,
+    typeof rowMaDaoServiceName !== 'undefined' ? rowMaDaoServiceName : null,
+    typeof rowMaDaoCountry !== 'undefined' ? rowMaDaoCountry : null,
+    typeof rowMaDaoOptions !== 'undefined' ? rowMaDaoOptions : null,
     typeof rowHeroSmsMaxPrice !== 'undefined' ? rowHeroSmsMaxPrice : null,
     typeof rowFiveSimOperator !== 'undefined' ? rowFiveSimOperator : null,
     typeof rowPhoneCodeSettingsGroup !== 'undefined' ? rowPhoneCodeSettingsGroup : null,
@@ -9550,6 +9920,15 @@ function updatePhoneVerificationSettingsUI() {
   if (rowNexSmsCountry) rowNexSmsCountry.style.display = showSettings && nexSmsProvider ? '' : 'none';
   if (rowNexSmsCountryFallback) rowNexSmsCountryFallback.style.display = showSettings && nexSmsProvider ? '' : 'none';
   if (rowNexSmsServiceCode) rowNexSmsServiceCode.style.display = showSettings && nexSmsProvider ? '' : 'none';
+  if (typeof rowMaDaoBaseUrl !== 'undefined' && rowMaDaoBaseUrl) rowMaDaoBaseUrl.style.display = showSettings && madaoProvider ? '' : 'none';
+  if (typeof rowMaDaoHttpSecret !== 'undefined' && rowMaDaoHttpSecret) rowMaDaoHttpSecret.style.display = showSettings && madaoProvider ? '' : 'none';
+  if (typeof rowMaDaoMode !== 'undefined' && rowMaDaoMode) rowMaDaoMode.style.display = showSettings && madaoProvider ? '' : 'none';
+  if (typeof rowMaDaoProviderId !== 'undefined' && rowMaDaoProviderId) rowMaDaoProviderId.style.display = showSettings && madaoProvider && madaoMode === MADAO_MODE_DIRECT ? '' : 'none';
+  if (typeof rowMaDaoRoutingPlanId !== 'undefined' && rowMaDaoRoutingPlanId) rowMaDaoRoutingPlanId.style.display = showSettings && madaoProvider && madaoMode === MADAO_MODE_ROUTING_PLAN ? '' : 'none';
+  if (typeof rowMaDaoServiceName !== 'undefined' && rowMaDaoServiceName) rowMaDaoServiceName.style.display = showSettings && madaoProvider ? '' : 'none';
+  if (typeof rowMaDaoCountry !== 'undefined' && rowMaDaoCountry) rowMaDaoCountry.style.display = showSettings && madaoProvider && madaoMode === MADAO_MODE_DIRECT ? '' : 'none';
+  if (typeof rowMaDaoOptions !== 'undefined' && rowMaDaoOptions) rowMaDaoOptions.style.display = showSettings && madaoProvider && madaoMode === MADAO_MODE_DIRECT ? '' : 'none';
+  if (rowHeroSmsMaxPrice) rowHeroSmsMaxPrice.style.display = showSettings && (heroProvider || fiveSimProvider || (madaoProvider && madaoMode === MADAO_MODE_DIRECT)) ? '' : 'none';
   if (rowFiveSimOperator) {
     rowFiveSimOperator.style.display = showSettings && fiveSimProvider ? '' : 'none';
   }
@@ -11469,7 +11848,11 @@ function applySettingsState(state) {
   updatePhoneSmsProviderOrderSummary(restoredPhoneSmsProviderOrder);
   if (previousPhoneSmsProvider !== restoredPhoneSmsProvider) {
     heroSmsCountrySelectionOrder = [];
-    loadHeroSmsCountries({ silent: true }).catch(() => { });
+    if (restoredPhoneSmsProvider === PHONE_SMS_PROVIDER_MADAO) {
+      refreshMaDaoReferenceData({ silent: true }).catch(() => { });
+    } else {
+      loadHeroSmsCountries({ silent: true }).catch(() => { });
+    }
   }
   if (inputHeroSmsApiKey) {
     inputHeroSmsApiKey.value = restoredPhoneSmsProvider === PHONE_SMS_PROVIDER_FIVE_SIM
@@ -11497,6 +11880,42 @@ function applySettingsState(state) {
       ? normalizeNexSmsServiceCodeValue(state?.nexSmsServiceCode || defaultNexSmsServiceCode)
       : String(state?.nexSmsServiceCode || defaultNexSmsServiceCode).trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '') || defaultNexSmsServiceCode;
   }
+  if (typeof inputMaDaoBaseUrl !== 'undefined' && inputMaDaoBaseUrl) {
+    inputMaDaoBaseUrl.value = String(state?.madaoBaseUrl || MADAO_DEFAULT_BASE_URL).trim();
+  }
+  if (typeof inputMaDaoHttpSecret !== 'undefined' && inputMaDaoHttpSecret) {
+    inputMaDaoHttpSecret.value = String(state?.madaoHttpSecret || '').trim();
+  }
+  if (typeof selectMaDaoMode !== 'undefined' && selectMaDaoMode) {
+    selectMaDaoMode.value = normalizeMaDaoModeValue(state?.madaoMode);
+  }
+  if (typeof selectMaDaoProviderId !== 'undefined' && selectMaDaoProviderId) {
+    setSelectOptions(selectMaDaoProviderId, madaoProviderOptionsState, {
+      placeholder: '请选择服务商',
+      value: normalizeMaDaoProviderIdValue(state?.madaoProviderId || ''),
+    });
+  }
+  if (typeof selectMaDaoRoutingPlanId !== 'undefined' && selectMaDaoRoutingPlanId) {
+    setSelectOptions(selectMaDaoRoutingPlanId, madaoRoutingPlanOptionsState, {
+      placeholder: '请选择路由方案',
+      value: normalizeMaDaoRoutingPlanIdValue(state?.madaoRoutingPlanId || ''),
+    });
+  }
+  if (typeof displayMaDaoServiceName !== 'undefined' && displayMaDaoServiceName) {
+    displayMaDaoServiceName.textContent = resolveMaDaoServiceName(state);
+  }
+  if (typeof selectMaDaoCountry !== 'undefined' && selectMaDaoCountry) {
+    setSelectOptions(selectMaDaoCountry, madaoCountryOptionsState, {
+      placeholder: '自动 / 未指定',
+      value: normalizeMaDaoCountryValue(state?.madaoCountry || ''),
+    });
+  }
+  if (typeof inputMaDaoAutoPickCountry !== 'undefined' && inputMaDaoAutoPickCountry) {
+    inputMaDaoAutoPickCountry.checked = Boolean(state?.madaoAutoPickCountry ?? true);
+  }
+  if (typeof inputMaDaoReusePhone !== 'undefined' && inputMaDaoReusePhone) {
+    inputMaDaoReusePhone.checked = Boolean(state?.madaoReusePhone ?? true);
+  }
   if (typeof inputHeroSmsReuseEnabled !== 'undefined' && inputHeroSmsReuseEnabled) {
     inputHeroSmsReuseEnabled.checked = normalizeHeroSmsReuseEnabledValue(
       state?.phoneSmsReuseEnabled,
@@ -11515,12 +11934,16 @@ function applySettingsState(state) {
   if (inputHeroSmsMaxPrice) {
     inputHeroSmsMaxPrice.value = restoredPhoneSmsProvider === PHONE_SMS_PROVIDER_FIVE_SIM
       ? normalizeFiveSimMaxPriceValue(state?.fiveSimMaxPrice || '')
-      : normalizeHeroSmsMaxPriceValue(state?.heroSmsMaxPrice || '');
+      : (restoredPhoneSmsProvider === PHONE_SMS_PROVIDER_MADAO
+        ? normalizeHeroSmsMaxPriceValue(state?.madaoMaxPrice || '')
+        : normalizeHeroSmsMaxPriceValue(state?.heroSmsMaxPrice || ''));
   }
   if (typeof inputHeroSmsMinPrice !== 'undefined' && inputHeroSmsMinPrice) {
     inputHeroSmsMinPrice.value = restoredPhoneSmsProvider === PHONE_SMS_PROVIDER_FIVE_SIM
       ? normalizePhoneSmsMinPriceValue(state?.fiveSimMinPrice || '', PHONE_SMS_PROVIDER_FIVE_SIM)
-      : normalizePhoneSmsMinPriceValue(state?.heroSmsMinPrice || '', restoredPhoneSmsProvider);
+      : (restoredPhoneSmsProvider === PHONE_SMS_PROVIDER_MADAO
+        ? normalizePhoneSmsMinPriceValue(state?.madaoMinPrice || '', PHONE_SMS_PROVIDER_MADAO)
+        : normalizePhoneSmsMinPriceValue(state?.heroSmsMinPrice || '', restoredPhoneSmsProvider));
   }
   if (inputFiveSimOperator) {
     inputFiveSimOperator.value = normalizeFiveSimOperator(state?.fiveSimOperator);
@@ -16746,6 +17169,9 @@ async function switchPhoneSmsProvider(nextProvider) {
       .map((country) => normalizeFiveSimCountryId(country?.id, ''))
       .filter(Boolean);
     patch.fiveSimOperator = normalizeFiveSimOperator(inputFiveSimOperator?.value || latestState?.fiveSimOperator);
+  } else if (previousProvider === PHONE_SMS_PROVIDER_MADAO) {
+    patch.madaoMaxPrice = currentMaxPrice;
+    patch.madaoMinPrice = currentMinPrice;
   } else {
     patch.heroSmsApiKey = currentApiKey;
     patch.heroSmsMaxPrice = currentMaxPrice;
@@ -16766,12 +17192,16 @@ async function switchPhoneSmsProvider(nextProvider) {
   if (inputHeroSmsMaxPrice) {
     inputHeroSmsMaxPrice.value = normalizedNextProvider === PHONE_SMS_PROVIDER_FIVE_SIM
       ? normalizeFiveSimMaxPriceValue(latestState?.fiveSimMaxPrice || '')
-      : normalizeHeroSmsMaxPriceValue(latestState?.heroSmsMaxPrice || '');
+      : (normalizedNextProvider === PHONE_SMS_PROVIDER_MADAO
+        ? normalizeHeroSmsMaxPriceValue(latestState?.madaoMaxPrice || '')
+        : normalizeHeroSmsMaxPriceValue(latestState?.heroSmsMaxPrice || ''));
   }
   if (typeof inputHeroSmsMinPrice !== 'undefined' && inputHeroSmsMinPrice) {
     inputHeroSmsMinPrice.value = normalizedNextProvider === PHONE_SMS_PROVIDER_FIVE_SIM
       ? normalizePhoneSmsMinPriceValue(latestState?.fiveSimMinPrice || '', PHONE_SMS_PROVIDER_FIVE_SIM)
-      : normalizePhoneSmsMinPriceValue(latestState?.heroSmsMinPrice || '', normalizedNextProvider);
+      : (normalizedNextProvider === PHONE_SMS_PROVIDER_MADAO
+        ? normalizePhoneSmsMinPriceValue(latestState?.madaoMinPrice || '', PHONE_SMS_PROVIDER_MADAO)
+        : normalizePhoneSmsMinPriceValue(latestState?.heroSmsMinPrice || '', normalizedNextProvider));
   }
   if (inputFiveSimOperator) {
     inputFiveSimOperator.value = normalizeFiveSimOperator(latestState?.fiveSimOperator);
@@ -16780,20 +17210,24 @@ async function switchPhoneSmsProvider(nextProvider) {
   if (displayPhoneSmsBalance) displayPhoneSmsBalance.textContent = '余额未获取';
   if (rowHeroSmsPriceTiers) rowHeroSmsPriceTiers.style.display = 'none';
 
-  await loadHeroSmsCountries({ silent: true });
-  const restoredPrimary = normalizedNextProvider === PHONE_SMS_PROVIDER_FIVE_SIM
-    ? {
-      id: normalizeFiveSimCountryId(latestState?.fiveSimCountryId),
-      label: normalizeFiveSimCountryLabel(latestState?.fiveSimCountryLabel),
-    }
-    : {
-      id: normalizeHeroSmsCountryId(latestState?.heroSmsCountryId),
-      label: normalizeHeroSmsCountryLabel(latestState?.heroSmsCountryLabel),
-    };
-  const restoredFallback = normalizedNextProvider === PHONE_SMS_PROVIDER_FIVE_SIM
-    ? normalizeFiveSimCountryFallbackList(latestState?.fiveSimCountryFallback || [])
-    : normalizeHeroSmsCountryFallbackList(latestState?.heroSmsCountryFallback || []);
-  applyHeroSmsFallbackSelection([restoredPrimary, ...restoredFallback], { includePrimary: true });
+  if (normalizedNextProvider === PHONE_SMS_PROVIDER_MADAO) {
+    await refreshMaDaoReferenceData({ silent: true });
+  } else {
+    await loadHeroSmsCountries({ silent: true });
+    const restoredPrimary = normalizedNextProvider === PHONE_SMS_PROVIDER_FIVE_SIM
+      ? {
+        id: normalizeFiveSimCountryId(latestState?.fiveSimCountryId),
+        label: normalizeFiveSimCountryLabel(latestState?.fiveSimCountryLabel),
+      }
+      : {
+        id: normalizeHeroSmsCountryId(latestState?.heroSmsCountryId),
+        label: normalizeHeroSmsCountryLabel(latestState?.heroSmsCountryLabel),
+      };
+    const restoredFallback = normalizedNextProvider === PHONE_SMS_PROVIDER_FIVE_SIM
+      ? normalizeFiveSimCountryFallbackList(latestState?.fiveSimCountryFallback || [])
+      : normalizeHeroSmsCountryFallbackList(latestState?.heroSmsCountryFallback || []);
+    applyHeroSmsFallbackSelection([restoredPrimary, ...restoredFallback], { includePrimary: true });
+  }
   updatePhoneVerificationSettingsUI();
   markSettingsDirty(true);
   saveSettings({ silent: true }).catch(() => {});
@@ -16880,6 +17314,8 @@ selectPhoneSmsProvider?.addEventListener('change', async () => {
     applyNexSmsCountrySelection(
       Array.isArray(latestState?.nexSmsCountryOrder) ? latestState.nexSmsCountryOrder : []
     );
+  } else if (selectPhoneSmsProvider?.value === PHONE_SMS_PROVIDER_MADAO) {
+    await refreshMaDaoReferenceData({ silent: true });
   } else {
     await loadHeroSmsCountries().catch(() => { });
     const nextPrimaryCountryId = normalizeHeroSmsCountryId(latestState?.heroSmsCountryId, 0);
@@ -16986,6 +17422,68 @@ inputNexSmsApiKey?.addEventListener('input', () => {
 });
 inputNexSmsApiKey?.addEventListener('blur', () => {
   saveSettings({ silent: true }).catch(() => { });
+});
+
+inputMaDaoBaseUrl?.addEventListener('input', () => {
+  markSettingsDirty(true);
+  scheduleSettingsAutoSave();
+});
+inputMaDaoBaseUrl?.addEventListener('blur', () => {
+  refreshMaDaoReferenceData({ silent: true }).catch(() => { });
+  saveSettings({ silent: true }).catch(() => { });
+});
+inputMaDaoHttpSecret?.addEventListener('input', () => {
+  markSettingsDirty(true);
+  scheduleSettingsAutoSave();
+});
+inputMaDaoHttpSecret?.addEventListener('blur', () => {
+  saveSettings({ silent: true }).catch(() => { });
+});
+selectMaDaoMode?.addEventListener('change', () => {
+  selectMaDaoMode.value = normalizeMaDaoModeValue(selectMaDaoMode.value);
+  updatePhoneVerificationSettingsUI();
+  updateHeroSmsPlatformDisplay();
+  if (selectMaDaoMode.value === MADAO_MODE_ROUTING_PLAN) {
+    loadMaDaoRoutingPlans({ silent: true }).catch(() => { });
+  } else {
+    loadMaDaoCountries({ silent: true }).catch(() => { });
+  }
+  markSettingsDirty(true);
+  saveSettings({ silent: true }).catch(() => { });
+});
+selectMaDaoProviderId?.addEventListener('change', () => {
+  loadMaDaoCountries({ silent: true }).catch(() => { });
+  updateHeroSmsPlatformDisplay();
+  markSettingsDirty(true);
+  saveSettings({ silent: true }).catch(() => { });
+});
+selectMaDaoRoutingPlanId?.addEventListener('change', () => {
+  updateHeroSmsPlatformDisplay();
+  markSettingsDirty(true);
+  saveSettings({ silent: true }).catch(() => { });
+});
+selectMaDaoCountry?.addEventListener('change', () => {
+  updateHeroSmsPlatformDisplay();
+  markSettingsDirty(true);
+  saveSettings({ silent: true }).catch(() => { });
+});
+inputMaDaoAutoPickCountry?.addEventListener('change', () => {
+  markSettingsDirty(true);
+  saveSettings({ silent: true }).catch(() => { });
+});
+inputMaDaoReusePhone?.addEventListener('change', () => {
+  markSettingsDirty(true);
+  saveSettings({ silent: true }).catch(() => { });
+});
+btnMaDaoRefreshRoutingPlans?.addEventListener('click', () => {
+  loadMaDaoRoutingPlans().catch((error) => {
+    showToast(`刷新 MaDao 路由方案失败：${error?.message || error}`, 'warn', 2200);
+  });
+});
+btnMaDaoRefreshCountries?.addEventListener('click', () => {
+  loadMaDaoCountries().catch((error) => {
+    showToast(`刷新 MaDao 国家列表失败：${error?.message || error}`, 'warn', 2200);
+  });
 });
 
 inputNexSmsServiceCode?.addEventListener('input', () => {
@@ -18033,15 +18531,19 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       if (message.payload.heroSmsAcquirePriority !== undefined && selectHeroSmsAcquirePriority) {
         selectHeroSmsAcquirePriority.value = normalizeHeroSmsAcquirePriority(message.payload.heroSmsAcquirePriority);
       }
-      if ((message.payload.heroSmsMaxPrice !== undefined || message.payload.fiveSimMaxPrice !== undefined) && inputHeroSmsMaxPrice) {
+      if ((message.payload.heroSmsMaxPrice !== undefined || message.payload.fiveSimMaxPrice !== undefined || message.payload.madaoMaxPrice !== undefined) && inputHeroSmsMaxPrice) {
         inputHeroSmsMaxPrice.value = getSelectedPhoneSmsProvider() === PHONE_SMS_PROVIDER_FIVE_SIM
           ? normalizeFiveSimMaxPriceValue(message.payload.fiveSimMaxPrice !== undefined ? message.payload.fiveSimMaxPrice : latestState?.fiveSimMaxPrice)
-          : normalizeHeroSmsMaxPriceValue(message.payload.heroSmsMaxPrice !== undefined ? message.payload.heroSmsMaxPrice : latestState?.heroSmsMaxPrice);
+          : (getSelectedPhoneSmsProvider() === PHONE_SMS_PROVIDER_MADAO
+            ? normalizeHeroSmsMaxPriceValue(message.payload.madaoMaxPrice !== undefined ? message.payload.madaoMaxPrice : latestState?.madaoMaxPrice)
+            : normalizeHeroSmsMaxPriceValue(message.payload.heroSmsMaxPrice !== undefined ? message.payload.heroSmsMaxPrice : latestState?.heroSmsMaxPrice));
       }
-      if ((message.payload.heroSmsMinPrice !== undefined || message.payload.fiveSimMinPrice !== undefined) && typeof inputHeroSmsMinPrice !== 'undefined' && inputHeroSmsMinPrice) {
+      if ((message.payload.heroSmsMinPrice !== undefined || message.payload.fiveSimMinPrice !== undefined || message.payload.madaoMinPrice !== undefined) && typeof inputHeroSmsMinPrice !== 'undefined' && inputHeroSmsMinPrice) {
         inputHeroSmsMinPrice.value = getSelectedPhoneSmsProvider() === PHONE_SMS_PROVIDER_FIVE_SIM
           ? normalizePhoneSmsMinPriceValue(message.payload.fiveSimMinPrice !== undefined ? message.payload.fiveSimMinPrice : latestState?.fiveSimMinPrice, PHONE_SMS_PROVIDER_FIVE_SIM)
-          : normalizePhoneSmsMinPriceValue(message.payload.heroSmsMinPrice !== undefined ? message.payload.heroSmsMinPrice : latestState?.heroSmsMinPrice, getSelectedPhoneSmsProvider());
+          : (getSelectedPhoneSmsProvider() === PHONE_SMS_PROVIDER_MADAO
+            ? normalizePhoneSmsMinPriceValue(message.payload.madaoMinPrice !== undefined ? message.payload.madaoMinPrice : latestState?.madaoMinPrice, PHONE_SMS_PROVIDER_MADAO)
+            : normalizePhoneSmsMinPriceValue(message.payload.heroSmsMinPrice !== undefined ? message.payload.heroSmsMinPrice : latestState?.heroSmsMinPrice, getSelectedPhoneSmsProvider()));
       }
       if (message.payload.fiveSimOperator !== undefined && inputFiveSimOperator) {
         inputFiveSimOperator.value = normalizeFiveSimOperator(message.payload.fiveSimOperator);
@@ -18101,6 +18603,40 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         }
         updatePhoneSmsProviderOrderSummary(nextOrder);
         updatePhoneVerificationSettingsUI();
+      }
+      if (message.payload.madaoMode !== undefined && typeof selectMaDaoMode !== 'undefined' && selectMaDaoMode) {
+        selectMaDaoMode.value = normalizeMaDaoModeValue(message.payload.madaoMode);
+      }
+      if (message.payload.madaoProviderId !== undefined && typeof selectMaDaoProviderId !== 'undefined' && selectMaDaoProviderId) {
+        setSelectOptions(selectMaDaoProviderId, madaoProviderOptionsState, {
+          placeholder: '请选择服务商',
+          value: normalizeMaDaoProviderIdValue(message.payload.madaoProviderId),
+        });
+      }
+      if (message.payload.madaoRoutingPlanId !== undefined && typeof selectMaDaoRoutingPlanId !== 'undefined' && selectMaDaoRoutingPlanId) {
+        setSelectOptions(selectMaDaoRoutingPlanId, madaoRoutingPlanOptionsState, {
+          placeholder: '请选择路由方案',
+          value: normalizeMaDaoRoutingPlanIdValue(message.payload.madaoRoutingPlanId),
+        });
+      }
+      if (message.payload.madaoCountry !== undefined && typeof selectMaDaoCountry !== 'undefined' && selectMaDaoCountry) {
+        setSelectOptions(selectMaDaoCountry, madaoCountryOptionsState, {
+          placeholder: '自动 / 未指定',
+          value: normalizeMaDaoCountryValue(message.payload.madaoCountry),
+        });
+      }
+      if (
+        message.payload.madaoMode !== undefined
+        || message.payload.madaoProviderId !== undefined
+        || message.payload.madaoRoutingPlanId !== undefined
+        || message.payload.madaoCountry !== undefined
+        || message.payload.activeFlowId !== undefined
+        || message.payload.flowId !== undefined
+      ) {
+        syncMaDaoServiceNameDisplay({
+          ...(latestState || {}),
+          ...(message.payload || {}),
+        });
       }
       if (message.payload.phoneVerificationEnabled !== undefined && inputPhoneVerificationEnabled) {
         inputPhoneVerificationEnabled.checked = Boolean(message.payload.phoneVerificationEnabled);

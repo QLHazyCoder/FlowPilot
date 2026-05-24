@@ -290,6 +290,7 @@ return {
   assert.equal(api.normalizePersistentSettingValue('kiroRsKey', ' key-1 '), 'key-1');
   assert.equal(api.normalizePersistentSettingValue('phoneSmsProvider', '5SIM'), '5sim');
   assert.equal(api.normalizePersistentSettingValue('phoneSmsProvider', 'NEXSMS'), 'nexsms');
+  assert.equal(api.normalizePersistentSettingValue('phoneSmsProvider', 'MADAO'), 'madao');
   assert.equal(api.normalizePersistentSettingValue('phoneSmsProvider', 'unknown'), 'hero-sms');
   assert.deepStrictEqual(api.normalizePersistentSettingValue('phoneSmsProviderOrder', ['nexsms', '5sim', 'nexsms']), ['nexsms', '5sim']);
   assert.equal(api.normalizePersistentSettingValue('phoneSmsReuseEnabled', false), false);
@@ -361,6 +362,18 @@ return {
     ['thailand', 'vietnam']
   );
   assert.equal(api.normalizePersistentSettingValue('nexSmsApiKey', ' demo-nex '), ' demo-nex ');
+  assert.equal(api.normalizePersistentSettingValue('madaoBaseUrl', ' http://127.0.0.1:7822 '), 'http://127.0.0.1:7822');
+  assert.equal(api.normalizePersistentSettingValue('madaoHttpSecret', ' demo-secret '), 'demo-secret');
+  assert.equal(api.normalizePersistentSettingValue('madaoMode', ' direct '), 'direct');
+  assert.equal(api.normalizePersistentSettingValue('madaoMode', 'unknown'), 'routing_plan');
+  assert.equal(api.normalizePersistentSettingValue('madaoProviderId', ' HeroSMS '), 'herosms');
+  assert.equal(api.normalizePersistentSettingValue('madaoRoutingPlanId', ' plan-1 '), 'plan-1');
+  assert.equal(api.normalizePersistentSettingValue('madaoServiceName', ' OpenAI '), 'openai');
+  assert.equal(api.normalizePersistentSettingValue('madaoCountry', ' th '), 'TH');
+  assert.equal(api.normalizePersistentSettingValue('madaoAutoPickCountry', 1), true);
+  assert.equal(api.normalizePersistentSettingValue('madaoReusePhone', 0), false);
+  assert.equal(api.normalizePersistentSettingValue('madaoMinPrice', '0.023456'), '0.0235');
+  assert.equal(api.normalizePersistentSettingValue('madaoMaxPrice', '0.123456'), '0.1235');
   assert.deepStrictEqual(
     api.normalizePersistentSettingValue('nexSmsCountryOrder', []),
     []
