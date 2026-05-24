@@ -11317,6 +11317,7 @@ async function recoverFillProfileCompletionFromBackground(executeError = null) {
     ...(pageState?.successState ? { successState: pageState.successState } : {}),
     ...(pageState?.url ? { url: pageState.url } : {}),
     recoveredByBackground: true,
+    step5PostCompletionValidated: true,
   };
 
   await addLog('步骤 5 [调试] 资料页完成信号丢失，后台复核已确认成功。', 'ok', {
@@ -11945,15 +11946,22 @@ async function executeNodeAndWait(nodeId, delayAfter = 2000) {
   if (normalizedNodeId === 'fill-profile') {
     const signupTabId = await getTabId('openai-auth');
     if (signupTabId) {
-      await addLog('自动运行：填写资料节点已收到完成信号，正在等待当前页面完成加载并稳定...', 'info');
-      await waitForTabStableComplete(signupTabId, {
-        timeoutMs: 120000,
-        retryDelayMs: 300,
-        stableMs: 1000,
-        initialDelayMs: 800,
-      });
       try {
-        await validateStep5PostCompletion(signupTabId, completionPayload || {});
+        if (!completionPayload?.step5PostCompletionValidated) {
+          await addLog('自动运行：填写资料节点已收到完成信号，正在等待当前页面完成加载并稳定...', 'info');
+          await waitForTabStableComplete(signupTabId, {
+            timeoutMs: 120000,
+            retryDelayMs: 300,
+            stableMs: 1000,
+            initialDelayMs: 800,
+          });
+          await validateStep5PostCompletion(signupTabId, completionPayload || {});
+        } else {
+          await addLog('自动运行：步骤 5 后台恢复已完成最终复核，直接进入后续节点。', 'ok', {
+            step: 5,
+            stepKey: 'fill-profile',
+          });
+        }
         await setNodeStatus(normalizedNodeId, 'completed');
         await addLog('已完成', 'ok', { nodeId: normalizedNodeId });
         await addLog('步骤 5 [调试] 资料页完成信号已通过后台复核。', 'ok', {
@@ -14337,13 +14345,20 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
     if (!signupTabId) {
       throw new Error('步骤 5：缺少认证页标签页，无法确认是否已跳转到 https://chatgpt.com。');
     }
-    await waitForTabStableComplete(signupTabId, {
-      timeoutMs: 120000,
-      retryDelayMs: 300,
-      stableMs: 1000,
-      initialDelayMs: 800,
-    });
-    await validateStep5PostCompletion(signupTabId, completionPayload || {});
+    if (!completionPayload?.step5PostCompletionValidated) {
+      await waitForTabStableComplete(signupTabId, {
+        timeoutMs: 120000,
+        retryDelayMs: 300,
+        stableMs: 1000,
+        initialDelayMs: 800,
+      });
+      await validateStep5PostCompletion(signupTabId, completionPayload || {});
+    } else {
+      await addLog('步骤 5：后台已完成最终状态复核，直接标记完成并进入下一步。', 'ok', {
+        step: 5,
+        stepKey: 'fill-profile',
+      });
+    }
     await setNodeStatus('fill-profile', 'completed');
     await addLog('已完成', 'ok', { nodeId: 'fill-profile' });
   },

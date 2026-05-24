@@ -288,6 +288,7 @@ return {
 
   assert.equal(result.successState, 'logged_in_home');
   assert.equal(result.recoveredByBackground, true);
+  assert.equal(result.step5PostCompletionValidated, true);
   assert.equal(result.url, 'https://chatgpt.com/');
   assert.equal(result.requireContentStateBeforeUrlSuccess, true);
   assert.equal(snapshot.promptAdvanceCount, 3);
@@ -309,6 +310,75 @@ return {
   );
   assert.equal(
     snapshot.logs.some(({ message }) => /页面通信中断，正在通过后台复核最终状态/.test(message)),
+    true
+  );
+});
+
+test('executeNodeAndWait skips duplicate step 5 validation after background recovery already validated completion', async () => {
+  const api = new Function(`
+const events = [];
+
+function throwIfStopped() {}
+
+async function getState() {
+  return {
+    autoStepDelaySeconds: 0,
+    nodeStatuses: {
+      'fill-profile': 'running',
+      'wait-registration-success': 'pending',
+    },
+  };
+}
+
+function assertNodeExecutionAllowedForState() {}
+function normalizeAutoStepDelaySeconds() { return 0; }
+async function addLog(message, level, meta) { events.push({ type: 'log', message, level, meta }); }
+async function sleepWithStop() {}
+function getStepIdByNodeIdForState(nodeId) { return nodeId === 'fill-profile' ? 5 : 0; }
+function getAutoRunPreExecutionDelayMsForNode() { return 0; }
+function doesNodeUseBackgroundCompletion() { return false; }
+function doesNodeUseCompletionSignal(nodeId) { return nodeId === 'fill-profile'; }
+function getNodeCompletionSignalTimeoutMs() { return 150000; }
+async function executeNode() { throw new Error('executeNode should not be called directly'); }
+async function executeNodeViaCompletionSignal(nodeId, timeoutMs) {
+  events.push({ type: 'completionSignal', nodeId, timeoutMs });
+  return {
+    nodeId,
+    outcome: 'background_transport_recovered',
+    successState: 'logged_in_home',
+    url: 'https://chatgpt.com/',
+    recoveredByBackground: true,
+    step5PostCompletionValidated: true,
+  };
+}
+async function getTabId(source) { return source === 'openai-auth' ? 99 : null; }
+async function waitForTabStableComplete() { events.push({ type: 'waitForTabStableComplete' }); }
+async function validateStep5PostCompletion() { throw new Error('duplicate validation should be skipped'); }
+async function setNodeStatus(nodeId, status) { events.push({ type: 'status', nodeId, status }); }
+function getErrorMessage(error) { return error?.message || String(error || ''); }
+
+${extractFunction('executeNodeAndWait')}
+
+return {
+  async run() {
+    await executeNodeAndWait('fill-profile', 0);
+  },
+  snapshot() {
+    return events;
+  },
+};
+`)();
+
+  await api.run();
+  const events = api.snapshot();
+
+  assert.equal(events.some((entry) => entry.type === 'waitForTabStableComplete'), false);
+  assert.equal(
+    events.some((entry) => entry.type === 'log' && /后台恢复已完成最终复核，直接进入后续节点/.test(entry.message)),
+    true
+  );
+  assert.equal(
+    events.some((entry) => entry.type === 'status' && entry.nodeId === 'fill-profile' && entry.status === 'completed'),
     true
   );
 });
