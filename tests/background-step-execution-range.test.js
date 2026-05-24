@@ -162,3 +162,66 @@ test('step execution range ignores progress outside the allowed range', () => {
   assert.equal(api.hasSavedNodeProgress(state.nodeStatuses, state), true);
   assert.equal(api.getFirstUnfinishedNodeId(state.nodeStatuses, state), 'fetch-signup-code');
 });
+
+test('setNodeStatus advances current node to step 6 after fill-profile completes', async () => {
+  const events = [];
+  const api = new Function('events', `
+let state = {
+  activeFlowId: 'openai',
+  nodeStatuses: {
+    'open-chatgpt': 'completed',
+    'submit-signup-email': 'completed',
+    'fill-password': 'completed',
+    'fetch-signup-code': 'completed',
+    'fill-profile': 'running',
+    'wait-registration-success': 'pending',
+  },
+  currentNodeId: 'fill-profile',
+};
+const DEFAULT_ACTIVE_FLOW_ID = 'openai';
+const DEFAULT_STATE = { nodeStatuses: ${JSON.stringify(Object.fromEntries(NODE_IDS.map((nodeId) => [nodeId, 'pending'])))} };
+const chrome = {
+  runtime: {
+    sendMessage(message) {
+      events.push({ type: 'message', message });
+      return { catch() {} };
+    },
+  },
+};
+async function getState() { return state; }
+async function setState(updates) {
+  events.push({ type: 'setState', updates });
+  state = { ...state, ...updates };
+}
+function getNodeIdsForState() { return ${JSON.stringify(NODE_IDS)}; }
+function getStepIdByNodeIdForState(nodeId) { return ${JSON.stringify(NODE_STEPS)}[String(nodeId || '').trim()] || 0; }
+function getNodeIdByStepForState(step) { return ${JSON.stringify(Object.fromEntries(Object.entries(NODE_STEPS).map(([nodeId, step]) => [step, nodeId])))}[Number(step)] || ''; }
+${[
+  'isPlainObjectValue',
+  'normalizeStepExecutionRangeFlowId',
+  'hasStepExecutionRangeShape',
+  'normalizePositiveStepNumber',
+  'normalizeStepExecutionRangeEntry',
+  'normalizeStepExecutionRangeByFlow',
+  'getStepExecutionRangeForState',
+  'isStepAllowedByExecutionRangeForState',
+  'isNodeExecutionAllowedForState',
+  'getExecutionAllowedNodeIdsForState',
+  'isStepDoneStatus',
+  'normalizeStatusMapForNodes',
+  'getFirstUnfinishedNodeId',
+  'setNodeStatus',
+].map(extractFunction).join('\n')}
+return {
+  async run() {
+    await setNodeStatus('fill-profile', 'completed');
+    return state;
+  },
+};
+`)(events);
+
+  const nextState = await api.run();
+
+  assert.equal(nextState.nodeStatuses['fill-profile'], 'completed');
+  assert.equal(nextState.currentNodeId, 'wait-registration-success');
+});

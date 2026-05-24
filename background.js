@@ -9307,9 +9307,15 @@ async function setNodeStatus(nodeId, status) {
   const state = await getState();
   const nodeStatuses = { ...(state.nodeStatuses || {}) };
   nodeStatuses[normalizedNodeId] = status;
+  const nextCurrentNodeId = isStepDoneStatus(status)
+    ? (getFirstUnfinishedNodeId(nodeStatuses, {
+      ...state,
+      nodeStatuses,
+    }) || normalizedNodeId)
+    : normalizedNodeId;
   await setState({
     nodeStatuses,
-    currentNodeId: normalizedNodeId,
+    currentNodeId: nextCurrentNodeId,
   });
   chrome.runtime.sendMessage({
     type: 'NODE_STATUS_CHANGED',
