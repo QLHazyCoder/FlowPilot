@@ -4,6 +4,8 @@
   const GROK_SIGNUP_URL = 'https://accounts.x.ai/sign-up?redirect=grok-com';
   const GROK_REGISTER_PAGE_SOURCE_ID = 'grok-register-page';
   const DEFAULT_GROK_PAGE_TIMEOUT_MS = 90 * 1000;
+  const GROK_VERIFICATION_PAGE_STATE = 'verification_code_entry';
+  const GROK_VERIFICATION_READY_TIMEOUT_MS = 90 * 1000;
   const GROK_POST_PROFILE_CF_WAIT_MS = 20 * 1000;
   const GROK_PRE_SSO_EXTRACT_WAIT_MS = 10 * 1000;
   const MAIL_2925_FILTER_LOOKBACK_MS = 10 * 60 * 1000;
@@ -189,6 +191,50 @@
         throw new Error(result.error);
       }
       return result || {};
+    }
+
+    async function getGrokRegisterPageState(options = {}) {
+      return sendGrokCommand('GET_PAGE_STATE', {}, {
+        step: options.step || 0,
+        timeoutMs: options.timeoutMs || 15000,
+        logMessage: options.logMessage || '',
+      });
+    }
+
+    async function waitForGrokVerificationPageReady(tabId, options = {}) {
+      const timeoutMs = Math.max(1000, Number(options.timeoutMs) || GROK_VERIFICATION_READY_TIMEOUT_MS);
+      const intervalMs = Math.max(250, Number(options.intervalMs) || 1000);
+      const deadline = Date.now() + timeoutMs;
+      let lastState = null;
+      let lastError = '';
+
+      while (Date.now() <= deadline) {
+        throwIfStopped();
+        try {
+          await ensureContentReady(tabId, {
+            timeoutMs: Math.min(DEFAULT_GROK_PAGE_TIMEOUT_MS, Math.max(5000, intervalMs + 3000)),
+            stableMs: 500,
+            initialDelayMs: 0,
+            logMessage: options.logMessage || '',
+          });
+          lastState = await getGrokRegisterPageState({
+            step: options.step || 0,
+            timeoutMs: Math.max(5000, intervalMs + 3000),
+          });
+          lastError = '';
+          if (lastState?.state === GROK_VERIFICATION_PAGE_STATE) {
+            return lastState;
+          }
+        } catch (error) {
+          lastError = getErrorMessage(error);
+        }
+        await sleepWithStop(Math.min(intervalMs, Math.max(0, deadline - Date.now())));
+      }
+
+      const stateLabel = cleanString(lastState?.state) || 'unknown';
+      const urlLabel = cleanString(lastState?.url);
+      const errorLabel = lastError ? `，最后通信错误：${lastError}` : '';
+      throw new Error(`Grok 邮箱提交后尚未进入验证码页面，当前状态：${stateLabel}${urlLabel ? `，URL：${urlLabel}` : ''}${errorLabel}。`);
     }
 
     function shouldClearGrokCookie(cookie = {}) {
@@ -395,8 +441,12 @@
         });
         const result = await sendGrokCommand(nodeId, { email }, {
           step: 2,
+          timeoutMs: GROK_VERIFICATION_READY_TIMEOUT_MS + 15000,
           logMessage: '步骤 2：正在提交 Grok 注册邮箱...',
         });
+        if (result.state !== GROK_VERIFICATION_PAGE_STATE) {
+          throw new Error(`Grok 邮箱提交后尚未进入验证码页面，当前状态：${cleanString(result.state) || 'unknown'}${cleanString(result.url) ? `，URL：${cleanString(result.url)}` : ''}。`);
+        }
         await log(`步骤 2：已提交 Grok 注册邮箱 ${email}。`, 'ok', nodeId);
         await completeNode(nodeId, {
           grokEmail: email,
@@ -456,6 +506,23 @@
           || currentState.runtimeState?.flowState?.grok?.register?.email
           || currentState.email
         ).toLowerCase();
+        const tabId = await ensureGrokRegisterTab(currentState, { openIfMissing: false });
+        await activateTab(tabId);
+        const readyState = await waitForGrokVerificationPageReady(tabId, {
+          step: 3,
+          logMessage: '步骤 3：正在等待 Grok 验证码页面就绪...',
+        });
+        await persistState({
+          grokPageState: readyState.state || '',
+          grokPageUrl: readyState.url || '',
+          ...buildGrokRuntimePatch({
+            session: {
+              pageState: readyState.state || '',
+              pageUrl: readyState.url || '',
+              lastError: '',
+            },
+          }),
+        });
         const pollResult = await pollFlowVerificationCode({
           actionLabel: 'Grok 验证码',
           filterAfterTimestamp,
@@ -478,7 +545,6 @@
         if (!code) {
           throw new Error('未能获取到 xAI 邮箱验证码。');
         }
-        const tabId = await ensureGrokRegisterTab(currentState, { openIfMissing: false });
         await activateTab(tabId);
         await ensureContentReady(tabId);
         const result = await sendGrokCommand(nodeId, { code }, {

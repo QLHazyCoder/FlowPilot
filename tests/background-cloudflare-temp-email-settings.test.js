@@ -82,7 +82,6 @@ function normalizeSignupMethod(value = '') { return String(value || '').trim().t
 function resolveSignupMethod(state = {}) { return normalizeSignupMethod(state?.signupMethod); }
 function normalizeLocalCpaStep9Mode(value) { return value === 'bypass' ? 'bypass' : 'submit'; }
 function normalizeAutoRunFallbackThreadIntervalMinutes(value) { return Number(value) || 0; }
-function normalizeAutoRunDelayMinutes(value) { return Number(value) || 30; }
 function normalizeAutoStepDelaySeconds(value, fallback = null) { return value == null || value === '' ? fallback : Number(value); }
 function normalizeVerificationResendCount(value, fallback) { return Number.isFinite(Number(value)) ? Number(value) : fallback; }
 function normalizeMailProvider(value) { return String(value || '').trim().toLowerCase() || '163'; }
@@ -180,7 +179,6 @@ function normalizeSignupMethod(value = '') { return String(value || '').trim().t
 function resolveSignupMethod(state = {}) { return normalizeSignupMethod(state?.signupMethod); }
 function normalizeLocalCpaStep9Mode(value) { return value === 'bypass' ? 'bypass' : 'submit'; }
 function normalizeAutoRunFallbackThreadIntervalMinutes(value) { return Number(value) || 0; }
-function normalizeAutoRunDelayMinutes(value) { return Number(value) || 30; }
 function normalizeAutoStepDelaySeconds(value, fallback = null) { return value == null || value === '' ? fallback : Number(value); }
 function normalizeVerificationResendCount(value, fallback) { return Number.isFinite(Number(value)) ? Number(value) : fallback; }
 function normalizeMailProvider(value) { return String(value || '').trim().toLowerCase() || '163'; }

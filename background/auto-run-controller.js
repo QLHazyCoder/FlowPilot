@@ -158,8 +158,6 @@
         kiroRsKey: state.kiroRsKey,
         autoRunSkipFailures: state.autoRunSkipFailures,
         autoRunFallbackThreadIntervalMinutes: state.autoRunFallbackThreadIntervalMinutes,
-        autoRunDelayEnabled: state.autoRunDelayEnabled,
-        autoRunDelayMinutes: state.autoRunDelayMinutes,
         autoStepDelaySeconds: state.autoStepDelaySeconds,
         stepExecutionRangeByFlow: state.stepExecutionRangeByFlow,
         signupMethod: state.signupMethod,
@@ -502,7 +500,6 @@
       }, {
         autoRunSessionId: 0,
         autoRunTimerPlan: null,
-        scheduledAutoRunPlan: null,
       });
       clearStopRequest();
     }
@@ -1159,7 +1156,6 @@
         autoRunSessionId: 0,
         autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
         autoRunTimerPlan: null,
-        scheduledAutoRunPlan: null,
         ...getAutoRunStatusPayload(deps.getStopRequested() || stoppedEarly ? 'stopped' : 'complete', {
           currentRun: deps.getStopRequested() || stoppedEarly ? afterRuntime.autoRunCurrentRun : afterRuntime.autoRunTotalRuns,
           totalRuns: afterRuntime.autoRunTotalRuns,

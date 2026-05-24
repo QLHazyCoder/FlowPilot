@@ -134,8 +134,6 @@ test('auto-run controller skips add-phone failures to the next round instead of 
     customPassword: '',
     autoRunSkipFailures: true,
     autoRunFallbackThreadIntervalMinutes: 0,
-    autoRunDelayEnabled: false,
-    autoRunDelayMinutes: 30,
     autoStepDelaySeconds: null,
     mailProvider: '163',
     emailGenerator: 'duck',
@@ -185,7 +183,7 @@ test('auto-run controller skips add-phone failures to the next round instead of 
       events.broadcasts.push({ phase, ...payload });
       currentState = {
         ...currentState,
-        autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+        autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
         autoRunPhase: phase,
         autoRunCurrentRun: payload.currentRun ?? runtime.state.autoRunCurrentRun,
         autoRunTotalRuns: payload.totalRuns ?? runtime.state.autoRunTotalRuns,
@@ -201,7 +199,7 @@ test('auto-run controller skips add-phone failures to the next round instead of 
       return sessionSeed;
     },
     getAutoRunStatusPayload: (phase, payload = {}) => ({
-      autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+      autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
       autoRunPhase: phase,
       autoRunCurrentRun: payload.currentRun ?? 0,
       autoRunTotalRuns: payload.totalRuns ?? 1,
@@ -297,8 +295,6 @@ test('auto-run controller treats phone-number supply exhaustion as round-fatal a
     customPassword: '',
     autoRunSkipFailures: true,
     autoRunFallbackThreadIntervalMinutes: 0,
-    autoRunDelayEnabled: false,
-    autoRunDelayMinutes: 30,
     autoStepDelaySeconds: null,
     mailProvider: '163',
     emailGenerator: 'duck',
@@ -348,7 +344,7 @@ test('auto-run controller treats phone-number supply exhaustion as round-fatal a
       events.broadcasts.push({ phase, ...payload });
       currentState = {
         ...currentState,
-        autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+        autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
         autoRunPhase: phase,
         autoRunCurrentRun: payload.currentRun ?? runtime.state.autoRunCurrentRun,
         autoRunTotalRuns: payload.totalRuns ?? runtime.state.autoRunTotalRuns,
@@ -364,7 +360,7 @@ test('auto-run controller treats phone-number supply exhaustion as round-fatal a
       return sessionSeed;
     },
     getAutoRunStatusPayload: (phase, payload = {}) => ({
-      autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+      autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
       autoRunPhase: phase,
       autoRunCurrentRun: payload.currentRun ?? 0,
       autoRunTotalRuns: payload.totalRuns ?? 1,
@@ -460,8 +456,6 @@ test('auto-run controller treats ended GPC task as round-fatal and skips same-ro
     customPassword: '',
     autoRunSkipFailures: true,
     autoRunFallbackThreadIntervalMinutes: 0,
-    autoRunDelayEnabled: false,
-    autoRunDelayMinutes: 30,
     autoStepDelaySeconds: null,
     mailProvider: '163',
     emailGenerator: 'duck',
@@ -511,7 +505,7 @@ test('auto-run controller treats ended GPC task as round-fatal and skips same-ro
       events.broadcasts.push({ phase, ...payload });
       currentState = {
         ...currentState,
-        autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+        autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
         autoRunPhase: phase,
         autoRunCurrentRun: payload.currentRun ?? runtime.state.autoRunCurrentRun,
         autoRunTotalRuns: payload.totalRuns ?? runtime.state.autoRunTotalRuns,
@@ -527,7 +521,7 @@ test('auto-run controller treats ended GPC task as round-fatal and skips same-ro
       return sessionSeed;
     },
     getAutoRunStatusPayload: (phase, payload = {}) => ({
-      autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+      autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
       autoRunPhase: phase,
       autoRunCurrentRun: payload.currentRun ?? 0,
       autoRunTotalRuns: payload.totalRuns ?? 1,
@@ -621,8 +615,6 @@ test('auto-run controller keeps same-round retrying for step9 local replacement 
     customPassword: '',
     autoRunSkipFailures: true,
     autoRunFallbackThreadIntervalMinutes: 0,
-    autoRunDelayEnabled: false,
-    autoRunDelayMinutes: 30,
     autoStepDelaySeconds: null,
     mailProvider: '163',
     emailGenerator: 'duck',
@@ -672,7 +664,7 @@ test('auto-run controller keeps same-round retrying for step9 local replacement 
       events.broadcasts.push({ phase, ...payload });
       currentState = {
         ...currentState,
-        autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+        autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
         autoRunPhase: phase,
         autoRunCurrentRun: payload.currentRun ?? runtime.state.autoRunCurrentRun,
         autoRunTotalRuns: payload.totalRuns ?? runtime.state.autoRunTotalRuns,
@@ -688,7 +680,7 @@ test('auto-run controller keeps same-round retrying for step9 local replacement 
       return sessionSeed;
     },
     getAutoRunStatusPayload: (phase, payload = {}) => ({
-      autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+      autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
       autoRunPhase: phase,
       autoRunCurrentRun: payload.currentRun ?? 0,
       autoRunTotalRuns: payload.totalRuns ?? 1,
@@ -779,8 +771,6 @@ test('auto-run controller skips user_already_exists failures to the next round i
     customPassword: '',
     autoRunSkipFailures: true,
     autoRunFallbackThreadIntervalMinutes: 0,
-    autoRunDelayEnabled: false,
-    autoRunDelayMinutes: 30,
     autoStepDelaySeconds: null,
     mailProvider: '163',
     emailGenerator: 'duck',
@@ -830,7 +820,7 @@ test('auto-run controller skips user_already_exists failures to the next round i
       events.broadcasts.push({ phase, ...payload });
       currentState = {
         ...currentState,
-        autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+        autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
         autoRunPhase: phase,
         autoRunCurrentRun: payload.currentRun ?? runtime.state.autoRunCurrentRun,
         autoRunTotalRuns: payload.totalRuns ?? runtime.state.autoRunTotalRuns,
@@ -846,7 +836,7 @@ test('auto-run controller skips user_already_exists failures to the next round i
       return sessionSeed;
     },
     getAutoRunStatusPayload: (phase, payload = {}) => ({
-      autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+      autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
       autoRunPhase: phase,
       autoRunCurrentRun: payload.currentRun ?? 0,
       autoRunTotalRuns: payload.totalRuns ?? 1,
@@ -943,8 +933,6 @@ test('auto-run controller skips step 4 repeated 405 recovery failures to the nex
     customPassword: '',
     autoRunSkipFailures: true,
     autoRunFallbackThreadIntervalMinutes: 0,
-    autoRunDelayEnabled: false,
-    autoRunDelayMinutes: 30,
     autoStepDelaySeconds: null,
     mailProvider: '163',
     emailGenerator: 'duck',
@@ -994,7 +982,7 @@ test('auto-run controller skips step 4 repeated 405 recovery failures to the nex
       events.broadcasts.push({ phase, ...payload });
       currentState = {
         ...currentState,
-        autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+        autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
         autoRunPhase: phase,
         autoRunCurrentRun: payload.currentRun ?? runtime.state.autoRunCurrentRun,
         autoRunTotalRuns: payload.totalRuns ?? runtime.state.autoRunTotalRuns,
@@ -1010,7 +998,7 @@ test('auto-run controller skips step 4 repeated 405 recovery failures to the nex
       return sessionSeed;
     },
     getAutoRunStatusPayload: (phase, payload = {}) => ({
-      autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+      autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
       autoRunPhase: phase,
       autoRunCurrentRun: payload.currentRun ?? 0,
       autoRunTotalRuns: payload.totalRuns ?? 1,
@@ -1108,8 +1096,6 @@ test('auto-run controller keeps retrying the same custom mail provider pool emai
     customPassword: '',
     autoRunSkipFailures: true,
     autoRunFallbackThreadIntervalMinutes: 0,
-    autoRunDelayEnabled: false,
-    autoRunDelayMinutes: 30,
     autoStepDelaySeconds: null,
     mailProvider: 'custom',
     customMailProviderPool: ['first@example.com'],
@@ -1160,7 +1146,7 @@ test('auto-run controller keeps retrying the same custom mail provider pool emai
       events.broadcasts.push({ phase, ...payload });
       currentState = {
         ...currentState,
-        autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+        autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
         autoRunPhase: phase,
         autoRunCurrentRun: payload.currentRun ?? runtime.state.autoRunCurrentRun,
         autoRunTotalRuns: payload.totalRuns ?? runtime.state.autoRunTotalRuns,
@@ -1176,7 +1162,7 @@ test('auto-run controller keeps retrying the same custom mail provider pool emai
       return sessionSeed;
     },
     getAutoRunStatusPayload: (phase, payload = {}) => ({
-      autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+      autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
       autoRunPhase: phase,
       autoRunCurrentRun: payload.currentRun ?? 0,
       autoRunTotalRuns: payload.totalRuns ?? 1,
@@ -1274,8 +1260,6 @@ test('auto-run controller retries 5sim rate limit failures instead of treating c
     customPassword: '',
     autoRunSkipFailures: true,
     autoRunFallbackThreadIntervalMinutes: 0,
-    autoRunDelayEnabled: false,
-    autoRunDelayMinutes: 30,
     autoStepDelaySeconds: null,
     mailProvider: '163',
     emailGenerator: 'duck',
@@ -1325,7 +1309,7 @@ test('auto-run controller retries 5sim rate limit failures instead of treating c
       events.broadcasts.push({ phase, ...payload });
       currentState = {
         ...currentState,
-        autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+        autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
         autoRunPhase: phase,
         autoRunCurrentRun: payload.currentRun ?? runtime.state.autoRunCurrentRun,
         autoRunTotalRuns: payload.totalRuns ?? runtime.state.autoRunTotalRuns,
@@ -1341,7 +1325,7 @@ test('auto-run controller retries 5sim rate limit failures instead of treating c
       return sessionSeed;
     },
     getAutoRunStatusPayload: (phase, payload = {}) => ({
-      autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+      autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
       autoRunPhase: phase,
       autoRunCurrentRun: payload.currentRun ?? 0,
       autoRunTotalRuns: payload.totalRuns ?? 1,

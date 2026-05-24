@@ -1263,7 +1263,7 @@ function updateIpProxyUI(state = latestState) {
   const isAccountMode = mode === 'account';
   const showSessionOptions = isAccountMode && service === '711proxy';
   const hasAccountListConfigured = accountListAvailable && isAccountMode && hasCurrentInputAccountListEntries();
-  const canOperate = !isAutoRunLockedPhase() && !isAutoRunScheduledPhase();
+  const canOperate = !isAutoRunLockedPhase();
   const actionState = getIpProxyActionState();
   const actionBusy = Boolean(actionState.busy);
   const busyAction = normalizeIpProxyActionType(actionState.action);

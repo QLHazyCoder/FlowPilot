@@ -85,7 +85,6 @@ test('sidepanel idle auto-run status does not reset manual run count input', () 
     extractFunction(source, 'syncAutoRunState'),
     extractFunction(source, 'isAutoRunLockedPhase'),
     extractFunction(source, 'isAutoRunPausedPhase'),
-    extractFunction(source, 'isAutoRunScheduledPhase'),
     extractFunction(source, 'applyAutoRunStatus'),
   ].join('\n');
 
@@ -96,7 +95,6 @@ let currentAutoRun = {
   currentRun: 0,
   totalRuns: 1,
   attemptRun: 0,
-  scheduledAt: null,
   countdownAt: null,
   countdownTitle: '',
   countdownNote: '',
@@ -116,9 +114,8 @@ function getLockedRunCountFromEmailPool() { return lockedRunCount; }
 function isCustomMailProvider() { return false; }
 function usesCustomEmailPoolGenerator() { return false; }
 function setDefaultAutoRunButton() {}
-function updateAutoDelayInputState() {}
 function updateFallbackThreadIntervalInputState() {}
-function syncScheduledCountdownTicker() {}
+function syncAutoRunCountdownTicker() {}
 function updateStopButtonState() {}
 function getStepStatuses() { return {}; }
 function updateConfigMenuControls() {}
@@ -171,7 +168,6 @@ test('sidepanel pending auto-run start ignores stale active run count sync', () 
     extractFunction(source, 'syncAutoRunState'),
     extractFunction(source, 'isAutoRunLockedPhase'),
     extractFunction(source, 'isAutoRunPausedPhase'),
-    extractFunction(source, 'isAutoRunScheduledPhase'),
     extractFunction(source, 'isAutoRunSourceSyncPhase'),
     extractFunction(source, 'shouldSyncRunCountFromAutoRunSource'),
     extractFunction(source, 'applyAutoRunStatus'),
@@ -184,7 +180,6 @@ let currentAutoRun = {
   currentRun: 0,
   totalRuns: 1,
   attemptRun: 0,
-  scheduledAt: null,
   countdownAt: null,
   countdownTitle: '',
   countdownNote: '',
@@ -205,9 +200,8 @@ function getLockedRunCountFromEmailPool() { return 0; }
 function isCustomMailProvider() { return false; }
 function usesCustomEmailPoolGenerator() { return false; }
 function setDefaultAutoRunButton() {}
-function updateAutoDelayInputState() {}
 function updateFallbackThreadIntervalInputState() {}
-function syncScheduledCountdownTicker() {}
+function syncAutoRunCountdownTicker() {}
 function updateStopButtonState() {}
 function getStepStatuses() { return {}; }
 function updateConfigMenuControls() {}

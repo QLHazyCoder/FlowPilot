@@ -713,7 +713,6 @@ function setFreePhoneReuseControlsLocked(locked) {
     || !Boolean(inputPhoneVerificationEnabled.checked && phoneVerificationSectionExpanded);
 }
 function isAutoRunLockedPhase() { return false; }
-function isAutoRunScheduledPhase() { return false; }
 
 ${extractFunction('normalizeSignupMethod')}
 ${extractFunction('normalizeHeroSmsReuseEnabledValue')}
@@ -979,8 +978,6 @@ const inputTempEmailReceiveMailbox = { value: '' };
 const inputTempEmailUseRandomSubdomain = { checked: false };
 const inputAutoSkipFailures = { checked: false };
 const inputAutoSkipFailuresThreadIntervalMinutes = { value: '0' };
-const inputAutoDelayEnabled = { checked: false };
-const inputAutoDelayMinutes = { value: '30' };
 const inputAutoStepDelaySeconds = { value: '' };
 const inputPhoneVerificationEnabled = { checked: true };
 const inputFreePhoneReuseEnabled = { checked: true };
@@ -1072,7 +1069,6 @@ function normalizeCloudflareTempEmailBaseUrlValue(value) { return String(value |
 function normalizeCloudflareTempEmailReceiveMailboxValue(value) { return String(value || '').trim(); }
 function normalizeAccountRunHistoryHelperBaseUrlValue(value) { return String(value || '').trim(); }
 function normalizeAutoRunThreadIntervalMinutes(value) { return Number(value) || 0; }
-function normalizeAutoDelayMinutes(value) { return Number(value) || 30; }
 function normalizeAutoStepDelaySeconds(value) { return value === '' ? null : Number(value); }
 function normalizeVerificationResendCount(value, fallback) { return Number(value) || fallback; }
 function normalizePlusAccountAccessStrategy(value = '') { return String(value || '').trim().toLowerCase() === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION ? PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION : PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH; }

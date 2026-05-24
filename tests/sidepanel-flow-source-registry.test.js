@@ -38,7 +38,12 @@ test('sidepanel html exposes flow selector and kiro source fields', () => {
     'id="select-flow"',
     '<option value="grok">Grok</option>',
     'id="label-source-selector"',
+    'id="btn-open-webchat2api-github"',
     'id="row-step6-cookie-settings"',
+    'id="row-shared-auto-run"',
+    'id="row-auto-run-thread-interval"',
+    'id="row-oauth-callback"',
+    'id="row-settings-actions"',
     'id="row-kiro-rs-url"',
     'id="btn-open-kiro-rs-github"',
     'id="row-kiro-rs-key"',
@@ -146,6 +151,10 @@ return {
 test('sidepanel Kiro GitHub button opens the configured fork', () => {
   assert.match(sidepanelSource, /openExternalUrl\('https:\/\/github\.com\/QLHazyCoder\/kiro\.rs'\)/);
   assert.doesNotMatch(sidepanelSource, /github\.com\/hank9999\/kiro\.rs/);
+});
+
+test('sidepanel webchat2api GitHub button opens the configured repository', () => {
+  assert.match(sidepanelSource, /openExternalUrl\('https:\/\/github\.com\/zqbxdev\/webchat2api'\)/);
 });
 
 test('sidepanel step definitions rerender when active flow changes even if plus/signup settings stay the same', () => {

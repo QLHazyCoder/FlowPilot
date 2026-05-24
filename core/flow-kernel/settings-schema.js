@@ -115,48 +115,11 @@
       if (isPlainObject(range)) {
         return normalizeStepExecutionRangeEntry(range, { enabled: false, fromStep: 1, toStep: 1 });
       }
-      if (flowId === 'openai') {
-        return { enabled: false, fromStep: 1, toStep: 11 };
-      }
-      if (flowId === 'kiro') {
-        return { enabled: false, fromStep: 1, toStep: 9 };
-      }
       const lastStep = Math.max(1, Number(getFlowDefinition(flowId)?.workflowStepCount) || 1);
       return { enabled: false, fromStep: 1, toStep: lastStep };
     }
 
     function buildDefaultTargetState(flowId, targetId) {
-      if (flowId === 'openai' && targetId === 'cpa') {
-        return {
-          vpsUrl: '',
-          vpsPassword: '',
-          localCpaStep9Mode: 'submit',
-        };
-      }
-      if (flowId === 'openai' && targetId === 'sub2api') {
-        return {
-          sub2apiUrl: '',
-          sub2apiEmail: '',
-          sub2apiPassword: '',
-          sub2apiGroupName: 'codex',
-          sub2apiGroupNames: ['codex', 'openai-plus'],
-          sub2apiAccountPriority: 1,
-          sub2apiDefaultProxyName: '',
-        };
-      }
-      if (flowId === 'openai' && targetId === 'codex2api') {
-        return {
-          codex2apiUrl: '',
-          codex2apiAdminKey: '',
-        };
-      }
-      if (flowId === 'kiro' && targetId === 'kiro-rs') {
-        return {
-          baseUrl: defaultKiroRsUrl,
-          apiKey: '',
-        };
-      }
-
       const definition = getFlowDefinition(flowId) || {};
       const flowDefaults = getFlowSettingsDefaults(flowId);
       const targetDefaults = isPlainObject(flowDefaults?.targets?.[targetId])
@@ -200,24 +163,7 @@
           stepExecutionRange: getDefaultStepExecutionRange(flowId),
         },
       };
-      if (flowId === 'openai') {
-        return mergePlainObjects(base, {
-          signup: {
-            signupMethod: 'email',
-            phoneVerificationEnabled: false,
-            phoneSignupReloginAfterBindEmailEnabled: false,
-          },
-          plus: {
-            plusModeEnabled: false,
-            plusPaymentMethod: 'paypal-hosted',
-            plusAccountAccessStrategy: 'oauth',
-            hostedCheckoutVerificationUrl: '',
-            hostedCheckoutPhoneNumber: '',
-            plusHostedCheckoutOauthDelaySeconds: 3,
-          },
-        });
-      }
-      return base;
+      return mergePlainObjects(base, getFlowSettingsDefaults(flowId));
     }
 
     function buildDefaultFlows() {
@@ -364,6 +310,18 @@
     }
 
     function normalizeOpenAiSettings(input = {}, nested = {}, defaults = {}, currentFlow = {}) {
+      const defaultOpenAiFlow = isPlainObject(defaults?.flows?.openai)
+        ? defaults.flows.openai
+        : {};
+      const defaultOpenAiTargets = isPlainObject(defaultOpenAiFlow.targets)
+        ? defaultOpenAiFlow.targets
+        : {};
+      const defaultOpenAiSignup = isPlainObject(defaultOpenAiFlow.signup)
+        ? defaultOpenAiFlow.signup
+        : {};
+      const defaultOpenAiPlus = isPlainObject(defaultOpenAiFlow.plus)
+        ? defaultOpenAiFlow.plus
+        : {};
       const cpaSource = {
         ...currentFlow.targets.cpa,
         ...getTargetValue(
@@ -407,66 +365,82 @@
         ...currentFlow,
         targets: {
           ...currentFlow.targets,
-          cpa: normalizeFlowTargetState('openai', 'cpa', cpaSource, defaults.flows.openai.targets.cpa),
-          sub2api: normalizeFlowTargetState('openai', 'sub2api', sub2apiSource, defaults.flows.openai.targets.sub2api),
-          codex2api: normalizeFlowTargetState('openai', 'codex2api', codex2apiSource, defaults.flows.openai.targets.codex2api),
+          cpa: normalizeFlowTargetState('openai', 'cpa', cpaSource, defaultOpenAiTargets.cpa || {}),
+          sub2api: normalizeFlowTargetState('openai', 'sub2api', sub2apiSource, defaultOpenAiTargets.sub2api || {}),
+          codex2api: normalizeFlowTargetState('openai', 'codex2api', codex2apiSource, defaultOpenAiTargets.codex2api || {}),
         },
         signup: {
           signupMethod: String(
             input?.signupMethod
             ?? currentFlow.signup?.signupMethod
-            ?? defaults.flows.openai.signup.signupMethod
+            ?? defaultOpenAiSignup.signupMethod
+            ?? 'email'
           ).trim().toLowerCase() === 'phone' ? 'phone' : 'email',
           phoneVerificationEnabled: Boolean(
             input?.phoneVerificationEnabled
             ?? currentFlow.signup?.phoneVerificationEnabled
-            ?? defaults.flows.openai.signup.phoneVerificationEnabled
+            ?? defaultOpenAiSignup.phoneVerificationEnabled
+            ?? false
           ),
           phoneSignupReloginAfterBindEmailEnabled: Boolean(
             input?.phoneSignupReloginAfterBindEmailEnabled
             ?? currentFlow.signup?.phoneSignupReloginAfterBindEmailEnabled
-            ?? defaults.flows.openai.signup.phoneSignupReloginAfterBindEmailEnabled
+            ?? defaultOpenAiSignup.phoneSignupReloginAfterBindEmailEnabled
+            ?? false
           ),
         },
         plus: {
           plusModeEnabled: Boolean(
             input?.plusModeEnabled
             ?? currentFlow.plus?.plusModeEnabled
-            ?? defaults.flows.openai.plus.plusModeEnabled
+            ?? defaultOpenAiPlus.plusModeEnabled
+            ?? false
           ),
           plusPaymentMethod: String(
             input?.plusPaymentMethod
             ?? currentFlow.plus?.plusPaymentMethod
-            ?? defaults.flows.openai.plus.plusPaymentMethod
-          ).trim() || defaults.flows.openai.plus.plusPaymentMethod,
+            ?? defaultOpenAiPlus.plusPaymentMethod
+            ?? 'paypal-hosted'
+          ).trim() || defaultOpenAiPlus.plusPaymentMethod || 'paypal-hosted',
           plusAccountAccessStrategy: normalizePlusAccountAccessStrategy(
             input?.plusAccountAccessStrategy
             ?? currentFlow.plus?.plusAccountAccessStrategy
-            ?? defaults.flows.openai.plus.plusAccountAccessStrategy
+            ?? defaultOpenAiPlus.plusAccountAccessStrategy
+            ?? 'oauth'
           ),
           hostedCheckoutVerificationUrl: String(
             input?.hostedCheckoutVerificationUrl
             ?? currentFlow.plus?.hostedCheckoutVerificationUrl
-            ?? defaults.flows.openai.plus.hostedCheckoutVerificationUrl
+            ?? defaultOpenAiPlus.hostedCheckoutVerificationUrl
+            ?? ''
           ).trim(),
           hostedCheckoutPhoneNumber: String(
             input?.hostedCheckoutPhoneNumber
             ?? currentFlow.plus?.hostedCheckoutPhoneNumber
-            ?? defaults.flows.openai.plus.hostedCheckoutPhoneNumber
+            ?? defaultOpenAiPlus.hostedCheckoutPhoneNumber
+            ?? ''
           ).trim(),
           plusHostedCheckoutOauthDelaySeconds: (() => {
             const numeric = Number(
               input?.plusHostedCheckoutOauthDelaySeconds
               ?? currentFlow.plus?.plusHostedCheckoutOauthDelaySeconds
-              ?? defaults.flows.openai.plus.plusHostedCheckoutOauthDelaySeconds
+              ?? defaultOpenAiPlus.plusHostedCheckoutOauthDelaySeconds
+              ?? 3
             );
-            return Math.min(120, Math.max(0, Math.floor(Number.isFinite(numeric) ? numeric : defaults.flows.openai.plus.plusHostedCheckoutOauthDelaySeconds)));
+            const fallback = Number(defaultOpenAiPlus.plusHostedCheckoutOauthDelaySeconds ?? 3) || 3;
+            return Math.min(120, Math.max(0, Math.floor(Number.isFinite(numeric) ? numeric : fallback)));
           })(),
         },
       };
     }
 
     function normalizeKiroSettings(input = {}, defaults = {}, currentFlow = {}) {
+      const defaultKiroFlow = isPlainObject(defaults?.flows?.kiro)
+        ? defaults.flows.kiro
+        : {};
+      const defaultKiroTargets = isPlainObject(defaultKiroFlow.targets)
+        ? defaultKiroFlow.targets
+        : {};
       const targetSource = {
         ...currentFlow.targets['kiro-rs'],
         baseUrl: input?.kiroRsUrl ?? input?.kiroRsBaseUrl ?? currentFlow.targets['kiro-rs'].baseUrl,
@@ -476,7 +450,7 @@
         ...currentFlow,
         targets: {
           ...currentFlow.targets,
-          'kiro-rs': normalizeFlowTargetState('kiro', 'kiro-rs', targetSource, defaults.flows.kiro.targets['kiro-rs']),
+          'kiro-rs': normalizeFlowTargetState('kiro', 'kiro-rs', targetSource, defaultKiroTargets['kiro-rs'] || {}),
         },
       };
     }

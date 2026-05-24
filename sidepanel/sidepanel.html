@@ -121,7 +121,7 @@
 
   <section id="data-section">
     <div id="settings-card" class="data-card">
-      <div class="data-row">
+      <div class="data-row" id="row-flow-selector">
         <span class="data-label">注册</span>
         <select id="select-flow" class="data-select" aria-label="Flow 选择">
           <option value="openai" selected>Codex / OpenAI</option>
@@ -129,13 +129,16 @@
           <option value="grok">Grok</option>
         </select>
       </div>
-      <div class="data-row">
+      <div class="data-row" id="row-source-selector">
         <span id="label-source-selector" class="data-label">来源</span>
-        <select id="select-panel-mode" class="data-select">
-          <option value="cpa">CPA 面板</option>
-          <option value="sub2api">SUB2API</option>
-          <option value="codex2api">Codex2API</option>
-        </select>
+        <div class="data-inline">
+          <select id="select-panel-mode" class="data-select">
+            <option value="cpa">CPA 面板</option>
+            <option value="sub2api">SUB2API</option>
+            <option value="codex2api">Codex2API</option>
+          </select>
+          <button id="btn-open-webchat2api-github" class="btn btn-ghost btn-xs data-inline-btn" type="button">GitHub</button>
+        </div>
       </div>
         <div id="contribution-mode-panel" class="contribution-mode-panel" hidden>
           <div class="contribution-mode-panel-header">
@@ -291,20 +294,8 @@
         <span class="data-label">上传状态</span>
         <span id="display-kiro-upload-status" class="data-value mono">未开始</span>
       </div>
-      <div class="data-row" id="row-grok-register-status" style="display:none;">
-        <span class="data-label">Grok 注册</span>
-        <span id="display-grok-register-status" class="data-value mono">未开始</span>
-      </div>
-      <div class="data-row" id="row-grok-sso-status" style="display:none;">
-        <span class="data-label">SSO 状态</span>
-        <span id="display-grok-sso-status" class="data-value mono">未提取</span>
-      </div>
-      <div class="data-row" id="row-grok-webchat2api-upload-status" style="display:none;">
-        <span class="data-label">上传状态</span>
-        <span id="display-grok-webchat2api-upload-status" class="data-value mono">未开始</span>
-      </div>
       <div class="data-row" id="row-grok-webchat2api-url" style="display:none;">
-        <span class="data-label">webchat2api</span>
+        <span class="data-label">webchat</span>
         <input type="text" id="input-grok-webchat2api-url" class="data-input"
           placeholder="请输入 webchat2api 地址，例如 http://localhost:83" />
       </div>
@@ -318,6 +309,18 @@
             data-hide-label="隐藏 webchat2api 管理密钥" aria-label="显示 webchat2api 管理密钥"
             title="显示 webchat2api 管理密钥"></button>
         </div>
+      </div>
+      <div class="data-row" id="row-grok-register-status" style="display:none;">
+        <span class="data-label">Grok 注册</span>
+        <span id="display-grok-register-status" class="data-value mono">未开始</span>
+      </div>
+      <div class="data-row" id="row-grok-sso-status" style="display:none;">
+        <span class="data-label">SSO 状态</span>
+        <span id="display-grok-sso-status" class="data-value mono">未提取</span>
+      </div>
+      <div class="data-row" id="row-grok-webchat2api-upload-status" style="display:none;">
+        <span class="data-label">上传状态</span>
+        <span id="display-grok-webchat2api-upload-status" class="data-value mono">未开始</span>
       </div>
       <div class="data-row" id="row-grok-sso-settings" style="display:none;">
         <span class="data-label">SSO Cookie</span>
@@ -694,26 +697,7 @@
           </div>
         </div>
       </div>
-      <div class="data-row module-divider-start" id="row-auto-delay-settings">
-        <span class="data-label">启动前</span>
-        <div class="data-inline setting-pair auto-delay-setting-pair">
-          <div class="setting-group setting-group-secondary auto-run-delay-setting">
-            <span class="setting-caption">延迟</span>
-            <label class="toggle-switch" for="input-auto-delay-enabled">
-              <input type="checkbox" id="input-auto-delay-enabled" />
-              <span class="toggle-switch-track" aria-hidden="true">
-                <span class="toggle-switch-thumb"></span>
-              </span>
-            </label>
-            <div class="setting-controls">
-              <input type="number" id="input-auto-delay-minutes" class="data-input auto-delay-input" value="30" min="1"
-                max="1440" step="1" title="启动前倒计时分钟数" />
-              <span class="data-unit">分钟</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="data-row">
+      <div class="data-row module-divider-start" id="row-shared-auto-run">
         <span class="data-label">自动重试</span>
         <div class="data-inline setting-pair">
           <div class="setting-group setting-group-primary">
@@ -734,6 +718,16 @@
           </div>
         </div>
       </div>
+      <div class="data-row" id="row-auto-run-thread-interval">
+        <span class="data-label">线程间隔</span>
+        <div class="data-inline">
+          <div class="setting-controls">
+            <input type="number" id="input-auto-skip-failures-thread-interval-minutes"
+              class="data-input auto-delay-input" value="0" min="0" max="1440" step="1" title="兜底模式下，两轮线程之间的等待分钟数" />
+            <span class="data-unit">分钟</span>
+          </div>
+        </div>
+      </div>
       <div class="data-row" id="row-oauth-flow-timeout">
         <span class="data-label">授权总超时</span>
         <div class="data-inline setting-pair">
@@ -747,14 +741,6 @@
               <span>启用</span>
             </label>
             <span class="setting-caption oauth-flow-timeout-caption">关闭后只取消 Step 7 后链总预算</span>
-          </div>
-          <div class="setting-group setting-group-secondary">
-            <span class="setting-caption">线程间隔</span>
-            <div class="setting-controls">
-              <input type="number" id="input-auto-skip-failures-thread-interval-minutes"
-                class="data-input auto-delay-input" value="0" min="0" max="1440" step="1" title="兜底模式下，两轮线程之间的等待分钟数" />
-              <span class="data-unit">分钟</span>
-            </div>
           </div>
         </div>
       </div>
@@ -782,10 +768,15 @@
         <span class="data-label">OAuth</span>
         <span id="display-oauth-url" class="data-value mono truncate">等待中...</span>
       </div>
-      <div class="data-row">
+      <div class="data-row" id="row-oauth-callback">
         <span class="data-label">回调</span>
         <div class="data-inline data-value-actions">
           <span id="display-localhost-url" class="data-value data-value-fill mono truncate">等待中...</span>
+        </div>
+      </div>
+      <div class="data-row module-divider-start" id="row-settings-actions">
+        <span class="data-label">设置</span>
+        <div class="data-inline data-value-actions">
           <button id="btn-save-settings" class="btn btn-outline btn-sm data-inline-btn" type="button">保存</button>
         </div>
       </div>
@@ -1798,16 +1789,16 @@
       <span class="auto-hint">先自动获取邮箱，或手动粘贴邮箱后再继续</span>
       <button id="btn-auto-continue" class="btn btn-primary btn-sm">继续</button>
     </div>
-    <div id="auto-schedule-bar" class="auto-schedule-bar" style="display:none;">
+    <div id="auto-countdown-bar" class="auto-countdown-bar" style="display:none;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="10" />
         <polyline points="12 6 12 12 16 14" />
       </svg>
-      <div class="auto-schedule-copy">
-        <span id="auto-schedule-title" class="auto-schedule-title">已计划自动运行</span>
-        <span id="auto-schedule-meta" class="auto-schedule-meta">等待倒计时开始...</span>
+      <div class="auto-countdown-copy">
+        <span id="auto-countdown-title" class="auto-countdown-title">等待继续</span>
+        <span id="auto-countdown-meta" class="auto-countdown-meta">等待倒计时开始...</span>
       </div>
-      <div class="auto-schedule-actions">
+      <div class="auto-countdown-actions">
         <button id="btn-auto-run-now" class="btn btn-primary btn-sm" type="button">立即开始</button>
         <button id="btn-auto-cancel-schedule" class="btn btn-outline btn-sm" type="button">取消</button>
       </div>

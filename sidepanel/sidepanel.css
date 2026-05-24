@@ -1268,6 +1268,19 @@ header {
   width: 76px;
 }
 
+#row-flow-selector .data-label,
+#row-source-selector .data-label,
+#row-grok-webchat2api-url .data-label,
+#row-grok-webchat2api-key .data-label,
+#row-grok-register-status .data-label,
+#row-grok-sso-status .data-label,
+#row-grok-webchat2api-upload-status .data-label,
+#row-grok-sso-settings .data-label {
+  width: 76px;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
 #row-codex2api-url .data-label {
   font-size: 10px;
   letter-spacing: 0.02em;
@@ -2197,15 +2210,6 @@ header {
   justify-content: flex-end;
 }
 
-.auto-delay-setting-pair {
-  flex-wrap: nowrap;
-}
-
-#row-auto-delay-settings .setting-group-secondary {
-  margin-left: auto;
-  min-width: 0;
-}
-
 .step6-cookie-cleanup-setting {
   gap: 8px;
 }
@@ -2227,10 +2231,6 @@ header {
   text-align: center;
 }
 
-.auto-run-delay-setting {
-  margin-left: auto !important;
-}
-
 .oauth-flow-timeout-setting {
   gap: 8px;
   min-width: 0;
@@ -2240,10 +2240,6 @@ header {
   min-width: 0 !important;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-#row-auto-delay-settings .setting-caption {
-  min-width: auto;
 }
 
 .setting-caption-left {
@@ -2720,7 +2716,7 @@ header {
 .auto-continue-bar svg { color: var(--orange); flex-shrink: 0; }
 .auto-hint { font-size: 13px; color: var(--orange); flex: 1; font-weight: 500; }
 
-.auto-schedule-bar {
+.auto-countdown-bar {
   margin-top: 8px;
   padding: 10px;
   background: var(--blue-soft);
@@ -2732,12 +2728,12 @@ header {
   gap: 10px;
 }
 
-.auto-schedule-bar svg {
+.auto-countdown-bar svg {
   color: var(--blue);
   flex-shrink: 0;
 }
 
-.auto-schedule-copy {
+.auto-countdown-copy {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -2745,19 +2741,19 @@ header {
   min-width: 0;
 }
 
-.auto-schedule-title {
+.auto-countdown-title {
   font-size: 13px;
   font-weight: 700;
   color: var(--blue);
 }
 
-.auto-schedule-meta {
+.auto-countdown-meta {
   font-size: 12px;
   line-height: 1.5;
   color: var(--text-secondary);
 }
 
-.auto-schedule-actions {
+.auto-countdown-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;

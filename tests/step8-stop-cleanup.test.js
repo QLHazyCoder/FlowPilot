@@ -76,7 +76,6 @@ let autoRunCurrentRun = 2;
 let autoRunTotalRuns = 3;
 let autoRunAttemptRun = 4;
 let autoRunSessionId = 99;
-const AUTO_RUN_TIMER_KIND_SCHEDULED_START = 'scheduled_start';
 const DEFAULT_STATE = {
   nodeStatuses: {},
 };
@@ -157,9 +156,6 @@ async function getState() {
 }
 function getPendingAutoRunTimerPlan() {
   return null;
-}
-function isAutoRunScheduledState() {
-  return false;
 }
 function getStep8CallbackUrlFromNavigation() { return ''; }
 function getStep8CallbackUrlFromTabUpdate() { return ''; }
