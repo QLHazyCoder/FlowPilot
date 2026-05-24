@@ -56,6 +56,7 @@ test('executeNodeViaCompletionSignal lets fill-profile succeed through backgroun
   const api = new Function(`
 const events = [];
 const LOG_PREFIX = '[test]';
+const nodeWaiters = new Map();
 
 function getErrorMessage(error) {
   return error?.message || String(error || '');
@@ -65,13 +66,22 @@ async function getState() {
   return {};
 }
 
+async function setState(updates) {
+  events.push({ type: 'setState', updates });
+}
+
+function createNodeCompletionToken(nodeId) {
+  return String(nodeId || 'node').trim() + ':token';
+}
+
 function assertNodeExecutionAllowedForState() {}
 
 function getNodeCompletionSignalTimeoutMs() {
   return 12345;
 }
 
-function waitForNodeComplete() {
+function waitForNodeComplete(nodeId) {
+  nodeWaiters.set(nodeId, {});
   return new Promise((_, reject) => {
     setTimeout(() => reject(new Error('节点 fill-profile 等待超时（>12 秒）')), 5);
   });
@@ -94,10 +104,11 @@ function notifyNodeError(nodeId, error) {
   events.push({ type: 'notifyNodeError', nodeId, error });
 }
 
-async function recoverFillProfileCompletionFromBackground(error) {
-  events.push({ type: 'backgroundRecovery', error: getErrorMessage(error) });
+async function recoverFillProfileCompletionFromBackground(error, completionToken) {
+  events.push({ type: 'backgroundRecovery', error: getErrorMessage(error), completionToken });
   return {
     nodeId: 'fill-profile',
+    completionToken,
     outcome: 'background_transport_recovered',
     successState: 'logged_in_home',
     url: 'https://chatgpt.com/',
@@ -127,8 +138,41 @@ return {
   assert.equal(result.recoveredByBackground, true);
   assert.equal(result.url, 'https://chatgpt.com/');
   assert.equal(events.some((entry) => entry.type === 'backgroundRecovery'), true);
+  assert.equal(events.find((entry) => entry.type === 'executeNode').options.completionToken, 'fill-profile:token');
+  assert.equal(events.find((entry) => entry.type === 'backgroundRecovery').completionToken, 'fill-profile:token');
   assert.equal(events.some((entry) => entry.type === 'notifyNodeError'), false);
   assert.equal(events.some((entry) => entry.type === 'finalizeDeferredNodeExecutionError'), false);
+});
+
+test('notifyNodeComplete ignores stale fill-profile completion token from previous auto-run round', async () => {
+  const api = new Function(`
+const events = [];
+const LOG_PREFIX = '[test]';
+const nodeWaiters = new Map();
+
+${extractFunction('notifyNodeComplete')}
+
+return {
+  run() {
+    const resolved = [];
+    nodeWaiters.set('fill-profile', {
+      completionToken: 'round-2-token',
+      resolve(payload) {
+        resolved.push(payload);
+      },
+    });
+    notifyNodeComplete('fill-profile', { completionToken: 'round-1-token', url: 'https://old.example/' });
+    notifyNodeComplete('fill-profile', { completionToken: 'round-2-token', url: 'https://chatgpt.com/' });
+    return resolved;
+  },
+};
+`)();
+
+  const resolved = api.run();
+
+  assert.deepStrictEqual(resolved, [
+    { completionToken: 'round-2-token', url: 'https://chatgpt.com/' },
+  ]);
 });
 
 test('executeNodeViaCompletionSignal keeps non-fill-profile retryable transport errors on original path', async () => {
@@ -144,13 +188,24 @@ async function getState() {
   return {};
 }
 
+async function setState(updates) {
+  events.push({ type: 'setState', updates });
+}
+
+function createNodeCompletionToken(nodeId) {
+  return String(nodeId || 'node').trim() + ':token';
+}
+
 function assertNodeExecutionAllowedForState() {}
 
 function getNodeCompletionSignalTimeoutMs() {
   return 12345;
 }
 
-function waitForNodeComplete() {
+const nodeWaiters = new Map();
+
+function waitForNodeComplete(nodeId) {
+  nodeWaiters.set(nodeId, {});
   return new Promise((_, reject) => {
     setTimeout(() => reject(new Error('节点 oauth-login 等待超时（>12 秒）')), 5);
   });

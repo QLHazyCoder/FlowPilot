@@ -7145,6 +7145,7 @@ async function waitForStep5SubmitOutcome(options = {}) {
 
 async function step5_fillNameBirthday(payload) {
   const { firstName, lastName, age, year, month, day, prefillOnly = false } = payload;
+  const completionToken = String(payload?.completionToken || '').trim();
   if (!firstName || !lastName) throw new Error('未提供姓名数据。');
   const performOperationWithDelay = typeof getOperationDelayRunner === 'function'
     ? getOperationDelayRunner()
@@ -7419,6 +7420,9 @@ async function step5_fillNameBirthday(payload) {
       navigationStarted: Boolean(extra.navigationStarted),
       outcome: extra.outcome || null,
     });
+    if (completionToken) {
+      completionPayload.completionToken = completionToken;
+    }
     debugLog(`准备发送完成信号（reason=${completionReason}，isAgeMode=${isAgeMode}）。`, {
       level: extra?.navigationStarted ? 'warn' : 'info',
     });

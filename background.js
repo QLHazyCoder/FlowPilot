@@ -11173,10 +11173,24 @@ function getStepCompletionSignalTimeoutMs(step, state = {}) {
   return getNodeCompletionSignalTimeoutMs(getNodeIdByStepForState(step, state), state);
 }
 
+function createNodeCompletionToken(nodeId) {
+  const normalizedNodeId = String(nodeId || '').trim() || 'node';
+  const randomPart = Math.random().toString(36).slice(2, 10);
+  return `${normalizedNodeId}:${Date.now()}:${randomPart}`;
+}
+
 function notifyNodeComplete(nodeId, payload) {
   const normalizedNodeId = String(nodeId || '').trim();
   const waiter = nodeWaiters.get(normalizedNodeId);
   console.log(LOG_PREFIX, `[notifyNodeComplete] node ${normalizedNodeId}, hasWaiter=${Boolean(waiter)}`);
+  const expectedToken = String(waiter?.completionToken || '').trim();
+  if (waiter && expectedToken) {
+    const actualToken = String(payload?.completionToken || payload?.stepCompletionToken || '').trim();
+    if (actualToken !== expectedToken) {
+      console.warn(LOG_PREFIX, `[notifyNodeComplete] ignore stale completion for node ${normalizedNodeId}: expected token ${expectedToken}, got ${actualToken || 'empty'}`);
+      return;
+    }
+  }
   if (waiter) waiter.resolve(payload);
 }
 
@@ -11303,7 +11317,7 @@ async function finalizeDeferredStepExecutionError(step, error) {
   return finalizeDeferredNodeExecutionError(nodeId, error);
 }
 
-async function recoverFillProfileCompletionFromBackground(executeError = null) {
+async function recoverFillProfileCompletionFromBackground(executeError = null, completionToken = '') {
   const transportMessage = getErrorMessage(executeError);
   await addLog('步骤 5：资料提交后页面通信中断，正在通过后台复核最终状态...', 'warn', {
     step: 5,
@@ -11325,6 +11339,7 @@ async function recoverFillProfileCompletionFromBackground(executeError = null) {
   const completionPayload = {
     nodeId: 'fill-profile',
     step: 5,
+    ...(completionToken ? { completionToken } : {}),
     outcome: 'background_transport_recovered',
     navigationStarted: true,
     requireContentStateBeforeUrlSuccess: true,
@@ -11356,14 +11371,25 @@ async function executeNodeViaCompletionSignal(nodeId, timeoutMs = 0) {
   const resolvedTimeoutMs = Number(timeoutMs) > 0
     ? timeoutMs
     : getNodeCompletionSignalTimeoutMs(normalizedNodeId, executionState);
+  const completionToken = createNodeCompletionToken(normalizedNodeId);
+  await setState({
+    currentCompletionTokenByNode: {
+      ...(executionState.currentCompletionTokenByNode || {}),
+      [normalizedNodeId]: completionToken,
+    },
+  });
   const completionResultPromise = waitForNodeComplete(normalizedNodeId, resolvedTimeoutMs).then(
     payload => ({ ok: true, payload }),
     error => ({ ok: false, error }),
   );
+  const waiter = nodeWaiters.get(normalizedNodeId);
+  if (waiter) {
+    waiter.completionToken = completionToken;
+  }
 
   let executeError = null;
   try {
-    await executeNode(normalizedNodeId, { deferRetryableTransportError: true });
+    await executeNode(normalizedNodeId, { deferRetryableTransportError: true, completionToken });
   } catch (err) {
     executeError = err;
     if (isStopError(err) || !isRetryableContentScriptTransportError(err)) {
@@ -11381,7 +11407,7 @@ async function executeNodeViaCompletionSignal(nodeId, timeoutMs = 0) {
       source: 'completion',
       ...result,
     }));
-    const taggedBackgroundRecoveryPromise = recoverFillProfileCompletionFromBackground(executeError).then(
+    const taggedBackgroundRecoveryPromise = recoverFillProfileCompletionFromBackground(executeError, completionToken).then(
       (payload) => ({
         source: 'background-recovery',
         ok: true,
@@ -11792,7 +11818,7 @@ const STEP_FETCH_NETWORK_RETRY_POLICIES = new Map([
 ]);
 
 async function executeNode(nodeId, options = {}) {
-  const { deferRetryableTransportError = false } = options;
+  const { deferRetryableTransportError = false, completionToken = '' } = options;
   const normalizedNodeId = String(nodeId || '').trim();
   if (!normalizedNodeId) {
     throw new Error('executeNode 缺少 nodeId。');
@@ -11846,6 +11872,7 @@ async function executeNode(nodeId, options = {}) {
           ...state,
           visibleStep: Number(step),
           nodeId: normalizedNodeId,
+          ...(completionToken ? { completionToken } : {}),
           nodeDefinition: getNodeDefinitionForState(normalizedNodeId, state),
           stepDefinition: getStepDefinitionForState(step, state),
         });
@@ -13911,6 +13938,7 @@ const step5Executor = self.MultiPageBackgroundStep5?.createStep5Executor({
   addLog,
   generateRandomBirthday,
   generateRandomName,
+  getState,
   sendToContentScript,
 });
 const step6Executor = self.MultiPageBackgroundStep6?.createStep6Executor({

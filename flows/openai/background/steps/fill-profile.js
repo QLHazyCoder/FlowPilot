@@ -6,12 +6,17 @@
       addLog,
       generateRandomBirthday,
       generateRandomName,
+      getState,
       sendToContentScript,
     } = deps;
 
-    async function executeStep5() {
+    async function executeStep5(state = {}) {
       const { firstName, lastName } = generateRandomName();
       const { year, month, day } = generateRandomBirthday();
+      const currentState = state && typeof state === 'object' && Object.keys(state).length
+        ? state
+        : (typeof getState === 'function' ? await getState() : {});
+      const completionToken = String(currentState?.completionToken || currentState?.currentCompletionTokenByNode?.['fill-profile'] || '').trim();
 
       await addLog(`步骤 5：已生成姓名 ${firstName} ${lastName}，生日 ${year}-${month}-${day}`);
 
@@ -26,6 +31,7 @@
           year,
           month,
           day,
+          ...(completionToken ? { completionToken } : {}),
         },
       });
     }
