@@ -7035,7 +7035,7 @@ async function waitForStep5SubmitOutcome(options = {}) {
   const {
     timeoutMs = 120000,
     maxAuthRetryRecoveries = 2,
-    maxPostSubmitPromptActions = 8,
+    maxPostSubmitPromptActions = 3,
     maxSubmitClicks = 3,
     retryClickIntervalMs = 3500,
   } = options;
@@ -7083,6 +7083,18 @@ async function waitForStep5SubmitOutcome(options = {}) {
     if (postSubmitPromptActionCount < maxPostSubmitPromptActions && await advanceStep5PostSubmitOnboardingPage({ allowProfileVisiblePrompt: true })) {
       postSubmitPromptActionCount += 1;
       lastSubmitClickAt = Date.now();
+      if (postSubmitPromptActionCount >= maxPostSubmitPromptActions) {
+        const url = String(location.href || '').trim();
+        debugLog(`注册后弹窗已连续处理 ${postSubmitPromptActionCount}/${maxPostSubmitPromptActions} 次，按已完成账号注册进入后续步骤。`, {
+          level: 'ok',
+        });
+        return {
+          state: isStep5CompletionChatgptUrl(url) ? 'logged_in_home' : 'post_submit_prompts_completed',
+          url,
+          postSubmitPromptActionsCompleted: true,
+          postSubmitPromptActionCount,
+        };
+      }
       continue;
     }
 

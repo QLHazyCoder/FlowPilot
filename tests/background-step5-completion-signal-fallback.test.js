@@ -298,7 +298,7 @@ async function sendToContentScriptResilient(source, message) {
   messages.push({ source, type: message.type });
   if (message.type === 'ADVANCE_STEP5_POST_SUBMIT_PROMPT') {
     promptAdvanceCount += 1;
-    return { advanced: promptAdvanceCount <= 2, state: { url: 'https://chatgpt.com/' } };
+    return { advanced: promptAdvanceCount <= 3, state: { url: 'https://chatgpt.com/' } };
   }
   if (message.type === 'GET_STEP5_SUBMIT_STATE') {
     return {
@@ -346,8 +346,10 @@ return {
   assert.equal(result.step5PostCompletionValidated, true);
   assert.equal(result.url, 'https://chatgpt.com/');
   assert.equal(result.requireContentStateBeforeUrlSuccess, true);
+  assert.equal(result.postSubmitPromptActionsCompleted, true);
+  assert.equal(result.postSubmitPromptActionCount, 3);
   assert.equal(snapshot.promptAdvanceCount, 3);
-  assert.equal(snapshot.waitCalls.length, 3);
+  assert.equal(snapshot.waitCalls.length, 4);
   assert.deepStrictEqual(snapshot.completions, [
     {
       nodeId: 'fill-profile',
@@ -360,7 +362,6 @@ return {
       'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
       'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
       'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
-      'GET_STEP5_SUBMIT_STATE',
     ]
   );
   assert.equal(

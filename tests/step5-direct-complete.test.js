@@ -1565,6 +1565,101 @@ return {
   assert.deepStrictEqual(api.snapshot().clicks, ['跳过', '继续']);
 });
 
+test('step 5 completes after three post-submit prompt button clicks', async () => {
+  const api = new Function(`
+let now = 0;
+const clicks = [];
+let promptIndex = 0;
+const makeButton = (text) => ({
+  tagName: 'BUTTON',
+  textContent: text,
+  innerText: text,
+  hidden: false,
+  disabled: false,
+  getAttribute(name) {
+    if (name === 'aria-disabled') return 'false';
+    return '';
+  },
+});
+const promptButtons = [
+  [makeButton('跳过')],
+  [makeButton('继续')],
+  [makeButton('同意')],
+  [makeButton('继续')],
+];
+const promptTexts = [
+  '是什么促使你使用 ChatGPT？ 跳过',
+  '你已准备就绪 继续',
+  '继续操作即表示你同意我们的条款，并已阅读我们的隐私政策。同意',
+  '你已准备就绪 继续',
+];
+const location = {
+  href: 'https://chatgpt.com/',
+};
+const document = {
+  body: {
+    innerText: promptTexts[0],
+  },
+  querySelector() { return null; },
+  querySelectorAll(selector) {
+    if (selector === 'button, [role="button"]') {
+      return promptButtons[promptIndex] || [];
+    }
+    if (selector === 'button, [role="button"], a, [role="link"], input[type="button"], input[type="submit"]') {
+      return promptButtons[promptIndex] || [];
+    }
+    return [];
+  },
+};
+
+function throwIfStopped() {}
+function log() {}
+async function sleep(ms = 0) { now += ms || 250; }
+async function humanPause() {}
+function simulateClick(el) {
+  clicks.push(el?.innerText || el?.textContent || 'clicked');
+  promptIndex += 1;
+  document.body.innerText = promptTexts[promptIndex] || 'still waiting';
+}
+function isVisibleElement(el) { return Boolean(el) && !el.hidden; }
+function isActionEnabled(el) { return Boolean(el) && !el.disabled && el.getAttribute?.('aria-disabled') !== 'true'; }
+function getSignupAuthRetryPathPatterns() { return []; }
+function getAuthTimeoutErrorPageState() { return null; }
+async function recoverCurrentAuthRetryPage() { throw new Error('should not recover retry page'); }
+function createSignupUserAlreadyExistsError() { return new Error('user already exists'); }
+function createAuthMaxCheckAttemptsError() { return new Error('max_check_attempts'); }
+function getStep5ErrorText() { return ''; }
+function getPageTextSnapshot() { return document.body.innerText; }
+function isStep5Ready() { return false; }
+function isLikelyLoggedInChatgptHomeUrl() { return false; }
+function isOAuthConsentPage() { return false; }
+function isAddPhonePageReady() { return false; }
+
+${extractFunction('getActionText')}
+${extractFunction('isSignupProfilePageUrl')}
+${getStep5OutcomeBundle()}
+
+return {
+  run() {
+    return waitForStep5SubmitOutcome({ timeoutMs: 3000 });
+  },
+  snapshot() {
+    return { clicks, now };
+  },
+};
+`)();
+
+  const result = await api.run();
+
+  assert.deepStrictEqual(result, {
+    state: 'logged_in_home',
+    url: 'https://chatgpt.com/',
+    postSubmitPromptActionsCompleted: true,
+    postSubmitPromptActionCount: 3,
+  });
+  assert.deepStrictEqual(api.snapshot().clicks, ['跳过', '继续', '同意']);
+});
+
 test('step 5 clicks agree on post-submit terms prompt before completing', async () => {
   const api = new Function(`
 let now = 0;

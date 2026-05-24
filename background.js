@@ -11350,6 +11350,8 @@ async function recoverFillProfileCompletionFromBackground(executeError = null, c
     ...completionPayload,
     ...(pageState?.successState ? { successState: pageState.successState } : {}),
     ...(pageState?.url ? { url: pageState.url } : {}),
+    ...(pageState?.postSubmitPromptActionsCompleted ? { postSubmitPromptActionsCompleted: true } : {}),
+    ...(Number(pageState?.postSubmitPromptActionCount) > 0 ? { postSubmitPromptActionCount: Number(pageState.postSubmitPromptActionCount) } : {}),
     recoveredByBackground: true,
     step5PostCompletionValidated: true,
   };
@@ -15379,7 +15381,7 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
       };
 
   const maxAuthRetryRecoveries = Math.max(1, Number(completionPayload?.maxAuthRetryRecoveries) || 2);
-  const maxPostSubmitPromptActions = Math.max(0, Number(completionPayload?.maxPostSubmitPromptActions) || 8);
+  const maxPostSubmitPromptActions = Math.max(0, Number(completionPayload?.maxPostSubmitPromptActions) || 3);
   let authRetryRecoveryCount = 0;
   let postSubmitPromptActionCount = 0;
   let lastPromptResult = null;
@@ -15418,6 +15420,24 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
           stableMs: 500,
           initialDelayMs: 300,
         }).catch(() => null);
+        if (postSubmitPromptActionCount >= maxPostSubmitPromptActions) {
+          const latestTab = await chrome.tabs.get(tabId).catch(() => null);
+          const latestUrl = String(latestTab?.url || currentUrl || completionPayload?.url || '').trim();
+          await debugLog(`后台复核已连续处理注册后弹窗 ${postSubmitPromptActionCount}/${maxPostSubmitPromptActions} 次，按已完成账号注册进入步骤 6。`, {
+            completionOutcome: String(completionPayload?.outcome || '').trim(),
+            completionUrl: String(completionPayload?.url || '').trim(),
+            navigationStarted: Boolean(completionPayload?.navigationStarted),
+            tabUrl: latestUrl,
+            pageState: promptResult?.state,
+            level: 'ok',
+          });
+          return {
+            successState: isStep5CompletionChatgptUrl(latestUrl) ? 'logged_in_home' : 'post_submit_prompts_completed',
+            url: latestUrl,
+            postSubmitPromptActionsCompleted: true,
+            postSubmitPromptActionCount,
+          };
+        }
         continue;
       }
     }
