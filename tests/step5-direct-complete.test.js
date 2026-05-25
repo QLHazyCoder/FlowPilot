@@ -1053,8 +1053,18 @@ test('step 5 advances post-submit onboarding survey page before completing', asy
   const api = new Function(`
 let now = 0;
 const clicks = [];
+let promptIndex = 0;
 const skipButton = {
   textContent: 'Skip for now',
+  hidden: false,
+  disabled: false,
+  getAttribute(name) {
+    if (name === 'aria-disabled') return 'false';
+    return '';
+  },
+};
+const continueButton = {
+  textContent: 'Continue',
   hidden: false,
   disabled: false,
   getAttribute(name) {
@@ -1072,7 +1082,7 @@ const document = {
   querySelector() { return null; },
   querySelectorAll(selector) {
     if (selector === 'button, [role="button"], a, [role="link"], input[type="button"], input[type="submit"]') {
-      return [skipButton];
+      return promptIndex === 0 ? [skipButton] : promptIndex === 1 ? [continueButton] : [];
     }
     return [];
   },
@@ -1084,8 +1094,11 @@ async function sleep(ms = 0) { now += ms || 250; }
 async function humanPause() {}
 function simulateClick(el) {
   clicks.push(el?.textContent || 'clicked');
+  promptIndex += 1;
   location.href = 'https://chatgpt.com/';
-  document.body.innerText = 'ChatGPT';
+  document.body.innerText = promptIndex === 1
+    ? 'You are ready to go Continue'
+    : 'ChatGPT';
 }
 function isVisibleElement(el) { return Boolean(el) && !el.hidden; }
 function isActionEnabled(el) { return Boolean(el) && !el.disabled && el.getAttribute?.('aria-disabled') !== 'true'; }
@@ -1121,15 +1134,16 @@ return {
     state: 'logged_in_home',
     url: 'https://chatgpt.com/',
     postSubmitPromptActionsCompleted: true,
-    postSubmitPromptActionCount: 1,
+    postSubmitPromptActionCount: 2,
   });
-  assert.deepStrictEqual(api.snapshot().clicks, ['Skip for now']);
+  assert.deepStrictEqual(api.snapshot().clicks, ['Skip for now', 'Continue']);
 });
 
 test('step 5 skips post-submit prompt when about-you url remains visible', async () => {
   const api = new Function(`
 let now = 0;
 const clicks = [];
+let promptIndex = 0;
 const submitButton = {
   textContent: '完成帐户创建',
   hidden: false,
@@ -1141,6 +1155,15 @@ const submitButton = {
 };
 const skipButton = {
   textContent: '跳过',
+  hidden: false,
+  disabled: false,
+  getAttribute(name) {
+    if (name === 'aria-disabled') return 'false';
+    return '';
+  },
+};
+const continueButton = {
+  textContent: '继续',
   hidden: false,
   disabled: false,
   getAttribute(name) {
@@ -1161,7 +1184,7 @@ const document = {
   },
   querySelectorAll(selector) {
     if (selector === 'button, [role="button"], a, [role="link"], input[type="button"], input[type="submit"]') {
-      return [submitButton, skipButton];
+      return promptIndex === 0 ? [submitButton, skipButton] : promptIndex === 1 ? [continueButton] : [];
     }
     return [];
   },
@@ -1173,8 +1196,11 @@ async function sleep(ms = 0) { now += ms || 250; }
 async function humanPause() {}
 function simulateClick(el) {
   clicks.push(el?.textContent || 'clicked');
+  promptIndex += 1;
   location.href = 'https://chatgpt.com/';
-  document.body.innerText = 'ChatGPT';
+  document.body.innerText = promptIndex === 1
+    ? '你已准备就绪 继续'
+    : 'ChatGPT';
 }
 function isVisibleElement(el) { return Boolean(el) && !el.hidden; }
 function isActionEnabled(el) { return Boolean(el) && !el.disabled && el.getAttribute?.('aria-disabled') !== 'true'; }
@@ -1210,9 +1236,9 @@ return {
     state: 'logged_in_home',
     url: 'https://chatgpt.com/',
     postSubmitPromptActionsCompleted: true,
-    postSubmitPromptActionCount: 1,
+    postSubmitPromptActionCount: 2,
   });
-  assert.deepStrictEqual(api.snapshot().clicks, ['跳过']);
+  assert.deepStrictEqual(api.snapshot().clicks, ['跳过', '继续']);
 });
 
 test('step 5 does not treat profile create-account button as post-submit prompt', async () => {
@@ -1323,8 +1349,18 @@ test('step 5 clicks continue on post-submit ready page before completing', async
   const api = new Function(`
 let now = 0;
 const clicks = [];
+let promptIndex = 0;
 const continueButton = {
   textContent: '继续',
+  hidden: false,
+  disabled: false,
+  getAttribute(name) {
+    if (name === 'aria-disabled') return 'false';
+    return '';
+  },
+};
+const agreeButton = {
+  textContent: '同意',
   hidden: false,
   disabled: false,
   getAttribute(name) {
@@ -1342,7 +1378,7 @@ const document = {
   querySelector() { return null; },
   querySelectorAll(selector) {
     if (selector === 'button, [role="button"], a, [role="link"], input[type="button"], input[type="submit"]') {
-      return [continueButton];
+      return promptIndex === 0 ? [continueButton] : promptIndex === 1 ? [agreeButton] : [];
     }
     return [];
   },
@@ -1354,7 +1390,10 @@ async function sleep(ms = 0) { now += ms || 250; }
 async function humanPause() {}
 function simulateClick(el) {
   clicks.push(el?.textContent || 'clicked');
-  document.body.innerText = 'ChatGPT';
+  promptIndex += 1;
+  document.body.innerText = promptIndex === 1
+    ? '继续操作即表示你同意我们的条款，并已阅读我们的隐私政策。同意'
+    : 'ChatGPT';
 }
 function isVisibleElement(el) { return Boolean(el) && !el.hidden; }
 function isActionEnabled(el) { return Boolean(el) && !el.disabled && el.getAttribute?.('aria-disabled') !== 'true'; }
@@ -1390,12 +1429,12 @@ return {
     state: 'logged_in_home',
     url: 'https://chatgpt.com/',
     postSubmitPromptActionsCompleted: true,
-    postSubmitPromptActionCount: 1,
+    postSubmitPromptActionCount: 2,
   });
-  assert.deepStrictEqual(api.snapshot().clicks, ['继续']);
+  assert.deepStrictEqual(api.snapshot().clicks, ['继续', '同意']);
 });
 
-test('step 5 completes after first successful post-submit home page prompt action', async () => {
+test('step 5 completes after two successful post-submit home page prompt actions', async () => {
   const api = new Function(`
 let now = 0;
 const clicks = [];
@@ -1481,9 +1520,9 @@ return {
     state: 'logged_in_home',
     url: 'https://chatgpt.com/',
     postSubmitPromptActionsCompleted: true,
-    postSubmitPromptActionCount: 1,
+    postSubmitPromptActionCount: 2,
   });
-  assert.deepStrictEqual(api.snapshot().clicks, ['跳过']);
+  assert.deepStrictEqual(api.snapshot().clicks, ['跳过', '同意']);
 });
 
 test('step 5 directly clicks Chinese survey buttons by button text', async () => {
@@ -1570,12 +1609,12 @@ return {
     state: 'logged_in_home',
     url: 'https://chatgpt.com/',
     postSubmitPromptActionsCompleted: true,
-    postSubmitPromptActionCount: 1,
+    postSubmitPromptActionCount: 2,
   });
-  assert.deepStrictEqual(api.snapshot().clicks, ['跳过']);
+  assert.deepStrictEqual(api.snapshot().clicks, ['跳过', '继续']);
 });
 
-test('step 5 completes after first successful post-submit prompt button click', async () => {
+test('step 5 completes after all available post-submit prompt button clicks up to the limit', async () => {
   const api = new Function(`
 let now = 0;
 const clicks = [];
@@ -1665,17 +1704,27 @@ return {
     state: 'logged_in_home',
     url: 'https://chatgpt.com/',
     postSubmitPromptActionsCompleted: true,
-    postSubmitPromptActionCount: 1,
+    postSubmitPromptActionCount: 3,
   });
-  assert.deepStrictEqual(api.snapshot().clicks, ['跳过']);
+  assert.deepStrictEqual(api.snapshot().clicks, ['跳过', '继续', '同意']);
 });
 
 test('step 5 clicks agree on post-submit terms prompt before completing', async () => {
   const api = new Function(`
 let now = 0;
 const clicks = [];
+let promptIndex = 0;
 const agreeButton = {
   textContent: '同意',
+  hidden: false,
+  disabled: false,
+  getAttribute(name) {
+    if (name === 'aria-disabled') return 'false';
+    return '';
+  },
+};
+const continueButton = {
+  textContent: '继续',
   hidden: false,
   disabled: false,
   getAttribute(name) {
@@ -1693,7 +1742,7 @@ const document = {
   querySelector() { return null; },
   querySelectorAll(selector) {
     if (selector === 'button, [role="button"], a, [role="link"], input[type="button"], input[type="submit"]') {
-      return [agreeButton];
+      return promptIndex === 0 ? [agreeButton] : promptIndex === 1 ? [continueButton] : [];
     }
     return [];
   },
@@ -1705,7 +1754,10 @@ async function sleep(ms = 0) { now += ms || 250; }
 async function humanPause() {}
 function simulateClick(el) {
   clicks.push(el?.textContent || 'clicked');
-  document.body.innerText = 'ChatGPT';
+  promptIndex += 1;
+  document.body.innerText = promptIndex === 1
+    ? '你已准备就绪 继续'
+    : 'ChatGPT';
 }
 function isVisibleElement(el) { return Boolean(el) && !el.hidden; }
 function isActionEnabled(el) { return Boolean(el) && !el.disabled && el.getAttribute?.('aria-disabled') !== 'true'; }
@@ -1741,9 +1793,9 @@ return {
     state: 'logged_in_home',
     url: 'https://chatgpt.com/',
     postSubmitPromptActionsCompleted: true,
-    postSubmitPromptActionCount: 1,
+    postSubmitPromptActionCount: 2,
   });
-  assert.deepStrictEqual(api.snapshot().clicks, ['同意']);
+  assert.deepStrictEqual(api.snapshot().clicks, ['同意', '继续']);
 });
 
 test('step 5 does not treat unknown auth page as left_profile success', () => {

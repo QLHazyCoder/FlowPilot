@@ -15391,6 +15391,7 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
 
   const maxAuthRetryRecoveries = Math.max(1, Number(completionPayload?.maxAuthRetryRecoveries) || 2);
   const maxPostSubmitPromptActions = Math.max(0, Number(completionPayload?.maxPostSubmitPromptActions) || 3);
+  const minPostSubmitPromptActions = Math.min(maxPostSubmitPromptActions, Math.max(0, Number(completionPayload?.minPostSubmitPromptActions) || 2));
   let authRetryRecoveryCount = 0;
   let postSubmitPromptActionCount = 0;
   let lastPromptResult = null;
@@ -15431,6 +15432,9 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
         }).catch(() => null);
         const latestTab = await chrome.tabs.get(tabId).catch(() => null);
         const latestUrl = String(latestTab?.url || currentUrl || completionPayload?.url || '').trim();
+        if (postSubmitPromptActionCount < maxPostSubmitPromptActions) {
+          continue;
+        }
         await debugLog(`后台复核已处理注册后弹窗 ${postSubmitPromptActionCount}/${maxPostSubmitPromptActions} 次，按已完成账号注册进入步骤 6。`, {
           completionOutcome: String(completionPayload?.outcome || '').trim(),
           completionUrl: String(completionPayload?.url || '').trim(),
@@ -15446,9 +15450,34 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
           postSubmitPromptActionCount,
         };
       }
+      if (postSubmitPromptActionCount >= minPostSubmitPromptActions) {
+        await debugLog(`后台复核已处理注册后弹窗 ${postSubmitPromptActionCount}/${maxPostSubmitPromptActions} 次，最后一轮未检测到新弹窗，忽略等待并进入步骤 6。`, {
+          completionOutcome: String(completionPayload?.outcome || '').trim(),
+          completionUrl: String(completionPayload?.url || '').trim(),
+          navigationStarted: Boolean(completionPayload?.navigationStarted),
+          tabUrl: currentUrl,
+          pageState: lastPromptResult,
+          level: 'ok',
+        });
+        return {
+          successState: isStep5CompletionChatgptUrl(currentUrl) ? 'logged_in_home' : 'post_submit_prompts_completed',
+          url: currentUrl,
+          postSubmitPromptActionsCompleted: true,
+          postSubmitPromptActionCount,
+        };
+      }
     }
 
     if (!completionPayload?.requireContentStateBeforeUrlSuccess && currentUrl && isStep5CompletionChatgptUrl(currentUrl)) {
+      if (postSubmitPromptActionCount > 0 && postSubmitPromptActionCount < maxPostSubmitPromptActions) {
+        await debugLog(`后台已进入 chatgpt.com，但注册后弹窗仅处理 ${postSubmitPromptActionCount}/${maxPostSubmitPromptActions} 次，继续等待下一轮弹窗处理。`, {
+          completionOutcome: String(completionPayload?.outcome || '').trim(),
+          completionUrl: String(completionPayload?.url || '').trim(),
+          navigationStarted: Boolean(completionPayload?.navigationStarted),
+          tabUrl: currentUrl,
+          level: 'info',
+        });
+      } else {
       await debugLog('后台确认已进入 chatgpt.com 且没有待处理的注册后弹窗，步骤 5 完成。', {
         completionOutcome: String(completionPayload?.outcome || '').trim(),
         completionUrl: String(completionPayload?.url || '').trim(),
@@ -15460,6 +15489,7 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
         successState: 'logged_in_home',
         url: currentUrl,
       };
+      }
     }
 
     if (
@@ -15470,6 +15500,16 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
       && lastPromptResult?.fallback
       && lastPromptResult?.reason === 'prompt_not_detected'
     ) {
+      if (postSubmitPromptActionCount < maxPostSubmitPromptActions) {
+        await debugLog(`后台兜底已进入 chatgpt.com，但注册后弹窗仅处理 ${postSubmitPromptActionCount}/${maxPostSubmitPromptActions} 次，继续等待下一轮弹窗处理。`, {
+          completionOutcome: String(completionPayload?.outcome || '').trim(),
+          completionUrl: String(completionPayload?.url || '').trim(),
+          navigationStarted: Boolean(completionPayload?.navigationStarted),
+          tabUrl: currentUrl,
+          pageState: lastPromptResult,
+          level: 'warn',
+        });
+      } else {
       await debugLog('后台兜底确认注册后弹窗已处理完，当前已进入 chatgpt.com 正常首页，步骤 5 完成。', {
         completionOutcome: String(completionPayload?.outcome || '').trim(),
         completionUrl: String(completionPayload?.url || '').trim(),
@@ -15483,6 +15523,7 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
         url: currentUrl,
         recoveredByFallback: true,
       };
+      }
     }
 
     const pageState = await getStep5SubmitStateFromContent({
@@ -15538,6 +15579,17 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
     }
 
     if (pageState.successState === 'logged_in_home' && isStep5CompletionChatgptUrl(pageState.url)) {
+      if (postSubmitPromptActionCount > 0 && postSubmitPromptActionCount < maxPostSubmitPromptActions) {
+        await debugLog(`后台复核确认已进入 chatgpt.com，但注册后弹窗仅处理 ${postSubmitPromptActionCount}/${maxPostSubmitPromptActions} 次，继续等待下一轮弹窗处理。`, {
+          completionOutcome: String(completionPayload?.outcome || '').trim(),
+          completionUrl: String(completionPayload?.url || '').trim(),
+          navigationStarted: Boolean(completionPayload?.navigationStarted),
+          tabUrl: currentUrl,
+          pageState,
+          level: 'info',
+        });
+        continue;
+      }
       await debugLog(`后台复核确认成功状态：${pageState.successState}`, {
         completionOutcome: String(completionPayload?.outcome || '').trim(),
         completionUrl: String(completionPayload?.url || '').trim(),

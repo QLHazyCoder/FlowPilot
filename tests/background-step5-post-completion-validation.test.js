@@ -218,7 +218,7 @@ return {
   );
 });
 
-test('step 5 post-completion validation completes after first successful chatgpt home prompt action', async () => {
+test('step 5 post-completion validation completes after final prompt miss following two successful actions', async () => {
   const api = new Function(`
 const messages = [];
 let promptAdvanceCount = 0;
@@ -282,14 +282,16 @@ return {
 
   assert.equal(result.successState, 'logged_in_home');
   assert.equal(result.postSubmitPromptActionsCompleted, true);
-  assert.equal(result.postSubmitPromptActionCount, 1);
+  assert.equal(result.postSubmitPromptActionCount, 2);
   assert.deepStrictEqual(
     snapshot.messages.map(({ type }) => type),
     [
       'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
+      'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
+      'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
     ]
   );
-  assert.equal(snapshot.promptAdvanceCount, 1);
+  assert.equal(snapshot.promptAdvanceCount, 3);
   assert.equal(snapshot.stateReadCount, 0);
 });
 
@@ -364,14 +366,82 @@ return {
 
   assert.equal(result.successState, 'logged_in_home');
   assert.equal(result.postSubmitPromptActionsCompleted, true);
-  assert.equal(result.postSubmitPromptActionCount, 1);
-  assert.deepStrictEqual(snapshot.fallbackClicks, ['跳过']);
+  assert.equal(result.postSubmitPromptActionCount, 2);
+  assert.deepStrictEqual(snapshot.fallbackClicks, ['跳过', '继续']);
   assert.equal(
     snapshot.logs.some(({ message }) => /后台兜底已点击注册后弹窗按钮“跳过”/.test(message)),
     true
   );
   assert.equal(
     snapshot.logs.some(({ message }) => /后台兜底已点击注册后弹窗按钮“继续”/.test(message)),
-    false
+    true
+  );
+});
+
+test('step 5 post-completion validation ignores final prompt miss after two actions', async () => {
+  const api = new Function(`
+const messages = [];
+let promptAdvanceCount = 0;
+const chrome = {
+  tabs: {
+    async get() {
+      return { url: 'https://chatgpt.com/' };
+    },
+  },
+};
+
+async function sendToContentScriptResilient(source, message) {
+  messages.push({ source, type: message.type });
+  if (message.type === 'ADVANCE_STEP5_POST_SUBMIT_PROMPT') {
+    promptAdvanceCount += 1;
+    return promptAdvanceCount <= 2
+      ? { advanced: true, actionText: promptAdvanceCount === 1 ? '跳过' : '继续' }
+      : { advanced: false, reason: 'prompt_not_detected' };
+  }
+  if (message.type === 'GET_STEP5_SUBMIT_STATE') {
+    throw new Error('final prompt miss should complete before reading page state');
+  }
+  throw new Error('unexpected message type: ' + message.type);
+}
+
+async function addLog() {}
+function getErrorMessage(error) { return error?.message || String(error || ''); }
+async function waitForTabStableComplete() {}
+
+${extractFunction('parseUrlSafely')}
+${extractFunction('isSignupEntryHost')}
+${extractFunction('isLikelyLoggedInChatgptHomeUrl')}
+${extractFunction('isStep5CompletionChatgptUrl')}
+${extractFunction('advanceStep5PostSubmitPromptOnTab')}
+${extractFunction('getStep5SubmitStateFromContent')}
+${extractFunction('recoverStep5SubmitRetryPageOnTab')}
+${extractFunction('validateStep5PostCompletion')}
+
+return {
+  async run() {
+    return validateStep5PostCompletion(99, {
+      maxPostSubmitPromptActions: 3,
+    });
+  },
+  snapshot() {
+    return { messages, promptAdvanceCount };
+  },
+};
+`)();
+
+  const result = await api.run();
+  const snapshot = api.snapshot();
+
+  assert.equal(result.successState, 'logged_in_home');
+  assert.equal(result.postSubmitPromptActionsCompleted, true);
+  assert.equal(result.postSubmitPromptActionCount, 2);
+  assert.equal(snapshot.promptAdvanceCount, 3);
+  assert.deepStrictEqual(
+    snapshot.messages.map(({ type }) => type),
+    [
+      'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
+      'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
+      'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
+    ]
   );
 });

@@ -7042,6 +7042,7 @@ async function waitForStep5SubmitOutcome(options = {}) {
   const start = Date.now();
   let authRetryRecoveryCount = 0;
   let postSubmitPromptActionCount = 0;
+  const minPostSubmitPromptActions = Math.min(maxPostSubmitPromptActions, Math.max(0, Number(options?.minPostSubmitPromptActions) || 2));
   let submitClickCount = 1;
   let lastSubmitClickAt = Date.now();
   let lastStep5Error = '';
@@ -7084,6 +7085,12 @@ async function waitForStep5SubmitOutcome(options = {}) {
       postSubmitPromptActionCount += 1;
       lastSubmitClickAt = Date.now();
       const url = String(location.href || '').trim();
+      debugLog(`注册后弹窗已处理 ${postSubmitPromptActionCount}/${maxPostSubmitPromptActions} 次。`, {
+        level: 'ok',
+      });
+      if (postSubmitPromptActionCount < maxPostSubmitPromptActions) {
+        continue;
+      }
       debugLog(`注册后弹窗已处理 ${postSubmitPromptActionCount}/${maxPostSubmitPromptActions} 次，按已完成账号注册进入后续步骤。`, {
         level: 'ok',
       });
@@ -7097,6 +7104,10 @@ async function waitForStep5SubmitOutcome(options = {}) {
 
     const successState = getStep5PostSubmitSuccessState();
     if (successState) {
+      if (postSubmitPromptActionCount > 0 && postSubmitPromptActionCount < maxPostSubmitPromptActions) {
+        await sleep(250);
+        continue;
+      }
       debugLog(`检测到资料提交成功状态：${successState.state || 'unknown'}`, {
         level: 'ok',
       });
@@ -7141,7 +7152,36 @@ async function waitForStep5SubmitOutcome(options = {}) {
 
   const finalSuccessState = getStep5PostSubmitSuccessState();
   if (finalSuccessState) {
+    if (postSubmitPromptActionCount > 0 && postSubmitPromptActionCount < minPostSubmitPromptActions) {
+      throw new Error(`步骤 5：注册后弹窗仅处理 ${postSubmitPromptActionCount}/${minPostSubmitPromptActions} 次，尚未达到完成门槛。URL: ${location.href}`);
+    }
+    if (postSubmitPromptActionCount >= minPostSubmitPromptActions && postSubmitPromptActionCount < maxPostSubmitPromptActions) {
+      const url = String(location.href || '').trim();
+      debugLog(`注册后弹窗已处理 ${postSubmitPromptActionCount}/${maxPostSubmitPromptActions} 次，最后一轮未检测到新弹窗，忽略等待超时并按成功进入后续步骤。`, {
+        level: 'ok',
+      });
+      return {
+        ...finalSuccessState,
+        state: finalSuccessState.state || (isStep5CompletionChatgptUrl(url) ? 'logged_in_home' : 'post_submit_prompts_completed'),
+        url: finalSuccessState.url || url,
+        postSubmitPromptActionsCompleted: true,
+        postSubmitPromptActionCount,
+      };
+    }
     return finalSuccessState;
+  }
+
+  if (postSubmitPromptActionCount >= minPostSubmitPromptActions) {
+    const url = String(location.href || '').trim();
+    debugLog(`注册后弹窗已处理 ${postSubmitPromptActionCount}/${maxPostSubmitPromptActions} 次，最后一轮未检测到新弹窗，忽略等待超时并按成功进入后续步骤。`, {
+      level: 'ok',
+    });
+    return {
+      state: isStep5CompletionChatgptUrl(url) ? 'logged_in_home' : 'post_submit_prompts_completed',
+      url,
+      postSubmitPromptActionsCompleted: true,
+      postSubmitPromptActionCount,
+    };
   }
 
   const finalStep5Error = (typeof getStep5ErrorText === 'function' ? getStep5ErrorText() : '') || lastStep5Error;
