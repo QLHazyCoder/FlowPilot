@@ -2974,6 +2974,7 @@ function syncLatestState(nextState) {
   const shouldSyncStepDefinitions = [
     'activeFlowId',
     'flowId',
+    'targetId',
     'plusModeEnabled',
     'plusPaymentMethod',
     'plusAccountAccessStrategy',
@@ -11080,6 +11081,7 @@ function applySettingsState(state) {
     syncStepDefinitionsForMode(stepDefinitionState.plusModeEnabled, {
       activeFlowId: state?.activeFlowId || state?.flowId,
       plusPaymentMethod: state?.plusPaymentMethod,
+      plusAccountAccessStrategy: stepDefinitionState.plusAccountAccessStrategy,
       signupMethod: stepDefinitionState.signupMethod,
       phoneSignupReloginAfterBindEmailEnabled: Boolean(state?.phoneSignupReloginAfterBindEmailEnabled),
       accountContributionEnabled: Boolean(state?.accountContributionEnabled),

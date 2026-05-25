@@ -240,6 +240,72 @@ return {
   assert.deepStrictEqual(api.getCalls()[0], { type: 'sync-definitions', activeFlowId: 'kiro' });
 });
 
+test('syncLatestState rebuilds workflow nodes when target changes', () => {
+  const bundle = [
+    extractFunction(sidepanelSource, 'syncLatestState'),
+  ].join('\n');
+
+  const api = new Function(`
+let latestState = {
+  activeFlowId: 'openai',
+  flowId: 'openai',
+  targetId: 'sub2api',
+  nodeStatuses: { 'sub2api-session-import': 'completed' },
+};
+const DEFAULT_ACTIVE_FLOW_ID = 'openai';
+let NODE_IDS = ['sub2api-session-import'];
+let NODE_DEFAULT_STATUSES = { 'sub2api-session-import': 'pending' };
+const calls = [];
+function normalizeFlowId(value = '', fallback = DEFAULT_ACTIVE_FLOW_ID) {
+  return String(value || fallback || DEFAULT_ACTIVE_FLOW_ID).trim().toLowerCase() || DEFAULT_ACTIVE_FLOW_ID;
+}
+function syncStepDefinitionsFromUiState(stateOverrides = {}) {
+  calls.push({ type: 'sync-definitions', targetId: stateOverrides.targetId });
+  if (stateOverrides.targetId === 'cpa') {
+    NODE_IDS = ['cpa-session-import'];
+    NODE_DEFAULT_STATUSES = { 'cpa-session-import': 'pending' };
+  }
+}
+function getStoredNodeStatuses(state = {}) {
+  const source = { ...NODE_DEFAULT_STATUSES, ...(state?.nodeStatuses || {}) };
+  return Object.fromEntries(NODE_IDS.map((nodeId) => [nodeId, source[nodeId] || 'pending']));
+}
+function renderAccountRecords(state) {
+  calls.push({ type: 'render', state: { ...state } });
+}
+${bundle}
+return {
+  syncLatestState,
+  getLatestState() {
+    return latestState;
+  },
+  getCalls() {
+    return calls;
+  },
+};
+`)();
+
+  api.syncLatestState({
+    targetId: 'cpa',
+    nodeStatuses: {
+      'sub2api-session-import': 'completed',
+      'cpa-session-import': 'running',
+    },
+  });
+
+  assert.deepStrictEqual(api.getLatestState().nodeStatuses, {
+    'cpa-session-import': 'running',
+  });
+  assert.equal(Object.prototype.hasOwnProperty.call(api.getLatestState().nodeStatuses, 'sub2api-session-import'), false);
+  assert.deepStrictEqual(api.getCalls()[0], { type: 'sync-definitions', targetId: 'cpa' });
+});
+
+test('applySettingsState passes capability resolved Plus account access strategy into step definitions', () => {
+  const body = extractFunction(sidepanelSource, 'applySettingsState');
+  assert.match(body, /resolveStepDefinitionCapabilityState\(state/);
+  assert.match(body, /plusAccountAccessStrategy:\s*stepDefinitionState\.plusAccountAccessStrategy/);
+});
+
 test('updateNodeUI ignores stale nodes outside the current workflow', () => {
   const bundle = [
     extractFunction(sidepanelSource, 'updateNodeUI'),
