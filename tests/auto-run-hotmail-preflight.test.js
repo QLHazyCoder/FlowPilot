@@ -104,8 +104,6 @@ test('auto-run controller verifies hotmail mailbox before each fresh attempt sta
     customPassword: '',
     autoRunSkipFailures: false,
     autoRunFallbackThreadIntervalMinutes: 0,
-    autoRunDelayEnabled: false,
-    autoRunDelayMinutes: 30,
     autoStepDelaySeconds: null,
     mailProvider: 'hotmail-api',
     emailGenerator: 'duck',
@@ -149,7 +147,7 @@ test('auto-run controller verifies hotmail mailbox before each fresh attempt sta
     broadcastAutoRunStatus: async (phase, payload = {}) => {
       currentState = {
         ...currentState,
-        autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+        autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
         autoRunPhase: phase,
         autoRunCurrentRun: payload.currentRun ?? runtime.state.autoRunCurrentRun,
         autoRunTotalRuns: payload.totalRuns ?? runtime.state.autoRunTotalRuns,
@@ -169,7 +167,7 @@ test('auto-run controller verifies hotmail mailbox before each fresh attempt sta
       events.preflightCalls.push({ ...payload });
     },
     getAutoRunStatusPayload: (phase, payload = {}) => ({
-      autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+      autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
       autoRunPhase: phase,
       autoRunCurrentRun: payload.currentRun ?? 0,
       autoRunTotalRuns: payload.totalRuns ?? 1,

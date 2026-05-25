@@ -10,6 +10,11 @@
   const PLUS_PAYMENT_METHOD_PAYPAL_HOSTED = 'paypal-hosted';
   const PLUS_PAYMENT_METHOD_GOPAY = 'gopay';
   const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
+  const LOCAL_CHECKOUT_PROXY_HEALTH_URL = 'http://127.0.0.1:21988/health';
+  const LOCAL_CHECKOUT_PROXY_URL = 'socks5://127.0.0.1:21987';
+  const LOCAL_CHECKOUT_PROXY_SETTINGS_SCOPE = 'regular';
+  const LOCAL_CHECKOUT_PROXY_TIMEOUT_MS = 1200;
+  const LOCAL_CHECKOUT_PROXY_SETTLE_MS = 350;
   const DEFAULT_GPC_HELPER_API_URL = 'https://gpc.qlhazycoder.top';
   const GPC_HELPER_PHONE_MODE_AUTO = 'auto';
   const GPC_HELPER_PHONE_MODE_MANUAL = 'manual';
@@ -24,6 +29,7 @@
   const PAYPAL_HOSTED_STAGE_LOGIN = 'pay_login';
   const PAYPAL_HOSTED_STAGE_GUEST_CHECKOUT = 'guest_checkout';
   const PAYPAL_HOSTED_STAGE_CREATE_ACCOUNT = 'create_account';
+  const PAYPAL_HOSTED_STAGE_SECURITY_CODE = 'security_code';
   const PAYPAL_HOSTED_STAGE_REVIEW = 'review_consent';
   const PAYPAL_HOSTED_STAGE_APPROVAL = 'approval';
   const PAYPAL_HOSTED_STAGE_UNKNOWN = 'unknown';
@@ -58,6 +64,7 @@
       sleepWithStop,
       waitForTabCompleteUntilStopped,
       waitForTabUrlMatchUntilStopped = null,
+      withCheckoutCreationProxy = null,
       throwIfStopped = () => {},
     } = deps;
 
@@ -76,6 +83,194 @@
         stepKey,
         ...(options && typeof options === 'object' ? options : {}),
       });
+    }
+
+    function parseSocks5Endpoint(proxyUrl = '') {
+      const text = String(proxyUrl || '').trim();
+      if (!text) {
+        return null;
+      }
+      let parsed = null;
+      try {
+        parsed = new URL(text);
+      } catch {
+        return null;
+      }
+      if (String(parsed.protocol || '').replace(/:$/, '').toLowerCase() !== 'socks5') {
+        return null;
+      }
+      const host = String(parsed.hostname || '').replace(/^\[|\]$/g, '').trim();
+      const port = Number.parseInt(String(parsed.port || ''), 10);
+      if (!host || !Number.isInteger(port) || port <= 0 || port > 65535) {
+        return null;
+      }
+      return { host, port };
+    }
+
+    function buildCheckoutCreationPacScript(endpoint) {
+      const proxyHost = String(endpoint?.host || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const port = Number.parseInt(String(endpoint?.port || ''), 10);
+      return `
+function FindProxyForURL(url, host) {
+  host = String(host || '').toLowerCase();
+  if (host === 'chatgpt.com' || dnsDomainIs(host, '.chatgpt.com')) {
+    return "SOCKS5 ${proxyHost}:${port}";
+  }
+  return "DIRECT";
+}`.trim();
+    }
+
+    function callChromeProxySettings(method, details = {}) {
+      const proxySettings = chrome?.proxy?.settings;
+      if (!proxySettings || typeof proxySettings[method] !== 'function') {
+        return Promise.reject(new Error('当前浏览器不支持扩展代理 API'));
+      }
+      return new Promise((resolve, reject) => {
+        proxySettings[method](details, (value) => {
+          const lastError = chrome?.runtime?.lastError;
+          if (lastError) {
+            reject(new Error(lastError.message || String(lastError)));
+            return;
+          }
+          resolve(value);
+        });
+      });
+    }
+
+    function canControlProxySettings(details = {}) {
+      const level = String(details?.levelOfControl || '').trim();
+      return !level || level === 'controlled_by_this_extension' || level === 'controllable_by_this_extension';
+    }
+
+    async function readProxySettingsSnapshot() {
+      return callChromeProxySettings('get', { incognito: false });
+    }
+
+    async function restoreProxySettingsSnapshot(snapshot = null) {
+      const value = snapshot?.value;
+      const level = String(snapshot?.levelOfControl || '').trim();
+      if (level === 'controlled_by_this_extension' && value && typeof value === 'object') {
+        await callChromeProxySettings('set', {
+          value,
+          scope: LOCAL_CHECKOUT_PROXY_SETTINGS_SCOPE,
+        });
+        return;
+      }
+      await callChromeProxySettings('clear', {
+        scope: LOCAL_CHECKOUT_PROXY_SETTINGS_SCOPE,
+      });
+    }
+
+    async function fetchLocalCheckoutProxyHealth() {
+      if (typeof fetchImpl !== 'function') {
+        return null;
+      }
+      const controller = typeof AbortController === 'function' ? new AbortController() : null;
+      let timer = null;
+      try {
+        timer = controller
+          ? setTimeout(() => controller.abort(), LOCAL_CHECKOUT_PROXY_TIMEOUT_MS)
+          : null;
+        const response = await fetchImpl(`${LOCAL_CHECKOUT_PROXY_HEALTH_URL}?t=${Date.now()}`, {
+          method: 'GET',
+          cache: 'no-store',
+          headers: { Accept: 'application/json,text/plain,*/*' },
+          ...(controller ? { signal: controller.signal } : {}),
+        });
+        if (!response?.ok) {
+          return null;
+        }
+        const payload = await response.json().catch(() => ({}));
+        if (!payload?.ok) {
+          return null;
+        }
+        const endpoint = parseSocks5Endpoint(payload.localProxy || LOCAL_CHECKOUT_PROXY_URL);
+        return endpoint ? { endpoint, payload } : null;
+      } catch {
+        return null;
+      } finally {
+        if (timer) {
+          clearTimeout(timer);
+        }
+      }
+    }
+
+    async function applyTemporaryCheckoutProxy(endpoint) {
+      const pacScript = buildCheckoutCreationPacScript(endpoint);
+      await callChromeProxySettings('set', {
+        value: {
+          mode: 'pac_script',
+          pacScript: {
+            data: pacScript,
+            mandatory: true,
+          },
+        },
+        scope: LOCAL_CHECKOUT_PROXY_SETTINGS_SCOPE,
+      });
+    }
+
+    async function runWithLocalCheckoutCreationProxy(action) {
+      if (typeof withCheckoutCreationProxy === 'function') {
+        return withCheckoutCreationProxy({
+          healthUrl: LOCAL_CHECKOUT_PROXY_HEALTH_URL,
+          localProxyUrl: LOCAL_CHECKOUT_PROXY_URL,
+        }, action);
+      }
+      if (!chrome?.proxy?.settings || typeof fetchImpl !== 'function') {
+        return action();
+      }
+
+      const health = await fetchLocalCheckoutProxyHealth();
+      if (!health?.endpoint) {
+        return action();
+      }
+
+      let snapshot = null;
+      let applied = false;
+      let result = null;
+      let proxyError = null;
+      let restoreFailed = false;
+      try {
+        try {
+          snapshot = await readProxySettingsSnapshot();
+        } catch (error) {
+          return action();
+        }
+        if (!canControlProxySettings(snapshot)) {
+          return action();
+        }
+        await applyTemporaryCheckoutProxy(health.endpoint);
+        applied = true;
+        await sleepWithStop(LOCAL_CHECKOUT_PROXY_SETTLE_MS);
+        result = await action();
+        if (result?.error && !result?.stopped) {
+          proxyError = new Error(result.error);
+        }
+      } catch (error) {
+        if (!applied) {
+          return action();
+        }
+        proxyError = error;
+      } finally {
+        if (applied) {
+          try {
+            await restoreProxySettingsSnapshot(snapshot);
+            await sleepWithStop(LOCAL_CHECKOUT_PROXY_SETTLE_MS);
+          } catch (error) {
+            restoreFailed = true;
+          }
+        }
+      }
+      if (result && !proxyError) {
+        return result;
+      }
+      if (proxyError) {
+        if (restoreFailed) {
+          throw proxyError;
+        }
+        return action();
+      }
+      return null;
     }
 
     function normalizePlusPaymentMethod(value = '') {
@@ -589,6 +784,16 @@
       return result || {};
     }
 
+    async function submitHostedPayPalSecurityCode(tabId, config = {}, stepKey = PAYPAL_HOSTED_STEP_CREATE_ACCOUNT) {
+      const stepNumber = getHostedStepNumber(stepKey);
+      const verificationCode = await pollHostedVerificationCode(config.verificationUrl);
+      await addHostedStepLog(stepKey, `步骤 ${stepNumber}：已获取 PayPal 手机验证码，正在填写。`, 'info');
+      return runHostedPayPalStep(tabId, {
+        expectedStage: PAYPAL_HOSTED_STAGE_SECURITY_CODE,
+        securityCode: verificationCode,
+      });
+    }
+
     function getHostedStageOrder(stage = '') {
       switch (stage) {
         case PAYPAL_HOSTED_STAGE_LOGIN:
@@ -597,6 +802,8 @@
           return 2;
         case PAYPAL_HOSTED_STAGE_CREATE_ACCOUNT:
           return 3;
+        case PAYPAL_HOSTED_STAGE_SECURITY_CODE:
+          return 3.5;
         case PAYPAL_HOSTED_STAGE_REVIEW:
           return 4;
         case PAYPAL_HOSTED_STAGE_OUTSIDE:
@@ -634,7 +841,7 @@
         try {
           const pageState = await getHostedPayPalState(tabId);
           lastStage = pageState?.hostedStage || lastStage;
-          if (predicate(pageState)) {
+          if (await predicate(pageState)) {
             return pageState;
           }
         } catch (error) {
@@ -934,6 +1141,19 @@
       }
 
       const pageState = await getHostedPayPalState(tabId);
+      const config = await getHostedCheckoutRuntimeConfig(state);
+      if (pageState.hostedStage === PAYPAL_HOSTED_STAGE_SECURITY_CODE) {
+        await submitHostedPayPalSecurityCode(tabId, config, stepKey);
+        const nextState = await waitForHostedPayPalStage(
+          tabId,
+          (stateInfo) => stateInfo?.hostedStage && stateInfo.hostedStage !== PAYPAL_HOSTED_STAGE_SECURITY_CODE,
+          { label: `步骤 ${stepNumber}：等待 PayPal 验证码提交后跳转` }
+        );
+        await completeHostedStep(stepKey, tabId, {
+          plusHostedCheckoutLastStage: nextState.hostedStage || '',
+        });
+        return;
+      }
       if (isHostedStageAtOrAfter(pageState.hostedStage, PAYPAL_HOSTED_STAGE_REVIEW)
         && pageState.hostedStage !== PAYPAL_HOSTED_STAGE_CREATE_ACCOUNT) {
         await addHostedStepLog(stepKey, `步骤 ${stepNumber}：当前 PayPal 已进入后续页面（${pageState.hostedStage}），创建确认节点直接完成。`, 'info');
@@ -952,7 +1172,13 @@
       });
       const nextState = await waitForHostedPayPalStage(
         tabId,
-        (stateInfo) => stateInfo?.hostedStage && stateInfo.hostedStage !== PAYPAL_HOSTED_STAGE_CREATE_ACCOUNT,
+        async (stateInfo) => {
+          if (stateInfo?.hostedStage === PAYPAL_HOSTED_STAGE_SECURITY_CODE) {
+            await submitHostedPayPalSecurityCode(tabId, config, stepKey);
+            return false;
+          }
+          return stateInfo?.hostedStage && stateInfo.hostedStage !== PAYPAL_HOSTED_STAGE_CREATE_ACCOUNT;
+        },
         { label: `步骤 ${stepNumber}：等待 PayPal 创建确认页跳转` }
       );
       await completeHostedStep(stepKey, tabId, {
@@ -1392,7 +1618,9 @@
       const paymentMethodLabel = getPlusPaymentMethodLabel(paymentMethod);
       const checkoutModeLabel = getCheckoutModeLabel(state);
       await addLog(`步骤 6：正在打开新的 ChatGPT 会话，准备创建${checkoutModeLabel}...`, 'info');
-      const tabId = await openFreshChatGptTabForCheckoutCreate();
+      let tabId = 0;
+      const createCheckout = async () => {
+        tabId = await openFreshChatGptTabForCheckoutCreate();
 
       await waitForTabCompleteUntilStopped(tabId);
       await sleepWithStop(1000);
@@ -1402,11 +1630,15 @@
         logMessage: '步骤 6：正在等待 ChatGPT 页面完成加载，再继续创建订阅页...',
       });
 
-      const result = await sendTabMessageUntilStopped(tabId, PLUS_CHECKOUT_SOURCE, {
+        return sendTabMessageUntilStopped(tabId, PLUS_CHECKOUT_SOURCE, {
         type: 'CREATE_PLUS_CHECKOUT',
         source: 'background',
         payload: { paymentMethod },
       });
+      };
+      const result = paymentMethod === PLUS_PAYMENT_METHOD_PAYPAL_HOSTED
+        ? await runWithLocalCheckoutCreationProxy(createCheckout)
+        : await createCheckout();
 
       if (result?.error) {
         throw new Error(result.error);

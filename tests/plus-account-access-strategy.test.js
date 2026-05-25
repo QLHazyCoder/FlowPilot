@@ -263,6 +263,7 @@ const window = {
   },
 };
 let latestState = { activeFlowId: 'openai' };
+const inputPhoneVerificationEnabled = { checked: false };
 let currentPlusModeEnabled = false;
 let currentPlusPaymentMethod = 'paypal';
 const PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH = 'oauth';
@@ -270,6 +271,7 @@ const PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION = 'sub2api_codex_sessio
 const PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION = 'cpa_codex_session';
 let currentPlusAccountAccessStrategy = 'oauth';
 let currentSignupMethod = 'email';
+let currentPhoneVerificationEnabled = false;
 let currentPhoneSignupReloginAfterBindEmailEnabled = false;
 let currentStepDefinitionFlowId = 'openai';
 const DEFAULT_ACTIVE_FLOW_ID = 'openai';
@@ -326,6 +328,7 @@ return {
         plusPaymentMethod: 'paypal',
         plusAccountAccessStrategy: 'sub2api_codex_session',
         signupMethod: 'email',
+        phoneVerificationEnabled: false,
         phoneSignupReloginAfterBindEmailEnabled: false,
         accountContributionEnabled: false,
       },
@@ -338,6 +341,7 @@ return {
         plusPaymentMethod: 'paypal',
         plusAccountAccessStrategy: 'sub2api_codex_session',
         signupMethod: 'email',
+        phoneVerificationEnabled: false,
         phoneSignupReloginAfterBindEmailEnabled: false,
         accountContributionEnabled: false,
       },

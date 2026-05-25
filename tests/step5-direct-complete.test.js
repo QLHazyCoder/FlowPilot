@@ -1109,7 +1109,7 @@ return {
   assert.equal(api.isCompletion('https://chatgpt.com/add-phone'), false);
 });
 
-test('step 5 navigation reporter does not complete on beforeunload alone', () => {
+test('step 5 navigation reporter hands off to background on beforeunload', () => {
   const api = new Function(`
 const events = [];
 const listeners = new Map();
@@ -1147,22 +1147,31 @@ ${extractFunction('installStep5NavigationCompletionReporter')}
 
 return {
   run() {
-    let completionCount = 0;
-    const cleanup = installStep5NavigationCompletionReporter(() => {
-      completionCount += 1;
-      events.push({ type: 'complete' });
+    const cleanup = installStep5NavigationCompletionReporter((payload) => {
+      events.push({ type: 'complete', payload });
     });
     const beforeUnload = listeners.get('beforeunload');
     if (beforeUnload) {
       beforeUnload({ type: 'beforeunload' });
     }
     cleanup();
-    return { completionCount, events };
+    return { events };
   },
 };
 `)();
 
   const result = api.run();
-  assert.equal(result.completionCount, 0);
+  assert.deepStrictEqual(
+    result.events.filter((entry) => entry.type === 'complete'),
+    [
+      {
+        type: 'complete',
+        payload: {
+          navigationStarted: true,
+          navigationEventType: 'beforeunload',
+        },
+      },
+    ]
+  );
   assert.equal(result.events.some((entry) => entry.type === 'log' && /检测到页面开始导航/.test(entry.message)), true);
 });

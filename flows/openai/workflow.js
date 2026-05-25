@@ -3027,9 +3027,17 @@
     'paypal-hosted-review',
     'gopay-subscription-confirm',
   ]);
+  const POST_LOGIN_PHONE_VERIFICATION_STEP_KEYS = Object.freeze([
+    'post-login-phone-verification',
+    'post-bound-email-phone-verification',
+  ]);
 
   function omitPlusPaymentChainSteps(steps = []) {
     return steps.filter((step) => !PLUS_PAYMENT_CHAIN_STEP_KEYS.includes(String(step?.key || '').trim()));
+  }
+
+  function omitPostLoginPhoneVerificationSteps(steps = []) {
+    return steps.filter((step) => !POST_LOGIN_PHONE_VERIFICATION_STEP_KEYS.includes(String(step?.key || '').trim()));
   }
 
   function reindexModeStepDefinitions(steps = []) {
@@ -3114,6 +3122,13 @@
 
   function isPhoneSignupReloginAfterBindEmailEnabled(options = {}) {
     return Boolean(options?.phoneSignupReloginAfterBindEmailEnabled);
+  }
+
+  function isPhoneVerificationEnabled(options = {}) {
+    if (Object.prototype.hasOwnProperty.call(options || {}, 'phoneVerificationEnabled')) {
+      return Boolean(options.phoneVerificationEnabled);
+    }
+    return true;
   }
 
   function normalizePlusAccountAccessStrategy(value = '') {
@@ -3205,6 +3220,9 @@
       && normalizePlusPaymentMethod(options?.plusPaymentMethod || options?.paymentMethod) === PLUS_PAYMENT_METHOD_NONE
     ) {
       steps = omitPlusPaymentChainSteps(steps);
+    }
+    if (!isPhoneVerificationEnabled(options)) {
+      steps = omitPostLoginPhoneVerificationSteps(steps);
     }
     return reindexModeStepDefinitions(steps);
   }

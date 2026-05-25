@@ -132,10 +132,7 @@ const inputTempEmailReceiveMailbox = { value: '' };
 const inputTempEmailUseRandomSubdomain = { checked: false };
 const inputAutoSkipFailures = { checked: false };
 const inputAutoSkipFailuresThreadIntervalMinutes = { value: '0' };
-const inputAutoDelayEnabled = { checked: false };
-const inputAutoDelayMinutes = { value: '30' };
 const inputAutoStepDelaySeconds = { value: '' };
-const inputOAuthFlowTimeoutEnabled = { checked: true };
 const inputVerificationResendCount = { value: '4' };
 const DEFAULT_VERIFICATION_RESEND_COUNT = 4;
 const PHONE_SMS_PROVIDER_HERO_SMS = 'hero-sms';
@@ -242,7 +239,6 @@ function normalizeCloudflareTempEmailBaseUrlValue(value) { return String(value |
 function normalizeCloudflareTempEmailReceiveMailboxValue(value) { return String(value || '').trim(); }
 function normalizeAccountRunHistoryHelperBaseUrlValue(value) { return String(value || '').trim(); }
 function normalizeAutoRunThreadIntervalMinutes(value) { return Number(value) || 0; }
-function normalizeAutoDelayMinutes(value) { return Number(value) || 30; }
 function normalizeAutoStepDelaySeconds(value) { return value === '' ? null : Number(value); }
 function normalizeVerificationResendCount(value, fallback) { return Number(value) || fallback; }
 function normalizePlusAccountAccessStrategy(value = '') { return String(value || '').trim().toLowerCase() === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION ? PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION : PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH; }
@@ -445,10 +441,7 @@ const selectLuckmailEmailType = { value: 'ms_graph' };
 const inputLuckmailDomain = { value: '' };
 const inputAutoSkipFailures = { checked: false };
 const inputAutoSkipFailuresThreadIntervalMinutes = { value: '' };
-const inputAutoDelayEnabled = { checked: false };
-const inputAutoDelayMinutes = { value: '' };
 const inputAutoStepDelaySeconds = { value: '' };
-const inputOAuthFlowTimeoutEnabled = { checked: true };
 const inputVerificationResendCount = { value: '' };
 const inputPhoneVerificationEnabled = { checked: false };
 const selectPhoneSmsProvider = { value: 'hero-sms' };
@@ -521,7 +514,6 @@ function applyCloudflareTempEmailSettingsState() {}
 function renderCloudflareDomainOptions() {}
 function setCloudflareDomainEditMode() {}
 function normalizeAutoRunThreadIntervalMinutes(value) { return Number(value) || 0; }
-function normalizeAutoDelayMinutes(value) { return Number(value) || 30; }
 function formatAutoStepDelayInputValue(value) { return value == null ? '' : String(value); }
 function normalizeVerificationResendCount(value, fallback) { return Number(value) || fallback; }
 function normalizeHeroSmsMaxPriceValue(value = '') { return String(value || '').trim(); }
@@ -557,7 +549,6 @@ function updateHeroSmsPlatformDisplay() {}
 function updatePhoneSmsProviderOrderSummary() {}
 function applyAutoRunStatus() {}
 function markSettingsDirty() {}
-function updateAutoDelayInputState() {}
 function updateFallbackThreadIntervalInputState() {}
 function updateAccountRunHistorySettingsUI() {}
 function updatePhoneVerificationSettingsUI() {}

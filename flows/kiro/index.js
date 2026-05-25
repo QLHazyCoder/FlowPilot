@@ -34,18 +34,23 @@
       "kiro-rs"
     ],
     "supportsLuckmail": false,
-    "supportsOauthTimeoutBudget": false,
     "canSwitchFlow": true,
     "stepDefinitionMode": "kiro",
     "targetSelectorLabel": "来源"
   },
   "baseGroups": [
-    "kiro-runtime-status"
+    "kiro-runtime-status",
+    "shared-auto-run",
+    "shared-settings-actions"
   ],
   "targets": {
     "kiro-rs": {
       "id": "kiro-rs",
       "label": "kiro.rs",
+      "defaultState": {
+        "baseUrl": "",
+        "apiKey": ""
+      },
       "groups": [
         "kiro-target-kiro-rs"
       ]

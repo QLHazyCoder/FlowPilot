@@ -36,8 +36,6 @@ test('auto-run controller preserves kiro flow across fresh reset and starts from
     phoneSignupReloginAfterBindEmailEnabled: false,
     autoRunSkipFailures: false,
     autoRunFallbackThreadIntervalMinutes: 0,
-    autoRunDelayEnabled: false,
-    autoRunDelayMinutes: 30,
     autoStepDelaySeconds: null,
     signupMethod: 'email',
     stepExecutionRangeByFlow: {
@@ -94,7 +92,7 @@ test('auto-run controller preserves kiro flow across fresh reset and starts from
       currentState = {
         ...currentState,
         ...extraState,
-        autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+        autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
         autoRunPhase: phase,
         autoRunCurrentRun: payload.currentRun ?? currentState.autoRunCurrentRun ?? 0,
         autoRunTotalRuns: payload.totalRuns ?? currentState.autoRunTotalRuns ?? 1,
@@ -124,7 +122,7 @@ test('auto-run controller preserves kiro flow across fresh reset and starts from
     },
     ensureHotmailMailboxReadyForAutoRunRound: async () => {},
     getAutoRunStatusPayload: (phase, payload = {}) => ({
-      autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+      autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
       autoRunPhase: phase,
       autoRunCurrentRun: payload.currentRun ?? 0,
       autoRunTotalRuns: payload.totalRuns ?? 1,
@@ -179,8 +177,6 @@ test('auto-run controller preserves kiro flow across fresh reset and starts from
         phoneSignupReloginAfterBindEmailEnabled: false,
         autoRunSkipFailures: false,
         autoRunFallbackThreadIntervalMinutes: 0,
-        autoRunDelayEnabled: false,
-        autoRunDelayMinutes: 30,
         autoStepDelaySeconds: null,
         signupMethod: 'email',
         stepExecutionRangeByFlow: {
@@ -445,8 +441,6 @@ test('auto-run controller stops immediately on kiro proxy failures even when ski
     flowId: 'kiro',
     autoRunSkipFailures: true,
     autoRunFallbackThreadIntervalMinutes: 0,
-    autoRunDelayEnabled: false,
-    autoRunDelayMinutes: 30,
     autoStepDelaySeconds: null,
     nodeStatuses: {
       'kiro-open-register-page': 'pending',
@@ -496,7 +490,7 @@ test('auto-run controller stops immediately on kiro proxy failures even when ski
       events.phases.push({ phase, ...payload });
       currentState = {
         ...currentState,
-        autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+        autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
         autoRunPhase: phase,
         autoRunCurrentRun: payload.currentRun ?? currentState.autoRunCurrentRun ?? 0,
         autoRunTotalRuns: payload.totalRuns ?? currentState.autoRunTotalRuns ?? 1,
@@ -514,7 +508,7 @@ test('auto-run controller stops immediately on kiro proxy failures even when ski
     },
     ensureHotmailMailboxReadyForAutoRunRound: async () => {},
     getAutoRunStatusPayload: (phase, payload = {}) => ({
-      autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+      autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
       autoRunPhase: phase,
       autoRunCurrentRun: payload.currentRun ?? 0,
       autoRunTotalRuns: payload.totalRuns ?? 1,

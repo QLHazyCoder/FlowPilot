@@ -103,7 +103,6 @@ function createRouter(overrides = {}) {
     broadcastDataUpdate: (updates) => {
       events.broadcasts.push(updates);
     },
-    cancelScheduledAutoRun: async () => {},
     checkIcloudSession: async () => {},
     clearAutoRunTimerAlarm: async () => {},
     clearLuckmailRuntimeState: async () => {},
@@ -171,7 +170,6 @@ function createRouter(overrides = {}) {
     listLuckmailPurchasesForManagement: async () => [],
     normalizeHotmailAccounts: (items) => items,
     normalizeRunCount: (value) => value,
-    AUTO_RUN_TIMER_KIND_SCHEDULED_START: 'scheduled',
     notifyNodeComplete: (nodeId, payload) => {
       events.notifyCompletions.push({ step: getStepForNode(nodeId), nodeId, payload });
     },
@@ -183,7 +181,6 @@ function createRouter(overrides = {}) {
     requestStop: async () => {},
     resetState: async () => {},
     resumeAutoRun: async () => {},
-    scheduleAutoRun: async () => {},
     selectLuckmailPurchase: async () => {},
     setCurrentHotmailAccount: async () => {},
     setEmailState: async (email) => {

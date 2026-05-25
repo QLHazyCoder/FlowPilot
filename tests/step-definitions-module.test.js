@@ -433,6 +433,34 @@ test('Plus no-payment mode removes only payment chain nodes', () => {
   assert.deepStrictEqual(cpaNodes.find((node) => node.nodeId === 'wait-registration-success')?.next, ['cpa-session-import']);
 });
 
+test('OpenAI OAuth workflow removes post-login phone verification when phone verification is disabled', () => {
+  const globalScope = {};
+  const api = new Function('self', `${readStepDefinitionsBundle()}; return self.MultiPageStepDefinitions;`)(globalScope);
+
+  [
+    { label: 'normal', options: { phoneVerificationEnabled: false } },
+    { label: 'plus paypal', options: { plusModeEnabled: true, phoneVerificationEnabled: false } },
+    { label: 'plus gopay', options: { plusModeEnabled: true, plusPaymentMethod: 'gopay', phoneVerificationEnabled: false } },
+    { label: 'phone relogin', options: { signupMethod: 'phone', phoneSignupReloginAfterBindEmailEnabled: true, phoneVerificationEnabled: false } },
+  ].forEach(({ label, options }) => {
+    const steps = api.getSteps(options);
+    const nodes = api.getNodes(options);
+    const keys = steps.map((step) => step.key);
+    const nodeIds = nodes.map((node) => node.nodeId);
+    const expectedNextAfterLoginCode = keys.includes('bind-email') ? 'bind-email' : 'confirm-oauth';
+
+    assert.equal(keys.includes('post-login-phone-verification'), false, `${label} should hide post-login phone step`);
+    assert.equal(keys.includes('post-bound-email-phone-verification'), false, `${label} should hide bound-email phone step`);
+    assert.equal(nodeIds.includes('post-login-phone-verification'), false, `${label} nodes should hide post-login phone step`);
+    assert.equal(nodeIds.includes('post-bound-email-phone-verification'), false, `${label} nodes should hide bound-email phone step`);
+    assert.deepStrictEqual(
+      nodes.find((node) => node.nodeId === 'fetch-login-code')?.next,
+      [expectedNextAfterLoginCode],
+      `${label} fetch-login-code should link to the next non-phone node`
+    );
+  });
+});
+
 test('Plus session strategy swaps the OAuth tail for a single SUB2API import node', () => {
   const globalScope = {};
   const api = new Function('self', `${readStepDefinitionsBundle()}; return self.MultiPageStepDefinitions;`)(globalScope);

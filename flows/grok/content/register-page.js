@@ -5,6 +5,7 @@ const GROK_SIGNUP_URL = 'https://accounts.x.ai/sign-up?redirect=grok-com';
 const GROK_EMAIL_SIGNUP_TEXT_PATTERN = /使用邮箱注册|sign\s*up\s*with\s*email|continue\s*with\s*email|email/i;
 const GROK_CONTINUE_TEXT_PATTERN = /continue|next|sign\s*up|submit|verify|继续|下一步|注册|提交|验证/i;
 const GROK_PROFILE_TEXT_PATTERN = /given\s*name|family\s*name|first\s*name|last\s*name|password|名字|姓氏|密码/i;
+const GROK_EMAIL_VERIFICATION_READY_TIMEOUT_MS = 90 * 1000;
 const GROK_PROFILE_SUBMIT_PRE_CLICK_DELAY_MS = 2000;
 
 function isVisibleGrokElement(element) {
@@ -174,6 +175,29 @@ function getGrokEmailErrorText() {
   return '';
 }
 
+async function waitForGrokVerificationPageAfterEmailSubmit() {
+  const settledState = await waitForGrok(() => {
+    const errorText = getGrokEmailErrorText();
+    if (errorText) return { state: 'email_error', error: errorText, url: location.href };
+    const state = getGrokPageState();
+    return state === 'verification_code_entry' ? { state, url: location.href } : null;
+  }, { timeoutMs: GROK_EMAIL_VERIFICATION_READY_TIMEOUT_MS, intervalMs: 500 });
+
+  if (settledState?.error) {
+    throw new Error(settledState.error);
+  }
+  if (settledState?.state === 'verification_code_entry') {
+    return settledState;
+  }
+
+  const errorText = getGrokEmailErrorText();
+  if (errorText) {
+    throw new Error(errorText);
+  }
+  const finalState = getGrokPageState();
+  throw new Error(`提交 Grok 注册邮箱后未进入验证码页面，当前页面状态：${finalState || 'unknown'}。请确认页面已跳转到“验证您的邮箱”后再继续。`);
+}
+
 async function submitGrokEmail(payload = {}) {
   const email = String(payload.email || '').trim();
   if (!email) throw new Error('缺少 Grok 注册邮箱。');
@@ -189,7 +213,8 @@ async function submitGrokEmail(payload = {}) {
   if (errorText) {
     throw new Error(errorText);
   }
-  return { submitted: true, state: getGrokPageState(), url: location.href };
+  const readyState = await waitForGrokVerificationPageAfterEmailSubmit();
+  return { submitted: true, state: readyState.state, url: readyState.url || location.href };
 }
 
 function getGrokVerificationErrorText() {

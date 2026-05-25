@@ -82,7 +82,6 @@ function normalizeSignupMethod(value = '') { return String(value || '').trim().t
 function resolveSignupMethod(state = {}) { return normalizeSignupMethod(state?.signupMethod); }
 function normalizeLocalCpaStep9Mode(value) { return value === 'bypass' ? 'bypass' : 'submit'; }
 function normalizeAutoRunFallbackThreadIntervalMinutes(value) { return Number(value) || 0; }
-function normalizeAutoRunDelayMinutes(value) { return Number(value) || 30; }
 function normalizeAutoStepDelaySeconds(value, fallback = null) { return value == null || value === '' ? fallback : Number(value); }
 function normalizeVerificationResendCount(value, fallback) { return Number.isFinite(Number(value)) ? Number(value) : fallback; }
 function normalizeMailProvider(value) { return String(value || '').trim().toLowerCase() || '163'; }
@@ -157,12 +156,11 @@ return {
   });
 });
 
-test('oauth flow timeout setting is persisted and normalized as boolean', () => {
+test('cloudflare temp email settings payload ignores removed UI-only flags', () => {
   const api = new Function(`
 const DEFAULT_VERIFICATION_RESEND_COUNT = 4;
 const PERSISTED_SETTING_DEFAULTS = {
   panelMode: 'cpa',
-  oauthFlowTimeoutEnabled: true,
   autoStepDelaySeconds: null,
   verificationResendCount: DEFAULT_VERIFICATION_RESEND_COUNT,
   mailProvider: '163',
@@ -180,7 +178,6 @@ function normalizeSignupMethod(value = '') { return String(value || '').trim().t
 function resolveSignupMethod(state = {}) { return normalizeSignupMethod(state?.signupMethod); }
 function normalizeLocalCpaStep9Mode(value) { return value === 'bypass' ? 'bypass' : 'submit'; }
 function normalizeAutoRunFallbackThreadIntervalMinutes(value) { return Number(value) || 0; }
-function normalizeAutoRunDelayMinutes(value) { return Number(value) || 30; }
 function normalizeAutoStepDelaySeconds(value, fallback = null) { return value == null || value === '' ? fallback : Number(value); }
 function normalizeVerificationResendCount(value, fallback) { return Number.isFinite(Number(value)) ? Number(value) : fallback; }
 function normalizeMailProvider(value) { return String(value || '').trim().toLowerCase() || '163'; }
@@ -224,15 +221,10 @@ return {
 };
   `)();
 
-  assert.equal(api.normalizePersistentSettingValue('oauthFlowTimeoutEnabled', 0), false);
-  assert.equal(api.normalizePersistentSettingValue('oauthFlowTimeoutEnabled', 1), true);
-
   assert.deepEqual(api.buildPersistentSettingsPayload({
-    oauthFlowTimeoutEnabled: false,
-  }), {
-    oauthFlowTimeoutEnabled: false,
-  });
+    removedUiOnlyFlag: false,
+  }), {});
 
   const defaults = api.buildPersistentSettingsPayload({}, { fillDefaults: true });
-  assert.equal(defaults.oauthFlowTimeoutEnabled, true);
+  assert.equal(Object.prototype.hasOwnProperty.call(defaults, 'removedUiOnlyFlag'), false);
 });

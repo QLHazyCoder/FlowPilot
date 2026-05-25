@@ -99,9 +99,6 @@ function normalizeMailProvider(value = '') {
 function normalizeAutoRunFallbackThreadIntervalMinutes(value) {
   return Math.max(0, Math.floor(Number(value) || 0));
 }
-function normalizeAutoRunDelayMinutes(value) {
-  return Math.max(1, Math.floor(Number(value) || 30));
-}
 function normalizeAutoStepDelaySeconds(value, fallback = null) {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : fallback;

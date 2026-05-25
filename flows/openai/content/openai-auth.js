@@ -6528,18 +6528,27 @@ function getSerializableRect(el) {
 // Step 5: Fill Name & Birthday / Age
 // ============================================================
 
-function getStep5DirectCompletionPayload({ isAgeMode = false, navigationStarted = false, outcome = null } = {}) {
+function getStep5DirectCompletionPayload({ isAgeMode = false, navigationStarted = false, navigationEventType = '', outcome = null } = {}) {
   const payload = {
     profileSubmitted: true,
-    postSubmitChecked: true,
+    postSubmitChecked: !navigationStarted,
   };
   if (isAgeMode) {
     payload.ageMode = true;
   }
   if (navigationStarted) {
     payload.navigationStarted = true;
+    payload.handoffToBackground = true;
+    const resolvedNavigationEventType = String(navigationEventType || '').trim();
+    if (resolvedNavigationEventType) {
+      payload.navigationEventType = resolvedNavigationEventType;
+    }
+    if (typeof location !== 'undefined' && location?.href) {
+      payload.url = location.href;
+    }
   }
   if (outcome?.state) {
+    payload.postSubmitChecked = true;
     payload.outcome = outcome.state;
   }
   if (outcome?.url) {
@@ -6825,6 +6834,7 @@ function installStep5NavigationCompletionReporter(completeOnce) {
   if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') {
     return () => {};
   }
+  let reportedNavigation = false;
   const debugLog = typeof logStep5SubmitDebug === 'function'
     ? logStep5SubmitDebug
     : (message, options = {}) => {
@@ -6838,6 +6848,25 @@ function installStep5NavigationCompletionReporter(completeOnce) {
 
   const onNavigationStarted = (event) => {
     const eventType = String(event?.type || 'navigation').trim() || 'navigation';
+    if (reportedNavigation) {
+      return;
+    }
+    reportedNavigation = true;
+    if (typeof completeOnce === 'function') {
+      try {
+        completeOnce({
+          navigationStarted: true,
+          navigationEventType: eventType,
+        });
+      } catch (error) {
+        if (typeof log === 'function') {
+          log(`步骤 5 [调试] 导航交棒信号发送失败：${error?.message || error}`, 'warn', {
+            step: 5,
+            stepKey: 'fill-profile',
+          });
+        }
+      }
+    }
     debugLog(`检测到页面开始导航（event=${eventType}）。`, {
       level: 'warn',
     });
@@ -7240,13 +7269,18 @@ async function step5_fillNameBirthday(payload) {
     const completionPayload = getStep5DirectCompletionPayload({
       isAgeMode,
       navigationStarted: Boolean(extra.navigationStarted),
+      navigationEventType: extra.navigationEventType || '',
       outcome: extra.outcome || null,
     });
+    reportedCompletionPayload = completionPayload;
+    if (extra?.navigationStarted && typeof reportNodeComplete === 'function') {
+      reportNodeComplete('fill-profile', completionPayload);
+    } else {
+      reportComplete(5, completionPayload);
+    }
     debugLog(`准备发送完成信号（reason=${completionReason}，isAgeMode=${isAgeMode}）。`, {
       level: extra?.navigationStarted ? 'warn' : 'info',
     });
-    reportedCompletionPayload = completionPayload;
-    reportComplete(5, completionPayload);
     return completionPayload;
   }
 

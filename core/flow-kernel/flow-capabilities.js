@@ -33,7 +33,6 @@
     contributionAdapterIds: [],
     supportedTargetIds: [],
     supportsLuckmail: false,
-    supportsOauthTimeoutBudget: false,
     canSwitchFlow: true,
     stepDefinitionMode: 'default',
     targetSelectorLabel: '来源',
@@ -59,6 +58,7 @@
   const DEFAULT_TARGET_CAPABILITIES = Object.freeze({
     supportsPhoneSignup: true,
     requiresPhoneSignupWarning: false,
+    usesOauthTimeoutBudget: false,
     supportedPlusAccountAccessStrategies: Object.freeze([PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH]),
   });
 
@@ -405,6 +405,7 @@
           targetId: effectiveTargetId,
           plusAccountAccessStrategy: effectivePlusAccountAccessStrategy,
           plusModeEnabled: runtimeLocks.plusModeEnabled,
+          phoneVerificationEnabled: runtimeLocks.phoneVerificationEnabled,
           signupMethod: effectiveSignupMethod,
         },
         supportedPanelModes: supportedTargetIds,

@@ -30,12 +30,11 @@
       contributionAdapterIds: [],
       supportedTargetIds: ['webchat2api'],
       supportsLuckmail: false,
-      supportsOauthTimeoutBudget: false,
       canSwitchFlow: true,
       stepDefinitionMode: 'grok',
       targetSelectorLabel: '来源',
     },
-    baseGroups: ['grok-runtime-status'],
+    baseGroups: ['grok-runtime-status', 'shared-auto-run', 'shared-settings-actions'],
     targets: {
       webchat2api: {
         id: 'webchat2api',

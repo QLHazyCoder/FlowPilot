@@ -188,6 +188,7 @@ return {
     plusPaymentMethod: 'gopay',
     plusAccountAccessStrategy: 'oauth',
     signupMethod: 'phone',
+    phoneVerificationEnabled: false,
     phoneSignupReloginAfterBindEmailEnabled: false,
   }]);
   assert.equal(steps[0].title, '注册并输入手机号');

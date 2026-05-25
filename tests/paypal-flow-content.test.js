@@ -413,6 +413,16 @@ function createHostedPayPalHarness(options = {}) {
     id: 'btnNext',
     text: '下一页',
   });
+  const securityCodeInputs = Array.from({ length: 6 }, (_value, index) => createDomElement({
+    tagName: 'INPUT',
+    id: `securityCode${index + 1}`,
+    type: 'text',
+  }));
+  const securityCodeContinueButton = createDomElement({
+    tagName: 'BUTTON',
+    id: 'securityCodeContinue',
+    text: 'Continue',
+  });
 
   function setElements(nextElements) {
     elements = nextElements;
@@ -462,6 +472,15 @@ function createHostedPayPalHarness(options = {}) {
     body.innerText = '请输入您的电子邮箱地址。 下一页 或 创建账户';
     body.textContent = body.innerText;
     setElements([emailInput, nextButton, createAccountButton]);
+  }
+
+  function showSecurityCode() {
+    location.href = 'https://www.paypal.com/checkoutweb/security-code';
+    location.host = 'www.paypal.com';
+    location.pathname = '/checkoutweb/security-code';
+    body.innerText = 'Enter your code We sent a 6-digit code to (835) 253-1607 Resend';
+    body.textContent = body.innerText;
+    setElements([...securityCodeInputs, securityCodeContinueButton]);
   }
 
   const context = {
@@ -558,6 +577,7 @@ function createHostedPayPalHarness(options = {}) {
     showPayEmail,
     showCreateAccount,
     showGuestCheckout,
+    showSecurityCode,
   };
 }
 
@@ -686,4 +706,38 @@ test('PayPal hosted create account page is detected and handled as its own step'
     JSON.parse(JSON.stringify(harness.events.filter((event) => event.type === 'operation').map((event) => event.metadata))),
     [{ stepKey: 'paypal-hosted-create-account', kind: 'click', label: 'hosted-paypal-create-account' }]
   );
+});
+
+test('PayPal hosted security code page fills six digit code inputs', async () => {
+  const harness = createHostedPayPalHarness();
+  harness.showSecurityCode();
+
+  const state = await harness.send({
+    type: 'PAYPAL_HOSTED_GET_STATE',
+    source: 'test',
+    payload: {},
+  });
+  assert.equal(state.ok, true);
+  assert.equal(state.hostedStage, 'security_code');
+  assert.equal(state.securityCodeVisible, true);
+
+  const result = await harness.send({
+    type: 'PAYPAL_RUN_HOSTED_CHECKOUT_STEP',
+    source: 'test',
+    payload: {
+      expectedStage: 'security_code',
+      securityCode: '921714',
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.stage, 'security_code');
+  assert.equal(result.securityCodeSubmitted, true);
+  assert.deepEqual(
+    harness.events
+      .filter((event) => event.type === 'fill' && /^securityCode/.test(event.id))
+      .map((event) => event.value),
+    ['9', '2', '1', '7', '1', '4']
+  );
+  assert.equal(harness.events.some((event) => event.type === 'click' && event.id === 'securityCodeContinue'), true);
 });

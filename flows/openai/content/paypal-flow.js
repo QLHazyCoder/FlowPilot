@@ -8,6 +8,7 @@ const PAYPAL_HOSTED_STAGE_OUTSIDE = 'outside_paypal';
 const PAYPAL_HOSTED_STAGE_LOGIN = 'pay_login';
 const PAYPAL_HOSTED_STAGE_GUEST_CHECKOUT = 'guest_checkout';
 const PAYPAL_HOSTED_STAGE_CREATE_ACCOUNT = 'create_account';
+const PAYPAL_HOSTED_STAGE_SECURITY_CODE = 'security_code';
 const PAYPAL_HOSTED_STAGE_REVIEW = 'review_consent';
 const PAYPAL_HOSTED_STAGE_APPROVAL = 'approval';
 const PAYPAL_HOSTED_STAGE_UNKNOWN = 'unknown';
@@ -15,6 +16,7 @@ const PAYPAL_HOSTED_STEP_KEYS = {
   [PAYPAL_HOSTED_STAGE_LOGIN]: 'paypal-hosted-email',
   [PAYPAL_HOSTED_STAGE_GUEST_CHECKOUT]: 'paypal-hosted-card',
   [PAYPAL_HOSTED_STAGE_CREATE_ACCOUNT]: 'paypal-hosted-create-account',
+  [PAYPAL_HOSTED_STAGE_SECURITY_CODE]: 'paypal-hosted-create-account',
   [PAYPAL_HOSTED_STAGE_REVIEW]: 'paypal-hosted-review',
 };
 
@@ -308,9 +310,62 @@ function findHostedReviewConsentButton() {
   ]);
 }
 
+function getHostedSecurityCodeInputs() {
+  const pageText = normalizeText(document.body?.innerText || document.body?.textContent || '');
+  const pageLooksLikeSecurityCode = /enter\s+(?:your\s+)?code|6[-\s]*digit\s+code|security\s+code|verification\s+code|we\s+sent\s+a\s+6[-\s]*digit\s+code/i.test(pageText);
+  const visibleInputs = getVisibleControls('input')
+    .filter((input) => {
+      const type = String(input.getAttribute?.('type') || input.type || '').trim().toLowerCase();
+      return isEnabledControl(input)
+        && !['hidden', 'checkbox', 'radio', 'submit', 'button', 'file'].includes(type);
+    });
+  const candidates = visibleInputs
+    .filter((input) => {
+      const maxLength = Number(input.getAttribute?.('maxlength') || input.maxLength || 0);
+      const metadata = getActionText(input);
+      return maxLength === 1 || /otp|code|verification|security|one[-\s]*time/i.test(metadata);
+    });
+  if (candidates.length < 6 && pageLooksLikeSecurityCode && visibleInputs.length >= 6) {
+    return visibleInputs.slice(0, 6);
+  }
+  const singleDigitInputs = candidates.filter((input) => {
+    const maxLength = Number(input.getAttribute?.('maxlength') || input.maxLength || 0);
+    const valueLength = String(input.value || '').length;
+    return maxLength === 1 || valueLength <= 1;
+  });
+  return singleDigitInputs.length >= 6 ? singleDigitInputs.slice(0, 6) : candidates;
+}
+
+function getHostedSecurityCodeSingleInput() {
+  return getVisibleControls('input').find((input) => {
+    const type = String(input.getAttribute?.('type') || input.type || '').trim().toLowerCase();
+    const maxLength = Number(input.getAttribute?.('maxlength') || input.maxLength || 0);
+    const metadata = getActionText(input);
+    return isEnabledControl(input)
+      && !['hidden', 'checkbox', 'radio', 'submit', 'button', 'file'].includes(type)
+      && maxLength >= 6
+      && /otp|code|verification|security|one[-\s]*time/i.test(metadata);
+  }) || null;
+}
+
+function findHostedSecurityCodeSubmitButton() {
+  return findClickableByText([
+    /submit|continue|next|verify|confirm|done/i,
+  ]);
+}
+
+function isHostedSecurityCodePage() {
+  const pageText = normalizeText(document.body?.innerText || document.body?.textContent || '');
+  const hasSecurityText = /enter\s+(?:your\s+)?code|6[-\s]*digit\s+code|security\s+code|verification\s+code|we\s+sent\s+a\s+6[-\s]*digit\s+code/i.test(pageText);
+  return hasSecurityText && (getHostedSecurityCodeInputs().length >= 6 || Boolean(getHostedSecurityCodeSingleInput()));
+}
+
 function detectPayPalHostedStage() {
   if (!/paypal\./i.test(String(location?.host || ''))) {
     return PAYPAL_HOSTED_STAGE_OUTSIDE;
+  }
+  if (isHostedSecurityCodePage()) {
+    return PAYPAL_HOSTED_STAGE_SECURITY_CODE;
   }
   if (isHostedGuestCheckoutPage()) {
     return PAYPAL_HOSTED_STAGE_GUEST_CHECKOUT;
@@ -462,6 +517,48 @@ function verifyHostedPhoneBeforeSubmit(expectedPhone = '') {
     payloadPhoneDigits: expectedDigits,
     renderedPhoneDigits: renderedDigits,
     phoneMatched: true,
+  };
+}
+
+function normalizeHostedSecurityCode(value = '') {
+  const code = String(value || '').replace(/\D/g, '').slice(0, 6);
+  return /^\d{6}$/.test(code) ? code : '';
+}
+
+async function submitHostedSecurityCode(payload = {}) {
+  await waitForDocumentComplete();
+  const code = normalizeHostedSecurityCode(payload.securityCode || payload.verificationCode || payload.code || '');
+  if (!code) {
+    throw new Error('PayPal hosted checkout 验证码为空或不是 6 位数字。');
+  }
+  const digitInputs = getHostedSecurityCodeInputs();
+  const singleInput = getHostedSecurityCodeSingleInput();
+  if (digitInputs.length >= 6) {
+    digitInputs.slice(0, 6).forEach((input, index) => {
+      fillInput(input, code[index]);
+    });
+  } else if (singleInput) {
+    fillInput(singleInput, code);
+  } else {
+    throw new Error('PayPal hosted checkout 未找到验证码输入框。');
+  }
+
+  const submitButton = findHostedSecurityCodeSubmitButton();
+  if (submitButton && isVisibleElement(submitButton) && isEnabledControl(submitButton)) {
+    await performPayPalOperationWithDelay({
+      stepKey: getHostedStepKey(PAYPAL_HOSTED_STAGE_SECURITY_CODE),
+      kind: 'click',
+      label: 'hosted-paypal-security-code-submit',
+    }, async () => {
+      simulateClick(submitButton);
+    });
+  }
+  await sleep(1000);
+  return {
+    stage: PAYPAL_HOSTED_STAGE_SECURITY_CODE,
+    securityCodeSubmitted: true,
+    submitted: Boolean(submitButton),
+    inputCount: digitInputs.length >= 6 ? 6 : 1,
   };
 }
 
@@ -640,6 +737,9 @@ async function runPayPalHostedCheckoutStep(payload = {}) {
   if (stage === PAYPAL_HOSTED_STAGE_CREATE_ACCOUNT) {
     return clickHostedCreateAccount(payload);
   }
+  if (stage === PAYPAL_HOSTED_STAGE_SECURITY_CODE) {
+    return submitHostedSecurityCode(payload);
+  }
   if (stage === PAYPAL_HOSTED_STAGE_REVIEW) {
     return clickHostedReviewConsent();
   }
@@ -659,6 +759,7 @@ function inspectPayPalHostedState() {
     hostedStage: stage,
     hasGuestCardFields: Boolean(document.getElementById('cardNumber')),
     hasHostedEmailInput: Boolean(document.getElementById('email') || findEmailInput()),
+    securityCodeVisible: stage === PAYPAL_HOSTED_STAGE_SECURITY_CODE,
     createAccountReady: Boolean(createAccountButton && isVisibleElement(createAccountButton) && isEnabledControl(createAccountButton)),
     reviewConsentReady: Boolean(findHostedReviewConsentButton()),
     approveReady: Boolean(findApproveButton()),

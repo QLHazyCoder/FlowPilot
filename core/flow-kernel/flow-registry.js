@@ -18,7 +18,6 @@
     contributionAdapterIds: [],
     supportedTargetIds: [],
     supportsLuckmail: false,
-    supportsOauthTimeoutBudget: false,
     canSwitchFlow: true,
     stepDefinitionMode: 'default',
     targetSelectorLabel: '\u6765\u6e90',
@@ -48,6 +47,20 @@
       id: 'service-proxy',
       label: 'IP \u4ee3\u7406',
       sectionIds: ['ip-proxy-section'],
+    },
+    'shared-auto-run': {
+      id: 'shared-auto-run',
+      label: '\u81ea\u52a8\u8fd0\u884c',
+      rowIds: [
+        'row-shared-auto-run',
+        'row-auto-run-thread-interval',
+        'row-step-execution-range',
+      ],
+    },
+    'shared-settings-actions': {
+      id: 'shared-settings-actions',
+      label: '\u8bbe\u7f6e\u64cd\u4f5c',
+      rowIds: ['row-settings-actions'],
     },
   });
 

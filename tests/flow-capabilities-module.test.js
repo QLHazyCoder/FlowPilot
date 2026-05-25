@@ -27,6 +27,8 @@ test('flow capability registry keeps OpenAI phone signup available only when run
   assert.equal(enabledState.canUsePhoneSignup, true);
   assert.equal(enabledState.effectiveSignupMethod, 'phone');
   assert.equal(enabledState.shouldWarnCpaPhoneSignup, true);
+  assert.equal(enabledState.targetCapabilities.usesOauthTimeoutBudget, true);
+  assert.equal(enabledState.stepDefinitionOptions.phoneVerificationEnabled, true);
   assert.deepEqual(enabledState.effectiveSignupMethods, ['email', 'phone']);
 
   const plusLockedState = registry.resolveSidepanelCapabilities({
@@ -42,7 +44,9 @@ test('flow capability registry keeps OpenAI phone signup available only when run
 
   assert.equal(plusLockedState.canUsePhoneSignup, false);
   assert.equal(plusLockedState.effectiveSignupMethod, 'email');
+  assert.equal(plusLockedState.stepDefinitionOptions.phoneVerificationEnabled, true);
   assert.equal(plusLockedState.shouldWarnCpaPhoneSignup, false);
+  assert.equal(plusLockedState.targetCapabilities.usesOauthTimeoutBudget, false);
   assert.deepEqual(plusLockedState.effectiveSignupMethods, ['email']);
 });
 
@@ -94,7 +98,7 @@ test('flow capability registry exposes Kiro as an independent flow with its own 
   assert.deepEqual(capabilityState.flowCapabilities.contributionAdapterIds, ['kiro-builder-id']);
   assert.deepEqual(
     capabilityState.visibleGroupIds,
-    ['kiro-runtime-status', 'kiro-target-kiro-rs', 'service-account', 'service-email', 'service-proxy']
+    ['kiro-runtime-status', 'shared-auto-run', 'shared-settings-actions', 'kiro-target-kiro-rs', 'service-account', 'service-email', 'service-proxy']
   );
 });
 
@@ -124,7 +128,7 @@ test('flow capability registry exposes Grok as an independent SSO flow without O
   assert.deepEqual(capabilityState.flowCapabilities.contributionAdapterIds, []);
   assert.deepEqual(
     capabilityState.visibleGroupIds,
-    ['grok-runtime-status', 'grok-target-webchat2api', 'service-account', 'service-email', 'service-proxy']
+    ['grok-runtime-status', 'shared-auto-run', 'shared-settings-actions', 'grok-target-webchat2api', 'service-account', 'service-email', 'service-proxy']
   );
 });
 

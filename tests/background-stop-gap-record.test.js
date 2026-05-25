@@ -195,7 +195,6 @@ let step8TabUpdatedListener = null;
 let step8PendingReject = null;
 let resumeWaiter = null;
 const STOP_ERROR_MESSAGE = '流程已被用户停止。';
-const AUTO_RUN_TIMER_KIND_SCHEDULED_START = 'scheduled_start';
 const DEFAULT_STATE = {
   stepStatuses: Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((step) => [step, 'pending'])),
 };
@@ -218,7 +217,6 @@ function abortActiveIcloudRequests() {}
 function getPendingAutoRunTimerPlan() {
   return null;
 }
-async function cancelScheduledAutoRun() {}
 async function clearAutoRunTimerAlarm() {}
 function clearStopRequest() {
   stopRequested = false;

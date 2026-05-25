@@ -77,11 +77,10 @@ const stepsProgress = document.getElementById('steps-progress');
 const btnAutoRun = document.getElementById('btn-auto-run');
 const btnAutoContinue = document.getElementById('btn-auto-continue');
 const autoContinueBar = document.getElementById('auto-continue-bar');
-const autoScheduleBar = document.getElementById('auto-schedule-bar');
-const autoScheduleTitle = document.getElementById('auto-schedule-title');
-const autoScheduleMeta = document.getElementById('auto-schedule-meta');
+const autoCountdownBar = document.getElementById('auto-countdown-bar');
+const autoCountdownTitle = document.getElementById('auto-countdown-title');
+const autoCountdownMeta = document.getElementById('auto-countdown-meta');
 const btnAutoRunNow = document.getElementById('btn-auto-run-now');
-const btnAutoCancelSchedule = document.getElementById('btn-auto-cancel-schedule');
 const btnClearLog = document.getElementById('btn-clear-log');
 const configMenuShell = document.getElementById('config-menu-shell');
 const btnConfigMenu = document.getElementById('btn-config-menu');
@@ -91,6 +90,7 @@ const btnImportSettings = document.getElementById('btn-import-settings');
 const inputImportSettingsFile = document.getElementById('input-import-settings-file');
 const labelSourceSelector = document.getElementById('label-source-selector');
 const selectPanelMode = document.getElementById('select-panel-mode');
+const btnOpenWebchat2ApiGithub = document.getElementById('btn-open-webchat2api-github');
 const rowVpsUrl = document.getElementById('row-vps-url');
 const inputVpsUrl = document.getElementById('input-vps-url');
 const rowVpsPassword = document.getElementById('row-vps-password');
@@ -428,10 +428,7 @@ const inputRunCount = document.getElementById('input-run-count');
 const inputAutoSkipFailures = document.getElementById('input-auto-skip-failures');
 const inputAutoSkipFailuresThreadIntervalMinutes = document.getElementById('input-auto-skip-failures-thread-interval-minutes');
 const inputStep6CookieCleanupEnabled = document.getElementById('input-step6-cookie-cleanup-enabled');
-const inputAutoDelayEnabled = document.getElementById('input-auto-delay-enabled');
-const inputAutoDelayMinutes = document.getElementById('input-auto-delay-minutes');
 const inputAutoStepDelaySeconds = document.getElementById('input-auto-step-delay-seconds');
-const inputOAuthFlowTimeoutEnabled = document.getElementById('input-oauth-flow-timeout-enabled');
 const rowStepExecutionRange = document.getElementById('row-step-execution-range');
 const inputStepExecutionRangeEnabled = document.getElementById('input-step-execution-range-enabled');
 const inputStepExecutionRangeFrom = document.getElementById('input-step-execution-range-from');
@@ -611,6 +608,7 @@ let currentPlusModeEnabled = false;
 let currentPlusPaymentMethod = DEFAULT_PLUS_PAYMENT_METHOD;
 let currentPlusAccountAccessStrategy = DEFAULT_PLUS_ACCOUNT_ACCESS_STRATEGY;
 let currentSignupMethod = DEFAULT_SIGNUP_METHOD;
+let currentPhoneVerificationEnabled = false;
 let currentPhoneSignupReloginAfterBindEmailEnabled = DEFAULT_PHONE_SIGNUP_RELOGIN_AFTER_BIND_EMAIL_ENABLED;
 let currentStepDefinitionFlowId = DEFAULT_ACTIVE_FLOW_ID;
 let phoneSignupReuseUiWasLocked = false;
@@ -634,12 +632,14 @@ let stepDefinitions = getStepDefinitionsForMode(false, {
   plusPaymentMethod: currentPlusPaymentMethod,
   plusAccountAccessStrategy: currentPlusAccountAccessStrategy,
   signupMethod: currentSignupMethod,
+  phoneVerificationEnabled: currentPhoneVerificationEnabled,
   phoneSignupReloginAfterBindEmailEnabled: currentPhoneSignupReloginAfterBindEmailEnabled,
 });
 let workflowNodes = getWorkflowNodesForMode(false, {
   plusPaymentMethod: currentPlusPaymentMethod,
   plusAccountAccessStrategy: currentPlusAccountAccessStrategy,
   signupMethod: currentSignupMethod,
+  phoneVerificationEnabled: currentPhoneVerificationEnabled,
   phoneSignupReloginAfterBindEmailEnabled: currentPhoneSignupReloginAfterBindEmailEnabled,
 });
 let STEP_IDS = stepDefinitions.map((step) => Number(step.id)).filter(Number.isFinite);
@@ -648,9 +648,6 @@ let SKIPPABLE_STEPS = new Set(STEP_IDS);
 let NODE_IDS = workflowNodes.map((node) => String(node.nodeId || '').trim()).filter(Boolean);
 let NODE_DEFAULT_STATUSES = Object.fromEntries(NODE_IDS.map((nodeId) => [nodeId, 'pending']));
 let SKIPPABLE_NODES = new Set(NODE_IDS);
-const AUTO_DELAY_MIN_MINUTES = 1;
-const AUTO_DELAY_MAX_MINUTES = 1440;
-const AUTO_DELAY_DEFAULT_MINUTES = 30;
 const AUTO_FALLBACK_THREAD_INTERVAL_MIN_MINUTES = 0;
 const AUTO_FALLBACK_THREAD_INTERVAL_MAX_MINUTES = 1440;
 const AUTO_FALLBACK_THREAD_INTERVAL_DEFAULT_MINUTES = 0;
@@ -920,6 +917,13 @@ function getStepDefinitionsForMode(plusModeEnabled = false, options = {}) {
   const rawSignupMethod = typeof options === 'string'
     ? currentSignupMethod
     : (options.signupMethod || currentSignupMethod || DEFAULT_SIGNUP_METHOD);
+  const phoneVerificationEnabled = typeof options === 'string'
+    ? (typeof inputPhoneVerificationEnabled !== 'undefined' && inputPhoneVerificationEnabled
+      ? Boolean(inputPhoneVerificationEnabled.checked)
+      : Boolean(typeof latestState !== 'undefined' ? latestState?.phoneVerificationEnabled : false))
+    : Boolean(options.phoneVerificationEnabled ?? (typeof inputPhoneVerificationEnabled !== 'undefined' && inputPhoneVerificationEnabled
+      ? inputPhoneVerificationEnabled.checked
+      : (typeof latestState !== 'undefined' ? latestState?.phoneVerificationEnabled : false)));
   const phoneSignupReloginAfterBindEmailEnabled = typeof options === 'string'
     ? currentPhoneSignupReloginAfterBindEmailEnabled
     : Boolean(options.phoneSignupReloginAfterBindEmailEnabled ?? currentPhoneSignupReloginAfterBindEmailEnabled);
@@ -935,6 +939,7 @@ function getStepDefinitionsForMode(plusModeEnabled = false, options = {}) {
     plusPaymentMethod: normalizePlusPaymentMethod(rawPaymentMethod),
     plusAccountAccessStrategy: normalizePlusAccountAccessStrategy(rawPlusAccountAccessStrategy),
     signupMethod: normalizeSignupMethod(rawSignupMethod),
+    phoneVerificationEnabled,
     phoneSignupReloginAfterBindEmailEnabled,
     accountContributionEnabled,
   }) || [])
@@ -959,6 +964,13 @@ function getWorkflowNodesForMode(plusModeEnabled = false, options = {}) {
   const rawSignupMethod = typeof options === 'string'
     ? currentSignupMethod
     : (options.signupMethod || currentSignupMethod || DEFAULT_SIGNUP_METHOD);
+  const phoneVerificationEnabled = typeof options === 'string'
+    ? (typeof inputPhoneVerificationEnabled !== 'undefined' && inputPhoneVerificationEnabled
+      ? Boolean(inputPhoneVerificationEnabled.checked)
+      : Boolean(typeof latestState !== 'undefined' ? latestState?.phoneVerificationEnabled : false))
+    : Boolean(options.phoneVerificationEnabled ?? (typeof inputPhoneVerificationEnabled !== 'undefined' && inputPhoneVerificationEnabled
+      ? inputPhoneVerificationEnabled.checked
+      : (typeof latestState !== 'undefined' ? latestState?.phoneVerificationEnabled : false)));
   const phoneSignupReloginAfterBindEmailEnabled = typeof options === 'string'
     ? currentPhoneSignupReloginAfterBindEmailEnabled
     : Boolean(options.phoneSignupReloginAfterBindEmailEnabled ?? currentPhoneSignupReloginAfterBindEmailEnabled);
@@ -974,6 +986,7 @@ function getWorkflowNodesForMode(plusModeEnabled = false, options = {}) {
     plusPaymentMethod: normalizePlusPaymentMethod(rawPaymentMethod),
     plusAccountAccessStrategy: normalizePlusAccountAccessStrategy(rawPlusAccountAccessStrategy),
     signupMethod: normalizeSignupMethod(rawSignupMethod),
+    phoneVerificationEnabled,
     phoneSignupReloginAfterBindEmailEnabled,
     accountContributionEnabled,
   });
@@ -1040,6 +1053,13 @@ function rebuildStepDefinitionState(plusModeEnabled = false, options = {}) {
   const rawSignupMethod = typeof options === 'string'
     ? currentSignupMethod
     : (options.signupMethod || currentSignupMethod || DEFAULT_SIGNUP_METHOD);
+  const phoneVerificationEnabled = typeof options === 'string'
+    ? (typeof inputPhoneVerificationEnabled !== 'undefined' && inputPhoneVerificationEnabled
+      ? Boolean(inputPhoneVerificationEnabled.checked)
+      : Boolean(typeof latestState !== 'undefined' ? latestState?.phoneVerificationEnabled : false))
+    : Boolean(options.phoneVerificationEnabled ?? (typeof inputPhoneVerificationEnabled !== 'undefined' && inputPhoneVerificationEnabled
+      ? inputPhoneVerificationEnabled.checked
+      : (typeof latestState !== 'undefined' ? latestState?.phoneVerificationEnabled : false)));
   const phoneSignupReloginAfterBindEmailEnabled = typeof options === 'string'
     ? currentPhoneSignupReloginAfterBindEmailEnabled
     : Boolean(options.phoneSignupReloginAfterBindEmailEnabled ?? currentPhoneSignupReloginAfterBindEmailEnabled);
@@ -1050,6 +1070,7 @@ function rebuildStepDefinitionState(plusModeEnabled = false, options = {}) {
   currentPlusPaymentMethod = normalizePlusPaymentMethod(rawPaymentMethod);
   currentPlusAccountAccessStrategy = normalizePlusAccountAccessStrategy(rawPlusAccountAccessStrategy);
   currentSignupMethod = normalizeSignupMethod(rawSignupMethod);
+  currentPhoneVerificationEnabled = Boolean(phoneVerificationEnabled);
   currentPhoneSignupReloginAfterBindEmailEnabled = phoneSignupReloginAfterBindEmailEnabled;
   const nextActiveFlowId = String(
     options?.activeFlowId
@@ -1064,6 +1085,7 @@ function rebuildStepDefinitionState(plusModeEnabled = false, options = {}) {
     plusPaymentMethod: currentPlusPaymentMethod,
     plusAccountAccessStrategy: currentPlusAccountAccessStrategy,
     signupMethod: currentSignupMethod,
+    phoneVerificationEnabled,
     phoneSignupReloginAfterBindEmailEnabled: currentPhoneSignupReloginAfterBindEmailEnabled,
     accountContributionEnabled,
   });
@@ -1073,6 +1095,7 @@ function rebuildStepDefinitionState(plusModeEnabled = false, options = {}) {
       plusPaymentMethod: currentPlusPaymentMethod,
       plusAccountAccessStrategy: currentPlusAccountAccessStrategy,
       signupMethod: currentSignupMethod,
+      phoneVerificationEnabled,
       phoneSignupReloginAfterBindEmailEnabled: currentPhoneSignupReloginAfterBindEmailEnabled,
       accountContributionEnabled,
     })
@@ -1396,7 +1419,6 @@ let currentAutoRun = {
   currentRun: 0,
   totalRuns: 1,
   attemptRun: 0,
-  scheduledAt: null,
   countdownAt: null,
   countdownTitle: '',
   countdownNote: '',
@@ -1417,7 +1439,7 @@ let currentModalActions = [];
 let modalResultBuilder = null;
 let activePlusManualConfirmationRequestId = '';
 let plusManualConfirmationDialogInFlight = false;
-let scheduledCountdownTimer = null;
+let autoRunCountdownTimer = null;
 let configMenuOpen = false;
 let configActionInFlight = false;
 let currentReleaseSnapshot = null;
@@ -1457,9 +1479,7 @@ function shouldAttachAutomationWindow(message = {}) {
   return [
     'EXECUTE_NODE',
     'AUTO_RUN',
-    'SCHEDULE_AUTO_RUN',
     'RESUME_AUTO_RUN',
-    'START_SCHEDULED_AUTO_RUN_NOW',
     'SKIP_AUTO_RUN_COUNTDOWN',
     'PROBE_IP_PROXY_EXIT',
   ].includes(String(message?.type || '').trim());
@@ -1711,7 +1731,6 @@ const ICLOUD_FORWARD_MAIL_PROVIDER_LABELS = Object.fromEntries(
 const getIcloudLoginUrlForHost = window.IcloudUtils?.getIcloudLoginUrlForHost
   || ((host) => host === 'icloud.com.cn' ? 'https://www.icloud.com.cn/' : (host === 'icloud.com' ? 'https://www.icloud.com/' : ''));
 
-btnAutoCancelSchedule?.remove();
 const MAIL_PROVIDER_LOGIN_CONFIGS = {
   [ICLOUD_PROVIDER]: {
     label: 'iCloud 邮箱',
@@ -3013,7 +3032,7 @@ function applyStepExecutionRangeState(state = latestState) {
   if (inputStepExecutionRangeEnabled) {
     inputStepExecutionRangeEnabled.checked = Boolean(range.enabled);
   }
-  const controlsDisabled = !available || isAutoRunLockedPhase() || isAutoRunScheduledPhase();
+  const controlsDisabled = !available || isAutoRunLockedPhase();
   if (inputStepExecutionRangeEnabled) inputStepExecutionRangeEnabled.disabled = controlsDisabled;
   if (inputStepExecutionRangeFrom) inputStepExecutionRangeFrom.disabled = controlsDisabled || !inputStepExecutionRangeEnabled?.checked;
   if (inputStepExecutionRangeTo) inputStepExecutionRangeTo.disabled = controlsDisabled || !inputStepExecutionRangeEnabled?.checked;
@@ -3114,7 +3133,7 @@ function hasSavedProgress(state = latestState) {
 function isContributionModeSwitchBlocked(state = latestState) {
   const statuses = getStepStatuses(state);
   const anyRunning = Object.values(statuses).some((status) => status === 'running');
-  return anyRunning || isAutoRunLockedPhase() || isAutoRunPausedPhase() || isAutoRunScheduledPhase();
+  return anyRunning || isAutoRunLockedPhase() || isAutoRunPausedPhase();
 }
 
 function shouldOfferAutoModeChoice(state = latestState) {
@@ -3661,7 +3680,7 @@ function syncAutoRunState(source = {}) {
   const autoRunning = source.autoRunning !== undefined
     ? Boolean(source.autoRunning)
     : (source.autoRunPhase !== undefined || source.phase !== undefined
-      ? ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase)
+      ? ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase)
       : currentAutoRun.autoRunning);
 
   currentAutoRun = {
@@ -3670,7 +3689,6 @@ function syncAutoRunState(source = {}) {
     currentRun: readAutoRunStateValue(source, ['autoRunCurrentRun', 'currentRun'], currentAutoRun.currentRun),
     totalRuns: readAutoRunStateValue(source, ['autoRunTotalRuns', 'totalRuns'], currentAutoRun.totalRuns),
     attemptRun: readAutoRunStateValue(source, ['autoRunAttemptRun', 'attemptRun'], currentAutoRun.attemptRun),
-    scheduledAt: readAutoRunStateValue(source, ['scheduledAutoRunAt', 'scheduledAt'], currentAutoRun.scheduledAt),
     countdownAt: readAutoRunStateValue(source, ['autoRunCountdownAt', 'countdownAt'], currentAutoRun.countdownAt),
     countdownTitle: readAutoRunStateValue(source, ['autoRunCountdownTitle', 'countdownTitle'], currentAutoRun.countdownTitle),
     countdownNote: readAutoRunStateValue(source, ['autoRunCountdownNote', 'countdownNote'], currentAutoRun.countdownNote),
@@ -3680,8 +3698,7 @@ function syncAutoRunState(source = {}) {
 function isContributionButtonLocked() {
   const autoActive = currentAutoRun.autoRunning
     || isAutoRunLockedPhase()
-    || isAutoRunPausedPhase()
-    || isAutoRunScheduledPhase();
+    || isAutoRunPausedPhase();
   if (autoActive) {
     return false;
   }
@@ -3706,12 +3723,8 @@ function isAutoRunWaitingStepPhase() {
   return currentAutoRun.phase === 'waiting_step';
 }
 
-function isAutoRunScheduledPhase() {
-  return currentAutoRun.phase === 'scheduled';
-}
-
 function isAutoRunSourceSyncPhase(phase) {
-  return ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase);
+  return ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase);
 }
 
 function shouldSyncRunCountFromAutoRunSource(source = {}) {
@@ -3746,14 +3759,6 @@ function getAutoRunLabel(payload = currentAutoRun) {
     return ` (${payload.currentRun}/${payload.totalRuns}${attemptLabel})`;
   }
   return attemptLabel ? ` (${attemptLabel.slice(3)})` : '';
-}
-
-function normalizeAutoDelayMinutes(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return AUTO_DELAY_DEFAULT_MINUTES;
-  }
-  return Math.min(AUTO_DELAY_MAX_MINUTES, Math.max(AUTO_DELAY_MIN_MINUTES, Math.floor(numeric)));
 }
 
 function normalizeAutoRunThreadIntervalMinutes(value) {
@@ -3979,12 +3984,6 @@ function updateFallbackThreadIntervalInputState() {
   inputAutoSkipFailuresThreadIntervalMinutes.disabled = Boolean(inputAutoSkipFailures.disabled);
 }
 
-function updateAutoDelayInputState() {
-  const scheduled = isAutoRunScheduledPhase();
-  inputAutoDelayEnabled.disabled = scheduled;
-  inputAutoDelayMinutes.disabled = scheduled || !inputAutoDelayEnabled.checked;
-}
-
 function formatCountdown(remainingMs) {
   const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
   const hours = Math.floor(totalSeconds / 3600);
@@ -4005,21 +4004,12 @@ function formatScheduleTime(timestamp) {
   });
 }
 
-function stopScheduledCountdownTicker() {
-  clearInterval(scheduledCountdownTimer);
-  scheduledCountdownTimer = null;
+function stopAutoRunCountdownTicker() {
+  clearInterval(autoRunCountdownTimer);
+  autoRunCountdownTimer = null;
 }
 
 function getActiveAutoRunCountdown() {
-  if (isAutoRunScheduledPhase() && Number.isFinite(currentAutoRun.scheduledAt)) {
-    return {
-      at: currentAutoRun.scheduledAt,
-      title: '已计划自动运行',
-      note: `计划于 ${formatScheduleTime(currentAutoRun.scheduledAt)} 开始`,
-      tone: 'scheduled',
-    };
-  }
-
   if (currentAutoRun.phase !== 'waiting_interval') {
     return null;
   }
@@ -4036,48 +4026,45 @@ function getActiveAutoRunCountdown() {
   };
 }
 
-function renderScheduledAutoRunInfo() {
-  if (!autoScheduleBar) {
+function renderAutoRunCountdownInfo() {
+  if (!autoCountdownBar) {
     return;
   }
 
   const countdown = getActiveAutoRunCountdown();
   if (!countdown) {
-    autoScheduleBar.style.display = 'none';
+    autoCountdownBar.style.display = 'none';
     return;
   }
 
   const remainingMs = countdown.at - Date.now();
-  autoScheduleBar.style.display = 'flex';
+  autoCountdownBar.style.display = 'flex';
   if (btnAutoRunNow) {
     btnAutoRunNow.hidden = false;
-    btnAutoRunNow.textContent = currentAutoRun.phase === 'waiting_interval' ? '立即继续' : '立即开始';
+    btnAutoRunNow.textContent = '立即继续';
   }
-  if (btnAutoCancelSchedule) {
-    btnAutoCancelSchedule.hidden = true;
-  }
-  autoScheduleTitle.textContent = countdown.title;
-  autoScheduleMeta.textContent = remainingMs > 0
+  autoCountdownTitle.textContent = countdown.title;
+  autoCountdownMeta.textContent = remainingMs > 0
     ? `${countdown.note ? `${countdown.note}，` : ''}剩余 ${formatCountdown(remainingMs)}`
     : '倒计时即将结束，正在准备继续...';
   return;
 }
 
-function syncScheduledCountdownTicker() {
-  renderScheduledAutoRunInfo();
+function syncAutoRunCountdownTicker() {
+  renderAutoRunCountdownInfo();
   if (getActiveAutoRunCountdown()) {
-    if (scheduledCountdownTimer) {
+    if (autoRunCountdownTimer) {
       return;
     }
 
-    scheduledCountdownTimer = setInterval(() => {
-      renderScheduledAutoRunInfo();
+    autoRunCountdownTimer = setInterval(() => {
+      renderAutoRunCountdownInfo();
       updateStatusDisplay(latestState);
     }, 1000);
     return;
   }
 
-  stopScheduledCountdownTicker();
+  stopAutoRunCountdownTicker();
   return;
 }
 
@@ -5221,12 +5208,7 @@ function collectSettingsPayload() {
     stepExecutionRangeByFlow: typeof buildStepExecutionRangeByFlowPayload === 'function'
       ? buildStepExecutionRangeByFlowPayload(latestState?.stepExecutionRangeByFlow)
       : (latestState?.stepExecutionRangeByFlow || {}),
-    autoRunDelayEnabled: inputAutoDelayEnabled.checked,
-    autoRunDelayMinutes: normalizeAutoDelayMinutes(inputAutoDelayMinutes.value),
     autoStepDelaySeconds: normalizeAutoStepDelaySeconds(inputAutoStepDelaySeconds.value),
-    oauthFlowTimeoutEnabled: typeof inputOAuthFlowTimeoutEnabled !== 'undefined' && inputOAuthFlowTimeoutEnabled
-      ? Boolean(inputOAuthFlowTimeoutEnabled.checked)
-      : true,
     phoneVerificationEnabled: effectivePhoneVerificationEnabled,
     signupMethod: effectiveSignupMethod,
     phoneSignupReloginAfterBindEmailEnabled: typeof inputPhoneSignupReloginAfterBindEmail !== 'undefined' && inputPhoneSignupReloginAfterBindEmail
@@ -9597,6 +9579,9 @@ function resolveStepDefinitionCapabilityState(state = latestState, options = {})
       ),
     signupMethod: capabilityState?.effectiveSignupMethod
       || normalizeSignupMethod((options?.signupMethod ?? nextState?.signupMethod) || DEFAULT_SIGNUP_METHOD),
+    phoneVerificationEnabled: capabilityState
+      ? Boolean(capabilityState.runtimeLocks?.phoneVerificationEnabled)
+      : Boolean(nextState?.phoneVerificationEnabled),
   };
 }
 
@@ -9694,7 +9679,7 @@ function canSelectPhoneSignupMethod() {
 }
 
 function isSignupMethodSwitchLocked() {
-  return isAutoRunLockedPhase() || isAutoRunPausedPhase() || isAutoRunScheduledPhase();
+  return isAutoRunLockedPhase() || isAutoRunPausedPhase();
 }
 
 function updateSignupMethodUI(options = {}) {
@@ -9960,7 +9945,7 @@ function updatePhoneVerificationSettingsUI() {
     }
   }
   phoneSignupReuseUiWasLocked = phoneSignupReuseLocked;
-  const settingsLocked = isAutoRunLockedPhase() || isAutoRunScheduledPhase();
+  const settingsLocked = isAutoRunLockedPhase();
   if (typeof inputPhoneSignupReloginAfterBindEmail !== 'undefined' && inputPhoneSignupReloginAfterBindEmail) {
     inputPhoneSignupReloginAfterBindEmail.disabled = settingsLocked || !showPhoneSignupReloginAfterBindEmail;
   }
@@ -11123,8 +11108,7 @@ function applyAutoRunStatus(payload = currentAutoRun) {
   const runLabel = getAutoRunLabel(currentAutoRun);
   const locked = isAutoRunLockedPhase();
   const paused = isAutoRunPausedPhase();
-  const scheduled = isAutoRunScheduledPhase();
-  const settingsCardLocked = scheduled || locked;
+  const settingsCardLocked = locked;
 
   setSettingsCardLocked(settingsCardLocked);
   setFreePhoneReuseControlsLocked(settingsCardLocked);
@@ -11145,14 +11129,14 @@ function applyAutoRunStatus(payload = currentAutoRun) {
   if (typeof inputSub2ApiAccountPriority !== 'undefined' && inputSub2ApiAccountPriority) {
     inputSub2ApiAccountPriority.disabled = locked;
   }
-  inputAutoSkipFailures.disabled = scheduled;
+  inputAutoSkipFailures.disabled = locked;
 
   const lockedRunCount = typeof getLockedRunCountFromEmailPool === 'function'
     ? getLockedRunCountFromEmailPool()
     : 0;
   const isSyncPhase = typeof isAutoRunSourceSyncPhase === 'function'
     ? isAutoRunSourceSyncPhase
-    : (phase) => ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase);
+    : (phase) => ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase);
   const shouldSyncRunCount = typeof shouldSyncRunCountFromAutoRunSource === 'function'
     ? shouldSyncRunCountFromAutoRunSource(currentAutoRun)
     : (currentAutoRun.autoRunning || isSyncPhase(currentAutoRun.phase));
@@ -11163,10 +11147,6 @@ function applyAutoRunStatus(payload = currentAutoRun) {
   }
 
   switch (currentAutoRun.phase) {
-    case 'scheduled':
-      autoContinueBar.style.display = 'none';
-      btnAutoRun.innerHTML = `已计划${runLabel}`;
-      break;
     case 'waiting_step':
       autoContinueBar.style.display = 'none';
       btnAutoRun.innerHTML = `等待中${runLabel}`;
@@ -11197,10 +11177,9 @@ function applyAutoRunStatus(payload = currentAutoRun) {
       break;
   }
 
-  updateAutoDelayInputState();
   updateFallbackThreadIntervalInputState();
-  syncScheduledCountdownTicker();
-  updateStopButtonState(scheduled || paused || locked || Object.values(getStepStatuses()).some(status => status === 'running'));
+  syncAutoRunCountdownTicker();
+  updateStopButtonState(paused || locked || Object.values(getStepStatuses()).some(status => status === 'running'));
   updateConfigMenuControls();
   renderContributionMode();
 }
@@ -11282,6 +11261,9 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
       || defaultStrategy
   );
   const nextSignupMethod = normalizeSignupMethod(options.signupMethod || currentSignupMethod || DEFAULT_SIGNUP_METHOD);
+  const nextPhoneVerificationEnabled = Boolean(options.phoneVerificationEnabled ?? (typeof inputPhoneVerificationEnabled !== 'undefined' && inputPhoneVerificationEnabled
+    ? inputPhoneVerificationEnabled.checked
+    : (typeof latestState !== 'undefined' ? latestState?.phoneVerificationEnabled : false)));
   const nextPhoneSignupReloginAfterBindEmailEnabled = Boolean(
     options.phoneSignupReloginAfterBindEmailEnabled
       ?? (typeof inputPhoneSignupReloginAfterBindEmail !== 'undefined' && inputPhoneSignupReloginAfterBindEmail
@@ -11309,6 +11291,7 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
     plusPaymentMethod: nextPaymentMethod,
     plusAccountAccessStrategy: nextPlusAccountAccessStrategy,
     signupMethod: nextSignupMethod,
+    phoneVerificationEnabled: nextPhoneVerificationEnabled,
     phoneSignupReloginAfterBindEmailEnabled: nextPhoneSignupReloginAfterBindEmailEnabled,
   });
   const paymentTitleChanged = Boolean(nextPlusModeEnabled && currentPaymentStep && nextPaymentTitle && currentPaymentStep.title !== nextPaymentTitle);
@@ -11317,6 +11300,7 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
     || nextPaymentMethod !== currentPlusPaymentMethod
     || nextPlusAccountAccessStrategy !== currentPlusAccountAccessStrategy
     || nextSignupMethod !== currentSignupMethod
+    || nextPhoneVerificationEnabled !== currentPhoneVerificationEnabled
     || nextPhoneSignupReloginAfterBindEmailEnabled !== currentPhoneSignupReloginAfterBindEmailEnabled
     || nextAccountContributionEnabled !== Boolean(typeof latestState !== 'undefined' ? latestState?.accountContributionEnabled : false)
     || nextActiveFlowId !== currentFlowId
@@ -11330,6 +11314,7 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
     plusPaymentMethod: nextPaymentMethod,
     plusAccountAccessStrategy: nextPlusAccountAccessStrategy,
     signupMethod: nextSignupMethod,
+    phoneVerificationEnabled: nextPhoneVerificationEnabled,
     phoneSignupReloginAfterBindEmailEnabled: nextPhoneSignupReloginAfterBindEmailEnabled,
     accountContributionEnabled: nextAccountContributionEnabled,
   });
@@ -11357,6 +11342,7 @@ function syncStepDefinitionsFromUiState(stateOverrides = {}) {
     plusPaymentMethod: getSelectedPlusPaymentMethod(nextState),
     plusAccountAccessStrategy: stepDefinitionState.plusAccountAccessStrategy,
     signupMethod: stepDefinitionState.signupMethod,
+    phoneVerificationEnabled: Boolean(stepDefinitionState.phoneVerificationEnabled),
     phoneSignupReloginAfterBindEmailEnabled: Boolean(nextState?.phoneSignupReloginAfterBindEmailEnabled),
     accountContributionEnabled: Boolean(nextState?.accountContributionEnabled),
   });
@@ -11381,6 +11367,7 @@ function applySettingsState(state) {
       activeFlowId: state?.activeFlowId || state?.flowId,
       plusPaymentMethod: state?.plusPaymentMethod,
       signupMethod: stepDefinitionState.signupMethod,
+      phoneVerificationEnabled: Boolean(stepDefinitionState.phoneVerificationEnabled),
       phoneSignupReloginAfterBindEmailEnabled: Boolean(state?.phoneSignupReloginAfterBindEmailEnabled),
       accountContributionEnabled: Boolean(state?.accountContributionEnabled),
     });
@@ -11801,14 +11788,7 @@ function applySettingsState(state) {
   if (typeof inputStep6CookieCleanupEnabled !== 'undefined' && inputStep6CookieCleanupEnabled) {
     inputStep6CookieCleanupEnabled.checked = Boolean(state?.step6CookieCleanupEnabled);
   }
-  inputAutoDelayEnabled.checked = Boolean(state?.autoRunDelayEnabled);
-  inputAutoDelayMinutes.value = String(normalizeAutoDelayMinutes(state?.autoRunDelayMinutes));
   inputAutoStepDelaySeconds.value = formatAutoStepDelayInputValue(state?.autoStepDelaySeconds);
-  if (typeof inputOAuthFlowTimeoutEnabled !== 'undefined' && inputOAuthFlowTimeoutEnabled) {
-    inputOAuthFlowTimeoutEnabled.checked = state?.oauthFlowTimeoutEnabled !== undefined
-      ? Boolean(state.oauthFlowTimeoutEnabled)
-      : true;
-  }
   if (inputVerificationResendCount) {
     const restoredVerificationResendCount = state?.verificationResendCount !== undefined
       ? state.verificationResendCount
@@ -12021,7 +12001,7 @@ function applySettingsState(state) {
   }
   const isSyncPhase = typeof isAutoRunSourceSyncPhase === 'function'
     ? isAutoRunSourceSyncPhase
-    : (phase) => ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase);
+    : (phase) => ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase);
   const shouldSyncInitialRunCount = typeof shouldSyncRunCountFromAutoRunSource === 'function'
     ? shouldSyncRunCountFromAutoRunSource(state)
     : (Boolean(state?.autoRunning) || isSyncPhase(state?.autoRunPhase ?? state?.phase));
@@ -12031,7 +12011,6 @@ function applySettingsState(state) {
 
   applyAutoRunStatus(state);
   markSettingsDirty(false);
-  updateAutoDelayInputState();
   updateFallbackThreadIntervalInputState();
   updateAccountRunHistorySettingsUI();
   updatePhoneVerificationSettingsUI();
@@ -14080,7 +14059,6 @@ function updateButtonStates() {
   const statuses = getNodeStatuses();
   const anyRunning = Object.values(statuses).some(s => s === 'running');
   const autoLocked = isAutoRunLockedPhase();
-  const autoScheduled = isAutoRunScheduledPhase();
   const enabledNodeIds = getEnabledNodeIdsForStepExecutionRange(latestState);
   const icloudTargetMailboxTypeValue = typeof selectIcloudTargetMailboxType !== 'undefined'
     ? selectIcloudTargetMailboxType?.value
@@ -14094,7 +14072,7 @@ function updateButtonStates() {
 
     if (currentStatus === 'disabled') {
       btn.disabled = true;
-    } else if (anyRunning || autoLocked || autoScheduled) {
+    } else if (anyRunning || autoLocked) {
       btn.disabled = true;
     } else if (enabledNodeIds.indexOf(nodeId) === 0) {
       btn.disabled = false;
@@ -14114,7 +14092,7 @@ function updateButtonStates() {
     const prevNodeId = currentIndex > 0 ? enabledNodeIds[currentIndex - 1] : null;
     const prevStatus = prevNodeId === null ? 'completed' : statuses[prevNodeId];
 
-    if (!SKIPPABLE_NODES.has(nodeId) || currentStatus === 'disabled' || anyRunning || autoLocked || autoScheduled || currentStatus === 'running' || isDoneStatus(currentStatus)) {
+    if (!SKIPPABLE_NODES.has(nodeId) || currentStatus === 'disabled' || anyRunning || autoLocked || currentStatus === 'running' || isDoneStatus(currentStatus)) {
       btn.style.display = 'none';
       btn.disabled = true;
       btn.title = '当前不可跳过';
@@ -14133,8 +14111,8 @@ function updateButtonStates() {
     btn.title = `跳过节点 ${nodeId}`;
   });
 
-  btnReset.disabled = anyRunning || autoScheduled || isAutoRunPausedPhase() || autoLocked;
-  const disableIcloudControls = anyRunning || autoScheduled || autoLocked;
+  btnReset.disabled = anyRunning || isAutoRunPausedPhase() || autoLocked;
+  const disableIcloudControls = anyRunning || autoLocked;
   if (btnIcloudRefresh) btnIcloudRefresh.disabled = disableIcloudControls;
   if (btnIcloudDeleteUsed) btnIcloudDeleteUsed.disabled = disableIcloudControls || !hasDeletableUsedIcloudAliases();
   if (selectIcloudHostPreference) selectIcloudHostPreference.disabled = disableIcloudControls;
@@ -14156,7 +14134,7 @@ function updateButtonStates() {
   if (checkboxAutoDeleteIcloud) checkboxAutoDeleteIcloud.disabled = disableIcloudControls;
   if (btnContributionMode) btnContributionMode.disabled = isContributionButtonLocked();
   applyStepExecutionRangeState(latestState);
-  updateStopButtonState(anyRunning || autoScheduled || isAutoRunPausedPhase() || autoLocked);
+  updateStopButtonState(anyRunning || isAutoRunPausedPhase() || autoLocked);
   renderContributionMode();
 }
 
@@ -14176,18 +14154,7 @@ function updateStatusDisplay(state) {
     displayStatus.textContent = remainingMs > 0
       ? `${countdown.title}，剩余 ${formatCountdown(remainingMs)}`
       : `${countdown.title}，即将结束...`;
-    statusBar.classList.add(countdown.tone === 'scheduled' ? 'scheduled' : 'running');
-    return;
-  }
-
-  if (isAutoRunScheduledPhase()) {
-    const remainingMs = Number.isFinite(currentAutoRun.scheduledAt)
-      ? currentAutoRun.scheduledAt - Date.now()
-      : 0;
-    displayStatus.textContent = remainingMs > 0
-      ? `自动计划中，剩余 ${formatCountdown(remainingMs)}`
-      : '倒计时即将结束，正在准备启动...';
-    statusBar.classList.add('scheduled');
+    statusBar.classList.add('running');
     return;
   }
 
@@ -15396,7 +15363,7 @@ btnSaveSettings.addEventListener('click', async () => {
 btnStop.addEventListener('click', async () => {
   btnStop.disabled = true;
   await chrome.runtime.sendMessage({ type: 'STOP_FLOW', source: 'sidepanel', payload: {} });
-  showToast(isAutoRunScheduledPhase() ? '正在取消倒计时计划...' : '正在停止当前流程...', 'warn', 2000);
+  showToast(currentAutoRun.phase === 'waiting_interval' ? '正在取消等待中的倒计时...' : '正在停止当前流程...', 'warn', 2000);
 });
 
 btnConfigMenu?.addEventListener('click', (event) => {
@@ -15573,24 +15540,18 @@ async function startAutoRunFromCurrentSettings() {
 
   btnAutoRun.disabled = true;
   inputRunCount.disabled = true;
-  const delayEnabled = inputAutoDelayEnabled.checked;
-  const delayMinutes = normalizeAutoDelayMinutes(inputAutoDelayMinutes.value);
   const activeFlowId = typeof getSelectedFlowId === 'function'
     ? getSelectedFlowId(latestState)
     : (String(latestState?.activeFlowId || latestState?.flowId || DEFAULT_ACTIVE_FLOW_ID).trim().toLowerCase() || DEFAULT_ACTIVE_FLOW_ID);
   const targetId = typeof getSelectedTargetId === 'function'
     ? getSelectedTargetId(activeFlowId)
     : normalizeTargetIdForFlow(activeFlowId, latestState?.targetId || '', getDefaultTargetIdForFlow(activeFlowId));
-  inputAutoDelayMinutes.value = String(delayMinutes);
-  btnAutoRun.innerHTML = delayEnabled
-    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> 计划中...'
-    : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> 运行中...';
+  btnAutoRun.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> 运行中...';
   const response = await sendSidepanelMessage({
-    type: delayEnabled ? 'SCHEDULE_AUTO_RUN' : 'AUTO_RUN',
+    type: 'AUTO_RUN',
     source: 'sidepanel',
     payload: {
       totalRuns,
-      delayMinutes,
       activeFlowId,
       targetId,
       autoRunSkipFailures,
@@ -15636,31 +15597,16 @@ btnAutoContinue.addEventListener('click', async () => {
 btnAutoRunNow?.addEventListener('click', async () => {
   try {
     btnAutoRunNow.disabled = true;
-    const waitingInterval = currentAutoRun.phase === 'waiting_interval';
     await sendSidepanelMessage({
-      type: waitingInterval ? 'SKIP_AUTO_RUN_COUNTDOWN' : 'START_SCHEDULED_AUTO_RUN_NOW',
+      type: 'SKIP_AUTO_RUN_COUNTDOWN',
       source: 'sidepanel',
       payload: {},
     });
-    if (waitingInterval) {
-      showToast('已跳过当前倒计时，自动流程将立即继续。', 'info', 1800);
-    }
+    showToast('已跳过当前倒计时，自动流程将立即继续。', 'info', 1800);
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
     btnAutoRunNow.disabled = false;
-  }
-});
-
-btnAutoCancelSchedule?.addEventListener('click', async () => {
-  try {
-    btnAutoCancelSchedule.disabled = true;
-    await chrome.runtime.sendMessage({ type: 'CANCEL_SCHEDULED_AUTO_RUN', source: 'sidepanel', payload: {} });
-    showToast('已取消倒计时计划。', 'info', 1800);
-  } catch (err) {
-    showToast(err.message, 'error');
-  } finally {
-    btnAutoCancelSchedule.disabled = false;
   }
 });
 
@@ -15693,7 +15639,6 @@ btnReset.addEventListener('click', async () => {
     autoRunCurrentRun: 0,
     autoRunTotalRuns: 1,
     autoRunAttemptRun: 0,
-    scheduledAutoRunAt: null,
     autoRunCountdownAt: null,
     autoRunCountdownTitle: '',
     autoRunCountdownNote: '',
@@ -15881,6 +15826,10 @@ btnGpcHelperConvertApiKey?.addEventListener('click', () => {
 
 btnOpenKiroRsGithub?.addEventListener('click', () => {
   openExternalUrl('https://github.com/QLHazyCoder/kiro.rs');
+});
+
+btnOpenWebchat2ApiGithub?.addEventListener('click', () => {
+  openExternalUrl('https://github.com/zqbxdev/webchat2api');
 });
 
 btnGpcHelperBalance?.addEventListener('click', async () => {
@@ -16999,12 +16948,6 @@ inputAutoSkipFailuresThreadIntervalMinutes.addEventListener('blur', () => {
   saveSettings({ silent: true }).catch(() => { });
 });
 
-inputAutoDelayEnabled.addEventListener('change', () => {
-  updateAutoDelayInputState();
-  markSettingsDirty(true);
-  saveSettings({ silent: true }).catch(() => { });
-});
-
 inputStep6CookieCleanupEnabled?.addEventListener('change', () => {
   markSettingsDirty(true);
   saveSettings({ silent: true }).catch(() => { });
@@ -17077,17 +17020,6 @@ selectFlow?.addEventListener('change', () => {
     saveSettings({ silent: true }).catch(() => { });
   });
 });
-
-inputAutoDelayMinutes.addEventListener('input', () => {
-  markSettingsDirty(true);
-  scheduleSettingsAutoSave();
-});
-inputAutoDelayMinutes.addEventListener('blur', () => {
-  inputAutoDelayMinutes.value = String(normalizeAutoDelayMinutes(inputAutoDelayMinutes.value));
-  saveSettings({ silent: true }).catch(() => { });
-});
-
-
 
 function getPhoneSmsCountrySelectionForProvider(provider = getSelectedPhoneSmsProvider(), options = {}) {
   const normalizedProvider = normalizePhoneSmsProvider(provider);
@@ -17247,6 +17179,10 @@ inputPhoneVerificationEnabled?.addEventListener('change', () => {
     updatePhoneVerificationSettingsUI();
     showToast('已切回邮箱注册', 'info', 1600);
   }
+  syncStepDefinitionsFromUiState({
+    phoneVerificationEnabled: Boolean(inputPhoneVerificationEnabled.checked),
+    signupMethod: getSelectedSignupMethod(),
+  });
   markSettingsDirty(true);
   saveSettings({ silent: true }).catch(() => { });
 });
@@ -17955,7 +17891,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         password: null,
         nodeStatuses: NODE_DEFAULT_STATUSES,
         logs: [],
-        scheduledAutoRunAt: null,
         autoRunCountdownAt: null,
         autoRunCountdownTitle: '',
         autoRunCountdownNote: '',
@@ -17990,7 +17925,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         autoRunCurrentRun: 0,
         autoRunTotalRuns: 1,
         autoRunAttemptRun: 0,
-        scheduledAutoRunAt: null,
         autoRunCountdownAt: null,
         autoRunCountdownTitle: '',
         autoRunCountdownNote: '',
@@ -18424,10 +18358,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         inputAutoSkipFailures.checked = Boolean(message.payload.autoRunSkipFailures);
         updateFallbackThreadIntervalInputState();
       }
-      if (message.payload.autoRunDelayEnabled !== undefined) {
-        inputAutoDelayEnabled.checked = Boolean(message.payload.autoRunDelayEnabled);
-        updateAutoDelayInputState();
-      }
       if (
         message.payload.step6CookieCleanupEnabled !== undefined
         && typeof inputStep6CookieCleanupEnabled !== 'undefined'
@@ -18443,9 +18373,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         renderStepStatuses(latestState);
         updateButtonStates();
       }
-      if (message.payload.autoRunDelayMinutes !== undefined) {
-        inputAutoDelayMinutes.value = String(normalizeAutoDelayMinutes(message.payload.autoRunDelayMinutes));
-      }
       if (message.payload.autoRunFallbackThreadIntervalMinutes !== undefined) {
         inputAutoSkipFailuresThreadIntervalMinutes.value = String(
           normalizeAutoRunThreadIntervalMinutes(message.payload.autoRunFallbackThreadIntervalMinutes)
@@ -18454,9 +18381,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       }
       if (message.payload.autoStepDelaySeconds !== undefined) {
         inputAutoStepDelaySeconds.value = formatAutoStepDelayInputValue(message.payload.autoStepDelaySeconds);
-      }
-      if (message.payload.oauthFlowTimeoutEnabled !== undefined && typeof inputOAuthFlowTimeoutEnabled !== 'undefined' && inputOAuthFlowTimeoutEnabled) {
-        inputOAuthFlowTimeoutEnabled.checked = Boolean(message.payload.oauthFlowTimeoutEnabled);
       }
       if (
         (
@@ -18646,6 +18570,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       }
       if (message.payload.phoneVerificationEnabled !== undefined || message.payload.signupMethod !== undefined) {
         updatePhoneVerificationSettingsUI();
+        syncStepDefinitionsFromUiState({
+          phoneVerificationEnabled: inputPhoneVerificationEnabled
+            ? Boolean(inputPhoneVerificationEnabled.checked)
+            : Boolean(latestState?.phoneVerificationEnabled),
+          signupMethod: typeof getSelectedSignupMethod === 'function'
+            ? getSelectedSignupMethod()
+            : latestState?.signupMethod,
+        });
       }
       const activePhoneSmsProvider = normalizePhoneSmsProviderValue(
         message.payload.phoneSmsProvider !== undefined
@@ -18775,12 +18707,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
     case 'AUTO_RUN_STATUS': {
       syncLatestState({
-        autoRunning: ['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(message.payload.phase),
+        autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(message.payload.phase),
         autoRunPhase: message.payload.phase,
         autoRunCurrentRun: message.payload.currentRun,
         autoRunTotalRuns: message.payload.totalRuns,
         autoRunAttemptRun: message.payload.attemptRun,
-        scheduledAutoRunAt: message.payload.scheduledAt ?? null,
         autoRunCountdownAt: message.payload.countdownAt ?? null,
         autoRunCountdownTitle: message.payload.countdownTitle ?? '',
         autoRunCountdownNote: message.payload.countdownNote ?? '',
@@ -18788,7 +18719,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       applyAutoRunStatus(message.payload);
       updateStatusDisplay(latestState);
       updateButtonStates();
-      if (!['scheduled', 'running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(message.payload.phase)) {
+      if (!['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(message.payload.phase)) {
         scheduleAccountRunHistoryRefresh();
       }
       break;

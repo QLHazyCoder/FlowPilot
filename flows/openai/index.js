@@ -38,7 +38,6 @@
       "codex2api"
     ],
     "supportsLuckmail": true,
-    "supportsOauthTimeoutBudget": true,
     "canSwitchFlow": true,
     "stepDefinitionMode": "openai-dynamic",
     "targetSelectorLabel": "来源"
@@ -46,13 +45,20 @@
   "baseGroups": [
     "openai-plus",
     "openai-phone",
+    "shared-auto-run",
     "openai-oauth",
-    "openai-step6"
+    "openai-step6",
+    "shared-settings-actions"
   ],
   "targets": {
     "cpa": {
       "id": "cpa",
       "label": "CPA 面板",
+      "defaultState": {
+        "vpsUrl": "",
+        "vpsPassword": "",
+        "localCpaStep9Mode": "submit"
+      },
       "groups": [
         "openai-target-cpa"
       ]
@@ -60,6 +66,18 @@
     "sub2api": {
       "id": "sub2api",
       "label": "SUB2API",
+      "defaultState": {
+        "sub2apiUrl": "",
+        "sub2apiEmail": "",
+        "sub2apiPassword": "",
+        "sub2apiGroupName": "codex",
+        "sub2apiGroupNames": [
+          "codex",
+          "openai-plus"
+        ],
+        "sub2apiAccountPriority": 1,
+        "sub2apiDefaultProxyName": ""
+      },
       "groups": [
         "openai-target-sub2api"
       ]
@@ -67,9 +85,35 @@
     "codex2api": {
       "id": "codex2api",
       "label": "Codex2API",
+      "defaultState": {
+        "codex2apiUrl": "",
+        "codex2apiAdminKey": ""
+      },
       "groups": [
         "openai-target-codex2api"
       ]
+    }
+  },
+  "settingsDefaults": {
+    "signup": {
+      "signupMethod": "email",
+      "phoneVerificationEnabled": false,
+      "phoneSignupReloginAfterBindEmailEnabled": false
+    },
+    "plus": {
+      "plusModeEnabled": false,
+      "plusPaymentMethod": "paypal-hosted",
+      "plusAccountAccessStrategy": "oauth",
+      "hostedCheckoutVerificationUrl": "",
+      "hostedCheckoutPhoneNumber": "",
+      "plusHostedCheckoutOauthDelaySeconds": 3
+    },
+    "autoRun": {
+      "stepExecutionRange": {
+        "enabled": false,
+        "fromStep": 1,
+        "toStep": 11
+      }
     }
   },
   "runtimeSources": {
@@ -382,8 +426,8 @@
       "id": "openai-oauth",
       "label": "OAuth",
       "rowIds": [
-        "row-oauth-flow-timeout",
-        "row-oauth-display"
+        "row-oauth-display",
+        "row-oauth-callback"
       ]
     },
     "openai-step6": {
@@ -398,6 +442,7 @@
     "cpa": {
       "supportsPhoneSignup": true,
       "requiresPhoneSignupWarning": true,
+      "usesOauthTimeoutBudget": true,
       "supportedPlusAccountAccessStrategies": [
         "oauth",
         "cpa_codex_session"

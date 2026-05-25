@@ -639,14 +639,11 @@ const IP_PROXY_TARGET_HOST_PATTERNS = [
 ];
 const AUTO_RUN_TIMER_ALARM_NAME = 'auto-run-timer';
 const IP_PROXY_AUTO_SYNC_ALARM_NAME = 'ip-proxy-auto-sync';
-const AUTO_RUN_TIMER_KIND_SCHEDULED_START = 'scheduled_start';
 const AUTO_RUN_TIMER_KIND_BETWEEN_ROUNDS = 'between_rounds';
 const AUTO_RUN_TIMER_KIND_BEFORE_RETRY = 'before_retry';
 const IP_PROXY_AUTO_SYNC_INTERVAL_MIN_MINUTES = 1;
 const IP_PROXY_AUTO_SYNC_INTERVAL_MAX_MINUTES = 1440;
 const IP_PROXY_AUTO_SYNC_DEFAULT_INTERVAL_MINUTES = 15;
-const AUTO_RUN_DELAY_MIN_MINUTES = 1;
-const AUTO_RUN_DELAY_MAX_MINUTES = 1440;
 const AUTO_RUN_RETRY_DELAY_MS = 3000;
 const AUTO_RUN_MAX_RETRIES_PER_ROUND = 3;
 const AUTO_STEP_DELAY_MIN_ALLOWED_SECONDS = 0;
@@ -942,12 +939,33 @@ function buildResolvedStepDefinitionState(state = {}) {
     signupMethod: resolvedSignupMethod,
     resolvedSignupMethod: resolvedSignupMethod,
     phoneSignupReloginAfterBindEmailEnabled: Boolean(state?.phoneSignupReloginAfterBindEmailEnabled),
+    phoneVerificationEnabled: Boolean(
+      stepDefinitionOptions.phoneVerificationEnabled
+      ?? capabilityState?.runtimeLocks?.phoneVerificationEnabled
+      ?? state?.phoneVerificationEnabled
+    ),
   };
 }
 
 function getStepDefinitionsForState(state = {}) {
   const resolvedState = buildResolvedStepDefinitionState(state);
   const rootScope = typeof self !== 'undefined' ? self : globalThis;
+  const applyPhoneVerificationStepVisibility = (definitions = []) => {
+    if (Boolean(resolvedState?.phoneVerificationEnabled)) {
+      return definitions;
+    }
+    const hiddenStepKeys = new Set([
+      'post-login-phone-verification',
+      'post-bound-email-phone-verification',
+    ]);
+    return (Array.isArray(definitions) ? definitions : [])
+      .filter((definition) => !hiddenStepKeys.has(String(definition?.key || '').trim()))
+      .map((definition, index) => ({
+        ...definition,
+        id: index + 1,
+        order: (index + 1) * 10,
+      }));
+  };
   if (rootScope.MultiPageStepDefinitions?.getSteps) {
     const defaultFlowId = typeof DEFAULT_ACTIVE_FLOW_ID === 'string' ? DEFAULT_ACTIVE_FLOW_ID : 'openai';
     const activeFlowId = String(resolvedState?.activeFlowId || '').trim().toLowerCase() || defaultFlowId;
@@ -957,6 +975,7 @@ function getStepDefinitionsForState(state = {}) {
       plusPaymentMethod: normalizePlusPaymentMethod(resolvedState?.plusPaymentMethod),
       plusAccountAccessStrategy: normalizePlusAccountAccessStrategy(resolvedState?.plusAccountAccessStrategy),
       signupMethod: getSignupMethodForStepDefinitions(resolvedState),
+      phoneVerificationEnabled: Boolean(resolvedState?.phoneVerificationEnabled),
       phoneSignupReloginAfterBindEmailEnabled: Boolean(resolvedState?.phoneSignupReloginAfterBindEmailEnabled),
     });
     if (Array.isArray(definitions)) {
@@ -968,7 +987,7 @@ function getStepDefinitionsForState(state = {}) {
     return [];
   }
   if (!Boolean(resolvedState?.plusModeEnabled)) {
-    return NORMAL_STEP_DEFINITIONS;
+    return applyPhoneVerificationStepVisibility(NORMAL_STEP_DEFINITIONS);
   }
   const paymentMethod = normalizePlusPaymentMethod(resolvedState?.plusPaymentMethod);
   const signupMethod = getSignupMethodForStepDefinitions(resolvedState);
@@ -978,58 +997,58 @@ function getStepDefinitionsForState(state = {}) {
       signupMethod === SIGNUP_METHOD_EMAIL
       && plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION
     ) {
-      return PLUS_GPC_SUB2API_SESSION_STEP_DEFINITIONS;
+      return applyPhoneVerificationStepVisibility(PLUS_GPC_SUB2API_SESSION_STEP_DEFINITIONS);
     }
     if (
       signupMethod === SIGNUP_METHOD_EMAIL
       && plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION
     ) {
-      return PLUS_GPC_CPA_SESSION_STEP_DEFINITIONS;
+      return applyPhoneVerificationStepVisibility(PLUS_GPC_CPA_SESSION_STEP_DEFINITIONS);
     }
-    return PLUS_GPC_STEP_DEFINITIONS;
+    return applyPhoneVerificationStepVisibility(PLUS_GPC_STEP_DEFINITIONS);
   }
   if (paymentMethod === PLUS_PAYMENT_METHOD_GOPAY) {
     if (
       signupMethod === SIGNUP_METHOD_EMAIL
       && plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION
     ) {
-      return PLUS_GOPAY_SUB2API_SESSION_STEP_DEFINITIONS;
+      return applyPhoneVerificationStepVisibility(PLUS_GOPAY_SUB2API_SESSION_STEP_DEFINITIONS);
     }
     if (
       signupMethod === SIGNUP_METHOD_EMAIL
       && plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION
     ) {
-      return PLUS_GOPAY_CPA_SESSION_STEP_DEFINITIONS;
+      return applyPhoneVerificationStepVisibility(PLUS_GOPAY_CPA_SESSION_STEP_DEFINITIONS);
     }
-    return PLUS_GOPAY_STEP_DEFINITIONS;
+    return applyPhoneVerificationStepVisibility(PLUS_GOPAY_STEP_DEFINITIONS);
   }
   if (paymentMethod === PLUS_PAYMENT_METHOD_PAYPAL_HOSTED) {
     if (signupMethod === SIGNUP_METHOD_PHONE) {
-      return Boolean(resolvedState?.phoneSignupReloginAfterBindEmailEnabled)
+      return applyPhoneVerificationStepVisibility(Boolean(resolvedState?.phoneSignupReloginAfterBindEmailEnabled)
         ? PLUS_PAYPAL_HOSTED_CHECKOUT_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS
-        : PLUS_PAYPAL_HOSTED_CHECKOUT_PHONE_STEP_DEFINITIONS;
+        : PLUS_PAYPAL_HOSTED_CHECKOUT_PHONE_STEP_DEFINITIONS);
     }
     if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
-      return PLUS_PAYPAL_HOSTED_CHECKOUT_SUB2API_SESSION_STEP_DEFINITIONS;
+      return applyPhoneVerificationStepVisibility(PLUS_PAYPAL_HOSTED_CHECKOUT_SUB2API_SESSION_STEP_DEFINITIONS);
     }
     if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION) {
-      return PLUS_PAYPAL_HOSTED_CHECKOUT_CPA_SESSION_STEP_DEFINITIONS;
+      return applyPhoneVerificationStepVisibility(PLUS_PAYPAL_HOSTED_CHECKOUT_CPA_SESSION_STEP_DEFINITIONS);
     }
-    return PLUS_PAYPAL_HOSTED_CHECKOUT_STEP_DEFINITIONS;
+    return applyPhoneVerificationStepVisibility(PLUS_PAYPAL_HOSTED_CHECKOUT_STEP_DEFINITIONS);
   }
   if (
     signupMethod === SIGNUP_METHOD_EMAIL
     && plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION
   ) {
-    return PLUS_PAYPAL_SUB2API_SESSION_STEP_DEFINITIONS;
+    return applyPhoneVerificationStepVisibility(PLUS_PAYPAL_SUB2API_SESSION_STEP_DEFINITIONS);
   }
   if (
     signupMethod === SIGNUP_METHOD_EMAIL
     && plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION
   ) {
-    return PLUS_PAYPAL_CPA_SESSION_STEP_DEFINITIONS;
+    return applyPhoneVerificationStepVisibility(PLUS_PAYPAL_CPA_SESSION_STEP_DEFINITIONS);
   }
-  return PLUS_PAYPAL_STEP_DEFINITIONS;
+  return applyPhoneVerificationStepVisibility(PLUS_PAYPAL_STEP_DEFINITIONS);
 }
 
 function getStepIdsForState(state = {}) {
@@ -1356,10 +1375,7 @@ const PERSISTED_SETTING_DEFAULTS = {
   gopayHelperApiKeyStatus: '',
   autoRunSkipFailures: false,
   autoRunFallbackThreadIntervalMinutes: 0,
-  oauthFlowTimeoutEnabled: true,
-  autoRunDelayEnabled: false,
   operationDelayEnabled: true,
-  autoRunDelayMinutes: 30,
   autoStepDelaySeconds: null,
   step6CookieCleanupEnabled: false,
   stepExecutionRangeByFlow: {},
@@ -1544,7 +1560,6 @@ const DEFAULT_STATE = {
   autoRunAttemptRun: 0, // 当前轮次的重试序号。
   autoRunSessionId: 0,
   autoRunRoundSummaries: [], // 自动运行轮次摘要。
-  scheduledAutoRunAt: null, // 自动运行计划启动时间戳。
   autoRunTimerPlan: null, // 自动运行可恢复计时计划快照。
   autoRunCountdownAt: null,
   autoRunCountdownTitle: '',
@@ -1574,17 +1589,6 @@ const DEFAULT_STATE = {
   ipProxyAppliedExitSource: '',
 };
 
-function normalizeAutoRunDelayMinutes(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return PERSISTED_SETTING_DEFAULTS.autoRunDelayMinutes;
-  }
-  return Math.min(
-    AUTO_RUN_DELAY_MAX_MINUTES,
-    Math.max(AUTO_RUN_DELAY_MIN_MINUTES, Math.floor(numeric))
-  );
-}
-
 function normalizeAutoRunFallbackThreadIntervalMinutes(value) {
   const rawValue = String(value ?? '').trim();
   if (!rawValue) {
@@ -1597,7 +1601,7 @@ function normalizeAutoRunFallbackThreadIntervalMinutes(value) {
   }
 
   return Math.min(
-    AUTO_RUN_DELAY_MAX_MINUTES,
+    1440,
     Math.max(0, Math.floor(numeric))
   );
 }
@@ -2029,7 +2033,6 @@ function isPhoneSignupIdentityStateForReuse(state = {}) {
   const runtimeActive = (
     (typeof isAutoRunLockedState === 'function' && isAutoRunLockedState(state))
     || (typeof isAutoRunPausedState === 'function' && isAutoRunPausedState(state))
-    || (typeof isAutoRunScheduledState === 'function' && isAutoRunScheduledState(state))
     || Boolean(state?.autoRunning)
   );
   if (!runtimeActive) {
@@ -2331,9 +2334,6 @@ function normalizeRunCount(value) {
 
 function normalizeAutoRunTimerKind(value = '') {
   const normalized = String(value || '').trim().toLowerCase();
-  if (normalized === AUTO_RUN_TIMER_KIND_SCHEDULED_START) {
-    return AUTO_RUN_TIMER_KIND_SCHEDULED_START;
-  }
   if (normalized === AUTO_RUN_TIMER_KIND_BETWEEN_ROUNDS) {
     return AUTO_RUN_TIMER_KIND_BETWEEN_ROUNDS;
   }
@@ -2413,22 +2413,6 @@ function normalizeAutoRunTimerPlan(plan) {
   const countdownTitle = String(plan.countdownTitle || '').trim();
   const countdownNote = String(plan.countdownNote || '').trim();
 
-  if (kind === AUTO_RUN_TIMER_KIND_SCHEDULED_START) {
-    return {
-      kind,
-      fireAt,
-      totalRuns,
-      autoRunSkipFailures,
-      mode,
-      currentRun: 0,
-      attemptRun: 0,
-      autoRunSessionId,
-      roundSummaries: [],
-      countdownTitle: countdownTitle || '已计划自动运行',
-      countdownNote: countdownNote || `计划于 ${formatAutoRunScheduleTime(fireAt)} 开始`,
-    };
-  }
-
   if (kind === AUTO_RUN_TIMER_KIND_BETWEEN_ROUNDS) {
     const normalizedCurrentRun = Math.max(1, Math.min(totalRuns, currentRun));
     const normalizedAttemptRun = Math.max(1, attemptRun);
@@ -2469,28 +2453,11 @@ function normalizeAutoRunTimerPlanFromState(state = {}) {
   if (directPlan) {
     return directPlan;
   }
-
-  if (state.autoRunPhase !== 'scheduled') {
-    return null;
-  }
-
-  const legacyScheduledAt = Number(state.scheduledAutoRunAt);
-  if (!Number.isFinite(legacyScheduledAt)) {
-    return null;
-  }
-
-  return normalizeAutoRunTimerPlan({
-    kind: AUTO_RUN_TIMER_KIND_SCHEDULED_START,
-    fireAt: legacyScheduledAt,
-    totalRuns: state.scheduledAutoRunPlan?.totalRuns ?? state.autoRunTotalRuns,
-    autoRunSkipFailures: state.scheduledAutoRunPlan?.autoRunSkipFailures ?? state.autoRunSkipFailures,
-    autoRunSessionId: state.autoRunSessionId,
-    mode: state.scheduledAutoRunPlan?.mode,
-  });
+  return null;
 }
 
 function getAutoRunTimerPlanPhase(kind = '') {
-  return kind === AUTO_RUN_TIMER_KIND_SCHEDULED_START ? 'scheduled' : 'waiting_interval';
+  return 'waiting_interval';
 }
 
 function getAutoRunTimerStatusPayload(plan) {
@@ -2506,7 +2473,6 @@ function getAutoRunTimerStatusPayload(plan) {
     totalRuns: normalizedPlan.totalRuns,
     attemptRun: normalizedPlan.attemptRun,
     sessionId: normalizedPlan.autoRunSessionId,
-    scheduledAt: phase === 'scheduled' ? normalizedPlan.fireAt : null,
     countdownAt: normalizedPlan.fireAt,
     countdownTitle: normalizedPlan.countdownTitle,
     countdownNote: normalizedPlan.countdownNote,
@@ -3404,10 +3370,8 @@ function normalizePersistentSettingValue(key, value) {
     case 'gopayHelperRemainingUses':
       return Math.max(0, Number(value) || 0);
     case 'autoRunSkipFailures':
-    case 'oauthFlowTimeoutEnabled':
     case 'gopayHelperLocalSmsHelperEnabled':
     case 'gopayHelperAutoModeEnabled':
-    case 'autoRunDelayEnabled':
       return Boolean(value);
     case 'operationDelayEnabled':
       return true;
@@ -3428,8 +3392,6 @@ function normalizePersistentSettingValue(key, value) {
       return normalizePhoneSmsProviderOrder(value);
     case 'autoRunFallbackThreadIntervalMinutes':
       return normalizeAutoRunFallbackThreadIntervalMinutes(value);
-    case 'autoRunDelayMinutes':
-      return normalizeAutoRunDelayMinutes(value);
     case 'autoStepDelaySeconds':
       return normalizeAutoStepDelaySeconds(value, PERSISTED_SETTING_DEFAULTS.autoStepDelaySeconds);
     case 'verificationResendCount':
@@ -10143,8 +10105,7 @@ function getAutoRunStatusPayload(phase, payload = {}) {
     return loggingStatus.getAutoRunStatusPayload(phase, normalizedPayload);
   }
   return {
-    autoRunning: phase === 'scheduled'
-      || phase === 'running'
+    autoRunning: phase === 'running'
       || phase === 'waiting_step'
       || phase === 'waiting_email'
       || phase === 'retrying'
@@ -10154,7 +10115,6 @@ function getAutoRunStatusPayload(phase, payload = {}) {
     autoRunTotalRuns: normalizedPayload.totalRuns ?? 1,
     autoRunAttemptRun: normalizedPayload.attemptRun ?? 0,
     autoRunSessionId: normalizeAutoRunSessionId(normalizedPayload.sessionId),
-    scheduledAutoRunAt: Number.isFinite(Number(normalizedPayload.scheduledAt)) ? Number(normalizedPayload.scheduledAt) : null,
     autoRunCountdownAt: Number.isFinite(Number(normalizedPayload.countdownAt)) ? Number(normalizedPayload.countdownAt) : null,
     autoRunCountdownTitle: normalizedPayload.countdownTitle === undefined ? '' : String(normalizedPayload.countdownTitle || ''),
     autoRunCountdownNote: normalizedPayload.countdownNote === undefined ? '' : String(normalizedPayload.countdownNote || ''),
@@ -10162,9 +10122,6 @@ function getAutoRunStatusPayload(phase, payload = {}) {
 }
 
 async function broadcastAutoRunStatus(phase, payload = {}, extraState = {}) {
-  const rawScheduledAt = phase === 'scheduled'
-    ? (payload.scheduledAt ?? payload.scheduledAutoRunAt ?? null)
-    : null;
   const rawCountdownAt = payload.countdownAt ?? payload.autoRunCountdownAt ?? null;
   const statusPayload = {
     phase,
@@ -10172,7 +10129,6 @@ async function broadcastAutoRunStatus(phase, payload = {}, extraState = {}) {
     totalRuns: payload.totalRuns ?? autoRunTotalRuns,
     attemptRun: payload.attemptRun ?? autoRunAttemptRun,
     sessionId: payload.sessionId ?? payload.autoRunSessionId ?? autoRunSessionId,
-    scheduledAt: rawScheduledAt === null ? null : Number(rawScheduledAt),
     countdownAt: rawCountdownAt === null ? null : Number(rawCountdownAt),
     countdownTitle: payload.countdownTitle === undefined ? '' : String(payload.countdownTitle || ''),
     countdownNote: payload.countdownNote === undefined ? '' : String(payload.countdownNote || ''),
@@ -10202,36 +10158,8 @@ function isAutoRunPausedState(state) {
   return Boolean(state.autoRunning) && state.autoRunPhase === 'waiting_email';
 }
 
-function isAutoRunScheduledState(state) {
-  const plan = normalizeAutoRunTimerPlanFromState(state);
-  const scheduledAt = state.scheduledAutoRunAt === null ? null : Number(state.scheduledAutoRunAt);
-  return Boolean(state.autoRunning)
-    && state.autoRunPhase === 'scheduled'
-    && Number.isFinite(scheduledAt)
-    && plan?.kind === AUTO_RUN_TIMER_KIND_SCHEDULED_START;
-}
-
 function getPendingAutoRunTimerPlan(state = {}) {
   return normalizeAutoRunTimerPlanFromState(state);
-}
-
-function formatAutoRunScheduleTime(timestamp) {
-  return new Date(timestamp).toLocaleString('zh-CN', {
-    hour12: false,
-    timeZone: DISPLAY_TIMEZONE,
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-}
-
-async function setAutoRunDelayEnabledState(enabled) {
-  const normalized = Boolean(enabled);
-  await setPersistentSettings({ autoRunDelayEnabled: normalized });
-  await setState({ autoRunDelayEnabled: normalized });
-  broadcastDataUpdate({ autoRunDelayEnabled: normalized });
 }
 
 async function ensureAutoRunTimerAlarm(fireAt) {
@@ -10265,7 +10193,6 @@ async function persistAutoRunTimerPlan(plan, extraState = {}) {
     {
       ...extraState,
       autoRunTimerPlan: normalizedPlan,
-      scheduledAutoRunPlan: null,
     }
   );
   await ensureAutoRunTimerAlarm(normalizedPlan.fireAt);
@@ -10276,22 +10203,6 @@ function getAutoRunTimerResumeOptions(plan) {
   const normalizedPlan = normalizeAutoRunTimerPlan(plan);
   if (!normalizedPlan) {
     return null;
-  }
-
-  if (normalizedPlan.kind === AUTO_RUN_TIMER_KIND_SCHEDULED_START) {
-    return {
-      loopOptions: {
-        autoRunSessionId: normalizedPlan.autoRunSessionId,
-        autoRunSkipFailures: normalizedPlan.autoRunSkipFailures,
-        mode: normalizedPlan.mode,
-      },
-      statusPayload: {
-        currentRun: 0,
-        totalRuns: normalizedPlan.totalRuns,
-        attemptRun: 0,
-        sessionId: normalizedPlan.autoRunSessionId,
-      },
-    };
   }
 
   if (normalizedPlan.kind === AUTO_RUN_TIMER_KIND_BETWEEN_ROUNDS) {
@@ -10367,33 +10278,8 @@ async function launchAutoRunTimerPlan(trigger = 'alarm', options = {}) {
       }, {
         autoRunRoundSummaries: [],
         autoRunTimerPlan: null,
-        scheduledAutoRunPlan: null,
       });
       return false;
-    }
-
-    if (plan.kind === AUTO_RUN_TIMER_KIND_SCHEDULED_START) {
-      const autoRunStartValidation = typeof validateAutoRunStartState === 'function'
-        ? validateAutoRunStartState(state, { state })
-        : { ok: true, errors: [] };
-      if (autoRunStartValidation?.ok === false) {
-        const validationMessage = autoRunStartValidation.errors?.[0]?.message || '当前设置不支持启动自动流程。';
-        await clearAutoRunTimerAlarm();
-        await broadcastAutoRunStatus('idle', {
-          currentRun: 0,
-          totalRuns: 1,
-          attemptRun: 0,
-        }, {
-          autoRunRoundSummaries: [],
-          autoRunTimerPlan: null,
-          scheduledAutoRunPlan: null,
-        });
-        await addLog(`自动运行计划已取消：${validationMessage}`, 'error');
-        if (trigger === 'manual') {
-          throw new Error(validationMessage);
-        }
-        return false;
-      }
     }
 
     await clearAutoRunTimerAlarm();
@@ -10404,9 +10290,6 @@ async function launchAutoRunTimerPlan(trigger = 'alarm', options = {}) {
     autoRunTotalRuns = plan.totalRuns;
     autoRunAttemptRun = resumeOptions.statusPayload.attemptRun;
     autoRunSessionId = normalizeAutoRunSessionId(plan.autoRunSessionId);
-    if (plan.kind === AUTO_RUN_TIMER_KIND_SCHEDULED_START && trigger !== 'manual' && state.autoRunDelayEnabled) {
-      await setAutoRunDelayEnabledState(false);
-    }
     await broadcastAutoRunStatus(
       'running',
       resumeOptions.statusPayload,
@@ -10414,7 +10297,6 @@ async function launchAutoRunTimerPlan(trigger = 'alarm', options = {}) {
         autoRunSkipFailures: plan.autoRunSkipFailures,
         autoRunRoundSummaries: serializeAutoRunRoundSummaries(plan.totalRuns, plan.roundSummaries),
         autoRunTimerPlan: null,
-        scheduledAutoRunPlan: null,
       }
     );
 
@@ -10446,81 +10328,12 @@ async function launchAutoRunTimerPlan(trigger = 'alarm', options = {}) {
   }
 }
 
-async function scheduleAutoRun(totalRuns, options = {}) {
-  const state = await getState();
-  if (isAutoRunLockedState(state) || isAutoRunPausedState(state) || autoRunActive) {
-    throw new Error('自动运行已在进行中，请先停止后再重新计划。');
-  }
-  if (getPendingAutoRunTimerPlan(state)) {
-    throw new Error('已有自动运行倒计时计划，请先取消或立即开始。');
-  }
-
-  const delayMinutes = normalizeAutoRunDelayMinutes(options.delayMinutes);
-  const sessionId = createAutoRunSessionId();
-  const timerPlan = normalizeAutoRunTimerPlan({
-    kind: AUTO_RUN_TIMER_KIND_SCHEDULED_START,
-    fireAt: Date.now() + delayMinutes * 60 * 1000,
-    totalRuns,
-    autoRunSkipFailures: options.autoRunSkipFailures,
-    autoRunSessionId: sessionId,
-    mode: options.mode,
-  });
-
-  autoRunCurrentRun = 0;
-  autoRunTotalRuns = timerPlan.totalRuns;
-  autoRunAttemptRun = 0;
-  autoRunSessionId = sessionId;
-
-  await persistAutoRunTimerPlan(timerPlan, {
-    autoRunSkipFailures: timerPlan.autoRunSkipFailures,
-    autoRunRoundSummaries: serializeAutoRunRoundSummaries(timerPlan.totalRuns, []),
-  });
-  await addLog(
-    `自动运行已计划：${delayMinutes} 分钟后启动（${formatAutoRunScheduleTime(timerPlan.fireAt)}），目标 ${timerPlan.totalRuns} 轮。`,
-    'info'
-  );
-  return { ok: true, scheduledAt: timerPlan.fireAt };
-}
-
-async function cancelScheduledAutoRun(options = {}) {
-  const state = await getState();
-  const plan = getPendingAutoRunTimerPlan(state);
-  if (!plan || plan.kind !== AUTO_RUN_TIMER_KIND_SCHEDULED_START) {
-    return false;
-  }
-
-  autoRunCurrentRun = 0;
-  autoRunTotalRuns = plan.totalRuns;
-  autoRunAttemptRun = 0;
-  clearCurrentAutoRunSessionId(plan.autoRunSessionId);
-  await broadcastAutoRunStatus(
-    'idle',
-    {
-      currentRun: 0,
-      totalRuns: plan.totalRuns,
-      attemptRun: 0,
-      sessionId: 0,
-    },
-    {
-      autoRunSessionId: 0,
-      autoRunRoundSummaries: [],
-      autoRunTimerPlan: null,
-      scheduledAutoRunPlan: null,
-    }
-  );
-  await clearAutoRunTimerAlarm();
-  if (options.logMessage !== false) {
-    await addLog(options.logMessage || '已取消自动运行倒计时计划。', 'warn');
-  }
-  return true;
-}
-
 async function restoreAutoRunTimerIfNeeded() {
   const state = await getState();
   let plan = getPendingAutoRunTimerPlan(state);
   if (!plan) {
     clearCurrentAutoRunSessionId();
-    if (state.autoRunPhase === 'scheduled' || state.autoRunPhase === 'waiting_interval') {
+    if (state.autoRunPhase === 'waiting_interval') {
       await clearAutoRunTimerAlarm();
       await broadcastAutoRunStatus('idle', {
         currentRun: 0,
@@ -10531,7 +10344,6 @@ async function restoreAutoRunTimerIfNeeded() {
         autoRunSessionId: 0,
         autoRunRoundSummaries: [],
         autoRunTimerPlan: null,
-        scheduledAutoRunPlan: null,
       });
     }
     return;
@@ -10564,7 +10376,6 @@ async function restoreAutoRunTimerIfNeeded() {
       autoRunSkipFailures: plan.autoRunSkipFailures,
       autoRunRoundSummaries: serializeAutoRunRoundSummaries(plan.totalRuns, plan.roundSummaries),
       autoRunTimerPlan: plan,
-      scheduledAutoRunPlan: null,
     }
   );
   await ensureAutoRunTimerAlarm(plan.fireAt);
@@ -10578,9 +10389,6 @@ async function ensureManualInteractionAllowed(actionLabel) {
   }
   if (isAutoRunPausedState(state)) {
     throw new Error(`自动流程当前已暂停。请点击“继续”，或先确认接管自动流程后再${actionLabel}。`);
-  }
-  if (isAutoRunScheduledState(state)) {
-    throw new Error(`自动流程已计划启动。请先取消计划，或立即开始后再${actionLabel}。`);
   }
 
   return state;
@@ -11273,38 +11081,98 @@ async function executeNodeViaCompletionSignal(nodeId, timeoutMs = 0) {
     error => ({ ok: false, error }),
   );
 
-  let executeError = null;
-  try {
-    await executeNode(normalizedNodeId, { deferRetryableTransportError: true });
-  } catch (err) {
-    executeError = err;
-    if (isStopError(err) || !isRetryableContentScriptTransportError(err)) {
-      notifyNodeError(normalizedNodeId, getErrorMessage(err));
+  const executeResultPromise = executeNode(normalizedNodeId, { deferRetryableTransportError: true }).then(
+    () => ({ ok: true }),
+    error => ({ ok: false, error }),
+  );
+
+  let executeResult = null;
+  let completionResult = null;
+  const firstResult = await Promise.race([
+    executeResultPromise.then(result => ({ type: 'execute', result })),
+    completionResultPromise.then(result => ({ type: 'completion', result })),
+  ]);
+
+  if (firstResult.type === 'completion') {
+    completionResult = firstResult.result;
+    if (completionResult.ok) {
+      executeResultPromise.then((result) => {
+        if (!result.ok) {
+          const error = result.error;
+          if (isStopError(error) || !isRetryableContentScriptTransportError(error)) {
+            console.warn(
+              LOG_PREFIX,
+              `[executeNodeViaCompletionSignal] node ${normalizedNodeId} completed before execute returned, later execute error: ${getErrorMessage(error)}`
+            );
+          }
+        }
+      }).catch(() => {});
+      return completionResult.payload;
     }
+    executeResultPromise.then((result) => {
+      if (!result.ok) {
+        const error = result.error;
+        if (isStopError(error) || !isRetryableContentScriptTransportError(error)) {
+          console.warn(
+            LOG_PREFIX,
+            `[executeNodeViaCompletionSignal] node ${normalizedNodeId} completion waiter failed before execute returned, later execute error: ${getErrorMessage(error)}`
+          );
+        }
+      }
+    }).catch(() => {});
+    if (/等待超时/.test(getErrorMessage(completionResult.error)) && normalizedNodeId === 'fill-profile') {
+      const recoveredPayload = await completeStep5FromTabUrlAfterTransportError(completionResult.error).catch(() => null);
+      if (recoveredPayload) {
+        notifyNodeComplete(normalizedNodeId, recoveredPayload);
+        return recoveredPayload;
+      }
+    }
+    throw completionResult.error;
+  } else {
+    executeResult = firstResult.result;
+    if (!executeResult.ok) {
+      const err = executeResult.error;
+      if (isStopError(err) || !isRetryableContentScriptTransportError(err)) {
+        notifyNodeError(normalizedNodeId, getErrorMessage(err));
+      } else if (normalizedNodeId === 'fill-profile') {
+        const recoveredPayload = await completeStep5FromTabUrlAfterTransportError(err).catch(() => null);
+        if (recoveredPayload) {
+          notifyNodeComplete(normalizedNodeId, recoveredPayload);
+          return recoveredPayload;
+        }
+      }
+    }
+    completionResult = await completionResultPromise;
   }
 
-  const completionResult = await completionResultPromise;
   if (completionResult.ok) {
-    if (executeError) {
+    if (executeResult && !executeResult.ok) {
       console.warn(
         LOG_PREFIX,
-        `[executeNodeViaCompletionSignal] node ${normalizedNodeId} completed after deferred execute error: ${getErrorMessage(executeError)}`
+        `[executeNodeViaCompletionSignal] node ${normalizedNodeId} completed after deferred execute error: ${getErrorMessage(executeResult.error)}`
       );
     }
     return completionResult.payload;
   }
 
-  if (executeError && isRetryableContentScriptTransportError(executeError)) {
+  if (executeResult && !executeResult.ok && isRetryableContentScriptTransportError(executeResult.error)) {
     const completionMessage = getErrorMessage(completionResult.error);
     if (/等待超时/.test(completionMessage)) {
-      await finalizeDeferredNodeExecutionError(normalizedNodeId, executeError);
-      throw executeError;
+      if (normalizedNodeId === 'fill-profile') {
+        const recoveredPayload = await completeStep5FromTabUrlAfterTransportError(executeResult.error).catch(() => null);
+        if (recoveredPayload) {
+          notifyNodeComplete(normalizedNodeId, recoveredPayload);
+          return recoveredPayload;
+        }
+      }
+      await finalizeDeferredNodeExecutionError(normalizedNodeId, executeResult.error);
+      throw executeResult.error;
     }
     throw completionResult.error;
   }
 
-  if (executeError) {
-    throw executeError;
+  if (executeResult && !executeResult.ok) {
+    throw executeResult.error;
   }
 
   throw completionResult.error;
@@ -11317,6 +11185,38 @@ async function executeStepViaCompletionSignal(step, timeoutMs = 0) {
     throw new Error(`执行步骤 ${step} 失败：当前 flow 中未找到对应节点。`);
   }
   return executeNodeViaCompletionSignal(nodeId, timeoutMs);
+}
+
+async function completeStep5FromTabUrlAfterTransportError(sourceError = null) {
+  const signupTabId = await getTabId('openai-auth').catch(() => null);
+  if (!Number.isInteger(signupTabId)) {
+    return null;
+  }
+
+  const tab = await waitForTabStableComplete(signupTabId, {
+    timeoutMs: 30000,
+    retryDelayMs: 300,
+    stableMs: 1000,
+    initialDelayMs: 300,
+  }).catch(() => null);
+  const currentUrl = String(tab?.url || '').trim();
+  if (!currentUrl || !isStep5CompletionChatgptUrl(currentUrl)) {
+    return null;
+  }
+
+  const payload = {
+    profileSubmitted: true,
+    postSubmitChecked: true,
+    outcome: 'logged_in_home',
+    url: currentUrl,
+    recoveredFromTransportError: true,
+  };
+  await addLog(
+    `步骤 5 [调试] 内容脚本通信中断，但后台确认标签页已进入 chatgpt.com，按提交成功收尾。原始错误：${getErrorMessage(sourceError)}`,
+    'warn',
+    { step: 5, stepKey: 'fill-profile' }
+  );
+  return payload;
 }
 
 function getLatestLogTimestamp(logs = [], fallback = 0) {
@@ -11548,15 +11448,6 @@ async function requestStop(options = {}) {
   const inferredStopNode = inferStoppedRecordNode(state);
   const timerPlan = getPendingAutoRunTimerPlan(state);
 
-  if (timerPlan?.kind === AUTO_RUN_TIMER_KIND_SCHEDULED_START && !autoRunActive) {
-    await cancelScheduledAutoRun({
-      logMessage: options.logMessage === false
-        ? false
-        : (options.logMessage || '已取消自动运行倒计时计划。'),
-    });
-    return;
-  }
-
   if (timerPlan && !autoRunActive) {
     autoRunCurrentRun = timerPlan.currentRun;
     autoRunTotalRuns = timerPlan.totalRuns;
@@ -11575,7 +11466,6 @@ async function requestStop(options = {}) {
       autoRunSkipFailures: timerPlan.autoRunSkipFailures,
       autoRunRoundSummaries: serializeAutoRunRoundSummaries(timerPlan.totalRuns, timerPlan.roundSummaries),
       autoRunTimerPlan: null,
-      scheduledAutoRunPlan: null,
     });
     await clearAutoRunTimerAlarm();
     clearStopRequest();
@@ -11635,7 +11525,6 @@ async function requestStop(options = {}) {
   }, {
     autoRunSessionId: 0,
     autoRunTimerPlan: null,
-    scheduledAutoRunPlan: null,
   });
 }
 
@@ -14206,7 +14095,6 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   buildPersistentSettingsPayload,
   broadcastDataUpdate,
   applyIpProxySettingsFromState,
-  cancelScheduledAutoRun,
   checkIcloudSession,
   clearAccountRunHistory: (...args) => clearAndBroadcastAccountRunHistory(...args),
   deleteAccountRunHistoryRecords: (...args) => deleteAndBroadcastAccountRunHistoryRecords(...args),
@@ -14313,7 +14201,6 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   normalizeMail2925Accounts,
   normalizePayPalAccounts,
   normalizeRunCount,
-  AUTO_RUN_TIMER_KIND_SCHEDULED_START,
   notifyNodeComplete,
   notifyNodeError,
   patchHotmailAccount,
@@ -14323,7 +14210,6 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   probeIpProxyExit,
   resetState,
   resumeAutoRun,
-  scheduleAutoRun,
   selectLuckmailPurchase,
   switchIpProxy,
   changeIpProxyExit,
@@ -14720,15 +14606,46 @@ function normalizeOAuthFlowSourceUrl(value) {
   return normalized || null;
 }
 
+function resolveOAuthTimeoutBudgetScope(state = {}) {
+  const activeFlowId = self.MultiPageFlowRegistry?.normalizeFlowId
+    ? self.MultiPageFlowRegistry.normalizeFlowId(
+      state?.activeFlowId || state?.flowId,
+      DEFAULT_ACTIVE_FLOW_ID
+    )
+    : (String(state?.activeFlowId || state?.flowId || DEFAULT_ACTIVE_FLOW_ID).trim().toLowerCase()
+      || DEFAULT_ACTIVE_FLOW_ID);
+  const capabilityState = typeof resolveCurrentFlowCapabilities === 'function'
+    ? resolveCurrentFlowCapabilities(state, { activeFlowId })
+    : null;
+  const targetId = capabilityState?.effectiveTargetId || (self.MultiPageFlowRegistry?.normalizeTargetId
+    ? self.MultiPageFlowRegistry.normalizeTargetId(
+      activeFlowId,
+      state?.targetId,
+      self.MultiPageFlowRegistry.getDefaultTargetId?.(activeFlowId)
+    )
+    : String(state?.targetId || '').trim().toLowerCase());
+  const targetCapabilities = capabilityState?.targetCapabilities || (self.MultiPageFlowRegistry?.getTargetCapabilities
+    ? self.MultiPageFlowRegistry.getTargetCapabilities(activeFlowId, targetId)
+    : null);
+  return {
+    activeFlowId,
+    targetId,
+    enabled: activeFlowId === DEFAULT_ACTIVE_FLOW_ID && Boolean(targetCapabilities?.usesOauthTimeoutBudget),
+  };
+}
+
+function shouldUseOAuthTimeoutBudget(state = {}) {
+  return resolveOAuthTimeoutBudgetScope(state).enabled;
+}
+
 async function startOAuthFlowTimeoutWindow(options = {}) {
   const step = Number(options.step) || 7;
   const state = options.state || await getState();
-  if (state?.oauthFlowTimeoutEnabled === false) {
+  if (!shouldUseOAuthTimeoutBudget(state)) {
     await setState({
       oauthFlowDeadlineAt: null,
       oauthFlowDeadlineSourceUrl: null,
     });
-    await addLog(`步骤 ${step}：已拿到新的 OAuth 登录地址，授权后链总超时已关闭，仅保留各步骤本地等待超时。`, 'info');
     return null;
   }
 
@@ -14745,7 +14662,7 @@ async function getOAuthFlowRemainingMs(options = {}) {
   const step = Number(options.step) || 7;
   const actionLabel = String(options.actionLabel || '后续授权流程').trim() || '后续授权流程';
   const state = options.state || await getState();
-  if (state?.oauthFlowTimeoutEnabled === false) {
+  if (!shouldUseOAuthTimeoutBudget(state)) {
     return null;
   }
 
