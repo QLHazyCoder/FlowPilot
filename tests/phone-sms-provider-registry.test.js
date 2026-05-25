@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
 const source = fs.readFileSync('phone-sms/providers/registry.js', 'utf8');
+const madaoSource = fs.readFileSync('phone-sms/providers/madao.js', 'utf8');
 
 function loadRegistry(root = {}) {
   return new Function('self', `${source}; return self.PhoneSmsProviderRegistry;`)(root);
@@ -52,4 +53,21 @@ test('phone sms provider registry normalizes ids, order and labels consistently'
     { provider: 'madao', deps: { bar: 2 } }
   );
   assert.throws(() => registry.createProvider('nexsms'), /接码平台模块未加载：nexsms/);
+});
+
+test('phone sms provider registry can create the real MaDao provider module', () => {
+  const madaoModule = new Function('self', `${madaoSource}; return self.PhoneSmsMaDaoProvider;`)({});
+  const registry = loadRegistry({
+    PhoneSmsMaDaoProvider: madaoModule,
+  });
+
+  const provider = registry.createProvider('madao', { fetchImpl: 'demo-fetch' });
+
+  assert.equal(provider.id, 'madao');
+  assert.equal(provider.label, 'MaDao');
+  assert.equal(provider.defaultProduct, 'openai');
+  assert.equal(typeof provider.acquireActivation, 'function');
+  assert.equal(typeof provider.pollActivation, 'function');
+  assert.equal(typeof provider.releaseActivation, 'function');
+  assert.equal(provider.mapTicketStatus('waiting_code'), 'waiting_code');
 });

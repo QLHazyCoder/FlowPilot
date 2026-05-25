@@ -262,11 +262,39 @@
     });
   }
 
+  function createProvider(deps = {}) {
+    return {
+      id: PROVIDER_ID,
+      label: 'MaDao',
+      defaultProduct: DEFAULT_SERVICE,
+      acquireActivation: (state, options = {}, runtimeDeps = {}) => acquireActivation(state, options, {
+        ...deps,
+        ...runtimeDeps,
+      }),
+      pollActivation: (state, activation, runtimeDeps = {}) => pollActivation(state, activation, {
+        ...deps,
+        ...runtimeDeps,
+      }),
+      releaseActivation: (state, activation, action = 'cancel', runtimeDeps = {}) => releaseActivation(state, activation, action, {
+        ...deps,
+        ...runtimeDeps,
+      }),
+      mapAcquirePath,
+      mapTicketStatus,
+      normalizeActivationFromAcquire,
+      resolveConfig: (state = {}, runtimeDeps = {}) => resolveConfig(state, {
+        ...deps,
+        ...runtimeDeps,
+      }),
+    };
+  }
+
   return {
     PROVIDER_ID,
     DEFAULT_BASE_URL,
     DEFAULT_SERVICE,
     acquireActivation,
+    createProvider,
     mapAcquirePath,
     mapTicketStatus,
     normalizeActivationFromAcquire,
