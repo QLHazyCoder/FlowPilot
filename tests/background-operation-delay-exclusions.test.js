@@ -20,3 +20,16 @@ test('operation delay gate names exactly the two excluded step keys', () => {
   assert.match(source, /confirm-oauth/);
   assert.match(source, /platform-verify/);
 });
+
+test('platform-verify stays background-completed instead of signal-waited', () => {
+  const source = fs.readFileSync('background.js', 'utf8');
+  const backgroundCompletedSet = source.match(/AUTO_RUN_BACKGROUND_COMPLETED_STEP_KEYS\s*=\s*new Set\(\[([\s\S]*?)\]\);/)?.[1] || '';
+  const completionSignalSet = source.match(/STEP_COMPLETION_SIGNAL_STEP_KEYS\s*=\s*new Set\(\[([\s\S]*?)\]\);/)?.[1] || '';
+
+  assert.match(backgroundCompletedSet, /'platform-verify'/, 'platform-verify should be completed by its background executor');
+  assert.doesNotMatch(
+    completionSignalSet,
+    /'platform-verify'/,
+    'platform-verify must not wait for a completion signal because background completion does not carry the generated token'
+  );
+});

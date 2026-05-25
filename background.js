@@ -11044,6 +11044,7 @@ const AUTO_RUN_BACKGROUND_COMPLETED_STEP_KEYS = new Set([
   'fetch-bound-email-login-code',
   'post-bound-email-phone-verification',
   'confirm-oauth',
+  'platform-verify',
   'kiro-open-register-page',
   'kiro-submit-email',
   'kiro-submit-name',
@@ -11058,7 +11059,6 @@ const STEP_COMPLETION_SIGNAL_STEP_KEYS = new Set([
   'fill-password',
   'fill-profile',
   'gopay-subscription-confirm',
-  'platform-verify',
 ]);
 const STEP_COMPLETION_SIGNAL_TIMEOUTS_BY_STEP_KEY = new Map([
   ['fill-profile', 150000],
