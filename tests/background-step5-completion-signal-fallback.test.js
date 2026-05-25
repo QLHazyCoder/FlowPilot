@@ -347,9 +347,9 @@ return {
   assert.equal(result.url, 'https://chatgpt.com/');
   assert.equal(result.requireContentStateBeforeUrlSuccess, true);
   assert.equal(result.postSubmitPromptActionsCompleted, true);
-  assert.equal(result.postSubmitPromptActionCount, 3);
-  assert.equal(snapshot.promptAdvanceCount, 3);
-  assert.equal(snapshot.waitCalls.length, 4);
+  assert.equal(result.postSubmitPromptActionCount, 1);
+  assert.equal(snapshot.promptAdvanceCount, 1);
+  assert.equal(snapshot.waitCalls.length, 2);
   assert.deepStrictEqual(snapshot.completions, [
     {
       nodeId: 'fill-profile',
@@ -359,8 +359,6 @@ return {
   assert.deepStrictEqual(
     snapshot.messages.map(({ type }) => type),
     [
-      'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
-      'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
       'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
     ]
   );

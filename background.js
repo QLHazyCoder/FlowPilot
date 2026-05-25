@@ -15429,25 +15429,22 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
           stableMs: 500,
           initialDelayMs: 300,
         }).catch(() => null);
-        if (postSubmitPromptActionCount >= maxPostSubmitPromptActions) {
-          const latestTab = await chrome.tabs.get(tabId).catch(() => null);
-          const latestUrl = String(latestTab?.url || currentUrl || completionPayload?.url || '').trim();
-          await debugLog(`后台复核已连续处理注册后弹窗 ${postSubmitPromptActionCount}/${maxPostSubmitPromptActions} 次，按已完成账号注册进入步骤 6。`, {
-            completionOutcome: String(completionPayload?.outcome || '').trim(),
-            completionUrl: String(completionPayload?.url || '').trim(),
-            navigationStarted: Boolean(completionPayload?.navigationStarted),
-            tabUrl: latestUrl,
-            pageState: promptResult?.state,
-            level: 'ok',
-          });
-          return {
-            successState: isStep5CompletionChatgptUrl(latestUrl) ? 'logged_in_home' : 'post_submit_prompts_completed',
-            url: latestUrl,
-            postSubmitPromptActionsCompleted: true,
-            postSubmitPromptActionCount,
-          };
-        }
-        continue;
+        const latestTab = await chrome.tabs.get(tabId).catch(() => null);
+        const latestUrl = String(latestTab?.url || currentUrl || completionPayload?.url || '').trim();
+        await debugLog(`后台复核已处理注册后弹窗 ${postSubmitPromptActionCount}/${maxPostSubmitPromptActions} 次，按已完成账号注册进入步骤 6。`, {
+          completionOutcome: String(completionPayload?.outcome || '').trim(),
+          completionUrl: String(completionPayload?.url || '').trim(),
+          navigationStarted: Boolean(completionPayload?.navigationStarted),
+          tabUrl: latestUrl,
+          pageState: promptResult?.state,
+          level: 'ok',
+        });
+        return {
+          successState: isStep5CompletionChatgptUrl(latestUrl) ? 'logged_in_home' : 'post_submit_prompts_completed',
+          url: latestUrl,
+          postSubmitPromptActionsCompleted: true,
+          postSubmitPromptActionCount,
+        };
       }
     }
 

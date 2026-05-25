@@ -1120,6 +1120,8 @@ return {
   assert.deepStrictEqual(result, {
     state: 'logged_in_home',
     url: 'https://chatgpt.com/',
+    postSubmitPromptActionsCompleted: true,
+    postSubmitPromptActionCount: 1,
   });
   assert.deepStrictEqual(api.snapshot().clicks, ['Skip for now']);
 });
@@ -1207,6 +1209,8 @@ return {
   assert.deepStrictEqual(result, {
     state: 'logged_in_home',
     url: 'https://chatgpt.com/',
+    postSubmitPromptActionsCompleted: true,
+    postSubmitPromptActionCount: 1,
   });
   assert.deepStrictEqual(api.snapshot().clicks, ['跳过']);
 });
@@ -1385,11 +1389,13 @@ return {
   assert.deepStrictEqual(result, {
     state: 'logged_in_home',
     url: 'https://chatgpt.com/',
+    postSubmitPromptActionsCompleted: true,
+    postSubmitPromptActionCount: 1,
   });
   assert.deepStrictEqual(api.snapshot().clicks, ['继续']);
 });
 
-test('step 5 handles multiple post-submit home page prompts before completing', async () => {
+test('step 5 completes after first successful post-submit home page prompt action', async () => {
   const api = new Function(`
 let now = 0;
 const clicks = [];
@@ -1474,8 +1480,10 @@ return {
   assert.deepStrictEqual(result, {
     state: 'logged_in_home',
     url: 'https://chatgpt.com/',
+    postSubmitPromptActionsCompleted: true,
+    postSubmitPromptActionCount: 1,
   });
-  assert.deepStrictEqual(api.snapshot().clicks, ['跳过', '同意']);
+  assert.deepStrictEqual(api.snapshot().clicks, ['跳过']);
 });
 
 test('step 5 directly clicks Chinese survey buttons by button text', async () => {
@@ -1561,11 +1569,13 @@ return {
   assert.deepStrictEqual(result, {
     state: 'logged_in_home',
     url: 'https://chatgpt.com/',
+    postSubmitPromptActionsCompleted: true,
+    postSubmitPromptActionCount: 1,
   });
-  assert.deepStrictEqual(api.snapshot().clicks, ['跳过', '继续']);
+  assert.deepStrictEqual(api.snapshot().clicks, ['跳过']);
 });
 
-test('step 5 completes after three post-submit prompt button clicks', async () => {
+test('step 5 completes after first successful post-submit prompt button click', async () => {
   const api = new Function(`
 let now = 0;
 const clicks = [];
@@ -1655,9 +1665,9 @@ return {
     state: 'logged_in_home',
     url: 'https://chatgpt.com/',
     postSubmitPromptActionsCompleted: true,
-    postSubmitPromptActionCount: 3,
+    postSubmitPromptActionCount: 1,
   });
-  assert.deepStrictEqual(api.snapshot().clicks, ['跳过', '继续', '同意']);
+  assert.deepStrictEqual(api.snapshot().clicks, ['跳过']);
 });
 
 test('step 5 clicks agree on post-submit terms prompt before completing', async () => {
@@ -1730,6 +1740,8 @@ return {
   assert.deepStrictEqual(result, {
     state: 'logged_in_home',
     url: 'https://chatgpt.com/',
+    postSubmitPromptActionsCompleted: true,
+    postSubmitPromptActionCount: 1,
   });
   assert.deepStrictEqual(api.snapshot().clicks, ['同意']);
 });

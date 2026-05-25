@@ -218,7 +218,7 @@ return {
   );
 });
 
-test('step 5 post-completion validation clears chatgpt home prompts before allowing success', async () => {
+test('step 5 post-completion validation completes after first successful chatgpt home prompt action', async () => {
   const api = new Function(`
 const messages = [];
 let promptAdvanceCount = 0;
@@ -281,15 +281,15 @@ return {
   const snapshot = api.snapshot();
 
   assert.equal(result.successState, 'logged_in_home');
+  assert.equal(result.postSubmitPromptActionsCompleted, true);
+  assert.equal(result.postSubmitPromptActionCount, 1);
   assert.deepStrictEqual(
     snapshot.messages.map(({ type }) => type),
     [
       'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
-      'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
-      'ADVANCE_STEP5_POST_SUBMIT_PROMPT',
     ]
   );
-  assert.equal(snapshot.promptAdvanceCount, 3);
+  assert.equal(snapshot.promptAdvanceCount, 1);
   assert.equal(snapshot.stateReadCount, 0);
 });
 
@@ -363,14 +363,15 @@ return {
   const snapshot = api.snapshot();
 
   assert.equal(result.successState, 'logged_in_home');
-  assert.equal(result.recoveredByFallback, true);
-  assert.deepStrictEqual(snapshot.fallbackClicks, ['跳过', '继续']);
+  assert.equal(result.postSubmitPromptActionsCompleted, true);
+  assert.equal(result.postSubmitPromptActionCount, 1);
+  assert.deepStrictEqual(snapshot.fallbackClicks, ['跳过']);
   assert.equal(
     snapshot.logs.some(({ message }) => /后台兜底已点击注册后弹窗按钮“跳过”/.test(message)),
     true
   );
   assert.equal(
-    snapshot.logs.some(({ message, level }) => /后台兜底已点击注册后弹窗按钮“继续”/.test(message) && level === 'info'),
-    true
+    snapshot.logs.some(({ message }) => /后台兜底已点击注册后弹窗按钮“继续”/.test(message)),
+    false
   );
 });
