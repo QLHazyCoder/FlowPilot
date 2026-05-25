@@ -17494,6 +17494,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     case 'AUTO_RUN_RESET': {
       // Full UI reset for next run
       syncLatestState({
+        runId: message.runId || message.payload?.runId || latestState?.runId || '',
+        activeRunId: message.activeRunId || message.payload?.activeRunId || latestState?.activeRunId || '',
         oauthUrl: null,
         localhostUrl: null,
         email: null,
@@ -17549,6 +17551,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       if (isLuckmailProvider()) {
         queueLuckmailPurchaseRefresh();
       }
+      chrome.runtime.sendMessage({ type: 'GET_STATE' }).then((state) => {
+        if (!state) return;
+        syncLatestState(state);
+        applySettingsState(state);
+        updateStatusDisplay(state);
+        updateProgressCounter();
+        updateButtonStates();
+      }).catch(() => { });
       break;
     }
 

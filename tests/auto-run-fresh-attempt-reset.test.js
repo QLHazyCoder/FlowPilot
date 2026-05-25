@@ -64,7 +64,7 @@ const helperBundle = [
   extractFunction(helperSource, 'getAutoRunStatusPayload'),
 ].join('\n');
 
-const api = new Function('autoRunModuleSource', `
+const api = new Function('autoRunModuleSource', 'assert', `
 const self = {};
 const STOP_ERROR_MESSAGE = 'Flow stopped.';
 const AUTO_RUN_MAX_RETRIES_PER_ROUND = 3;
@@ -142,6 +142,27 @@ let currentState = {
   signupPhoneCompletedActivation: { activationId: 'signup-completed', phoneNumber: '+6612345' },
   signupPhoneVerificationRequestedAt: 123456,
   signupPhoneVerificationPurpose: 'signup',
+  email: 'old@example.com',
+  password: 'old-password',
+  registrationEmailState: {
+    current: 'old@example.com',
+    previous: 'old@example.com',
+    source: 'generated:old',
+    updatedAt: 123456,
+  },
+  oauthUrl: 'https://auth.example.com/old-oauth',
+  localhostUrl: 'http://localhost:1455/auth/callback?code=old&state=old-state',
+  sub2apiSessionId: 'old-sub2api-session',
+  sub2apiOAuthState: 'old-sub2api-state',
+  cpaOAuthState: 'old-cpa-state',
+  codex2apiSessionId: 'old-codex2api-session',
+  codex2apiOAuthState: 'old-codex2api-state',
+  currentCompletionTokenByNode: { 'fill-profile': 'old-token' },
+  seenCodes: ['old-code'],
+  seenInbucketMailIds: ['old-mail-id'],
+  loginVerificationRequestedAt: 234567,
+  oauthFlowDeadlineAt: 345678,
+  oauthFlowDeadlineSourceUrl: 'https://auth.example.com/old-oauth',
   mailProvider: '163',
   emailGenerator: 'duck',
   gmailBaseEmail: 'demo@gmail.com',
@@ -225,6 +246,9 @@ async function resetState() {
     inbucketMailbox: prev.inbucketMailbox,
     cloudflareDomain: prev.cloudflareDomain,
     cloudflareDomains: [...(prev.cloudflareDomains || [])],
+    currentCompletionTokenByNode: prev.currentCompletionTokenByNode || {},
+    seenCodes: [...(prev.seenCodes || [])],
+    seenInbucketMailIds: [...(prev.seenInbucketMailIds || [])],
     tabRegistry: { ...(prev.tabRegistry || {}) },
     sourceLastUrls: { ...(prev.sourceLastUrls || {}) },
   };
@@ -284,8 +308,41 @@ async function runAutoSequenceFromStep() {
     throw new Error('fresh auto-run attempt reused stale runtime tab context');
   }
 
+  if (runCalls === 2) {
+    assert.equal(state.email || '', '', 'fresh run must not reuse previous registration email');
+    assert.equal(state.registrationEmailState?.current || '', '', 'fresh run must clear registration email state');
+    assert.equal(state.oauthUrl || '', '', 'fresh run must not reuse previous OAuth URL');
+    assert.equal(state.localhostUrl || '', '', 'fresh run must not reuse previous localhost callback');
+    assert.equal(state.sub2apiSessionId || '', '', 'fresh run must not reuse previous SUB2API session');
+    assert.equal(state.cpaOAuthState || '', '', 'fresh run must not reuse previous CPA OAuth state');
+    assert.equal(state.codex2apiSessionId || '', '', 'fresh run must not reuse previous Codex2API session');
+    assert.deepStrictEqual(state.currentCompletionTokenByNode || {}, {}, 'fresh run must clear completion tokens');
+    assert.deepStrictEqual(state.seenCodes || [], [], 'fresh run must clear seen verification codes');
+    assert.deepStrictEqual(state.seenInbucketMailIds || [], [], 'fresh run must clear seen inbucket mail ids');
+    assert.equal(state.signupVerificationRequestedAt, null, 'fresh run must clear signup verification timestamp');
+    assert.equal(state.loginVerificationRequestedAt, null, 'fresh run must clear login verification timestamp');
+    assert.equal(state.oauthFlowDeadlineAt, null, 'fresh run must clear OAuth deadline');
+    assert.equal(state.oauthFlowDeadlineSourceUrl, null, 'fresh run must clear OAuth deadline source');
+    assert.equal(state.runId, '1001:2:1', 'fresh run should get an isolated run id');
+    assert.equal(state.activeRunId, '1001:2:1', 'fresh run should get an isolated active run id');
+  }
+
+  const nextEmail = 'run' + runCalls + '@example.com';
+
   currentState = {
     ...currentState,
+    email: nextEmail,
+    registrationEmailState: {
+      current: nextEmail,
+      previous: nextEmail,
+      source: 'generated:test',
+      updatedAt: Date.now(),
+    },
+    oauthUrl: 'https://auth.example.com/oauth-' + runCalls,
+    localhostUrl: 'http://localhost:1455/auth/callback?code=code-' + runCalls + '&state=state-' + runCalls,
+    currentCompletionTokenByNode: { 'fill-profile': 'token-' + runCalls },
+    seenCodes: ['code-' + runCalls],
+    seenInbucketMailIds: ['mail-' + runCalls],
     stepStatuses: {
       1: 'completed',
       2: 'completed',
@@ -408,7 +465,7 @@ return {
     };
   },
 };
-`)(autoRunModuleSource);
+`)(autoRunModuleSource, assert);
 
 (async () => {
   await api.autoRunLoop(2, { autoRunSkipFailures: false, mode: 'restart' });
@@ -430,6 +487,8 @@ return {
   assert.strictEqual(snapshot.currentState.signupPhoneCompletedActivation, null, 'completed signup phone activation should be runtime-only');
   assert.strictEqual(snapshot.currentState.signupPhoneVerificationRequestedAt, null, 'signup phone request time should be runtime-only');
   assert.strictEqual(snapshot.currentState.signupPhoneVerificationPurpose, '', 'signup phone purpose should be runtime-only');
+  assert.strictEqual(snapshot.currentState.runId, '1001:2:1', 'final state should keep the second round run id');
+  assert.strictEqual(snapshot.currentState.activeRunId, '1001:2:1', 'final state should keep the second round active run id');
   assert.deepStrictEqual(
     snapshot.currentState.reusablePhoneActivation,
     {

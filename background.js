@@ -3968,6 +3968,15 @@ function mergeAutoRunKeepStateValue(baseValue, patchValue) {
 
 function collectAutoRunFreshResetRuntimeSettingKeys() {
   const keySet = new Set();
+  [
+    'currentCompletionTokenByNode',
+    'seenCodes',
+    'seenInbucketMailIds',
+    'signupVerificationRequestedAt',
+    'loginVerificationRequestedAt',
+    'oauthFlowDeadlineAt',
+    'oauthFlowDeadlineSourceUrl',
+  ].forEach((field) => keySet.add(field));
   const flowFieldGroups = isPlainObjectValue(runtimeStateHelpers?.FLOW_FIELD_GROUPS)
     ? runtimeStateHelpers.FLOW_FIELD_GROUPS
     : {};

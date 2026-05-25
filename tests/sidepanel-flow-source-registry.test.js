@@ -306,6 +306,18 @@ test('applySettingsState passes capability resolved Plus account access strategy
   assert.match(body, /plusAccountAccessStrategy:\s*stepDefinitionState\.plusAccountAccessStrategy/);
 });
 
+test('AUTO_RUN_RESET refreshes sidepanel from background state after local reset', () => {
+  const resetCaseIndex = sidepanelSource.indexOf("case 'AUTO_RUN_RESET'");
+  assert.notEqual(resetCaseIndex, -1, 'AUTO_RUN_RESET handler should exist');
+  const dataUpdatedCaseIndex = sidepanelSource.indexOf("case 'DATA_UPDATED'", resetCaseIndex);
+  assert.notEqual(dataUpdatedCaseIndex, -1, 'DATA_UPDATED handler should follow AUTO_RUN_RESET');
+  const resetCaseBody = sidepanelSource.slice(resetCaseIndex, dataUpdatedCaseIndex);
+
+  assert.match(resetCaseBody, /chrome\.runtime\.sendMessage\(\{\s*type:\s*'GET_STATE'\s*\}\)/);
+  assert.match(resetCaseBody, /syncLatestState\(state\)/);
+  assert.match(resetCaseBody, /applySettingsState\(state\)/);
+});
+
 test('updateNodeUI ignores stale nodes outside the current workflow', () => {
   const bundle = [
     extractFunction(sidepanelSource, 'updateNodeUI'),
