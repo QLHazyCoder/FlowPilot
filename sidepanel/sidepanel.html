@@ -1444,12 +1444,15 @@
             </div>
             <div class="data-row" id="row-phone-sms-provider" style="display:none;">
               <span class="data-label">接码服务商</span>
-              <select id="select-phone-sms-provider" class="data-select mono">
-                <option value="hero-sms">HeroSMS</option>
-                <option value="5sim">5sim</option>
-                <option value="nexsms">NexSMS</option>
-                <option value="madao">MaDao</option>
-              </select>
+              <div class="data-inline data-value-actions">
+                <select id="select-phone-sms-provider" class="data-select mono">
+                  <option value="hero-sms">HeroSMS</option>
+                  <option value="5sim">5sim</option>
+                  <option value="nexsms">NexSMS</option>
+                  <option value="madao">MaDao</option>
+                </select>
+                <button id="btn-open-madao-github" class="btn btn-ghost btn-xs data-inline-btn" type="button" style="display:none;">Github</button>
+              </div>
             </div>
             <div class="data-row" id="row-phone-sms-provider-order" style="display:none;">
               <span class="data-label">服务商顺序</span>
@@ -1642,6 +1645,10 @@
                 <button id="btn-madao-refresh-routing-plans" class="btn btn-ghost btn-xs data-inline-btn" type="button">刷新</button>
               </div>
             </div>
+            <div class="data-row" id="row-madao-routing-plan-note" style="display:none;">
+              <span class="data-label">说明</span>
+              <span class="data-value hero-sms-country-note">当前由 MaDao 路由方案决定服务商、国家与价格筛选；FlowPilot 仅保留换号、轮询、超时等本地流程参数。</span>
+            </div>
             <div class="data-row" id="row-madao-service-name" style="display:none;">
               <span class="data-label">服务名</span>
               <span id="display-madao-service-name" class="data-value mono">openai</span>
@@ -1656,7 +1663,7 @@
               </div>
             </div>
             <div class="data-row" id="row-madao-options" style="display:none;">
-              <span class="data-label">接码参数</span>
+              <span class="data-label">MaDao 参数</span>
               <div class="data-inline data-value-actions">
                 <label class="toggle-switch" for="input-madao-auto-pick-country" title="允许 MaDao 自动选择国家">
                   <input type="checkbox" id="input-madao-auto-pick-country" />
@@ -1675,7 +1682,7 @@
               </div>
             </div>
             <div class="data-row" id="row-hero-sms-max-price" style="display:none;">
-              <span class="data-label">价格区间</span>
+              <span id="label-phone-sms-price-filters" class="data-label">价格区间</span>
               <div class="data-inline hero-sms-price-preview-stack">
                 <div class="hero-sms-price-preview-head">
                   <button id="btn-hero-sms-price-preview" class="btn btn-outline btn-xs data-inline-btn" type="button">查询价格</button>
@@ -1698,13 +1705,13 @@
                       <input type="number" id="input-hero-sms-max-price" class="data-input auto-delay-input mono hero-sms-max-price-input" placeholder="0.12" min="0" step="0.0001" title="接码价格上限；可空（空=不设上限）" />
                     </div>
                   </div>
-                  <div class="hero-sms-price-control">
+                  <div class="hero-sms-price-control" id="row-hero-sms-preferred-price">
                     <span class="hero-sms-settings-caption">指定档位</span>
                     <div class="setting-controls">
                       <input type="number" id="input-hero-sms-preferred-price" class="data-input auto-delay-input mono hero-sms-max-price-input" placeholder="例如 0.0512（可空）" min="0" step="0.0001" title="优先尝试该价格档位；可空（空=按优先级策略）" />
                     </div>
                   </div>
-                  <div class="hero-sms-price-control hero-sms-price-control-reuse">
+                  <div class="hero-sms-price-control hero-sms-price-control-reuse" id="row-hero-sms-reuse-enabled">
                     <span class="hero-sms-settings-caption">号码复用</span>
                     <div class="setting-controls hero-sms-toggle-controls">
                       <label class="toggle-switch hero-sms-price-reuse-toggle" for="input-hero-sms-reuse-enabled" title="开启后会优先复用未超次数的可用号码">

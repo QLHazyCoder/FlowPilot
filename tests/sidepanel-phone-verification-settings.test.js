@@ -158,14 +158,20 @@ test('sidepanel html exposes phone verification toggle and multi-provider SMS ro
   assert.match(html, /id="row-madao-routing-plan-id"/);
   assert.match(html, /id="select-madao-routing-plan-id"/);
   assert.match(html, /id="btn-madao-refresh-routing-plans"/);
+  assert.match(html, /id="row-madao-routing-plan-note"/);
+  assert.match(html, /当前由 MaDao 路由方案决定服务商、国家与价格筛选；FlowPilot 仅保留换号、轮询、超时等本地流程参数。/);
   assert.match(html, /id="row-madao-service-name"/);
   assert.match(html, /id="display-madao-service-name"/);
   assert.match(html, /id="row-madao-country"/);
   assert.match(html, /id="select-madao-country"/);
   assert.match(html, /id="btn-madao-refresh-countries"/);
   assert.match(html, /id="row-madao-options"/);
+  assert.match(html, /<span class="data-label">MaDao 参数<\/span>/);
   assert.match(html, /id="input-madao-auto-pick-country"/);
   assert.match(html, /id="input-madao-reuse-phone"/);
+  assert.match(html, /id="btn-open-madao-github"/);
+  assert.match(html, /id="label-phone-sms-price-filters"/);
+  assert.match(html, /<span id="label-phone-sms-price-filters" class="data-label">价格区间<\/span>/);
   assert.doesNotMatch(html, /id="input-account-run-history-text-enabled"/);
 });
 
@@ -683,6 +689,7 @@ const rowHeroSmsCountryFallback = { style: { display: 'none' } };
 const rowHeroSmsAcquirePriority = { style: { display: 'none' } };
 const rowHeroSmsApiKey = { style: { display: 'none' } };
 const rowHeroSmsMaxPrice = { style: { display: 'none' } };
+const labelPhoneSmsPriceFilters = { textContent: '价格区间' };
 const rowFiveSimApiKey = { style: { display: 'none' } };
 const rowFiveSimCountry = { style: { display: 'none' } };
 const rowFiveSimCountryFallback = { style: { display: 'none' } };
@@ -697,15 +704,18 @@ const rowMaDaoHttpSecret = { style: { display: 'none' } };
 const rowMaDaoMode = { style: { display: 'none' } };
 const rowMaDaoProviderId = { style: { display: 'none' } };
 const rowMaDaoRoutingPlanId = { style: { display: 'none' } };
+const rowMaDaoRoutingPlanNote = { style: { display: 'none' } };
 const rowMaDaoServiceName = { style: { display: 'none' } };
 const rowMaDaoCountry = { style: { display: 'none' } };
 const rowMaDaoOptions = { style: { display: 'none' } };
+const btnOpenMaDaoGithub = { style: { display: 'none' } };
 const rowHeroSmsRuntimePair = { style: { display: 'none' } };
 const rowHeroSmsCurrentNumber = { style: { display: 'none' } };
 const rowHeroSmsCurrentCountdown = { style: { display: 'none' } };
 const rowHeroSmsPriceTiers = { style: { display: 'none' } };
 const rowHeroSmsCurrentCode = { style: { display: 'none' } };
 const rowHeroSmsPreferredActivation = createMockRow();
+const rowHeroSmsPreferredPrice = { style: { display: 'none' } };
 const rowPhoneVerificationResendCount = { style: { display: 'none' } };
 const rowPhoneReplacementLimit = { style: { display: 'none' } };
 const rowPhoneCodeWaitSeconds = { style: { display: 'none' } };
@@ -716,6 +726,7 @@ const rowFreePhoneReuseEnabled = createMockRow();
 const rowFreePhoneReuseAutoEnabled = createMockRow();
 const rowFreeReusablePhone = createMockRow();
 const heroSmsReuseRow = createMockRow();
+const rowHeroSmsReuseEnabled = heroSmsReuseRow;
 const inputHeroSmsReuseEnabled = { checked: true, disabled: false, closest: () => heroSmsReuseRow };
 const inputFreePhoneReuseEnabled = { checked: true, disabled: false };
 const inputFreePhoneReuseAutoEnabled = { checked: true, disabled: false };
@@ -723,6 +734,8 @@ const selectHeroSmsPreferredActivation = { disabled: false };
 const inputFreeReusablePhone = { disabled: false };
 const btnSaveFreeReusablePhone = { disabled: false };
 const btnClearFreeReusablePhone = { disabled: false };
+const btnHeroSmsPricePreview = { style: { display: 'none' } };
+const btnPhoneSmsBalance = { style: { display: 'none' } };
 const PHONE_SMS_PROVIDER_HERO_SMS = 'hero-sms';
 const PHONE_SMS_PROVIDER_FIVE_SIM = '5sim';
 const PHONE_SMS_PROVIDER_MADAO = 'madao';
@@ -777,6 +790,7 @@ return {
   rowHeroSmsAcquirePriority,
   rowHeroSmsApiKey,
   rowHeroSmsMaxPrice,
+  labelPhoneSmsPriceFilters,
   rowFiveSimApiKey,
   rowFiveSimCountry,
   rowFiveSimCountryFallback,
@@ -791,18 +805,22 @@ return {
   rowMaDaoMode,
   rowMaDaoProviderId,
   rowMaDaoRoutingPlanId,
+  rowMaDaoRoutingPlanNote,
   rowMaDaoServiceName,
   rowMaDaoCountry,
   rowMaDaoOptions,
+  btnOpenMaDaoGithub,
   rowHeroSmsRuntimePair,
   rowHeroSmsCurrentNumber,
   rowHeroSmsCurrentCountdown,
   rowHeroSmsPriceTiers,
   rowHeroSmsCurrentCode,
   rowHeroSmsPreferredActivation,
+  rowHeroSmsPreferredPrice,
   rowFreePhoneReuseEnabled,
   rowFreePhoneReuseAutoEnabled,
   rowFreeReusablePhone,
+  rowHeroSmsReuseEnabled,
   rowPhoneVerificationResendCount,
   rowPhoneReplacementLimit,
   rowPhoneCodeWaitSeconds,
@@ -817,6 +835,8 @@ return {
   inputFreeReusablePhone,
   btnSaveFreeReusablePhone,
   btnClearFreeReusablePhone,
+  btnHeroSmsPricePreview,
+  btnPhoneSmsBalance,
   selectMaDaoMode,
   setSelectedPhoneSmsProvider(value) { selectPhoneSmsProvider.value = value; },
   updatePhoneVerificationSettingsUI,
@@ -890,6 +910,7 @@ return {
   assert.equal(api.rowHeroSmsAcquirePriority.style.display, '');
   assert.equal(api.rowHeroSmsApiKey.style.display, '');
   assert.equal(api.rowHeroSmsMaxPrice.style.display, '');
+  assert.equal(api.labelPhoneSmsPriceFilters.textContent, '价格区间');
   assert.equal(api.rowFiveSimOperator.style.display, 'none');
   assert.equal(api.rowHeroSmsCurrentNumber.style.display, '');
   assert.equal(api.rowHeroSmsCurrentCountdown.style.display, '');
@@ -964,19 +985,40 @@ return {
   assert.equal(api.rowMaDaoHttpSecret.style.display, '');
   assert.equal(api.rowMaDaoMode.style.display, '');
   assert.equal(api.rowMaDaoRoutingPlanId.style.display, '');
+  assert.equal(api.rowMaDaoRoutingPlanNote.style.display, '');
   assert.equal(api.rowMaDaoServiceName.style.display, '');
+  assert.equal(api.btnOpenMaDaoGithub.style.display, '');
   assert.equal(api.rowMaDaoProviderId.style.display, 'none');
   assert.equal(api.rowMaDaoCountry.style.display, 'none');
   assert.equal(api.rowMaDaoOptions.style.display, 'none');
   assert.equal(api.rowHeroSmsMaxPrice.style.display, 'none');
+  assert.equal(api.labelPhoneSmsPriceFilters.textContent, '价格区间');
+  assert.equal(api.btnHeroSmsPricePreview.style.display, 'none');
+  assert.equal(api.btnPhoneSmsBalance.style.display, 'none');
+  assert.equal(api.rowHeroSmsPreferredPrice.style.display, 'none');
+  assert.equal(api.rowHeroSmsReuseEnabled.style.display, 'none');
+  assert.equal(api.rowFreePhoneReuseEnabled.style.display, 'none');
+  assert.equal(api.rowFreePhoneReuseAutoEnabled.style.display, 'none');
+  assert.equal(api.rowFreeReusablePhone.style.display, 'none');
+  assert.equal(api.rowHeroSmsPreferredActivation.style.display, 'none');
 
   api.selectMaDaoMode.value = 'direct';
   api.updatePhoneVerificationSettingsUI();
   assert.equal(api.rowMaDaoRoutingPlanId.style.display, 'none');
+  assert.equal(api.rowMaDaoRoutingPlanNote.style.display, 'none');
   assert.equal(api.rowMaDaoProviderId.style.display, '');
   assert.equal(api.rowMaDaoCountry.style.display, '');
   assert.equal(api.rowMaDaoOptions.style.display, '');
   assert.equal(api.rowHeroSmsMaxPrice.style.display, '');
+  assert.equal(api.labelPhoneSmsPriceFilters.textContent, '筛选条件');
+  assert.equal(api.btnHeroSmsPricePreview.style.display, 'none');
+  assert.equal(api.btnPhoneSmsBalance.style.display, 'none');
+  assert.equal(api.rowHeroSmsPreferredPrice.style.display, 'none');
+  assert.equal(api.rowHeroSmsReuseEnabled.style.display, 'none');
+  assert.equal(api.rowFreePhoneReuseEnabled.style.display, 'none');
+  assert.equal(api.rowFreePhoneReuseAutoEnabled.style.display, 'none');
+  assert.equal(api.rowFreeReusablePhone.style.display, 'none');
+  assert.equal(api.rowHeroSmsPreferredActivation.style.display, 'none');
 });
 
 test('collectSettingsPayload keeps local helper sync enabled while persisting sms toggle state', () => {

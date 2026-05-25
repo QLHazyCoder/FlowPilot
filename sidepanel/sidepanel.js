@@ -444,12 +444,14 @@ const inputPhoneSignupReloginAfterBindEmail = document.getElementById('input-pho
 const rowSignupPhone = document.getElementById('row-signup-phone');
 const signupMethodButtons = Array.from(document.querySelectorAll('[data-signup-method]'));
 const selectPhoneSmsProvider = document.getElementById('select-phone-sms-provider');
+const btnOpenMaDaoGithub = document.getElementById('btn-open-madao-github');
 const rowHeroSmsPlatform = document.getElementById('row-hero-sms-platform');
 const rowHeroSmsCountry = document.getElementById('row-hero-sms-country');
 const rowHeroSmsCountryFallback = document.getElementById('row-hero-sms-country-fallback');
 const rowHeroSmsAcquirePriority = document.getElementById('row-hero-sms-acquire-priority');
 const rowHeroSmsApiKey = document.getElementById('row-hero-sms-api-key');
 const rowHeroSmsMaxPrice = document.getElementById('row-hero-sms-max-price');
+const labelPhoneSmsPriceFilters = document.getElementById('label-phone-sms-price-filters');
 const rowPhoneSmsProvider = document.getElementById('row-phone-sms-provider');
 const rowPhoneSmsProviderOrder = document.getElementById('row-phone-sms-provider-order');
 const rowPhoneSmsProviderOrderActions = document.getElementById('row-phone-sms-provider-order-actions');
@@ -467,6 +469,7 @@ const rowMaDaoHttpSecret = document.getElementById('row-madao-http-secret');
 const rowMaDaoMode = document.getElementById('row-madao-mode');
 const rowMaDaoProviderId = document.getElementById('row-madao-provider-id');
 const rowMaDaoRoutingPlanId = document.getElementById('row-madao-routing-plan-id');
+const rowMaDaoRoutingPlanNote = document.getElementById('row-madao-routing-plan-note');
 const rowMaDaoServiceName = document.getElementById('row-madao-service-name');
 const rowMaDaoCountry = document.getElementById('row-madao-country');
 const rowMaDaoOptions = document.getElementById('row-madao-options');
@@ -476,6 +479,7 @@ const rowHeroSmsCurrentCountdown = document.getElementById('row-hero-sms-current
 const rowHeroSmsPriceTiers = document.getElementById('row-hero-sms-price-tiers');
 const rowHeroSmsCurrentCode = document.getElementById('row-hero-sms-current-code');
 const rowHeroSmsPreferredActivation = document.getElementById('row-hero-sms-preferred-activation');
+const rowHeroSmsPreferredPrice = document.getElementById('row-hero-sms-preferred-price');
 const rowPhoneCodeSettingsGroup = document.getElementById('row-phone-code-settings-group');
 const rowPhoneVerificationResendCount = document.getElementById('row-phone-verification-resend-count');
 const rowPhoneReplacementLimit = document.getElementById('row-phone-replacement-limit');
@@ -486,6 +490,7 @@ const rowPhoneCodePollMaxRounds = document.getElementById('row-phone-code-poll-m
 const rowFreePhoneReuseEnabled = document.getElementById('row-free-phone-reuse-enabled');
 const rowFreePhoneReuseAutoEnabled = document.getElementById('row-free-phone-reuse-auto-enabled');
 const rowFreeReusablePhone = document.getElementById('row-free-reusable-phone');
+const rowHeroSmsReuseEnabled = document.getElementById('row-hero-sms-reuse-enabled');
 const inputHeroSmsApiKey = document.getElementById('input-hero-sms-api-key');
 const btnToggleHeroSmsApiKey = document.getElementById('btn-toggle-hero-sms-api-key');
 const inputFiveSimApiKey = document.getElementById('input-five-sim-api-key');
@@ -9829,6 +9834,9 @@ function updatePhoneVerificationSettingsUI() {
   const madaoMode = normalizeMaDaoModeValue(
     (typeof selectMaDaoMode !== 'undefined' && selectMaDaoMode ? selectMaDaoMode.value : latestState?.madaoMode)
   );
+  const madaoDirectMode = madaoProvider && madaoMode === MADAO_MODE_DIRECT;
+  const madaoRoutingMode = madaoProvider && madaoMode === MADAO_MODE_ROUTING_PLAN;
+  const madaoFlowRuntimeOnly = madaoProvider;
   if (rowPhoneVerificationEnabled) {
     rowPhoneVerificationEnabled.style.display = canShowPhoneSettings ? '' : 'none';
   }
@@ -9908,20 +9916,29 @@ function updatePhoneVerificationSettingsUI() {
   if (typeof rowMaDaoBaseUrl !== 'undefined' && rowMaDaoBaseUrl) rowMaDaoBaseUrl.style.display = showSettings && madaoProvider ? '' : 'none';
   if (typeof rowMaDaoHttpSecret !== 'undefined' && rowMaDaoHttpSecret) rowMaDaoHttpSecret.style.display = showSettings && madaoProvider ? '' : 'none';
   if (typeof rowMaDaoMode !== 'undefined' && rowMaDaoMode) rowMaDaoMode.style.display = showSettings && madaoProvider ? '' : 'none';
-  if (typeof rowMaDaoProviderId !== 'undefined' && rowMaDaoProviderId) rowMaDaoProviderId.style.display = showSettings && madaoProvider && madaoMode === MADAO_MODE_DIRECT ? '' : 'none';
-  if (typeof rowMaDaoRoutingPlanId !== 'undefined' && rowMaDaoRoutingPlanId) rowMaDaoRoutingPlanId.style.display = showSettings && madaoProvider && madaoMode === MADAO_MODE_ROUTING_PLAN ? '' : 'none';
+  if (typeof rowMaDaoProviderId !== 'undefined' && rowMaDaoProviderId) rowMaDaoProviderId.style.display = showSettings && madaoDirectMode ? '' : 'none';
+  if (typeof rowMaDaoRoutingPlanId !== 'undefined' && rowMaDaoRoutingPlanId) rowMaDaoRoutingPlanId.style.display = showSettings && madaoRoutingMode ? '' : 'none';
+  if (typeof rowMaDaoRoutingPlanNote !== 'undefined' && rowMaDaoRoutingPlanNote) rowMaDaoRoutingPlanNote.style.display = showSettings && madaoRoutingMode ? '' : 'none';
   if (typeof rowMaDaoServiceName !== 'undefined' && rowMaDaoServiceName) rowMaDaoServiceName.style.display = showSettings && madaoProvider ? '' : 'none';
-  if (typeof rowMaDaoCountry !== 'undefined' && rowMaDaoCountry) rowMaDaoCountry.style.display = showSettings && madaoProvider && madaoMode === MADAO_MODE_DIRECT ? '' : 'none';
-  if (typeof rowMaDaoOptions !== 'undefined' && rowMaDaoOptions) rowMaDaoOptions.style.display = showSettings && madaoProvider && madaoMode === MADAO_MODE_DIRECT ? '' : 'none';
-  if (rowHeroSmsMaxPrice) rowHeroSmsMaxPrice.style.display = showSettings && (heroProvider || fiveSimProvider || (madaoProvider && madaoMode === MADAO_MODE_DIRECT)) ? '' : 'none';
+  if (typeof rowMaDaoCountry !== 'undefined' && rowMaDaoCountry) rowMaDaoCountry.style.display = showSettings && madaoDirectMode ? '' : 'none';
+  if (typeof rowMaDaoOptions !== 'undefined' && rowMaDaoOptions) rowMaDaoOptions.style.display = showSettings && madaoDirectMode ? '' : 'none';
+  if (typeof btnOpenMaDaoGithub !== 'undefined' && btnOpenMaDaoGithub) btnOpenMaDaoGithub.style.display = showSettings && madaoProvider ? '' : 'none';
+  if (rowHeroSmsMaxPrice) rowHeroSmsMaxPrice.style.display = showSettings && (heroProvider || fiveSimProvider || madaoDirectMode) ? '' : 'none';
+  if (typeof labelPhoneSmsPriceFilters !== 'undefined' && labelPhoneSmsPriceFilters) {
+    labelPhoneSmsPriceFilters.textContent = madaoDirectMode ? '筛选条件' : '价格区间';
+  }
+  if (typeof btnHeroSmsPricePreview !== 'undefined' && btnHeroSmsPricePreview) btnHeroSmsPricePreview.style.display = showSettings && !madaoFlowRuntimeOnly ? '' : 'none';
+  if (typeof btnPhoneSmsBalance !== 'undefined' && btnPhoneSmsBalance) btnPhoneSmsBalance.style.display = showSettings && !madaoFlowRuntimeOnly ? '' : 'none';
+  if (typeof rowHeroSmsPreferredPrice !== 'undefined' && rowHeroSmsPreferredPrice) rowHeroSmsPreferredPrice.style.display = showSettings && !madaoFlowRuntimeOnly && (heroProvider || fiveSimProvider) ? '' : 'none';
+  if (typeof rowHeroSmsReuseEnabled !== 'undefined' && rowHeroSmsReuseEnabled) rowHeroSmsReuseEnabled.style.display = showSettings && !madaoFlowRuntimeOnly && heroProvider ? '' : 'none';
   if (rowFiveSimOperator) {
     rowFiveSimOperator.style.display = showSettings && fiveSimProvider ? '' : 'none';
   }
   if (typeof rowFreePhoneReuseEnabled !== 'undefined' && rowFreePhoneReuseEnabled) {
-    rowFreePhoneReuseEnabled.style.display = showSettings ? '' : 'none';
+    rowFreePhoneReuseEnabled.style.display = showSettings && !madaoFlowRuntimeOnly ? '' : 'none';
   }
   if (typeof rowFreePhoneReuseAutoEnabled !== 'undefined' && rowFreePhoneReuseAutoEnabled) {
-    rowFreePhoneReuseAutoEnabled.style.display = showSettings ? '' : 'none';
+    rowFreePhoneReuseAutoEnabled.style.display = showSettings && !madaoFlowRuntimeOnly ? '' : 'none';
   }
   const phoneSignupReuseLocked = typeof isPhoneSignupReuseLocked === 'function'
     ? isPhoneSignupReuseLocked(latestState, {
@@ -9980,9 +9997,11 @@ function updatePhoneVerificationSettingsUI() {
   if (typeof btnClearFreeReusablePhone !== 'undefined' && btnClearFreeReusablePhone) {
     btnClearFreeReusablePhone.disabled = settingsLocked || phoneSignupReuseLocked;
   }
-  const heroSmsReuseRow = typeof inputHeroSmsReuseEnabled !== 'undefined' && inputHeroSmsReuseEnabled?.closest
-    ? inputHeroSmsReuseEnabled.closest('.hero-sms-price-control')
-    : null;
+  const heroSmsReuseRow = typeof rowHeroSmsReuseEnabled !== 'undefined' && rowHeroSmsReuseEnabled
+    ? rowHeroSmsReuseEnabled
+    : (typeof inputHeroSmsReuseEnabled !== 'undefined' && inputHeroSmsReuseEnabled?.closest
+      ? inputHeroSmsReuseEnabled.closest('.hero-sms-price-control')
+      : null);
   setElementReuseLockedState(heroSmsReuseRow, phoneSignupReuseLocked);
   setElementReuseLockedState(
     typeof rowFreePhoneReuseEnabled !== 'undefined' ? rowFreePhoneReuseEnabled : null,
@@ -10009,13 +10028,17 @@ function updatePhoneVerificationSettingsUI() {
     typeof rowHeroSmsCurrentNumber !== 'undefined' ? rowHeroSmsCurrentNumber : null,
     typeof rowHeroSmsCurrentCountdown !== 'undefined' ? rowHeroSmsCurrentCountdown : null,
     typeof rowHeroSmsCurrentCode !== 'undefined' ? rowHeroSmsCurrentCode : null,
-    typeof rowFreeReusablePhone !== 'undefined' ? rowFreeReusablePhone : null,
-    typeof rowHeroSmsPreferredActivation !== 'undefined' ? rowHeroSmsPreferredActivation : null,
   ].forEach((row) => {
     if (row) {
       row.style.display = runtimeVisible ? '' : 'none';
     }
   });
+  if (typeof rowFreeReusablePhone !== 'undefined' && rowFreeReusablePhone) {
+    rowFreeReusablePhone.style.display = runtimeVisible && !madaoFlowRuntimeOnly ? '' : 'none';
+  }
+  if (typeof rowHeroSmsPreferredActivation !== 'undefined' && rowHeroSmsPreferredActivation) {
+    rowHeroSmsPreferredActivation.style.display = runtimeVisible && !madaoFlowRuntimeOnly ? '' : 'none';
+  }
   if (typeof syncSignupPhoneInputFromState === 'function') {
     syncSignupPhoneInputFromState(latestState);
   }
@@ -15830,6 +15853,10 @@ btnOpenKiroRsGithub?.addEventListener('click', () => {
 
 btnOpenWebchat2ApiGithub?.addEventListener('click', () => {
   openExternalUrl('https://github.com/zqbxdev/webchat2api');
+});
+
+btnOpenMaDaoGithub?.addEventListener('click', () => {
+  openExternalUrl('https://github.com/netcookies/MaDao');
 });
 
 btnGpcHelperBalance?.addEventListener('click', async () => {
