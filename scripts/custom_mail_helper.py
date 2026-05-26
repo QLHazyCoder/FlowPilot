@@ -4,7 +4,10 @@ import imaplib
 import json
 import os
 import re
+import secrets
 import ssl
+import sqlite3
+import string
 import traceback
 from datetime import datetime, timezone
 from email.header import decode_header
@@ -43,6 +46,8 @@ IMAP_PASS = os.environ.get("FLOWPILOT_CUSTOM_IMAP_PASS", "")
 IMAP_MAILBOX = os.environ.get("FLOWPILOT_CUSTOM_IMAP_MAILBOX", "INBOX")
 REQUEST_TIMEOUT_SECONDS = int(os.environ.get("FLOWPILOT_CUSTOM_IMAP_TIMEOUT", "45"))
 DEFAULT_TOP = 20
+RANDOM_EMAIL_DB_PATH = os.environ.get("FLOWPILOT_RANDOM_EMAIL_DB_PATH", os.path.join(PROJECT_ROOT, "data", "custom-mail-helper.sqlite3"))
+RANDOM_EMAIL_MAX_COUNT = int(os.environ.get("FLOWPILOT_RANDOM_EMAIL_MAX_COUNT", "20"))
 PUBLIC_ENV_KEYS = [
     "FLOWPILOT_SUB2API_REDIRECT_URI",
 ]
@@ -138,6 +143,87 @@ def to_iso_string(timestamp_ms):
 
 def parse_addresses(value):
     return [addr.strip().lower() for _, addr in getaddresses([str(value or "")]) if addr.strip()]
+
+
+def normalize_domain(value):
+    domain = str(value or "").strip().lower()
+    if domain.startswith("@"):
+        domain = domain[1:]
+    if not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+", domain):
+        raise RuntimeError("Invalid domain")
+    return domain
+
+
+def parse_generation_count(value):
+    if value in (None, ""):
+        return 1
+    try:
+        count = int(value)
+    except Exception as exc:
+        raise RuntimeError("n must be an integer") from exc
+    if count < 1:
+        raise RuntimeError("n must be >= 1")
+    if count > RANDOM_EMAIL_MAX_COUNT:
+        raise RuntimeError(f"n must be <= {RANDOM_EMAIL_MAX_COUNT}")
+    return count
+
+
+def ensure_random_email_db():
+    db_dir = os.path.dirname(RANDOM_EMAIL_DB_PATH)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
+    connection = sqlite3.connect(RANDOM_EMAIL_DB_PATH)
+    try:
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS generated_emails (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL UNIQUE,
+                prefix TEXT NOT NULL,
+                domain TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        connection.execute("CREATE INDEX IF NOT EXISTS idx_generated_emails_domain ON generated_emails(domain)")
+        connection.commit()
+        return connection
+    except Exception:
+        connection.close()
+        raise
+
+
+def random_email_prefix():
+    length = secrets.randbelow(5) + 8
+    alphabet = string.ascii_lowercase
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def generate_random_emails(payload):
+    domain = normalize_domain((payload or {}).get("domain"))
+    count = parse_generation_count((payload or {}).get("n"))
+    emails = []
+    connection = ensure_random_email_db()
+    try:
+        attempts = 0
+        max_attempts = max(100, count * 20)
+        while len(emails) < count and attempts < max_attempts:
+            attempts += 1
+            prefix = random_email_prefix()
+            email_address = f"{prefix}@{domain}"
+            try:
+                connection.execute(
+                    "INSERT INTO generated_emails(email, prefix, domain) VALUES (?, ?, ?)",
+                    (email_address, prefix, domain),
+                )
+                emails.append(email_address)
+            except sqlite3.IntegrityError:
+                continue
+        if len(emails) != count:
+            connection.rollback()
+            raise RuntimeError("Unable to generate enough unique emails")
+        connection.commit()
+        return {"email": emails[0] if emails else "", "emails": emails, "domain": domain, "count": len(emails)}
+    finally:
+        connection.close()
 
 
 def normalize_message(message_id, raw_bytes):
@@ -315,6 +401,10 @@ class CustomMailHelperHandler(BaseHTTPRequestHandler):
                 return
             if self.path == "/env":
                 json_response(self, 200, {"ok": True, "env": get_public_env_payload()})
+                return
+            if self.path == "/random-email":
+                result = generate_random_emails(payload)
+                json_response(self, 200, {"ok": True, **result})
                 return
             json_response(self, 404, {"ok": False, "error": f"Unsupported path: {self.path}"})
         except Exception as exc:
