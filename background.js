@@ -10934,6 +10934,72 @@ async function reportCompletedStepSideEffectError(step, error) {
   return reportCompletedNodeSideEffectError(getNodeIdByStepForState(step, state), error);
 }
 
+function getSignupPhoneIdentityValue(state = {}) {
+  const accountIdentifierType = String(state?.accountIdentifierType || '').trim().toLowerCase();
+  return String(
+    state?.signupPhoneNumber
+    || state?.signupPhoneCompletedActivation?.phoneNumber
+    || state?.signupPhoneActivation?.phoneNumber
+    || (accountIdentifierType === 'phone' ? state?.accountIdentifier : '')
+    || ''
+  ).trim();
+}
+
+function signupPhoneIdentityValuesMatch(left = '', right = '') {
+  const leftRaw = String(left || '').trim();
+  const rightRaw = String(right || '').trim();
+  if (!leftRaw || !rightRaw) {
+    return false;
+  }
+  if (leftRaw === rightRaw) {
+    return true;
+  }
+  const leftDigits = leftRaw.replace(/\D+/g, '');
+  const rightDigits = rightRaw.replace(/\D+/g, '');
+  return Boolean(leftDigits && rightDigits && leftDigits === rightDigits);
+}
+
+async function clearSignupPhoneIdentityAfterSuccessfulFlow(completionState = {}, options = {}) {
+  const completedPhone = getSignupPhoneIdentityValue(completionState);
+  const latestState = await getState();
+  const currentPhone = getSignupPhoneIdentityValue(latestState);
+  const currentIdentifierType = String(latestState?.accountIdentifierType || '').trim().toLowerCase();
+  const hasCurrentPhoneIdentity = Boolean(
+    currentPhone
+    || latestState?.signupPhoneActivation
+    || latestState?.signupPhoneCompletedActivation
+    || currentIdentifierType === 'phone'
+  );
+
+  if (!hasCurrentPhoneIdentity) {
+    return { cleared: false, reason: 'empty' };
+  }
+
+  if (completedPhone && currentPhone && !signupPhoneIdentityValuesMatch(completedPhone, currentPhone)) {
+    return { cleared: false, reason: 'changed' };
+  }
+
+  const updates = {
+    phoneNumber: '',
+    signupPhoneNumber: '',
+    signupPhoneActivation: null,
+    signupPhoneCompletedActivation: null,
+    signupPhoneVerificationRequestedAt: null,
+    signupPhoneVerificationPurpose: '',
+  };
+  if (currentIdentifierType === 'phone') {
+    updates.accountIdentifierType = null;
+    updates.accountIdentifier = '';
+  }
+
+  await setState(updates);
+  broadcastDataUpdate(updates);
+  await addLog('手机号注册：流程成功后已清空本轮注册手机号，避免下一轮复用。', 'ok', {
+    nodeId: options?.nodeId || 'platform-verify',
+  });
+  return { cleared: true, phoneNumber: currentPhone || completedPhone };
+}
+
 async function runCompletedNodeSideEffects(nodeId, payload, completionState, lastNodeId) {
   await handleNodeData(nodeId, payload);
   if (nodeId === lastNodeId) {
@@ -10966,6 +11032,11 @@ async function completeNodeFromBackground(nodeId, payload = {}) {
   await addLog('已完成', 'ok', { nodeId: normalizedNodeId });
 
   if (normalizedNodeId === lastNodeId) {
+    if (typeof clearSignupPhoneIdentityAfterSuccessfulFlow === 'function') {
+      await clearSignupPhoneIdentityAfterSuccessfulFlow(latestState, {
+        nodeId: normalizedNodeId,
+      });
+    }
     notifyNodeComplete(normalizedNodeId, payload);
     void runCompletedNodeSideEffects(normalizedNodeId, payload, completionState, lastNodeId)
       .catch((error) => reportCompletedNodeSideEffectError(normalizedNodeId, error));
