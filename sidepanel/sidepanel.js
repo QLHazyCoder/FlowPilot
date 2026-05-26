@@ -9918,7 +9918,7 @@ function updatePhoneVerificationSettingsUI() {
   if (typeof rowMaDaoMode !== 'undefined' && rowMaDaoMode) rowMaDaoMode.style.display = showSettings && madaoProvider ? '' : 'none';
   if (typeof rowMaDaoProviderId !== 'undefined' && rowMaDaoProviderId) rowMaDaoProviderId.style.display = showSettings && madaoDirectMode ? '' : 'none';
   if (typeof rowMaDaoRoutingPlanId !== 'undefined' && rowMaDaoRoutingPlanId) rowMaDaoRoutingPlanId.style.display = showSettings && madaoRoutingMode ? '' : 'none';
-  if (typeof rowMaDaoRoutingPlanNote !== 'undefined' && rowMaDaoRoutingPlanNote) rowMaDaoRoutingPlanNote.style.display = showSettings && madaoRoutingMode ? '' : 'none';
+  if (typeof rowMaDaoRoutingPlanNote !== 'undefined' && rowMaDaoRoutingPlanNote) rowMaDaoRoutingPlanNote.style.display = 'none';
   if (typeof rowMaDaoServiceName !== 'undefined' && rowMaDaoServiceName) rowMaDaoServiceName.style.display = showSettings && madaoProvider ? '' : 'none';
   if (typeof rowMaDaoCountry !== 'undefined' && rowMaDaoCountry) rowMaDaoCountry.style.display = showSettings && madaoDirectMode ? '' : 'none';
   if (typeof rowMaDaoOptions !== 'undefined' && rowMaDaoOptions) rowMaDaoOptions.style.display = showSettings && madaoDirectMode ? '' : 'none';

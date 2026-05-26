@@ -985,7 +985,7 @@ return {
   assert.equal(api.rowMaDaoHttpSecret.style.display, '');
   assert.equal(api.rowMaDaoMode.style.display, '');
   assert.equal(api.rowMaDaoRoutingPlanId.style.display, '');
-  assert.equal(api.rowMaDaoRoutingPlanNote.style.display, '');
+  assert.equal(api.rowMaDaoRoutingPlanNote.style.display, 'none');
   assert.equal(api.rowMaDaoServiceName.style.display, '');
   assert.equal(api.btnOpenMaDaoGithub.style.display, '');
   assert.equal(api.rowMaDaoProviderId.style.display, 'none');
