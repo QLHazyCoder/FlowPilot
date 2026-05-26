@@ -211,6 +211,7 @@
       madaoProviderId: normalizeProviderId(payload?.provider || fallback.provider),
       madaoRoutingPlanId: normalizeText(payload?.routing_plan_id || fallback.routing_plan_id),
       madaoRoutingPlanName: normalizeText(payload?.routing_plan_name || fallback.routing_plan_name),
+      madaoRoutingItemId: normalizeText(payload?.routing_item_id || fallback.routing_item_id),
       madaoAcquirePath: mapAcquirePath(payload?.acquire_path),
       madaoStatus: mapTicketStatus(payload?.status),
       ...(payload?.price !== undefined && payload?.price !== null
@@ -262,6 +263,63 @@
     });
   }
 
+  async function replaceRoutingActivation(state = {}, activation, options = {}, deps = {}) {
+    const config = resolveConfig(state, deps);
+    const ticketId = normalizeText(activation?.activationId || activation?.ticketId);
+    if (!ticketId) {
+      throw new Error('MaDao 激活记录缺少 ticket_id。');
+    }
+    const releaseAction = normalizeText(options?.releaseAction, 'cancel').toLowerCase() === 'ban'
+      ? 'ban'
+      : 'cancel';
+    const payload = await requestJson(config, '/api/routing/replace', {
+      method: 'POST',
+      body: {
+        ticket_id: ticketId,
+        release_action: releaseAction,
+        failed_item_id: normalizeText(options?.failedItemId || activation?.madaoRoutingItemId),
+        reason: normalizeText(options?.reason),
+      },
+    });
+    const nextTicket = normalizeActivationFromAcquire(payload?.next_ticket, {
+      routing_plan_id: activation?.madaoRoutingPlanId,
+      routing_plan_name: activation?.madaoRoutingPlanName,
+      service: activation?.serviceCode,
+      country: activation?.countryId,
+    });
+    if (!nextTicket) {
+      throw new Error('MaDao 返回的下一条路由激活记录无效。');
+    }
+    return {
+      currentTicketId: normalizeText(payload?.current_ticket_id, ticketId),
+      currentTicketRelease: payload?.current_ticket_release || null,
+      nextActivation: nextTicket,
+    };
+  }
+
+  async function rotateActivation(state = {}, activation, options = {}, deps = {}) {
+    const mode = normalizeText(state?.madaoMode, 'routing_plan').toLowerCase() === 'direct'
+      ? 'direct'
+      : 'routing_plan';
+    const normalizedActivation = activation && typeof activation === 'object' ? activation : null;
+    const releaseAction = normalizeText(options?.releaseAction, 'cancel').toLowerCase() === 'ban'
+      ? 'ban'
+      : 'cancel';
+    if (mode === 'routing_plan' && normalizeText(normalizedActivation?.madaoRoutingPlanId)) {
+      return replaceRoutingActivation(state, normalizedActivation, {
+        releaseAction,
+        failedItemId: options?.failedItemId || normalizedActivation?.madaoRoutingItemId,
+        reason: options?.reason,
+      }, deps);
+    }
+    const currentTicketRelease = await releaseActivation(state, normalizedActivation, releaseAction, deps);
+    return {
+      currentTicketId: normalizeText(normalizedActivation?.activationId || normalizedActivation?.ticketId),
+      currentTicketRelease,
+      nextActivation: null,
+    };
+  }
+
   function createProvider(deps = {}) {
     return {
       id: PROVIDER_ID,
@@ -276,6 +334,14 @@
         ...runtimeDeps,
       }),
       releaseActivation: (state, activation, action = 'cancel', runtimeDeps = {}) => releaseActivation(state, activation, action, {
+        ...deps,
+        ...runtimeDeps,
+      }),
+      rotateActivation: (state, activation, options = {}, runtimeDeps = {}) => rotateActivation(state, activation, options, {
+        ...deps,
+        ...runtimeDeps,
+      }),
+      replaceRoutingActivation: (state, activation, options = {}, runtimeDeps = {}) => replaceRoutingActivation(state, activation, options, {
         ...deps,
         ...runtimeDeps,
       }),
@@ -299,6 +365,8 @@
     mapTicketStatus,
     normalizeActivationFromAcquire,
     pollActivation,
+    rotateActivation,
+    replaceRoutingActivation,
     releaseActivation,
     resolveConfig,
   };

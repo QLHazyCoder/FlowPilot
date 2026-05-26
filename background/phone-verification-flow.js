@@ -951,6 +951,21 @@
       return rootScope.PhoneSmsMaDaoProvider || null;
     }
 
+    function getPhoneSmsProviderAdapterForState(state = {}) {
+      const providerId = normalizePhoneSmsProvider(state?.phoneSmsProvider || DEFAULT_PHONE_SMS_PROVIDER);
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      if (rootScope.PhoneSmsProviderRegistry?.createProvider) {
+        return rootScope.PhoneSmsProviderRegistry.createProvider(providerId, {
+          addLog,
+          fetchImpl,
+          requestTimeoutMs: DEFAULT_PHONE_REQUEST_TIMEOUT_MS,
+          sleepWithStop,
+          throwIfStopped,
+        });
+      }
+      return null;
+    }
+
     function resolveMaDaoPriceRange(state = {}) {
       const minPrice = normalizeHeroSmsPriceLimit(state?.madaoMinPrice);
       const maxPrice = normalizeHeroSmsPriceLimit(state?.madaoMaxPrice);
@@ -1420,6 +1435,13 @@
         ...(record.source ? { source: String(record.source || '').trim() } : {}),
         ...(record.phoneCodeReceived ? { phoneCodeReceived: true } : {}),
         ...(record.phoneCodeReceivedAt ? { phoneCodeReceivedAt: Math.max(0, Number(record.phoneCodeReceivedAt) || 0) } : {}),
+        ...(record.madaoProviderId ? { madaoProviderId: String(record.madaoProviderId || '').trim() } : {}),
+        ...(record.madaoRoutingPlanId ? { madaoRoutingPlanId: String(record.madaoRoutingPlanId || '').trim() } : {}),
+        ...(record.madaoRoutingPlanName ? { madaoRoutingPlanName: String(record.madaoRoutingPlanName || '').trim() } : {}),
+        ...(record.madaoRoutingItemId ? { madaoRoutingItemId: String(record.madaoRoutingItemId || '').trim() } : {}),
+        ...(record.madaoAcquirePath ? { madaoAcquirePath: String(record.madaoAcquirePath || '').trim() } : {}),
+        ...(record.madaoStatus ? { madaoStatus: String(record.madaoStatus || '').trim() } : {}),
+        ...(record.madaoPrice !== undefined && record.madaoPrice !== null ? { madaoPrice: Number(record.madaoPrice) } : {}),
         ...(ignoredPhoneCodeKeys.length ? { ignoredPhoneCodeKeys } : {}),
       };
     }
@@ -4235,6 +4257,26 @@
       }
     }
 
+    async function rotateCurrentPhoneActivation(state = {}, activation, options = {}) {
+      const adapter = getPhoneSmsProviderAdapterForState(state);
+      if (adapter?.rotateActivation) {
+        return adapter.rotateActivation(state, activation, options, {
+          fetchImpl,
+          requestTimeoutMs: DEFAULT_PHONE_REQUEST_TIMEOUT_MS,
+        });
+      }
+      if (options?.releaseAction === 'ban') {
+        await banPhoneActivation(state, activation);
+      } else {
+        await cancelPhoneActivation(state, activation);
+      }
+      return {
+        currentTicketId: normalizeActivation(activation)?.activationId || '',
+        currentTicketRelease: null,
+        nextActivation: null,
+      };
+    }
+
     async function requestAdditionalPhoneSms(state = {}, activation) {
       const config = resolvePhoneConfig(state);
       if (config.provider !== PHONE_SMS_PROVIDER_HERO) {
@@ -6806,11 +6848,18 @@
           'warn'
         );
         if (shouldCancelActivation && activation) {
-          await cancelPhoneActivation(state, activation);
+          const rotation = await rotateCurrentPhoneActivation(state, activation, {
+            releaseAction: 'cancel',
+            reason: String(failureCode || failureReason || '').trim(),
+          });
+          activation = normalizeActivation(rotation?.nextActivation) || null;
         }
         await clearCurrentActivation();
-        activation = null;
-        shouldCancelActivation = false;
+        if (activation) {
+          await persistCurrentActivation(activation);
+        } else {
+          shouldCancelActivation = false;
+        }
         preferReuseExistingActivationOnAddPhone = false;
         addPhoneReentryWithSameActivation = 0;
         let addPhoneSnapshot = {
@@ -6896,11 +6945,18 @@
                   );
                 }
                 if (shouldCancelActivation && activation) {
-                  await cancelPhoneActivation(state, activation);
+                  const rotation = await rotateCurrentPhoneActivation(state, activation, {
+                    releaseAction: 'cancel',
+                    reason: 'returned_to_add_phone_loop',
+                  });
+                  activation = normalizeActivation(rotation?.nextActivation) || null;
                 }
                 await clearCurrentActivation();
-                activation = null;
-                shouldCancelActivation = false;
+                if (activation) {
+                  await persistCurrentActivation(activation);
+                } else {
+                  shouldCancelActivation = false;
+                }
                 preferReuseExistingActivationOnAddPhone = false;
                 addPhoneReentryWithSameActivation = 0;
                 pageState = {
@@ -6956,11 +7012,18 @@
                   );
                 }
                 if (shouldCancelActivation && activation) {
-                  await banPhoneActivation(state, activation);
+                  const rotation = await rotateCurrentPhoneActivation(state, activation, {
+                    releaseAction: 'ban',
+                    reason: 'phone_number_used',
+                  });
+                  activation = normalizeActivation(rotation?.nextActivation) || null;
                 }
                 await clearCurrentActivation();
-                activation = null;
-                shouldCancelActivation = false;
+                if (activation) {
+                  await persistCurrentActivation(activation);
+                } else {
+                  shouldCancelActivation = false;
+                }
                 preferReuseExistingActivationOnAddPhone = false;
                 addPhoneReentryWithSameActivation = 0;
                 pageState = {
@@ -7042,6 +7105,8 @@
 
           let shouldReplaceNumber = false;
           let replaceReason = '';
+          let failedActivationForReplacement = null;
+          let replacementPreparedInAdvance = false;
 
           for (let attempt = 1; attempt <= DEFAULT_PHONE_SUBMIT_ATTEMPTS; attempt += 1) {
             throwIfStopped();
@@ -7051,6 +7116,7 @@
               await markPreferredActivationExhausted(codeResult.reason || 'sms_timeout');
               shouldReplaceNumber = true;
               replaceReason = codeResult.reason || 'sms_not_received';
+              failedActivationForReplacement = activation;
               break;
             }
 
@@ -7086,6 +7152,7 @@
               if (isPhoneNumberUsedError(invalidErrorText)) {
                 shouldReplaceNumber = true;
                 replaceReason = 'phone_number_used';
+                failedActivationForReplacement = activation;
                 await discardPhoneActivationFromReuse(
                   `目标站拒绝该号码（${invalidErrorText}）。`,
                   activation,
@@ -7097,8 +7164,13 @@
                   );
                 }
                 if (shouldCancelActivation && activation) {
-                  await banPhoneActivation(state, activation);
-                  shouldCancelActivation = false;
+                  const rotation = await rotateCurrentPhoneActivation(state, activation, {
+                    releaseAction: 'ban',
+                    reason: 'phone_number_used',
+                  });
+                  activation = normalizeActivation(rotation?.nextActivation) || null;
+                  shouldCancelActivation = Boolean(activation);
+                  replacementPreparedInAdvance = Boolean(activation);
                 }
                 await addLog(
                   `步骤 9：手机号被提示已使用（${invalidErrorText}），立即更换新号码。`,
@@ -7110,9 +7182,15 @@
               if (attempt >= DEFAULT_PHONE_SUBMIT_ATTEMPTS) {
                 shouldReplaceNumber = true;
                 replaceReason = 'code_rejected';
+                failedActivationForReplacement = activation;
                 if (shouldCancelActivation && activation) {
-                  await banPhoneActivation(state, activation);
-                  shouldCancelActivation = false;
+                  const rotation = await rotateCurrentPhoneActivation(state, activation, {
+                    releaseAction: 'ban',
+                    reason: 'code_rejected',
+                  });
+                  activation = normalizeActivation(rotation?.nextActivation) || null;
+                  shouldCancelActivation = Boolean(activation);
+                  replacementPreparedInAdvance = Boolean(activation);
                 }
                 await addLog(
                   `步骤 9：手机验证码连续 ${DEFAULT_PHONE_SUBMIT_ATTEMPTS} 次被拒（${invalidErrorText}），将更换号码。`,
@@ -7218,24 +7296,38 @@
             throw buildPhoneReplacementLimitError(maxNumberReplacementAttempts, replaceReason || 'unknown');
           }
 
-          if (shouldCancelActivation && activation) {
-            await cancelPhoneActivation(state, activation);
+          const failedActivation = failedActivationForReplacement || activation;
+          if (shouldCancelActivation && failedActivation && !replacementPreparedInAdvance) {
+            const releaseAction = (
+              replaceReason === 'phone_number_used'
+              || replaceReason === 'code_rejected'
+            )
+              ? 'ban'
+              : 'cancel';
+            const rotation = await rotateCurrentPhoneActivation(state, failedActivation, {
+              releaseAction,
+              reason: `step9 replace number: ${replaceReason || 'unknown'}`,
+            });
+            activation = normalizeActivation(rotation?.nextActivation) || null;
           }
-          if (shouldRetireFreeReusableActivationOnFailure(await getState(), activation)) {
+          if (shouldRetireFreeReusableActivationOnFailure(await getState(), failedActivation)) {
             await retireFreeReusableActivation(
-              `自动白嫖复用号码 ${activation.phoneNumber} 在失败后被更换。`
+              `自动白嫖复用号码 ${failedActivation.phoneNumber} 在失败后被更换。`
             );
           }
-          if (isPhoneNumberUsedError(replaceReason)) {
+          if (isPhoneNumberUsedError(replaceReason) && failedActivation) {
             await discardPhoneActivationFromReuse(
               `目标站拒绝该号码（${replaceReason}）。`,
-              activation,
+              failedActivation,
               await getState()
             );
           }
           await clearCurrentActivation();
-          activation = null;
-          shouldCancelActivation = false;
+          if (activation) {
+            await persistCurrentActivation(activation);
+          } else {
+            shouldCancelActivation = false;
+          }
           addPhoneReentryWithSameActivation = 0;
 
           let returnResult = null;
@@ -7281,6 +7373,8 @@
             addPhonePage: true,
             phoneVerificationPage: false,
           };
+          failedActivationForReplacement = null;
+          replacementPreparedInAdvance = false;
         }
       } catch (error) {
         const errorMessage = String(error?.message || error || '');

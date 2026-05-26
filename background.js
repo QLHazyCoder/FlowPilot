@@ -21,6 +21,7 @@ importScripts(
   'gopay-utils.js',
   'phone-sms/providers/hero-sms.js',
   'phone-sms/providers/five-sim.js',
+  'phone-sms/providers/nexsms.js',
   'phone-sms/providers/madao.js',
   'phone-sms/providers/registry.js',
   'background/phone-verification-flow.js',
