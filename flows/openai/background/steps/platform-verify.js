@@ -33,7 +33,7 @@
       const factory = deps.createSub2ApiApi
         || self.MultiPageBackgroundSub2ApiApi?.createSub2ApiApi;
       if (typeof factory !== 'function') {
-        throw new Error('SUB2API 直连接口模块未加载，无法提交回调。');
+        throw new Error('SUB2API direct-connect module is not loaded. Cannot submit the callback.');
       }
       sub2ApiApi = factory({
         addLog,
@@ -90,13 +90,13 @@
       try {
         parsed = new URL(rawUrl);
       } catch {
-        throw new Error(`步骤 ${platformVerifyStep} 捕获到的 localhost OAuth 回调地址格式无效，请重新执行步骤 ${confirmOauthStep}。`);
+        throw new Error(`Step ${platformVerifyStep}: The captured localhost OAuth callback URL format is invalid. Rerun Step ${confirmOauthStep}.`);
       }
 
       const code = normalizeString(parsed.searchParams.get('code'));
       const oauthState = normalizeString(parsed.searchParams.get('state'));
       if (!code || !oauthState) {
-        throw new Error(`步骤 ${platformVerifyStep} 捕获到的 localhost OAuth 回调地址缺少 code 或 state，请重新执行步骤 ${confirmOauthStep}。`);
+        throw new Error(`Step ${platformVerifyStep}: The captured localhost OAuth callback URL is missing code or state. Rerun Step ${confirmOauthStep}.`);
       }
 
       return {
@@ -115,19 +115,19 @@
       ]
         .map((value) => normalizeString(value))
         .find(Boolean);
-      return details || `Codex2API 请求失败（HTTP ${responseStatus}）。`;
+      return details || `Codex2API request failed (HTTP ${responseStatus}).`;
     }
 
     function deriveCpaManagementOrigin(vpsUrl) {
       const normalizedUrl = normalizeString(vpsUrl);
       if (!normalizedUrl) {
-        throw new Error('尚未填写 CPA 地址，请先在侧边栏输入。');
+        throw new Error('CPA URL is not filled in yet. Enter it in the side panel first.');
       }
       let parsed;
       try {
         parsed = new URL(normalizedUrl);
       } catch {
-        throw new Error('CPA 地址格式无效，请先在侧边栏检查。');
+        throw new Error('CPA URL format is invalid. Check it in the side panel first.');
       }
       return parsed.origin;
     }
@@ -141,7 +141,7 @@
       ]
         .map((value) => normalizeString(value))
         .find(Boolean);
-      return details || `CPA 管理接口请求失败（HTTP ${responseStatus}）。`;
+      return details || `CPA admin API request failed (HTTP ${responseStatus}).`;
     }
 
     async function fetchCpaManagementJson(origin, path, options = {}) {
@@ -181,7 +181,7 @@
         return payload;
       } catch (error) {
         if (error?.name === 'AbortError') {
-          throw new Error('CPA 管理接口请求超时，请稍后重试。');
+          throw new Error('CPA admin API request timed out. Please try again later.');
         }
         throw error;
       } finally {
@@ -240,7 +240,7 @@
         return payload;
       } catch (error) {
         if (error?.name === 'AbortError') {
-          throw new Error('Codex2API 请求超时，请稍后重试。');
+          throw new Error('Codex2API request timed out. Please try again later.');
         }
         throw error;
       } finally {
@@ -263,17 +263,17 @@
       const confirmOauthStep = resolveConfirmOauthStep(platformVerifyStep, state);
       const authLoginStep = resolveAuthLoginStep(platformVerifyStep, state);
       if (state.localhostUrl && !isLocalhostOAuthCallbackUrl(state.localhostUrl)) {
-        throw new Error(`步骤 ${confirmOauthStep} 捕获到的 localhost OAuth 回调地址无效，请重新执行步骤 ${confirmOauthStep}。`);
+        throw new Error(`Step ${confirmOauthStep}: The captured localhost OAuth callback URL is invalid. Rerun Step ${confirmOauthStep}.`);
       }
       if (!state.localhostUrl) {
-        throw new Error(`缺少 localhost 回调地址，请先完成步骤 ${confirmOauthStep}。`);
+        throw new Error(`Missing localhost callback URL. Complete Step ${confirmOauthStep} first.`);
       }
       if (!state.vpsUrl) {
-        throw new Error('尚未填写 CPA 地址，请先在侧边栏输入。');
+        throw new Error('CPA URL is not filled in yet. Enter it in the side panel first.');
       }
 
       if (shouldBypassStep9ForLocalCpa(state)) {
-        await addStepLog(platformVerifyStep, '检测到本地 CPA，且当前策略为“跳过平台回调验证”，本轮不再重复提交回调地址。', 'info');
+        await addStepLog(platformVerifyStep, 'Detected local CPA, and the current strategy is "skip platform callback verification". This round will not resubmit the callback URL.', 'info');
         await completeNodeFromBackground(state?.nodeId || 'platform-verify', {
           localhostUrl: state.localhostUrl,
           verifiedStatus: 'local-auto',
@@ -284,14 +284,14 @@
       const callback = parseLocalhostCallback(state.localhostUrl, platformVerifyStep, state);
       const expectedState = normalizeString(state.cpaOAuthState);
       if (expectedState && expectedState !== callback.state) {
-        throw new Error(`CPA 回调 state 与当前授权会话不匹配，请重新执行步骤 ${authLoginStep}。`);
+        throw new Error(`CPA callback state does not match the current authorization session. Rerun Step ${authLoginStep}.`);
       }
       const managementKey = normalizeString(state.vpsPassword);
       if (!managementKey) {
-        throw new Error('尚未配置 CPA 管理密钥，请先在侧边栏填写。');
+        throw new Error('CPA admin key is not configured yet. Fill it in the side panel first.');
       }
 
-      await addStepLog(platformVerifyStep, '正在通过 CPA 管理接口提交回调地址...');
+      await addStepLog(platformVerifyStep, 'Submitting the callback URL through the CPA admin API...');
       try {
         const origin = normalizeString(state.cpaManagementOrigin) || deriveCpaManagementOrigin(state.vpsUrl);
         const result = await fetchCpaManagementJson(origin, '/v0/management/oauth-callback', {
@@ -305,7 +305,7 @@
 
         const verifiedStatus = normalizeString(result?.message)
           || normalizeString(result?.status_message)
-          || 'CPA 已通过接口提交回调';
+          || 'CPA callback submitted through the API';
         await addStepLog(platformVerifyStep, verifiedStatus, 'ok');
         await completeNodeFromBackground(state?.nodeId || 'platform-verify', {
           localhostUrl: callback.url,
@@ -313,7 +313,7 @@
         });
       } catch (error) {
         const reason = normalizeString(error?.message) || 'unknown error';
-        await addStepLog(platformVerifyStep, `CPA 接口提交失败：${reason}`, 'error');
+        await addStepLog(platformVerifyStep, `CPA API submission failed: ${reason}`, 'error');
         throw error;
       }
     }
@@ -323,28 +323,28 @@
       const confirmOauthStep = resolveConfirmOauthStep(platformVerifyStep, state);
       const authLoginStep = resolveAuthLoginStep(platformVerifyStep, state);
       if (state.localhostUrl && !isLocalhostOAuthCallbackUrl(state.localhostUrl)) {
-        throw new Error(`步骤 ${confirmOauthStep} 捕获到的 localhost OAuth 回调地址无效，请重新执行步骤 ${confirmOauthStep}。`);
+        throw new Error(`Step ${confirmOauthStep}: The captured localhost OAuth callback URL is invalid. Rerun Step ${confirmOauthStep}.`);
       }
       if (!state.localhostUrl) {
-        throw new Error(`缺少 localhost 回调地址，请先完成步骤 ${confirmOauthStep}。`);
+        throw new Error(`Missing localhost callback URL. Complete Step ${confirmOauthStep} first.`);
       }
       if (!state.codex2apiSessionId) {
-        throw new Error(`缺少 Codex2API 会话信息，请重新执行步骤 ${authLoginStep}。`);
+        throw new Error(`Missing Codex2API session information. Rerun Step ${authLoginStep}.`);
       }
       if (!normalizeString(state.codex2apiAdminKey)) {
-        throw new Error('尚未配置 Codex2API 管理密钥，请先在侧边栏填写。');
+        throw new Error('Codex2API admin key is not configured yet. Fill it in the side panel first.');
       }
 
       const callback = parseLocalhostCallback(state.localhostUrl, platformVerifyStep, state);
       const expectedState = normalizeString(state.codex2apiOAuthState);
       if (expectedState && expectedState !== callback.state) {
-        throw new Error(`Codex2API 回调 state 与当前授权会话不匹配，请重新执行步骤 ${authLoginStep}。`);
+        throw new Error(`Codex2API callback state does not match the current authorization session. Rerun Step ${authLoginStep}.`);
       }
 
       const codex2apiUrl = normalizeCodex2ApiUrl(state.codex2apiUrl);
       const origin = new URL(codex2apiUrl).origin;
 
-      await addStepLog(platformVerifyStep, '正在向 Codex2API 提交回调并创建账号...');
+      await addStepLog(platformVerifyStep, 'Submitting the callback to Codex2API and creating the account...');
       const result = await fetchCodex2ApiJson(origin, '/api/admin/oauth/exchange-code', {
         adminKey: state.codex2apiAdminKey,
         method: 'POST',
@@ -355,7 +355,7 @@
         },
       });
 
-      const verifiedStatus = normalizeString(result?.message) || 'Codex2API OAuth 账号添加成功';
+      const verifiedStatus = normalizeString(result?.message) || 'Codex2API OAuth account added successfully';
       await addStepLog(platformVerifyStep, verifiedStatus, 'ok');
       await completeNodeFromBackground(state?.nodeId || 'platform-verify', {
         localhostUrl: callback.url,
@@ -368,19 +368,19 @@
       const visibleStep = platformVerifyStep;
       const confirmOauthStep = resolveConfirmOauthStep(visibleStep, state);
       if (state.localhostUrl && !isLocalhostOAuthCallbackUrl(state.localhostUrl)) {
-        throw new Error(`步骤 ${confirmOauthStep} 捕获到的 localhost OAuth 回调地址无效，请重新执行步骤 ${confirmOauthStep}。`);
+        throw new Error(`Step ${confirmOauthStep}: The captured localhost OAuth callback URL is invalid. Rerun Step ${confirmOauthStep}.`);
       }
       if (!state.localhostUrl) {
-        throw new Error(`缺少 localhost 回调地址，请先完成步骤 ${confirmOauthStep}。`);
+        throw new Error(`Missing localhost callback URL. Complete Step ${confirmOauthStep} first.`);
       }
       if (!state.sub2apiSessionId) {
-        throw new Error('缺少 SUB2API 会话信息，请重新执行步骤 1。');
+        throw new Error('Missing SUB2API session information. Rerun Step 1.');
       }
       if (!state.sub2apiEmail) {
-        throw new Error('尚未配置 SUB2API 登录邮箱，请先在侧边栏填写。');
+        throw new Error('SUB2API login email is not configured yet. Fill it in the side panel first.');
       }
       if (!state.sub2apiPassword) {
-        throw new Error('尚未配置 SUB2API 登录密码，请先在侧边栏填写。');
+        throw new Error('SUB2API login password is not configured yet. Fill it in the side panel first.');
       }
 
       const sub2apiUrl = normalizeSub2ApiUrl(state.sub2apiUrl);
@@ -398,7 +398,7 @@
             sub2apiUrl,
           }, {
             visibleStep,
-            logLabel: `步骤 ${visibleStep}`,
+            logLabel: `Step ${visibleStep}`,
             logOptions: { step: visibleStep, stepKey: 'platform-verify' },
             timeoutMs: SUB2API_STEP9_RESPONSE_TIMEOUT_MS,
           });
@@ -410,7 +410,7 @@
             throw error;
           }
           await addLog(
-            `SUB2API 回调交换出现临时网络波动（${error.message}），正在重试 ${attempt + 1}/${maxExchangeAttempts}...`,
+            `SUB2API callback exchange hit a temporary network issue (${error.message}). Retrying ${attempt + 1}/${maxExchangeAttempts}...`,
             'warn',
             { step: visibleStep, stepKey: 'platform-verify' }
           );

@@ -35,7 +35,7 @@
       const factory = deps.createCpaApi
         || self.MultiPageBackgroundCpaApi?.createCpaApi;
       if (typeof factory !== 'function') {
-        throw new Error('CPA 接口模块未加载，无法导入当前 ChatGPT 会话。');
+        throw new Error('CPA API module not loaded, unable to import current ChatGPT session.');
       }
       cpaApi = factory({
         addLog: rawAddLog,
@@ -181,16 +181,16 @@
         return fallbackTab.id;
       }
 
-      throw new Error('未找到可读取 ChatGPT 会话的标签页，请先打开一个已登录的 ChatGPT / OpenAI 页面，或完成当前 Plus 支付链路。');
+      throw new Error('No tab found from which to read a ChatGPT session, please open a logged-in ChatGPT / OpenAI page first, or complete the current Plus payment flow.');
     }
 
     async function getResolvedSessionTab(tabId, visibleStep) {
       const tab = await chrome?.tabs?.get?.(tabId).catch(() => null);
       if (!tab?.id) {
-        throw new Error(`步骤 ${visibleStep}：ChatGPT 会话标签页不存在或已关闭，无法继续导入 CPA。`);
+        throw new Error(`Step ${visibleStep}: ChatGPT session tab does not exist or has been closed, unable to continue importing CPA.`);
       }
       if (!isSupportedChatGptSessionUrl(tab.url)) {
-        throw new Error(`步骤 ${visibleStep}：当前标签页不在 ChatGPT / OpenAI 页面，无法读取当前登录会话。`);
+        throw new Error(`Step ${visibleStep}: current tab is not on a ChatGPT / OpenAI page, unable to read current login session.`);
       }
       return tab;
     }
@@ -201,7 +201,7 @@
       await ensureContentScriptReadyOnTabUntilStopped(PLUS_CHECKOUT_SOURCE, tabId, {
         inject: PLUS_CHECKOUT_INJECT_FILES,
         injectSource: PLUS_CHECKOUT_SOURCE,
-        logMessage: `步骤 ${visibleStep}：正在等待 ChatGPT 会话页完成加载，再继续读取当前登录会话...`,
+        logMessage: `Step ${visibleStep}: waiting for ChatGPT session page to finish loading, then continuing to read current login session...`,
       });
 
       const sessionResult = await sendTabMessageUntilStopped(tabId, PLUS_CHECKOUT_SOURCE, {
@@ -224,7 +224,7 @@
         || session?.accessToken
       );
       if (!session && !accessToken) {
-        throw new Error(`步骤 ${visibleStep}：未读取到有效的 ChatGPT 会话或 accessToken，请确认当前标签页仍处于已登录状态。`);
+        throw new Error(`Step ${visibleStep}: did not read a valid ChatGPT session or accessToken, please confirm the current tab is still logged in.`);
       }
 
       return {
@@ -238,14 +238,14 @@
       const visibleStep = resolveVisibleStep(state);
       const api = getCpaApi();
 
-      await addStepLog(visibleStep, '正在定位当前 ChatGPT 会话页并准备导入 CPA...', 'info');
+      await addStepLog(visibleStep, 'Locating current ChatGPT session page and preparing to import CPA...', 'info');
       const tabId = await resolveSessionTabId(state);
       const tab = await getResolvedSessionTab(tabId, visibleStep);
       if (chrome?.tabs?.update) {
         await chrome.tabs.update(tab.id, { active: true }).catch(() => {});
       }
 
-      await addStepLog(visibleStep, '正在读取当前 ChatGPT 登录会话...', 'info');
+      await addStepLog(visibleStep, 'Reading current ChatGPT login session...', 'info');
       const sessionState = await readCurrentChatGptSession(tab.id, visibleStep);
       throwIfStopped();
 
@@ -255,7 +255,7 @@
         accessToken: sessionState.accessToken,
       }, {
         visibleStep,
-        logLabel: `步骤 ${visibleStep}`,
+        logLabel: `Step ${visibleStep}`,
         logOptions: { step: visibleStep, stepKey: 'cpa-session-import' },
         timeoutMs: 120000,
         importTimeoutMs: 120000,

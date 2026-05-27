@@ -3,8 +3,8 @@
     const {
       formShell = null,
       toggleButton = null,
-      hiddenLabel = '添加账号',
-      visibleLabel = '取消添加',
+      hiddenLabel = 'Add Account',
+      visibleLabel = 'Cancel Add',
       onClear = null,
       onFocus = null,
     } = options;

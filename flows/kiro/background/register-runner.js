@@ -194,7 +194,7 @@
   }
 
   function getErrorMessage(error) {
-    return error instanceof Error ? error.message : String(error ?? '未知错误');
+    return error instanceof Error ? error.message : String(error ?? 'Unknown error');
   }
 
   function normalizeKiroCookieDomain(domain = '') {
@@ -477,11 +477,11 @@
 
     async function clearKiroCookiesBeforeStep1() {
       if (!chrome?.cookies?.getAll || !chrome.cookies?.remove) {
-        await log('步骤 1：当前浏览器不支持 cookies API，跳过打开 Kiro 注册页前的 cookie 清理。', 'warn');
+        await log('Step 1: cookies API not supported by this browser, skipping cookie cleanup before opening Kiro registration page.', 'warn');
         return;
       }
 
-      await log('步骤 1：打开 Kiro 注册页前清理 AWS Builder ID 相关 cookies...', 'info');
+      await log('Step 1: clearing AWS Builder ID related cookies before opening Kiro registration page...', 'info');
       const cookies = await collectKiroStep1Cookies(chrome);
       let removedCount = 0;
       for (const cookie of cookies) {
@@ -497,11 +497,11 @@
             origins: KIRO_STEP1_COOKIE_CLEAR_ORIGINS,
           });
         } catch (error) {
-          await log(`步骤 1：browsingData 补扫 cookies 失败：${getErrorMessage(error)}`, 'warn');
+          await log(`Step 1: browsingData cookie sweep failed: ${getErrorMessage(error)}`, 'warn');
         }
       }
 
-      await log(`步骤 1：已清理 ${removedCount} 个 AWS Builder ID 相关 cookies。`, 'ok');
+      await log(`Step 1: cleared ${removedCount} AWS Builder ID related cookies.`, 'ok');
     }
 
     async function ensureKiroRegisterTab(state = {}, options = {}) {
@@ -528,12 +528,12 @@
       }
 
       if (!loginUrl) {
-        throw new Error(options.missingUrlMessage || '缺少 Kiro 注册页地址，请先执行步骤 1。');
+        throw new Error(options.missingUrlMessage || 'Missing Kiro registration page URL, please run step 1 first.');
       }
 
       tabId = await reuseOrCreateTab(KIRO_REGISTER_PAGE_SOURCE_ID, loginUrl);
       if (!Number.isInteger(tabId)) {
-        throw new Error(options.openFailedMessage || '无法打开 Kiro 注册页，请重试步骤 1。');
+        throw new Error(options.openFailedMessage || 'Unable to open Kiro registration page, please retry step 1.');
       }
       await registerTab(KIRO_REGISTER_PAGE_SOURCE_ID, tabId);
       await setState(mergeRuntimePatch(state, {
@@ -591,11 +591,11 @@
           ...options,
           timeoutBudget,
         }),
-        logMessage: options.readyLogMessage || '正在等待 Kiro 页面进入下一状态...',
+        logMessage: options.readyLogMessage || 'Waiting for Kiro page to advance to the next state...',
       });
 
       if (!hasKiroRegisterPageState(result) && !result?.error) {
-        await log('Kiro 注册页通用脚本已响应，但专用页面识别脚本未返回状态，正在重新注入 Kiro 注册页识别脚本...', 'warn');
+        await log('Kiro registration page common script responded, but the page-specific detection script did not return a state. Re-injecting Kiro registration page detection script...', 'warn');
         await injectKiroRegisterContentScripts(tabId);
         result = await sendToContentScriptResilient(KIRO_REGISTER_PAGE_SOURCE_ID, message, {
           timeoutMs: timeoutBudget?.getRemainingMs?.(1000) || timeoutMs,
@@ -604,7 +604,7 @@
             ...options,
             timeoutBudget,
           }),
-          logMessage: options.readyLogMessage || '正在等待 Kiro 页面进入下一状态...',
+          logMessage: options.readyLogMessage || 'Waiting for Kiro page to advance to the next state...',
         });
       }
 
@@ -612,14 +612,14 @@
         throw new Error(result.error);
       }
       if (!hasKiroRegisterPageState(result)) {
-        throw new Error('Kiro 注册页专用页面识别脚本未返回页面状态，请刷新当前 AWS 页面或重新执行当前步骤。');
+        throw new Error('Kiro registration page detection script did not return a page state. Please refresh the current AWS page or re-run the current step.');
       }
       return result;
     }
 
     async function reattachKiroRegisterPage(tabId, options = {}) {
       if (!Number.isInteger(tabId)) {
-        throw new Error('缺少 Kiro 注册页标签页，无法重新连接内容脚本。');
+        throw new Error('Missing Kiro registration page tab, cannot reconnect content script.');
       }
       const timeoutBudget = resolveTimeoutBudget(options);
       if (typeof waitForTabStableComplete === 'function') {
@@ -636,7 +636,7 @@
           injectSource: KIRO_REGISTER_PAGE_SOURCE_ID,
           timeoutMs: timeoutBudget.getRemainingMs(1000),
           retryDelayMs: 800,
-          logMessage: options.injectLogMessage || 'Kiro 注册页已跳转，正在重新连接内容脚本...',
+          logMessage: options.injectLogMessage || 'Kiro registration page navigated, reconnecting content script...',
         });
       }
     }
@@ -653,14 +653,14 @@
           timeoutBudget: createTimeoutBudget(remainingTimeoutMs),
           stableMs: Number(options.recoveryStableMs) || Number(options.stableMs) || 1200,
           initialDelayMs: Number(options.recoveryInitialDelayMs) || 120,
-          injectLogMessage: options.recoveryInjectLogMessage || options.injectLogMessage || 'Kiro 注册页已跳转，正在重新连接内容脚本...',
+          injectLogMessage: options.recoveryInjectLogMessage || options.injectLogMessage || 'Kiro registration page navigated, reconnecting content script...',
         });
       };
     }
 
     async function ensureKiroPageState(tabId, options = {}) {
       if (!Number.isInteger(tabId)) {
-        throw new Error('缺少 Kiro 注册页标签页，无法继续执行。');
+        throw new Error('Missing Kiro registration page tab, cannot continue.');
       }
       const pageLoadTimeoutMs = normalizeKiroPageLoadTimeoutMs(
         options.pageTimeoutMs,
@@ -681,7 +681,7 @@
           injectSource: KIRO_REGISTER_PAGE_SOURCE_ID,
           timeoutMs: timeoutBudget.getRemainingMs(1000),
           retryDelayMs: 800,
-          logMessage: options.injectLogMessage || 'Kiro 注册页内容脚本未就绪，正在等待页面恢复...',
+          logMessage: options.injectLogMessage || 'Kiro registration page content script not ready, waiting for page recovery...',
         });
       }
       if (typeof sendToContentScriptResilient !== 'function') {
@@ -712,7 +712,7 @@
 
     async function waitForKiroPageChange(tabId, options = {}) {
       if (!Number.isInteger(tabId)) {
-        throw new Error('缺少 Kiro 注册页标签页，无法继续执行。');
+        throw new Error('Missing Kiro registration page tab, cannot continue.');
       }
       const pageLoadTimeoutMs = normalizeKiroPageLoadTimeoutMs(
         options.pageTimeoutMs,
@@ -733,7 +733,7 @@
           injectSource: KIRO_REGISTER_PAGE_SOURCE_ID,
           timeoutMs: timeoutBudget.getRemainingMs(1000),
           retryDelayMs: 800,
-          logMessage: options.injectLogMessage || 'Kiro 注册页切换中，正在等待页面恢复...',
+          logMessage: options.injectLogMessage || 'Kiro registration page is switching, waiting for page recovery...',
         });
       }
       if (typeof sendToContentScriptResilient !== 'function') {
@@ -756,7 +756,7 @@
         ...options,
         timeoutBudget,
         timeoutMs: stateWaitTimeoutMs,
-        readyLogMessage: options.readyLogMessage || '正在等待 Kiro 页面完成跳转...',
+        readyLogMessage: options.readyLogMessage || 'Waiting for Kiro page navigation to complete...',
       });
     }
 
@@ -784,7 +784,7 @@
       const email = resolveKiroRegisterEmail(currentState, pageState, fallbackEmail);
       const emailText = email ? ` ${email}` : '';
       return new Error(
-        `步骤 ${step}：邮箱${emailText} 已进入 AWS Builder ID 登录页，说明该邮箱已存在或被 AWS 判定为已有账号；Kiro 注册流程只处理新账号注册，已停止，请换新邮箱重试。`
+        `Step ${step}: email${emailText} reached the AWS Builder ID sign-in page, meaning this email already exists or is treated as an existing account by AWS. The Kiro registration flow only handles new account sign-ups and has stopped. Please retry with a new email.`
       );
     }
 
@@ -868,7 +868,7 @@
         return cachedName;
       }
       if (typeof generateRandomName !== 'function') {
-        throw new Error('Kiro 姓名步骤缺少随机姓名能力，无法继续执行。');
+        throw new Error('Kiro name step missing random-name capability, cannot continue.');
       }
       const generated = generateRandomName();
       if (typeof generated === 'string') {
@@ -881,7 +881,7 @@
       const lastName = cleanString(generated?.lastName);
       const fullName = cleanString(`${firstName} ${lastName}`);
       if (!fullName) {
-        throw new Error('Kiro 姓名步骤未生成有效姓名。');
+        throw new Error('Kiro name step did not produce a valid name.');
       }
       return fullName;
     }
@@ -895,7 +895,7 @@
         };
       }
       if (typeof generatePassword !== 'function') {
-        throw new Error('Kiro 密码步骤缺少公共密码生成能力，无法继续执行。');
+        throw new Error('Kiro password step missing shared password generator, cannot continue.');
       }
       return {
         password: String(generatePassword() || ''),
@@ -905,7 +905,7 @@
 
     async function pollKiroVerificationCode(step, state = {}, nodeId = '') {
       if (typeof pollFlowVerificationCode !== 'function') {
-        throw new Error('Kiro 验证码步骤缺少共享邮件轮询能力，无法继续执行。');
+        throw new Error('Kiro verification-code step missing shared mail polling, cannot continue.');
       }
 
       const runtimeState = readKiroRuntime(state);
@@ -917,14 +917,14 @@
         : requestedAt;
 
       return pollFlowVerificationCode({
-        actionLabel: 'Kiro 验证码',
+        actionLabel: 'Kiro verification code',
         filterAfterTimestamp,
         flowId: 'kiro',
         logStep: step,
         logStepKey: 'kiro-submit-verification-code',
-        missingCapabilityMessage: 'Kiro 验证码步骤缺少共享邮件轮询能力，无法继续执行。',
+        missingCapabilityMessage: 'Kiro verification-code step missing shared mail polling, cannot continue.',
         nodeId: 'kiro-submit-verification-code',
-        notFoundMessage: `步骤 ${step}：邮箱轮询结束，但未获取到 Kiro 验证码。`,
+        notFoundMessage: `Step ${step}: mailbox polling ended without obtaining Kiro verification code.`,
         state: {
           ...state,
           activeFlowId: 'kiro',
@@ -943,7 +943,7 @@
         const loginUrl = KIRO_SIGNIN_URL;
         const tabId = await reuseOrCreateTab(KIRO_REGISTER_PAGE_SOURCE_ID, loginUrl);
         if (!Number.isInteger(tabId)) {
-          throw new Error('无法打开 Kiro 注册页，请重试步骤 1。');
+          throw new Error('Unable to open Kiro registration page, please retry step 1.');
         }
         await registerTab(KIRO_REGISTER_PAGE_SOURCE_ID, tabId);
         await activateTab(tabId);
@@ -953,12 +953,12 @@
           targetStates: ['kiro_signin_page', 'email_entry'],
           stableMs: 2500,
           initialDelayMs: 300,
-          injectLogMessage: '步骤 1：Kiro 注册页内容脚本未就绪，正在等待页面恢复...',
-          readyLogMessage: '步骤 1：正在等待 Kiro 官方登录页加载完成...',
+          injectLogMessage: 'Step 1: Kiro registration page content script not ready, waiting for page recovery...',
+          readyLogMessage: 'Step 1: waiting for the Kiro official sign-in page to finish loading...',
         });
 
         if (landingResult?.state === 'kiro_signin_page') {
-          await log('步骤 1：正在选择 AWS Builder ID 登录方式...', 'info', nodeId);
+          await log('Step 1: selecting AWS Builder ID sign-in option...', 'info', nodeId);
           const selectResult = await sendToContentScriptResilient(KIRO_REGISTER_PAGE_SOURCE_ID, {
             type: 'EXECUTE_NODE',
             nodeId: 'kiro-open-register-page',
@@ -969,7 +969,7 @@
             timeoutMs: 30000,
             retryDelayMs: 700,
             onRetryableError: buildKiroRetryRecovery(tabId, {}),
-            logMessage: '步骤 1：正在点击 Kiro 官方登录页的 Builder ID...',
+            logMessage: 'Step 1: clicking Builder ID on the Kiro official sign-in page...',
           });
           if (selectResult?.error) {
             throw new Error(selectResult.error);
@@ -979,9 +979,9 @@
             targetStates: ['email_entry'],
             stableMs: 2500,
             initialDelayMs: 300,
-            injectLogMessage: '步骤 1：选择 Builder ID 后页面跳转中，正在等待 Kiro 注册页恢复...',
-            readyLogMessage: '步骤 1：正在等待 Builder ID 邮箱输入框加载完成...',
-            timeoutMessage: '选择 Builder ID 后未进入邮箱页，请检查当前 Kiro 登录页或代理状态。',
+            injectLogMessage: 'Step 1: page navigating after Builder ID selection, waiting for Kiro registration page recovery...',
+            readyLogMessage: 'Step 1: waiting for the Builder ID email input to finish loading...',
+            timeoutMessage: 'After selecting Builder ID, the email page did not load. Please check the current Kiro sign-in page or proxy state.',
           });
         }
 
@@ -1039,7 +1039,7 @@
         };
 
         const payload = await applyRuntimeState(currentState, nextPatch);
-        await log('Kiro 注册页已就绪，已进入 Builder ID 邮箱页，请在下一步中获取邮箱并继续。', 'ok', nodeId);
+        await log('Kiro registration page is ready and on the Builder ID email page. Get the email and continue in the next step.', 'ok', nodeId);
         await completeNodeFromBackground(nodeId, payload);
       } catch (error) {
         const message = getErrorMessage(error);
@@ -1053,15 +1053,15 @@
       const currentState = await getExecutionState(state);
       try {
         const tabId = await activateKiroRegisterTab(currentState, {
-          missingUrlMessage: '缺少 Kiro 注册页地址，请先执行步骤 1。',
-          openFailedMessage: '无法恢复 Kiro 注册页，请重新执行步骤 1。',
+          missingUrlMessage: 'Missing Kiro registration page URL, please run step 1 first.',
+          openFailedMessage: 'Unable to restore Kiro registration page, please re-run step 1.',
         });
         const currentPageState = await readKiroRegisterPageState(tabId, {
           step: 2,
           stableMs: 2500,
           initialDelayMs: 300,
-          injectLogMessage: '步骤 2：Kiro 注册页内容脚本未就绪，正在等待页面恢复...',
-          readyLogMessage: '步骤 2：正在读取 Kiro 注册页当前状态...',
+          injectLogMessage: 'Step 2: Kiro registration page content script not ready, waiting for page recovery...',
+          readyLogMessage: 'Step 2: reading current state of Kiro registration page...',
         });
         assertKiroRegistrationOnlyState(currentPageState, currentState, 2);
 
@@ -1069,7 +1069,7 @@
           const runtimeState = readKiroRuntime(currentState);
           const adoptedEmail = resolveKiroRegisterEmail(currentState, currentPageState);
           if (!adoptedEmail) {
-            throw new Error('步骤 2：当前已不在邮箱页，但无法识别注册邮箱，请回到邮箱页重新提交或在配置中填入注册邮箱。');
+            throw new Error('Step 2: no longer on the email page but could not identify the registration email. Please return to the email page and resubmit, or set the registration email in config.');
           }
           const status = getKiroRegisterStatusForPageState(currentPageState.state);
           await adoptKiroRegisterPageState(currentState, currentPageState, nodeId, {
@@ -1079,22 +1079,22 @@
               ? runtimeState.register?.verificationRequestedAt || 0
               : undefined,
           });
-          await log(`步骤 2：检测到当前已进入 ${currentPageState.state}，已收养注册进度并继续。`, 'ok', nodeId);
+          await log(`Step 2: already at ${currentPageState.state}, adopted registration progress and continuing.`, 'ok', nodeId);
           return;
         }
 
         if (currentPageState?.state !== 'email_entry') {
-          throw new Error(`步骤 2：当前页面状态为 ${currentPageState?.state || 'unknown'}，不是 Kiro 注册邮箱页，请先执行步骤 1 或回到邮箱输入页。`);
+          throw new Error(`Step 2: current page state is ${currentPageState?.state || 'unknown'}, not the Kiro registration email page. Please run step 1 first or return to the email input page.`);
         }
 
         if (typeof resolveSignupEmailForFlow !== 'function') {
-          throw new Error('Kiro 邮箱步骤缺少公共邮箱解析能力，无法继续执行。');
+          throw new Error('Kiro email step missing shared email resolver, cannot continue.');
         }
 
         const resolvedEmail = await resolveSignupEmailForFlow(currentState, {
           preserveAccountIdentity: true,
         });
-        await log(`步骤 2：已获取邮箱 ${resolvedEmail}，正在提交到 Kiro 注册页...`, 'info', nodeId);
+        await log(`Step 2: obtained email ${resolvedEmail}, submitting to Kiro registration page...`, 'info', nodeId);
 
         await activateTab(tabId);
         const submitResult = await sendToContentScriptResilient(KIRO_REGISTER_PAGE_SOURCE_ID, {
@@ -1109,7 +1109,7 @@
           timeoutMs: 30000,
           retryDelayMs: 700,
           onRetryableError: buildKiroRetryRecovery(tabId, {}),
-          logMessage: '步骤 2：正在向 Kiro 注册页提交邮箱...',
+          logMessage: 'Step 2: submitting email to Kiro registration page...',
         });
         if (submitResult?.error) {
           throw new Error(submitResult.error);
@@ -1120,13 +1120,13 @@
           fromStates: ['email_entry'],
           stableMs: 1500,
           initialDelayMs: 150,
-          injectLogMessage: '步骤 2：邮箱提交后页面切换中，正在等待 Kiro 注册页恢复...',
-          readyLogMessage: '步骤 2：邮箱已提交，正在等待 Kiro 注册链路进入下一页...',
-          timeoutMessage: '邮箱提交后页面没有离开邮箱页，请检查邮箱是否被拒绝、页面是否异常或代理是否卡住。',
+          injectLogMessage: 'Step 2: page switching after email submission, waiting for Kiro registration page recovery...',
+          readyLogMessage: 'Step 2: email submitted, waiting for the Kiro registration flow to reach the next page...',
+          timeoutMessage: 'After email submission, the page did not leave the email page. Check whether the email was rejected, the page is broken, or the proxy is stuck.',
         });
         assertKiroRegistrationOnlyState(landingResult, currentState, 2, resolvedEmail);
         if (!KIRO_REGISTER_AFTER_EMAIL_STATES.includes(landingResult?.state)) {
-          throw new Error(`步骤 2：邮箱提交后进入了无法继续注册的页面状态：${landingResult?.state || 'unknown'}。`);
+          throw new Error(`Step 2: after email submission the page entered a state that cannot continue registration: ${landingResult?.state || 'unknown'}.`);
         }
 
         const landedStatus = getKiroRegisterStatusForPageState(landingResult.state);
@@ -1152,7 +1152,7 @@
             error: '',
           },
         });
-        await log(`步骤 2：邮箱 ${resolvedEmail} 已提交，当前页面状态：${landingResult?.state || 'unknown'}。`, 'ok', nodeId);
+        await log(`Step 2: email ${resolvedEmail} submitted, current page state: ${landingResult?.state || 'unknown'}.`, 'ok', nodeId);
         await completeNodeFromBackground(nodeId, {
           ...payload,
           email: resolvedEmail,
@@ -1173,21 +1173,21 @@
         const runtimeState = readKiroRuntime(currentState);
 
         const tabId = await activateKiroRegisterTab(currentState, {
-          missingUrlMessage: '缺少 Kiro 注册页地址，请先执行步骤 1。',
-          openFailedMessage: '无法恢复 Kiro 注册页，请重新执行步骤 1。',
+          missingUrlMessage: 'Missing Kiro registration page URL, please run step 1 first.',
+          openFailedMessage: 'Unable to restore Kiro registration page, please re-run step 1.',
         });
         const currentPageState = await readKiroRegisterPageState(tabId, {
           step: 3,
           stableMs: 1500,
           initialDelayMs: 150,
-          injectLogMessage: '步骤 3：Kiro 姓名页内容脚本未就绪，正在等待页面恢复...',
-          readyLogMessage: '步骤 3：正在读取 Kiro 注册页当前状态...',
+          injectLogMessage: 'Step 3: Kiro name page content script not ready, waiting for page recovery...',
+          readyLogMessage: 'Step 3: reading current state of Kiro registration page...',
         });
         assertKiroRegistrationOnlyState(currentPageState, currentState, 3);
 
         const currentEmail = resolveKiroRegisterEmail(currentState, currentPageState);
         if (!currentEmail) {
-          throw new Error('步骤 3：缺少 Kiro 注册邮箱，请先完成步骤 2。');
+          throw new Error('Step 3: missing Kiro registration email, please complete step 2 first.');
         }
 
         if (KIRO_REGISTER_AFTER_NAME_STATES.includes(currentPageState?.state)) {
@@ -1199,17 +1199,17 @@
               ? (runtimeState.register?.verificationRequestedAt || 0)
               : undefined,
           });
-          await log(`步骤 3：检测到当前已进入 ${currentPageState.state}，已收养注册进度并继续。`, 'ok', nodeId);
+          await log(`Step 3: already at ${currentPageState.state}, adopted registration progress and continuing.`, 'ok', nodeId);
           return;
         }
 
         if (currentPageState?.state !== 'name_entry') {
-          throw new Error(`步骤 3：当前页面状态为 ${currentPageState?.state || 'unknown'}，不是 Kiro 注册姓名页，请先完成步骤 2。`);
+          throw new Error(`Step 3: current page state is ${currentPageState?.state || 'unknown'}, not the Kiro registration name page. Please complete step 2 first.`);
         }
 
         const fullName = resolveKiroFullName(currentState);
         const verificationRequestedAt = Date.now();
-        await log(`步骤 3：正在填写姓名 ${fullName} 并继续...`, 'info', nodeId);
+        await log(`Step 3: filling in name ${fullName} and continuing...`, 'info', nodeId);
 
         const submitResult = await sendToContentScriptResilient(KIRO_REGISTER_PAGE_SOURCE_ID, {
           type: 'EXECUTE_NODE',
@@ -1223,7 +1223,7 @@
           timeoutMs: 30000,
           retryDelayMs: 700,
           onRetryableError: buildKiroRetryRecovery(tabId, {}),
-          logMessage: '步骤 3：正在向 Kiro 姓名页提交姓名...',
+          logMessage: 'Step 3: submitting name to Kiro name page...',
         });
         if (submitResult?.error) {
           throw new Error(submitResult.error);
@@ -1234,13 +1234,13 @@
           fromStates: ['name_entry'],
           stableMs: 1500,
           initialDelayMs: 150,
-          injectLogMessage: '步骤 3：姓名提交后页面切换中，正在等待 Kiro 注册页恢复...',
-          readyLogMessage: '步骤 3：姓名已提交，正在等待 Kiro 注册链路进入下一页...',
-          timeoutMessage: '姓名提交后未进入验证码页，请检查当前页面状态。',
+          injectLogMessage: 'Step 3: page switching after name submission, waiting for Kiro registration page recovery...',
+          readyLogMessage: 'Step 3: name submitted, waiting for the Kiro registration flow to reach the next page...',
+          timeoutMessage: 'After name submission, the verification-code page did not load. Please check the current page state.',
         });
         assertKiroRegistrationOnlyState(landingResult, currentState, 3, currentEmail);
         if (!KIRO_REGISTER_AFTER_NAME_STATES.includes(landingResult?.state)) {
-          throw new Error(`步骤 3：姓名提交后进入了无法继续注册的页面状态：${landingResult?.state || 'unknown'}。`);
+          throw new Error(`Step 3: after name submission the page entered a state that cannot continue registration: ${landingResult?.state || 'unknown'}.`);
         }
 
         const landedStatus = getKiroRegisterStatusForPageState(landingResult.state);
@@ -1266,7 +1266,7 @@
             error: '',
           },
         });
-        await log(`步骤 3：姓名已提交，当前页面状态：${landingResult?.state || 'unknown'}。`, 'ok', nodeId);
+        await log(`Step 3: name submitted, current page state: ${landingResult?.state || 'unknown'}.`, 'ok', nodeId);
         await completeNodeFromBackground(nodeId, payload);
       } catch (error) {
         const message = getErrorMessage(error);
@@ -1280,21 +1280,21 @@
       const currentState = await getExecutionState(state);
       try {
         const tabId = await activateKiroRegisterTab(currentState, {
-          missingUrlMessage: '缺少 Kiro 注册页地址，请先执行步骤 1。',
-          openFailedMessage: '无法恢复 Kiro 注册页，请重新执行步骤 1。',
+          missingUrlMessage: 'Missing Kiro registration page URL, please run step 1 first.',
+          openFailedMessage: 'Unable to restore Kiro registration page, please re-run step 1.',
         });
         const currentPageState = await readKiroRegisterPageState(tabId, {
           step: 4,
           stableMs: 1500,
           initialDelayMs: 150,
-          injectLogMessage: '步骤 4：Kiro 验证码页内容脚本未就绪，正在等待页面恢复...',
-          readyLogMessage: '步骤 4：正在读取 Kiro 注册页当前状态...',
+          injectLogMessage: 'Step 4: Kiro verification-code page content script not ready, waiting for page recovery...',
+          readyLogMessage: 'Step 4: reading current state of Kiro registration page...',
         });
         assertKiroRegistrationOnlyState(currentPageState, currentState, 4);
 
         const currentEmail = resolveKiroRegisterEmail(currentState, currentPageState);
         if (!currentEmail) {
-          throw new Error('步骤 4：缺少 Kiro 注册邮箱，请先完成步骤 2，或在当前验证码页显示注册邮箱后重试。');
+          throw new Error('Step 4: missing Kiro registration email. Please complete step 2 first, or retry after the registration email appears on the current verification-code page.');
         }
 
         if (KIRO_REGISTER_AFTER_OTP_STATES.includes(currentPageState?.state)) {
@@ -1303,12 +1303,12 @@
             email: currentEmail,
             status,
           });
-          await log(`步骤 4：检测到当前已进入 ${currentPageState.state}，已收养注册进度并继续。`, 'ok', nodeId);
+          await log(`Step 4: already at ${currentPageState.state}, adopted registration progress and continuing.`, 'ok', nodeId);
           return;
         }
 
         if (currentPageState?.state !== 'register_otp_page') {
-          throw new Error(`步骤 4：当前页面状态为 ${currentPageState?.state || 'unknown'}，不是 Kiro 注册验证码页，请先完成前置注册步骤。`);
+          throw new Error(`Step 4: current page state is ${currentPageState?.state || 'unknown'}, not the Kiro registration verification-code page. Please complete the earlier registration steps first.`);
         }
 
         const pollingState = {
@@ -1323,9 +1323,9 @@
         const codeResult = await pollKiroVerificationCode(4, pollingState, nodeId);
         const code = cleanString(codeResult?.code);
         if (!code) {
-          throw new Error('未能获取到 Kiro 邮箱验证码。');
+          throw new Error('Failed to obtain Kiro email verification code.');
         }
-        await log(`步骤 4：已获取验证码 ${code}，正在返回 Kiro 注册页提交...`, 'info', nodeId);
+        await log(`Step 4: obtained verification code ${code}, returning to Kiro registration page to submit...`, 'info', nodeId);
 
         await activateTab(tabId);
         const submitResult = await sendToContentScriptResilient(KIRO_REGISTER_PAGE_SOURCE_ID, {
@@ -1340,7 +1340,7 @@
           timeoutMs: 30000,
           retryDelayMs: 700,
           onRetryableError: buildKiroRetryRecovery(tabId, {}),
-          logMessage: '步骤 4：正在向 Kiro 验证码页提交验证码...',
+          logMessage: 'Step 4: submitting verification code to Kiro verification-code page...',
         });
         if (submitResult?.error) {
           throw new Error(submitResult.error);
@@ -1351,17 +1351,17 @@
           fromStates: ['register_otp_page'],
           stableMs: 1500,
           initialDelayMs: 150,
-          injectLogMessage: '步骤 4：验证码提交后页面切换中，正在等待 Kiro 注册页恢复...',
-          readyLogMessage: '步骤 4：验证码已提交，正在等待 Kiro 密码页加载完成...',
+          injectLogMessage: 'Step 4: page switching after verification-code submission, waiting for Kiro registration page recovery...',
+          readyLogMessage: 'Step 4: verification code submitted, waiting for the Kiro password page to finish loading...',
           returnOnCodeInvalid: true,
-          timeoutMessage: '验证码提交后未进入密码页，请检查验证码是否失效或页面是否异常。',
+          timeoutMessage: 'After verification-code submission, the password page did not load. Please check whether the code expired or the page is broken.',
         });
         assertKiroRegistrationOnlyState(landingResult, currentState, 4, currentEmail);
         if (landingResult?.state === 'register_otp_page' && landingResult?.codeInvalid) {
-          throw new Error('步骤 4：Kiro 提示验证码无效或已过期，已停止当前注册；请重新获取验证码或换邮箱重试。');
+          throw new Error('Step 4: Kiro reported the verification code is invalid or expired and stopped the current registration. Please obtain a new verification code or retry with a different email.');
         }
         if (!KIRO_REGISTER_AFTER_OTP_STATES.includes(landingResult?.state)) {
-          throw new Error(`步骤 4：验证码提交后进入了无法继续注册的页面状态：${landingResult?.state || 'unknown'}。`);
+          throw new Error(`Step 4: after verification-code submission the page entered a state that cannot continue registration: ${landingResult?.state || 'unknown'}.`);
         }
 
         const landedStatus = getKiroRegisterStatusForPageState(landingResult.state);
@@ -1383,7 +1383,7 @@
             error: '',
           },
         });
-        await log(`步骤 4：验证码已提交，当前页面状态：${landingResult?.state || 'unknown'}。`, 'ok', nodeId);
+        await log(`Step 4: verification code submitted, current page state: ${landingResult?.state || 'unknown'}.`, 'ok', nodeId);
         await completeNodeFromBackground(nodeId, {
           ...payload,
           code,
@@ -1402,15 +1402,15 @@
       const currentState = await getExecutionState(state);
       try {
         const tabId = await activateKiroRegisterTab(currentState, {
-          missingUrlMessage: '缺少 Kiro 注册页地址，请先执行步骤 1。',
-          openFailedMessage: '无法恢复 Kiro 注册页，请重新执行步骤 1。',
+          missingUrlMessage: 'Missing Kiro registration page URL, please run step 1 first.',
+          openFailedMessage: 'Unable to restore Kiro registration page, please re-run step 1.',
         });
         const currentPageState = await readKiroRegisterPageState(tabId, {
           step: 5,
           stableMs: 1500,
           initialDelayMs: 150,
-          injectLogMessage: '步骤 5：Kiro 密码页内容脚本未就绪，正在等待页面恢复...',
-          readyLogMessage: '步骤 5：正在读取 Kiro 注册页当前状态...',
+          injectLogMessage: 'Step 5: Kiro password page content script not ready, waiting for page recovery...',
+          readyLogMessage: 'Step 5: reading current state of Kiro registration page...',
         });
         assertKiroRegistrationOnlyState(currentPageState, currentState, 5);
 
@@ -1421,18 +1421,18 @@
             email: currentEmail,
             status,
           });
-          await log(`步骤 5：检测到当前已进入 ${currentPageState.state}，已收养注册进度并继续。`, 'ok', nodeId);
+          await log(`Step 5: already at ${currentPageState.state}, adopted registration progress and continuing.`, 'ok', nodeId);
           return;
         }
 
         if (currentPageState?.state !== 'create_password_page') {
-          throw new Error(`步骤 5：当前页面状态为 ${currentPageState?.state || 'unknown'}，不是 Kiro 注册密码页，请先完成前置注册步骤。`);
+          throw new Error(`Step 5: current page state is ${currentPageState?.state || 'unknown'}, not the Kiro registration password page. Please complete the earlier registration steps first.`);
         }
 
         const passwordResolution = resolveKiroPassword(currentState);
         const password = passwordResolution.password;
         if (!password) {
-          throw new Error('未生成有效的 Kiro 账户密码。');
+          throw new Error('Failed to generate a valid Kiro account password.');
         }
         if (typeof setPasswordState === 'function') {
           await setPasswordState(password);
@@ -1441,9 +1441,9 @@
         }
 
         const passwordModeLabel = passwordResolution.mode === 'custom'
-          ? '自定义密码'
-          : (passwordResolution.mode === 'reused' ? '复用现有密码' : '自动生成密码');
-        await log(`步骤 5：正在填写 Kiro 账户密码（${passwordModeLabel}，${password.length} 位）...`, 'info', nodeId);
+          ? 'custom password'
+          : (passwordResolution.mode === 'reused' ? 'reusing existing password' : 'auto-generated password');
+        await log(`Step 5: filling in Kiro account password (${passwordModeLabel}, ${password.length} chars)...`, 'info', nodeId);
 
         const submitResult = await sendToContentScriptResilient(KIRO_REGISTER_PAGE_SOURCE_ID, {
           type: 'EXECUTE_NODE',
@@ -1457,7 +1457,7 @@
           timeoutMs: 30000,
           retryDelayMs: 700,
           onRetryableError: buildKiroRetryRecovery(tabId, {}),
-          logMessage: '步骤 5：正在向 Kiro 密码页提交密码...',
+          logMessage: 'Step 5: submitting password to Kiro password page...',
         });
         if (submitResult?.error) {
           throw new Error(submitResult.error);
@@ -1468,13 +1468,13 @@
           fromStates: ['create_password_page'],
           stableMs: 1200,
           initialDelayMs: 120,
-          injectLogMessage: '步骤 5：密码提交后页面切换中，正在等待 Kiro 注册页恢复...',
-          readyLogMessage: '步骤 5：密码已提交，正在等待 Kiro 注册页完成跳转...',
-          timeoutMessage: '密码提交后页面未离开密码页，请检查密码规则或当前页面提示。',
+          injectLogMessage: 'Step 5: page switching after password submission, waiting for Kiro registration page recovery...',
+          readyLogMessage: 'Step 5: password submitted, waiting for the Kiro registration page navigation to complete...',
+          timeoutMessage: 'After password submission, the page did not leave the password page. Please check the password rules or the current page hint.',
         });
         assertKiroRegistrationOnlyState(landingResult, currentState, 5, currentEmail);
         if (!KIRO_REGISTER_AFTER_PASSWORD_STATES.includes(landingResult?.state)) {
-          throw new Error(`步骤 5：密码提交后进入了无法继续注册的页面状态：${landingResult?.state || 'unknown'}。`);
+          throw new Error(`Step 5: after password submission the page entered a state that cannot continue registration: ${landingResult?.state || 'unknown'}.`);
         }
 
         const nextRegisterStatus = getKiroRegisterStatusForPageState(landingResult?.state);
@@ -1495,7 +1495,7 @@
             error: '',
           },
         });
-        await log(`步骤 5：密码已提交，当前页面状态：${landingResult?.state || 'unknown'}。`, 'ok', nodeId);
+        await log(`Step 5: password submitted, current page state: ${landingResult?.state || 'unknown'}.`, 'ok', nodeId);
         await completeNodeFromBackground(nodeId, payload);
       } catch (error) {
         const message = getErrorMessage(error);
@@ -1509,25 +1509,25 @@
       const currentState = await getExecutionState(state);
       try {
         const tabId = await activateKiroRegisterTab(currentState, {
-          missingUrlMessage: '缺少 Kiro 注册页地址，请先执行步骤 1。',
-          openFailedMessage: '无法恢复 Kiro 注册页，请重新执行步骤 1。',
+          missingUrlMessage: 'Missing Kiro registration page URL, please run step 1 first.',
+          openFailedMessage: 'Unable to restore Kiro registration page, please re-run step 1.',
         });
         let landingResult = await readKiroRegisterPageState(tabId, {
           step: 6,
           stableMs: 1500,
           initialDelayMs: 150,
-          injectLogMessage: '步骤 6：Kiro 授权确认页内容脚本未就绪，正在等待页面恢复...',
-          readyLogMessage: '步骤 6：正在读取 Kiro 注册页当前状态...',
-          timeoutMessage: '未进入 Kiro 授权确认页，请检查当前页面状态。',
+          injectLogMessage: 'Step 6: Kiro authorization consent page content script not ready, waiting for page recovery...',
+          readyLogMessage: 'Step 6: reading current state of Kiro registration page...',
+          timeoutMessage: 'Did not reach the Kiro authorization consent page. Please check the current page state.',
         });
         assertKiroRegistrationOnlyState(landingResult, currentState, 6);
 
         if (!['authorization_page', 'success_page', 'kiro_web_signed_in'].includes(landingResult?.state)) {
-          throw new Error(`步骤 6：当前页面状态为 ${landingResult?.state || 'unknown'}，不是 Kiro 注册授权确认页，请先完成前置注册步骤。`);
+          throw new Error(`Step 6: current page state is ${landingResult?.state || 'unknown'}, not the Kiro registration authorization consent page. Please complete the earlier registration steps first.`);
         }
 
         if (landingResult?.state === 'authorization_page') {
-          await log('步骤 6：正在确认访问并完成 Kiro 注册授权...', 'info', nodeId);
+          await log('Step 6: confirming access and finishing Kiro registration authorization...', 'info', nodeId);
           const submitResult = await sendToContentScriptResilient(KIRO_REGISTER_PAGE_SOURCE_ID, {
             type: 'EXECUTE_NODE',
             nodeId: 'kiro-complete-register-consent',
@@ -1540,7 +1540,7 @@
             timeoutMs: 60000,
             retryDelayMs: 700,
             onRetryableError: buildKiroRetryRecovery(tabId, {}),
-            logMessage: '步骤 6：正在处理 Kiro 注册授权确认页...',
+            logMessage: 'Step 6: processing Kiro registration authorization consent page...',
           });
           if (submitResult?.error) {
             throw new Error(submitResult.error);
@@ -1550,9 +1550,9 @@
             targetStates: ['success_page', 'kiro_web_signed_in'],
             stableMs: 2000,
             initialDelayMs: 300,
-            injectLogMessage: '步骤 6：授权确认后页面跳转中，正在等待 Kiro Web 登录态恢复...',
-            readyLogMessage: '步骤 6：授权确认已提交，正在等待回到 Kiro Web...',
-            timeoutMessage: '授权确认后未回到 Kiro Web 登录完成页，请检查当前页面或代理状态。',
+            injectLogMessage: 'Step 6: page navigating after authorization consent, waiting for Kiro Web sign-in to be restored...',
+            readyLogMessage: 'Step 6: authorization consent submitted, waiting for return to Kiro Web...',
+            timeoutMessage: 'After authorization consent, did not return to the Kiro Web sign-in completion page. Please check the current page or proxy state.',
           });
           assertKiroRegistrationOnlyState(landingResult, currentState, 6);
         }
@@ -1580,7 +1580,7 @@
             error: '',
           },
         });
-        await log('步骤 6：注册页授权已完成，Kiro Web 登录态已建立。', 'ok', nodeId);
+        await log('Step 6: registration page authorization complete, Kiro Web sign-in established.', 'ok', nodeId);
         await completeNodeFromBackground(nodeId, payload);
       } catch (error) {
         const message = getErrorMessage(error);

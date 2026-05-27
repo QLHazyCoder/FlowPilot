@@ -88,8 +88,8 @@
     }
 
     function buildAutomationWindowUnavailableError(error) {
-      const suffix = error?.message ? ` 原因：${error.message}` : '';
-      return new Error(`自动任务窗口已不可用，请在目标 Chrome 窗口重新打开侧边栏并启动任务。${suffix}`);
+      const suffix = error?.message ? ` Reason: ${error.message}` : '';
+      return new Error(`The automation task window is no longer available. Please reopen the side panel in the target Chrome window and start the task again.${suffix}`);
     }
 
     async function getAutomationWindowId(options = {}) {
@@ -319,7 +319,7 @@
         await setState({ tabRegistry: registry });
       }
 
-      await addLog(`已关闭 ${matchedIds.length} 个旧的${getSourceLabel(source)}标签页。`, 'info');
+      await addLog(`Closed ${matchedIds.length} stale ${getSourceLabel(source)} tabs.`, 'info');
     }
 
     function isLocalhostOAuthCallbackTabMatch(callbackUrl, candidateUrl) {
@@ -357,7 +357,7 @@
         await setState({ tabRegistry: registry });
       }
 
-      await addLog(`已关闭 ${matchedIds.length} 个匹配当前 OAuth callback 的 localhost 残留标签页。`, 'info');
+      await addLog(`Closed ${matchedIds.length} localhost residual tabs matching the current OAuth callback.`, 'info');
       return matchedIds.length;
     }
 
@@ -387,7 +387,7 @@
       if (!matchedIds.length) return 0;
 
       await chrome.tabs.remove(matchedIds).catch(() => { });
-      await addLog(`已关闭 ${matchedIds.length} 个匹配 ${prefix} 的 localhost 残留标签页。`, 'info');
+      await addLog(`Closed ${matchedIds.length} localhost residual tabs matching ${prefix}.`, 'info');
       return matchedIds.length;
     }
 
@@ -540,7 +540,7 @@
         }
 
         if (!inject || !inject.length) {
-          throw new Error(`${getSourceLabel(source)} 内容脚本未就绪，且未提供可用的注入文件。`);
+          throw new Error(`${getSourceLabel(source)} content script is not ready and no injectable files were provided.`);
         }
 
         let registry = await getTabRegistry();
@@ -592,7 +592,7 @@
         await sleepOrStop(retryDelayMs);
       }
 
-      throw lastError || new Error(`${getSourceLabel(source)} 内容脚本长时间未就绪。`);
+      throw lastError || new Error(`${getSourceLabel(source)} content script did not become ready in time.`);
     }
 
     function getContentScriptResponseTimeoutMs(message) {
@@ -624,10 +624,10 @@
       const rawMessage = error?.message || String(error || '');
       if (isRetryableContentScriptTransportError(error)) {
         return new Error(
-          `${getSourceLabel(source)} 页面刚完成跳转或刷新，内容脚本还没有重新接回；扩展已自动重试，但仍未恢复。请重试当前步骤。`
+          `${getSourceLabel(source)} page just navigated or reloaded and the content script has not re-attached; the extension auto-retried but it still has not recovered. Please retry the current step.`
         );
       }
-      return new Error(rawMessage || `${getSourceLabel(source)} 页面通信失败。`);
+      return new Error(rawMessage || `${getSourceLabel(source)} page communication failed.`);
     }
 
     function getMessageDebugLabel(source, message, tabId = null) {
@@ -664,7 +664,7 @@
           settled = true;
           const seconds = Math.ceil(responseTimeoutMs / 1000);
           console.warn(LOG_PREFIX, `[sendTabMessageWithTimeout] timeout ${debugLabel} after ${Date.now() - startedAt}ms`);
-          reject(new Error(`${getSourceLabel(source)} 内容脚本 ${seconds} 秒内未响应，请刷新页面后重试。`));
+          reject(new Error(`${getSourceLabel(source)} content script did not respond within ${seconds}s. Please refresh the page and retry.`));
         }, responseTimeoutMs);
 
         chrome.tabs.sendMessage(tabId, message)
@@ -692,7 +692,7 @@
         const commandKey = getSourceCommandKey(source);
         const timer = setTimeout(() => {
           pendingCommands.delete(commandKey);
-          reject(new Error(`${getSourceLabel(source)} 内容脚本 ${timeout / 1000} 秒内未响应，请刷新页面后重试。`));
+          reject(new Error(`${getSourceLabel(source)} content script did not respond within ${timeout / 1000}s. Please refresh the page and retry.`));
         }, timeout);
         pendingCommands.set(commandKey, {
           message,
@@ -957,7 +957,7 @@
       if (lastError && isRetryableContentScriptTransportError(lastError)) {
         throw buildRetryableTransportTimeoutError(source, lastError);
       }
-      throw lastError || new Error(`等待 ${getSourceLabel(source)} 重新就绪超时。`);
+      throw lastError || new Error(`Timed out waiting for ${getSourceLabel(source)} to become ready again.`);
     }
 
     async function sendToMailContentScriptResilient(mail, message, options = {}) {
@@ -995,7 +995,7 @@
 
           lastError = err;
           if (!logged) {
-            await addLog(`${mail.label} 页面通信异常，正在尝试让邮箱页重新就绪...`, 'warn', {
+            await addLog(`${mail.label} page communication failed; trying to bring the mailbox page back to ready state...`, 'warn', {
               step: logStep,
               stepKey: logStepKey,
             });
@@ -1016,7 +1016,7 @@
         }
       }
 
-      throw lastError || new Error(`${mail.label} 页面未能重新就绪。`);
+      throw lastError || new Error(`${mail.label} page failed to become ready again.`);
     }
 
     return {

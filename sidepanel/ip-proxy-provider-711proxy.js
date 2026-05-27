@@ -1,4 +1,4 @@
-// sidepanel/ip-proxy-provider-711proxy.js — 711Proxy 面板专属逻辑
+// sidepanel/ip-proxy-provider-711proxy.js — 711Proxy panel-specific logic
 function normalizeIpProxyCountryCode(value = '') {
   const raw = String(value || '').trim().toUpperCase().replace(/[^A-Z]/g, '');
   return /^[A-Z]{2}$/.test(raw) ? raw : '';

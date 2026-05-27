@@ -89,7 +89,7 @@
       const accounts = normalizePayPalAccounts(state.paypalAccounts);
       const account = findPayPalAccount(accounts, accountId);
       if (!account) {
-        throw new Error('未找到对应的 PayPal 账号。');
+        throw new Error('Corresponding PayPal account not found.');
       }
 
       await syncSelectedPayPalAccountState(account);

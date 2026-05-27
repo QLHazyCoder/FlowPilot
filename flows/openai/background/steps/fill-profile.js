@@ -13,7 +13,7 @@
       const { firstName, lastName } = generateRandomName();
       const { year, month, day } = generateRandomBirthday();
 
-      await addLog(`步骤 5：已生成姓名 ${firstName} ${lastName}，生日 ${year}-${month}-${day}`);
+      await addLog(`Step 5: Generated name ${firstName} ${lastName}, birthday ${year}-${month}-${day}`);
 
       await sendToContentScript('openai-auth', {
         type: 'EXECUTE_NODE',

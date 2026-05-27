@@ -70,7 +70,7 @@
 
     async function executeSignupPhoneCodeStep(state, signupTabId) {
       if (typeof phoneVerificationHelpers?.completeSignupPhoneVerificationFlow !== 'function') {
-        throw new Error('步骤 4：手机号注册验证码流程不可用，接码模块尚未初始化。');
+        throw new Error('Step 4: phone-number registration verification code flow unavailable, SMS verification module not initialized.');
       }
 
       const signupProfile = buildSignupProfileForVerificationStep();
@@ -106,11 +106,11 @@
         : stepStartedAt;
 
       if (mail.source === 'icloud-mail' && typeof ensureIcloudMailSession === 'function') {
-        await addLog('步骤 4：正在确认 iCloud 邮箱登录态...', 'info');
+        await addLog('Step 4: confirming iCloud mailbox sign-in...', 'info');
         await ensureIcloudMailSession({
           state,
           step: 4,
-          actionLabel: '步骤 4：确认 iCloud 邮箱登录态',
+          actionLabel: 'Step 4: confirm iCloud mailbox sign-in',
         });
       }
 
@@ -121,23 +121,23 @@
         || mail.provider === CLOUDFLARE_TEMP_EMAIL_PROVIDER
         || mail.provider === CLOUD_MAIL_PROVIDER
       ) {
-        await addLog(`步骤 4：正在通过 ${mail.label} 轮询验证码...`);
+        await addLog(`Step 4: polling verification code via ${mail.label}...`);
       } else if (mail.provider === '2925') {
-        await addLog(`步骤 4：正在打开${mail.label}...`);
+        await addLog(`Step 4: opening ${mail.label}...`);
         if (typeof ensureMail2925MailboxSession === 'function') {
           await ensureMail2925MailboxSession({
             accountId: state.currentMail2925AccountId || null,
             forceRelogin: false,
             allowLoginWhenOnLoginPage: Boolean(state?.mail2925UseAccountPool),
             expectedMailboxEmail: getExpectedMail2925MailboxEmail(state),
-            actionLabel: '步骤 4：确认 2925 邮箱登录态',
+            actionLabel: 'Step 4: confirm 2925 mailbox sign-in',
           });
         } else {
           await focusOrOpenMailTab(mail);
         }
-        await addLog(`步骤 4：将直接使用当前已登录的 ${mail.label} 轮询验证码。`, 'info');
+        await addLog(`Step 4: will poll verification codes directly from the currently logged-in ${mail.label}.`, 'info');
       } else {
-        await addLog(`步骤 4：正在打开${mail.label}...`);
+        await addLog(`Step 4: opening ${mail.label}...`);
         await focusOrOpenMailTab(mail);
       }
 
@@ -191,13 +191,13 @@
       const signupTabId = await getTabId('openai-auth');
 
       if (!signupTabId) {
-        throw new Error('认证页面标签页已关闭，无法继续步骤 4。请先执行步骤 1 或步骤 2，重新打开认证页后再试。');
+        throw new Error('Auth page tab is closed, cannot continue step 4. Please run step 1 or step 2 first to reopen the auth page and retry.');
       }
 
       await chrome.tabs.update(signupTabId, { active: true });
       throwIfStopped();
       if (typeof waitForTabStableComplete === 'function') {
-        await addLog('步骤 4：等待注册验证码页面完成加载后再继续...', 'info');
+        await addLog('Step 4: waiting for signup verification code page to finish loading before continuing...', 'info');
         await waitForTabStableComplete(signupTabId, {
           timeoutMs: 45000,
           retryDelayMs: 300,
@@ -206,7 +206,7 @@
         });
       }
       throwIfStopped();
-      await addLog('步骤 4：正在确认注册验证码页面是否就绪，必要时自动恢复密码页超时报错...');
+      await addLog('Step 4: confirming signup verification code page is ready, recovering from password page timeout if needed...');
 
       const prepareRequest = {
         type: 'PREPARE_SIGNUP_VERIFICATION',
@@ -215,7 +215,7 @@
         payload: {
           password: state.password || state.customPassword || '',
           prepareSource: 'step4_execute',
-          prepareLogLabel: '步骤 4 执行',
+          prepareLogLabel: 'Step 4 execution',
         },
       };
       const prepareTimeoutMs = 30000;
@@ -235,7 +235,7 @@
               timeoutMs: Math.max(1000, prepareTimeoutMs - (Date.now() - prepareStartAt)),
               responseTimeoutMs: prepareResponseTimeoutMs,
               retryDelayMs: 700,
-              logMessage: '步骤 4：认证页正在切换，等待页面重新就绪后继续检测...',
+              logMessage: 'Step 4: auth page is switching, waiting for page to be ready again before continuing detection...',
             });
           break;
         } catch (error) {
@@ -257,13 +257,13 @@
               step: 4,
               timeoutMs: Math.min(12000, remainingMs),
               maxClickAttempts: 2,
-              logLabel: '步骤 4：检测到注册认证重试页，正在点击“重试”恢复',
+              logLabel: 'Step 4: detected signup auth retry page, clicking "Retry" to recover',
             },
           }, {
             timeoutMs: Math.min(12000, remainingMs),
             responseTimeoutMs: Math.min(12000, remainingMs),
             retryDelayMs: 700,
-            logMessage: '步骤 4：认证页正在切换，等待页面重新就绪后继续检测...',
+            logMessage: 'Step 4: auth page is switching, waiting for page to be ready again before continuing detection...',
           });
 
           if (recoverResult?.error) {
@@ -273,7 +273,7 @@
       }
 
       if (!prepareResult) {
-        throw new Error('步骤 4：等待注册验证码页面就绪超时，请刷新认证页后重试。');
+        throw new Error('Step 4: timed out waiting for signup verification code page to be ready. Please refresh the auth page and retry.');
       }
 
       if (prepareResult && prepareResult.error) {
@@ -287,7 +287,7 @@
       if (isPhoneSignupState(state)) {
         const phoneResult = await executeSignupPhoneCodeStep(state, signupTabId);
         if (phoneResult?.emailVerificationRequired || phoneResult?.emailVerificationPage) {
-          await addLog('步骤 4：手机验证码已通过，OpenAI 要求继续邮箱验证，切换到邮箱验证码轮询。', 'info');
+          await addLog('Step 4: phone verification code passed, OpenAI requires email verification next. Switching to email verification code polling.', 'info');
           return executeSignupEmailVerificationStep(state, stepStartedAt, verificationSessionKey);
         }
         return phoneResult;

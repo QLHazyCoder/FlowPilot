@@ -41,13 +41,13 @@
     function deriveCpaManagementOrigin(vpsUrl) {
       const normalizedUrl = normalizeString(vpsUrl);
       if (!normalizedUrl) {
-        throw new Error('尚未配置 CPA 地址，请先在侧边栏填写。');
+        throw new Error('CPA URL is not configured. Please fill it in the side panel.');
       }
       let parsed;
       try {
         parsed = new URL(normalizedUrl);
       } catch {
-        throw new Error('CPA 地址格式无效，请先在侧边栏检查。');
+        throw new Error('CPA URL format is invalid. Please check in the side panel.');
       }
       return parsed.origin;
     }
@@ -60,7 +60,7 @@
         payload?.reason,
       ];
       const message = candidates.map(normalizeString).find(Boolean);
-      return message || `CPA 管理接口请求失败（HTTP ${responseStatus}）。`;
+      return message || `CPA management API request failed (HTTP ${responseStatus}).`;
     }
 
     async function fetchCpaManagementJson(origin, path, options = {}) {
@@ -100,7 +100,7 @@
         return payload;
       } catch (error) {
         if (error?.name === 'AbortError') {
-          throw new Error('CPA 管理接口请求超时，请稍后重试。');
+          throw new Error('CPA management API request timed out. Please retry later.');
         }
         throw error;
       } finally {
@@ -292,7 +292,7 @@
       const session = isPlainObject(state?.session) ? state.session : {};
       const accessToken = normalizeString(state?.accessToken || session?.accessToken);
       if (!accessToken) {
-        throw new Error('未读取到可导入的 ChatGPT accessToken。');
+        throw new Error('No importable ChatGPT accessToken read.');
       }
 
       const inputIdToken = firstNonEmpty(
@@ -401,7 +401,7 @@
     async function requestOAuthUrl(state, options = {}) {
       const managementKey = normalizeString(state?.vpsPassword);
       if (!managementKey) {
-        throw new Error('尚未配置 CPA 管理密钥，请先在侧边栏填写。');
+        throw new Error('CPA management key is not configured. Please fill it in the side panel.');
       }
       const origin = deriveCpaManagementOrigin(state?.vpsUrl);
       const result = await fetchCpaManagementJson(origin, '/v0/management/codex-auth-url', {
@@ -428,7 +428,7 @@
       );
 
       if (!oauthUrl || !oauthUrl.startsWith('http')) {
-        throw new Error('CPA 管理接口未返回有效的 auth_url。');
+        throw new Error('CPA management API did not return a valid auth_url.');
       }
 
       return {
@@ -441,7 +441,7 @@
     async function submitOAuthCallback(state, callbackUrl, options = {}) {
       const managementKey = normalizeString(state?.vpsPassword);
       if (!managementKey) {
-        throw new Error('尚未配置 CPA 管理密钥，请先在侧边栏填写。');
+        throw new Error('CPA management key is not configured. Please fill it in the side panel.');
       }
       const origin = normalizeString(state?.cpaManagementOrigin) || deriveCpaManagementOrigin(state?.vpsUrl);
       const result = await fetchCpaManagementJson(origin, '/v0/management/oauth-callback', {
@@ -455,22 +455,22 @@
       });
       return {
         localhostUrl: normalizeString(callbackUrl),
-        verifiedStatus: firstNonEmpty(result?.message, result?.status_message, 'CPA 已通过接口提交回调'),
+        verifiedStatus: firstNonEmpty(result?.message, result?.status_message, 'CPA submitted callback via API'),
       };
     }
 
     async function importCurrentChatGptSession(state = {}, options = {}) {
-      const logLabel = normalizeString(options.logLabel) || 'CPA 会话导入';
+      const logLabel = normalizeString(options.logLabel) || 'CPA session import';
       const managementKey = normalizeString(state?.vpsPassword);
       if (!managementKey) {
-        throw new Error('尚未配置 CPA 管理密钥，请先在侧边栏填写。');
+        throw new Error('CPA management key is not configured. Please fill it in the side panel.');
       }
       const origin = deriveCpaManagementOrigin(state?.vpsUrl);
       const sessionAuth = buildCpaSessionAuthJson(state, options);
 
-      await logWithOptions(`${logLabel}：正在通过 CPA 管理接口导入当前 ChatGPT 会话...`, 'info', options);
+      await logWithOptions(`${logLabel}: Importing current ChatGPT session via CPA management API...`, 'info', options);
       if (!sessionAuth.hasRefreshToken) {
-        await logWithOptions(`${logLabel}：未包含 refresh_token，access_token 过期后无法自动续期。`, 'warn', options);
+        await logWithOptions(`${logLabel}: Missing refresh_token, cannot auto-renew after access_token expires.`, 'warn', options);
       }
 
       await fetchCpaManagementJson(origin, `/v0/management/auth-files?name=${encodeURIComponent(sessionAuth.fileName)}`, {
@@ -481,8 +481,8 @@
       });
 
       const verifiedStatus = sessionAuth.email
-        ? `CPA 会话导入完成：${sessionAuth.email}`
-        : `CPA 会话导入完成：${sessionAuth.fileName}`;
+        ? `CPA session import complete: ${sessionAuth.email}`
+        : `CPA session import complete: ${sessionAuth.fileName}`;
       await logWithOptions(verifiedStatus, 'ok', options);
       return {
         verifiedStatus,

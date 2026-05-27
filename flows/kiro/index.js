@@ -36,7 +36,7 @@
     "supportsLuckmail": false,
     "canSwitchFlow": true,
     "stepDefinitionMode": "kiro",
-    "targetSelectorLabel": "来源"
+    "targetSelectorLabel": "Source"
   },
   "baseGroups": [
     "kiro-runtime-status",
@@ -66,7 +66,7 @@
     "kiro-register-page": {
       "flowId": "kiro",
       "kind": "flow-page",
-      "label": "Kiro 注册页",
+      "label": "Kiro signup page",
       "readyPolicy": "top-frame-only",
       "family": "kiro-register-page-family",
       "driverId": "flows/kiro/content/register-page",
@@ -121,7 +121,7 @@
     "kiro-desktop-authorize": {
       "flowId": "kiro",
       "kind": "flow-page",
-      "label": "Kiro 桌面授权页",
+      "label": "Kiro desktop authorization page",
       "readyPolicy": "top-frame-only",
       "family": "kiro-desktop-authorize-family",
       "driverId": "flows/kiro/content/desktop-authorize-page",
@@ -207,7 +207,7 @@
   "settingsGroups": {
     "kiro-target-kiro-rs": {
       "id": "kiro-target-kiro-rs",
-      "label": "kiro.rs 配置",
+      "label": "kiro.rs Config",
       "rowIds": [
         "row-kiro-rs-url",
         "row-kiro-rs-key",
@@ -216,7 +216,7 @@
     },
     "kiro-runtime-status": {
       "id": "kiro-runtime-status",
-      "label": "Kiro 运行态",
+      "label": "Kiro runtime status",
       "rowIds": [
         "row-kiro-web-status",
         "row-kiro-login-url",

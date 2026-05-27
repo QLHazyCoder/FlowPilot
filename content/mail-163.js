@@ -2,9 +2,9 @@
 // Injected on: mail.163.com
 //
 // DOM structure:
-// Mail item: div[sign="letter"] with aria-label="你的 ChatGPT 代码为 479637 发件人 ： OpenAI ..."
+// Mail item: div[sign="letter"] with aria-label="Your ChatGPT code is 479637 sender: OpenAI ..."
 // Sender: .nui-user (e.g., "OpenAI")
-// Subject: span.da0 (e.g., "你的 ChatGPT 代码为 479637")
+// Subject: span.da0 (e.g., "Your ChatGPT code is 479637")
 // Delete actions: hover trash icon on the row, or checkbox + toolbar delete button
 
 const MAIL163_PREFIX = '[MultiPage:mail-163]';
@@ -54,11 +54,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse(result);
     }).catch(err => {
       if (isStopError(err)) {
-        log(`步骤 ${message.step}：已被用户停止。`, 'warn');
+      log(`Step ${message.step}: Stopped by user.`, 'warn');
         sendResponse({ stopped: true, error: err.message });
         return;
       }
-      log(`步骤 ${message.step}：邮箱轮询失败：${err.message}`, 'warn');
+      log(`Step ${message.step}: Mailbox polling failed: ${err.message}`, 'warn');
       sendResponse({ error: err.message });
     });
     return true;
@@ -112,13 +112,13 @@ function getNetEaseMailLabel(hostname) {
   ).toLowerCase();
 
   if (currentHostname === 'mail.126.com' || currentHostname.endsWith('.mail.126.com')) {
-    return '126 邮箱';
+    return '126 Mail';
   }
   if (currentHostname === 'webmail.vip.163.com') {
-    return '163 VIP 邮箱';
+    return '163 VIP Mail';
   }
 
-  return '163 邮箱';
+  return '163 Mail';
 }
 
 function isVisibleNode(node) {
@@ -537,23 +537,23 @@ async function handlePollEmail(step, payload) {
   const filterAfterMinute = normalizeMinuteTimestamp(Number(filterAfterTimestamp) || 0);
   const mailLabel = getNetEaseMailLabel();
 
-  log(`步骤 ${step}：开始轮询 ${mailLabel}（最多 ${maxAttempts} 次）`);
+  log(`Step ${step}: Starting polling of ${mailLabel} (max ${maxAttempts} attempts)`);
   if (filterAfterMinute) {
-    log(`步骤 ${step}：仅尝试 ${new Date(filterAfterMinute).toLocaleString('zh-CN', { hour12: false })} 及之后时间的邮件。`);
+    log(`Step ${step}: Only attempting emails from ${new Date(filterAfterMinute).toLocaleString('zh-CN', { hour12: false })} onward.`);
   }
 
   // Click inbox in sidebar to ensure we're in inbox view
-  log(`步骤 ${step}：正在等待侧边栏加载...`);
+  log(`Step ${step}: Waiting for sidebar to load...`);
   try {
     const inboxLink = await waitForElement('.nui-tree-item-text[title="收件箱"]', 5000);
     inboxLink.click();
-    log(`步骤 ${step}：已点击收件箱`);
+    log(`Step ${step}: Clicked inbox`);
   } catch {
-    log(`步骤 ${step}：未找到收件箱入口，继续尝试后续流程...`, 'warn');
+    log(`Step ${step}: Inbox entry not found, continuing with subsequent flow...`, 'warn');
   }
 
   // Wait for mail list to appear
-  log(`步骤 ${step}：正在等待邮件列表加载...`);
+  log(`Step ${step}: Waiting for mail list to load...`);
   let items = [];
   for (let i = 0; i < 20; i++) {
     items = findMailItems();
@@ -568,19 +568,19 @@ async function handlePollEmail(step, payload) {
   }
 
   if (items.length === 0) {
-    throw new Error(`${mailLabel}列表未加载完成，请确认当前已打开收件箱。`);
+    throw new Error(`${mailLabel} list did not finish loading. Please confirm inbox is open.`);
   }
 
-  log(`步骤 ${step}：邮件列表已加载，共 ${items.length} 封邮件`);
+  log(`Step ${step}: Mail list loaded, ${items.length} emails total`);
 
   // Snapshot existing mail IDs
   const existingMailIds = getCurrentMailIds(items);
-  log(`步骤 ${step}：已记录当前 ${existingMailIds.size} 封旧邮件快照`);
+  log(`Step ${step}: Recorded snapshot of current ${existingMailIds.size} old emails`);
 
   const FALLBACK_AFTER = 3;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    log(`步骤 ${step}：正在轮询 ${mailLabel}，第 ${attempt}/${maxAttempts} 次`);
+    log(`Step ${step}: Polling ${mailLabel}, attempt ${attempt}/${maxAttempts}`);
 
     if (attempt > 1) {
       await refreshInbox();
@@ -612,7 +612,7 @@ async function handlePollEmail(step, payload) {
       const combinedText = normalizeText([subject, ariaLabel, rowText].filter(Boolean).join(' '));
 
       if (!mailTimestamp) {
-        log(`步骤 ${step}：邮件 ${id.slice(0, 60)} 未读取到时间，已跳过时间窗口校验后的文本匹配阶段。`, 'info');
+        log(`Step ${step}: Email ${id.slice(0, 60)} did not yield a timestamp, skipped text matching phase after time window check.`, 'info');
       }
 
       const senderMatch = senderFilters.some((filter) => {
@@ -626,37 +626,37 @@ async function handlePollEmail(step, payload) {
 
       if (senderMatch || subjectMatch) {
         let code = extractVerificationCode(combinedText, { codePatterns });
-        let codeSource = '邮件列表';
+        let codeSource = 'mail list';
 
         if (!code) {
           const openedText = await openMailAndGetMessageText(item, { codePatterns });
           code = extractVerificationCode(openedText, { codePatterns });
           if (code) {
-            codeSource = '邮件正文';
+            codeSource = 'mail body';
           }
         }
 
         if (code && excludedCodeSet.has(code)) {
-          log(`步骤 ${step}：跳过排除的验证码：${code}`, 'info');
+          log(`Step ${step}: Skipping excluded verification code: ${code}`, 'info');
         } else if (code && !seenCodes.has(code)) {
           seenCodes.add(code);
           persistSeenCodes();
-          const source = useFallback && existingMailIds.has(id) ? `回退匹配${codeSource}` : `新邮件${codeSource}`;
-          const timeLabel = mailTimestamp ? `，时间：${new Date(mailTimestamp).toLocaleString('zh-CN', { hour12: false })}` : '';
-          log(`步骤 ${step}：已找到验证码：${code}（来源：${source}${timeLabel}，主题：${subject.slice(0, 40)}）`, 'ok');
+          const source = useFallback && existingMailIds.has(id) ? `fallback-matched ${codeSource}` : `new email ${codeSource}`;
+          const timeLabel = mailTimestamp ? `, time: ${new Date(mailTimestamp).toLocaleString('zh-CN', { hour12: false })}` : '';
+          log(`Step ${step}: Found verification code: ${code} (source: ${source}${timeLabel}, subject: ${subject.slice(0, 40)})`, 'ok');
 
           // Trigger cleanup only as a best-effort side effect.
           scheduleEmailCleanup(item, step);
 
           return { ok: true, code, emailTimestamp: Date.now(), mailId: id };
         } else if (code && seenCodes.has(code)) {
-          log(`步骤 ${step}：跳过已处理过的验证码：${code}`, 'info');
+          log(`Step ${step}: Skipping already processed verification code: ${code}`, 'info');
         }
       }
     }
 
     if (attempt === FALLBACK_AFTER + 1) {
-      log(`步骤 ${step}：连续 ${FALLBACK_AFTER} 次未发现新邮件，开始回退到首封匹配邮件`, 'warn');
+      log(`Step ${step}: ${FALLBACK_AFTER} consecutive attempts with no new emails, starting fallback to first matched email`, 'warn');
     }
 
     if (attempt < maxAttempts) {
@@ -665,8 +665,8 @@ async function handlePollEmail(step, payload) {
   }
 
   throw new Error(
-    `${(maxAttempts * intervalMs / 1000).toFixed(0)} 秒后仍未在 ${mailLabel}中找到新的匹配邮件。` +
-    '请手动检查收件箱。'
+    `No new matching email found in ${mailLabel} after ${(maxAttempts * intervalMs / 1000).toFixed(0)} seconds. ` +
+    'Please manually check the inbox.'
   );
 }
 
@@ -676,7 +676,7 @@ async function handlePollEmail(step, payload) {
 
 async function deleteEmail(item, step) {
   try {
-    log(`步骤 ${step}：正在删除邮件...`);
+    log(`Step ${step}: Deleting email...`);
 
     // Strategy 1: Click the trash icon inside the mail item
     // Each mail item has: <b class="nui-ico nui-ico-delete" title="删除邮件" sign="trash">
@@ -688,21 +688,21 @@ async function deleteEmail(item, step) {
     const trashIcon = item.querySelector('[sign="trash"], .nui-ico-delete, [title="删除邮件"]');
     if (trashIcon) {
       trashIcon.click();
-      log(`步骤 ${step}：已点击删除图标`, 'ok');
+      log(`Step ${step}: Clicked delete icon`, 'ok');
       await sleep(1500);
 
       // Check if item disappeared (confirm deletion)
       const stillExists = document.getElementById(item.id);
       if (!stillExists || stillExists.style.display === 'none') {
-        log(`步骤 ${step}：邮件已成功删除`);
+        log(`Step ${step}: Email deleted successfully`);
       } else {
-        log(`步骤 ${step}：邮件可能尚未删除，列表中仍可见`, 'warn');
+        log(`Step ${step}: Email may not be deleted, still visible in list`, 'warn');
       }
       return;
     }
 
     // Strategy 2: Select checkbox then click toolbar delete button
-    log(`步骤 ${step}：未找到删除图标，尝试使用复选框加工具栏删除...`);
+    log(`Step ${step}: Delete icon not found, trying checkbox + toolbar delete...`);
     const checkbox = item.querySelector('[sign="checkbox"], .nui-chk');
     if (checkbox) {
       checkbox.click();
@@ -713,16 +713,16 @@ async function deleteEmail(item, step) {
       for (const btn of toolbarBtns) {
         if (btn.textContent.replace(/\s/g, '').includes('删除')) {
           btn.closest('.nui-btn').click();
-          log(`步骤 ${step}：已点击工具栏删除`, 'ok');
+          log(`Step ${step}: Clicked toolbar delete`, 'ok');
           await sleep(1500);
           return;
         }
       }
     }
 
-    log(`步骤 ${step}：无法删除邮件（未找到删除按钮）`, 'warn');
+    log(`Step ${step}: Unable to delete email (delete button not found)`, 'warn');
   } catch (err) {
-    log(`步骤 ${step}：删除邮件失败：${err.message}`, 'warn');
+    log(`Step ${step}: Failed to delete email: ${err.message}`, 'warn');
   }
 }
 
@@ -731,7 +731,7 @@ async function deleteEmail(item, step) {
 // ============================================================
 
 async function refreshInbox() {
-  // Try toolbar "刷 新" button
+  // Try toolbar "Refresh" button
   const toolbarBtns = document.querySelectorAll('.nui-btn .nui-btn-text');
   for (const btn of toolbarBtns) {
     if (btn.textContent.replace(/\s/g, '') === '刷新') {
@@ -742,7 +742,7 @@ async function refreshInbox() {
     }
   }
 
-  // Fallback: click sidebar "收 信"
+  // Fallback: click sidebar "Receive Mail"
   const shouXinBtns = document.querySelectorAll('.ra0');
   for (const btn of shouXinBtns) {
     if (btn.textContent.replace(/\s/g, '').includes('收信')) {

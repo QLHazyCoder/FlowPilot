@@ -158,13 +158,13 @@
 
         if (retryState.maxCheckAttemptsBlocked) {
           throw new Error(
-            'CF_SECURITY_BLOCKED::您已触发Cloudflare 安全防护系统，已完全停止流程，请不要短时间内多次进行重新发送验证码，连续刷新、反复点击重试会加重风控；请先关闭页面等待 15-30 分钟，让系统的临时限制自动解除。或者更换浏览器'
+            'CF_SECURITY_BLOCKED::Cloudflare security protection was triggered. The flow has been fully stopped. Do not resend verification codes repeatedly in a short time. Continuous refreshes and repeated retry clicks will worsen the risk control state. Close the page and wait 15-30 minutes for the temporary restriction to clear automatically, or switch browsers.'
           );
         }
 
         if (retryState.userAlreadyExistsBlocked) {
           throw new Error(
-            'SIGNUP_USER_ALREADY_EXISTS::步骤 4：检测到 user_already_exists，说明当前用户已存在，当前轮将直接停止。'
+            'SIGNUP_USER_ALREADY_EXISTS::Step 4: Detected user_already_exists, which means the current user already exists. This round will stop immediately.'
           );
         }
 
@@ -172,8 +172,8 @@
           idlePollCount = 0;
           clickCount += 1;
           if (typeof log === 'function') {
-            const prefix = logLabel || `步骤 ${step || '?'}：检测到重试页，正在点击“重试”恢复`;
-            log(`${prefix}（第 ${clickCount} 次）...`, 'warn');
+            const prefix = logLabel || `Step ${step || '?'}: Retry page detected. Clicking "Try again" to recover`;
+            log(`${prefix} (attempt ${clickCount})...`, 'warn');
           }
           if (typeof humanPause === 'function') {
             await humanPause(300, 800);
@@ -199,7 +199,7 @@
         idlePollCount += 1;
         if (idlePollCount >= maxIdlePolls) {
           throw new Error(
-            `${logLabel || `步骤 ${step || '?'}：重试页恢复`}超时：重试按钮长时间不可点击。URL: ${location.href}`
+            `${logLabel || `Step ${step || '?'}: Retry page recovery`} timed out: the retry button stayed unclickable for too long. URL: ${location.href}`
           );
         }
 
@@ -217,18 +217,18 @@
 
       if (finalRetryState.maxCheckAttemptsBlocked) {
         throw new Error(
-          'CF_SECURITY_BLOCKED::您已触发Cloudflare 安全防护系统，已完全停止流程，请不要短时间内多次进行重新发送验证码，连续刷新、反复点击重试会加重风控；请先关闭页面等待 15-30 分钟，让系统的临时限制自动解除。或者更换浏览器'
+          'CF_SECURITY_BLOCKED::Cloudflare security protection was triggered. The flow has been fully stopped. Do not resend verification codes repeatedly in a short time. Continuous refreshes and repeated retry clicks will worsen the risk control state. Close the page and wait 15-30 minutes for the temporary restriction to clear automatically, or switch browsers.'
         );
       }
 
       if (finalRetryState.userAlreadyExistsBlocked) {
         throw new Error(
-          'SIGNUP_USER_ALREADY_EXISTS::步骤 4：检测到 user_already_exists，说明当前用户已存在，当前轮将直接停止。'
+          'SIGNUP_USER_ALREADY_EXISTS::Step 4: Detected user_already_exists, which means the current user already exists. This round will stop immediately.'
         );
       }
 
       throw new Error(
-        `${logLabel || `步骤 ${step || '?'}：重试页恢复`}失败：已连续点击“重试” ${maxClickAttempts} 次，页面仍未恢复。URL: ${location.href}`
+        `${logLabel || `Step ${step || '?'}: Retry page recovery`} failed: clicked "Try again" repeatedly ${maxClickAttempts} times and the page still did not recover. URL: ${location.href}`
       );
     }
 

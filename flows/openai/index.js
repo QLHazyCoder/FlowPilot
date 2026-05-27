@@ -40,7 +40,7 @@
     "supportsLuckmail": true,
     "canSwitchFlow": true,
     "stepDefinitionMode": "openai-dynamic",
-    "targetSelectorLabel": "来源"
+    "targetSelectorLabel": "Source"
   },
   "baseGroups": [
     "openai-plus",
@@ -53,7 +53,7 @@
   "targets": {
     "cpa": {
       "id": "cpa",
-      "label": "CPA 面板",
+      "label": "CPA panel",
       "defaultState": {
         "vpsUrl": "",
         "vpsPassword": "",
@@ -120,7 +120,7 @@
     "openai-auth": {
       "flowId": "openai",
       "kind": "flow-page",
-      "label": "认证页",
+      "label": "Auth page",
       "readyPolicy": "allow-child-frame",
       "family": "openai-auth-family",
       "driverId": "flows/openai/content/openai-auth",
@@ -156,7 +156,7 @@
     "chatgpt": {
       "flowId": "openai",
       "kind": "flow-entry",
-      "label": "ChatGPT 首页",
+      "label": "ChatGPT home page",
       "readyPolicy": "allow-child-frame",
       "family": "chatgpt-entry-family",
       "driverId": null,
@@ -183,7 +183,7 @@
     "vps-panel": {
       "flowId": "openai",
       "kind": "panel-page",
-      "label": "CPA 面板",
+      "label": "CPA panel",
       "readyPolicy": "allow-child-frame",
       "family": "vps-panel-family",
       "driverId": "flows/openai/content/vps-panel",
@@ -198,7 +198,7 @@
     "platform-panel": {
       "flowId": "openai",
       "kind": "virtual-page",
-      "label": "平台回调面板",
+      "label": "Platform callback panel",
       "readyPolicy": "disabled",
       "family": "platform-panel-family",
       "driverId": "content/platform-panel",
@@ -208,7 +208,7 @@
     "sub2api-panel": {
       "flowId": "openai",
       "kind": "panel-page",
-      "label": "SUB2API 后台",
+      "label": "SUB2API admin",
       "readyPolicy": "allow-child-frame",
       "family": "sub2api-panel-family",
       "driverId": "flows/openai/content/sub2api-panel",
@@ -237,7 +237,7 @@
     "codex2api-panel": {
       "flowId": "openai",
       "kind": "panel-page",
-      "label": "Codex2API 后台",
+      "label": "Codex2API admin",
       "readyPolicy": "allow-child-frame",
       "family": "codex2api-panel-family",
       "driverId": "flows/openai/content/sub2api-panel",
@@ -280,7 +280,7 @@
     "paypal-flow": {
       "flowId": "openai",
       "kind": "flow-page",
-      "label": "PayPal 授权页",
+      "label": "PayPal authorization page",
       "readyPolicy": "allow-child-frame",
       "family": "paypal-flow-family",
       "driverId": "flows/openai/content/paypal-flow",
@@ -296,7 +296,7 @@
     "gopay-flow": {
       "flowId": "openai",
       "kind": "flow-page",
-      "label": "GoPay 授权页",
+      "label": "GoPay authorization page",
       "readyPolicy": "allow-child-frame",
       "family": "gopay-flow-family",
       "driverId": "flows/openai/content/gopay-flow",
@@ -378,7 +378,7 @@
   "settingsGroups": {
     "openai-target-cpa": {
       "id": "openai-target-cpa",
-      "label": "CPA 来源",
+      "label": "CPA Source",
       "rowIds": [
         "row-vps-url",
         "row-vps-password",
@@ -387,7 +387,7 @@
     },
     "openai-target-sub2api": {
       "id": "openai-target-sub2api",
-      "label": "SUB2API 来源",
+      "label": "SUB2API Source",
       "rowIds": [
         "row-sub2api-url",
         "row-sub2api-email",
@@ -399,7 +399,7 @@
     },
     "openai-target-codex2api": {
       "id": "openai-target-codex2api",
-      "label": "Codex2API 来源",
+      "label": "Codex2API Source",
       "rowIds": [
         "row-codex2api-url",
         "row-codex2api-admin-key"
@@ -416,7 +416,7 @@
     },
     "openai-phone": {
       "id": "openai-phone",
-      "label": "接码设置",
+      "label": "SMS verification settings",
       "sectionIds": [
         "phone-verification-section"
       ],
@@ -432,7 +432,7 @@
     },
     "openai-step6": {
       "id": "openai-step6",
-      "label": "第六步",
+      "label": "Step 6",
       "rowIds": [
         "row-step6-cookie-settings"
       ]

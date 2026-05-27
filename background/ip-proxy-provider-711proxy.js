@@ -1,4 +1,4 @@
-// background/ip-proxy-provider-711proxy.js — 711Proxy 参数与账号规则
+// background/ip-proxy-provider-711proxy.js — 711Proxy parameters and account rules
 (function register711ProxyProvider(root) {
   function normalizeCountryCode(value = '') {
     const raw = String(value || '').trim().toUpperCase().replace(/[^A-Z]/g, '');
@@ -78,7 +78,7 @@
       }
     }
 
-    // 账号列表模式按每行原样生效，不叠加固定账号区的 session/sessTime。
+    // Account list mode honors each line as-is — do not overlay fixed account region's session/sessTime.
     if (hasAccountList) {
       return nextEntry;
     }

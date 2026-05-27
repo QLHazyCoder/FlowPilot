@@ -43,11 +43,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse(result);
     }).catch((err) => {
       if (isStopError(err)) {
-        log(`步骤 ${message.step}：已被用户停止。`, 'warn');
+        log(`Step ${message.step}: Stopped by user.`, 'warn');
         sendResponse({ stopped: true, error: err.message });
         return;
       }
-      log(`步骤 ${message.step}：Gmail 轮询失败：${err.message}`, 'warn');
+      log(`Step ${message.step}: Gmail polling failed: ${err.message}`, 'warn');
       sendResponse({ error: err.message });
     });
     return true;
@@ -327,13 +327,13 @@ async function activateCategoryTab(step, categoryKey) {
     const refreshed = collectCategoryTabs().find((item) => item.key === categoryKey);
     if (refreshed?.selected) {
       await sleep(500);
-      log(`步骤 ${step}：已切换到 Gmail 分类 ${refreshed.label}。`);
+      log(`Step ${step}: Switched to Gmail category ${refreshed.label}.`);
       return { key: refreshed.key, label: refreshed.label, switched: true };
     }
   }
 
   await sleep(600);
-  log(`步骤 ${step}：已尝试切换到 Gmail 分类 ${target.label}。`, 'info');
+  log(`Step ${step}: Attempted to switch to Gmail category ${target.label}.`, 'info');
   return { key: target.key, label: target.label, switched: true };
 }
 
@@ -499,7 +499,7 @@ async function ensureInboxReady(step) {
     if (inboxLink) {
       simulateClick(inboxLink);
       await sleep(800);
-      log(`步骤 ${step}：已切回 Gmail 收件箱。`);
+      log(`Step ${step}: Switched back to Gmail inbox.`);
     } else {
       location.hash = '#inbox';
       await sleep(800);
@@ -521,7 +521,7 @@ async function refreshInbox(step) {
   const refreshButton = findRefreshButton();
   if (refreshButton) {
     simulateClick(refreshButton);
-    log(`步骤 ${step}：已点击 Gmail 刷新。`);
+    log(`Step ${step}: Clicked Gmail refresh.`);
     await sleep(1500);
     return;
   }
@@ -529,13 +529,13 @@ async function refreshInbox(step) {
   const inboxLink = findInboxLink();
   if (inboxLink) {
     simulateClick(inboxLink);
-    log(`步骤 ${step}：未找到刷新按钮，已重新进入收件箱。`);
+    log(`Step ${step}: Refresh button not found, re-entered inbox.`);
     await sleep(1200);
     return;
   }
 
   location.reload();
-  log(`步骤 ${step}：未找到刷新按钮，已直接刷新页面。`);
+  log(`Step ${step}: Refresh button not found, reloaded page directly.`);
   await sleep(2500);
 }
 
@@ -592,9 +592,9 @@ async function handlePollEmail(step, payload) {
   const excludedCodeSet = new Set(excludeCodes.filter(Boolean));
   const filterAfterMinute = normalizeMinuteTimestamp(Number(filterAfterTimestamp) || 0);
 
-  log(`步骤 ${step}：开始轮询 Gmail（最多 ${maxAttempts} 次）`);
+  log(`Step ${step}: Starting Gmail polling (max ${maxAttempts} attempts)`);
   if (filterAfterMinute) {
-    log(`步骤 ${step}：仅尝试 ${new Date(filterAfterMinute).toLocaleString('zh-CN', { hour12: false })} 及之后时间的邮件。`);
+    log(`Step ${step}: Only attempting emails from ${new Date(filterAfterMinute).toLocaleString('zh-CN', { hour12: false })} onward.`);
   }
 
   let initialRows = await ensureInboxReady(step);
@@ -604,7 +604,7 @@ async function handlePollEmail(step, payload) {
   }
 
   if (!initialRows.length) {
-    throw new Error('Gmail 收件箱列表未加载完成，请确认当前已打开 Gmail 收件箱。');
+    throw new Error('Gmail inbox list did not finish loading. Please confirm Gmail inbox is open.');
   }
 
   const categoryOrder = getCategoryScanOrder();
@@ -614,11 +614,11 @@ async function handlePollEmail(step, payload) {
     const activeCategory = await activateCategoryTab(step, category.key);
     const rows = collectThreadRows();
     existingMailIdsByCategory.set(activeCategory.key, getCurrentMailIds(rows));
-    log(`步骤 ${step}：已记录 Gmail 分类 ${activeCategory.label} 的 ${rows.length} 封旧邮件快照`);
+    log(`Step ${step}: Recorded snapshot of ${rows.length} old emails in Gmail category ${activeCategory.label}`);
   }
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    log(`步骤 ${step}：正在轮询 Gmail，第 ${attempt}/${maxAttempts} 次`);
+    log(`Step ${step}: Polling Gmail, attempt ${attempt}/${maxAttempts}`);
 
     if (attempt > 1) {
       await refreshInbox(step);
@@ -658,19 +658,19 @@ async function handlePollEmail(step, payload) {
         });
         if (previewCode) {
           if (excludedCodeSet.has(previewCode)) {
-            log(`步骤 ${step}：跳过排除的验证码：${previewCode}`, 'info');
+            log(`Step ${step}: Skipping excluded verification code: ${previewCode}`, 'info');
             continue;
           }
           if (seenCodes.has(previewCode)) {
-            log(`步骤 ${step}：跳过已处理过的验证码：${previewCode}`, 'info');
+            log(`Step ${step}: Skipping already processed verification code: ${previewCode}`, 'info');
             continue;
           }
           seenCodes.add(previewCode);
           persistSeenCodes();
-          const source = useFallback && existingMailIds.has(rowId) ? '回退匹配邮件' : '新邮件';
-          const timeLabel = rowTimestamp ? `，时间：${new Date(rowTimestamp).toLocaleString('zh-CN', { hour12: false })}` : '';
-          const targetLabel = previewTargetState.matches ? '，目标邮箱命中' : '';
-          log(`步骤 ${step}：已在 Gmail ${activeCategory.label} 分类找到验证码：${previewCode}（来源：${source}${timeLabel}${targetLabel}）`, 'ok');
+          const source = useFallback && existingMailIds.has(rowId) ? 'fallback-matched email' : 'new email';
+          const timeLabel = rowTimestamp ? `, time: ${new Date(rowTimestamp).toLocaleString('zh-CN', { hour12: false })}` : '';
+          const targetLabel = previewTargetState.matches ? ', target email hit' : '';
+          log(`Step ${step}: Found verification code in Gmail ${activeCategory.label} category: ${previewCode} (source: ${source}${timeLabel}${targetLabel})`, 'ok');
           return {
             ok: true,
             code: previewCode,
@@ -688,19 +688,19 @@ async function handlePollEmail(step, payload) {
           continue;
         }
         if (excludedCodeSet.has(bodyCode)) {
-          log(`步骤 ${step}：跳过排除的验证码：${bodyCode}`, 'info');
+          log(`Step ${step}: Skipping excluded verification code: ${bodyCode}`, 'info');
           continue;
         }
         if (seenCodes.has(bodyCode)) {
-          log(`步骤 ${step}：跳过已处理过的验证码：${bodyCode}`, 'info');
+          log(`Step ${step}: Skipping already processed verification code: ${bodyCode}`, 'info');
           continue;
         }
         seenCodes.add(bodyCode);
         persistSeenCodes();
-        const source = useFallback && existingMailIds.has(rowId) ? '回退匹配邮件正文' : '新邮件正文';
-        const timeLabel = rowTimestamp ? `，时间：${new Date(rowTimestamp).toLocaleString('zh-CN', { hour12: false })}` : '';
-        const targetLabel = openedTargetState.matches ? '，目标邮箱命中' : '';
-        log(`步骤 ${step}：已在 Gmail ${activeCategory.label} 分类正文中找到验证码：${bodyCode}（来源：${source}${timeLabel}${targetLabel}）`, 'ok');
+        const source = useFallback && existingMailIds.has(rowId) ? 'fallback-matched email body' : 'new email body';
+        const timeLabel = rowTimestamp ? `, time: ${new Date(rowTimestamp).toLocaleString('zh-CN', { hour12: false })}` : '';
+        const targetLabel = openedTargetState.matches ? ', target email hit' : '';
+        log(`Step ${step}: Found verification code in Gmail ${activeCategory.label} category body: ${bodyCode} (source: ${source}${timeLabel}${targetLabel})`, 'ok');
         return {
           ok: true,
           code: bodyCode,
@@ -711,7 +711,7 @@ async function handlePollEmail(step, payload) {
     }
 
     if (attempt === GMAIL_FALLBACK_AFTER + 1) {
-      log(`步骤 ${step}：连续 ${GMAIL_FALLBACK_AFTER} 次未发现新邮件，开始回退到首封匹配邮件`, 'warn');
+      log(`Step ${step}: ${GMAIL_FALLBACK_AFTER} consecutive attempts with no new emails, starting fallback to first matched email`, 'warn');
     }
 
     if (attempt < maxAttempts) {
@@ -720,7 +720,7 @@ async function handlePollEmail(step, payload) {
   }
 
   throw new Error(
-    `${(maxAttempts * intervalMs / 1000).toFixed(0)} 秒后仍未在 Gmail 中找到匹配邮件。请手动检查 Gmail 收件箱。`
+    `No matching email found in Gmail after ${(maxAttempts * intervalMs / 1000).toFixed(0)} seconds. Please manually check Gmail inbox.`
   );
 }
 

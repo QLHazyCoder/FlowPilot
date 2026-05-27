@@ -32,7 +32,7 @@
       supportsLuckmail: false,
       canSwitchFlow: true,
       stepDefinitionMode: 'grok',
-      targetSelectorLabel: '来源',
+      targetSelectorLabel: 'Source',
     },
     baseGroups: ['grok-runtime-status', 'shared-auto-run', 'shared-settings-actions'],
     targets: {
@@ -53,7 +53,7 @@
       'grok-register-page': {
         flowId: 'grok',
         kind: 'flow-page',
-        label: 'Grok 注册页',
+        label: 'Grok signup page',
         readyPolicy: 'top-frame-only',
         family: 'grok-register-page-family',
         driverId: 'flows/grok/content/register-page',
@@ -144,7 +144,7 @@
       },
       'grok-runtime-status': {
         id: 'grok-runtime-status',
-        label: 'Grok 运行态',
+        label: 'Grok runtime status',
         rowIds: [
           'row-grok-register-status',
           'row-grok-sso-status',

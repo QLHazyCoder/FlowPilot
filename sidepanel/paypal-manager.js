@@ -21,10 +21,10 @@
 
     function buildSelectOptions(accounts = []) {
       if (!accounts.length) {
-        return '<option value="">请先添加 PayPal 账号</option>';
+        return '<option value="">Please add a PayPal account first</option>';
       }
       return accounts.map((account) => (
-        `<option value="${helpers.escapeHtml(account.id)}">${helpers.escapeHtml(account.email || '(未命名账号)')}</option>`
+        `<option value="${helpers.escapeHtml(account.id)}">${helpers.escapeHtml(account.email || '(unnamed account)')}</option>`
       )).join('');
     }
 
@@ -33,7 +33,7 @@
     }
 
     function getPayPalAccountLabel(account = {}) {
-      return String(account?.email || '(未命名账号)');
+      return String(account?.email || '(unnamed account)');
     }
 
     function normalizePickerPayPalAccounts(accounts = []) {
@@ -65,8 +65,8 @@
         trigger: dom.btnPayPalAccountMenu,
         current: dom.payPalAccountCurrent,
         menu: dom.payPalAccountMenu,
-        emptyLabel: '请先添加 PayPal 账号',
-        itemLabel: '账号',
+        emptyLabel: 'Please add a PayPal account first',
+        itemLabel: 'Account',
         normalizeItems: normalizePickerPayPalAccounts,
         normalizeValue: (value) => String(value || '').trim(),
         getItemValue: getPayPalAccountValue,
@@ -138,7 +138,7 @@
       });
       renderPayPalAccounts();
       if (!silent) {
-        helpers.showToast(`已切换当前 PayPal 账号为 ${response.account?.email || accountId}`, 'success', 1800);
+        helpers.showToast(`Switched current PayPal account to ${response.account?.email || accountId}`, 'success', 1800);
       }
       return response.account || null;
     }
@@ -190,7 +190,7 @@
           currentPayPalAccountId: payload.currentPayPalAccountId || null,
         });
         renderPayPalAccounts();
-        helpers.showToast(`已删除 PayPal 账号：${targetAccount.email || targetId}`, 'success', 1600);
+        helpers.showToast(`Deleted PayPal account: ${targetAccount.email || targetId}`, 'success', 1600);
       } finally {
         actionInFlight = false;
         if (dom.btnAddPayPalAccount) {
@@ -201,40 +201,40 @@
 
     async function openPayPalAccountDialog() {
       if (typeof helpers.openFormDialog !== 'function') {
-        throw new Error('表单弹窗能力未加载，请刷新扩展后重试。');
+        throw new Error('Form dialog capability not loaded, please refresh the extension and retry.');
       }
       return helpers.openFormDialog({
-        title: '添加 PayPal 账号',
-        confirmLabel: '保存账号',
+        title: 'Add PayPal Account',
+        confirmLabel: 'Save Account',
         confirmVariant: 'btn-primary',
         fields: [
           {
             key: 'email',
-            label: 'PayPal 账号',
+            label: 'PayPal Account',
             type: 'text',
             masked: true,
-            showPasswordLabel: '显示 PayPal 账号',
-            hidePasswordLabel: '隐藏 PayPal 账号',
-            placeholder: '请输入 PayPal 登录邮箱',
+            showPasswordLabel: 'Show PayPal account',
+            hidePasswordLabel: 'Hide PayPal account',
+            placeholder: 'Enter PayPal login email',
             autocomplete: 'username',
             required: true,
-            requiredMessage: '请先填写 PayPal 账号。',
+            requiredMessage: 'Please fill in PayPal account first.',
             validate: (value) => {
               const normalized = String(value || '').trim();
               if (!normalized.includes('@')) {
-                return 'PayPal 账号需填写邮箱格式。';
+                return 'PayPal account must be in email format.';
               }
               return '';
             },
           },
           {
             key: 'password',
-            label: 'PayPal 密码',
+            label: 'PayPal Password',
             type: 'password',
-            placeholder: '请输入 PayPal 登录密码',
+            placeholder: 'Enter PayPal login password',
             autocomplete: 'current-password',
             required: true,
-            requiredMessage: '请先填写 PayPal 密码。',
+            requiredMessage: 'Please fill in PayPal password first.',
           },
         ],
       });
@@ -273,9 +273,9 @@
           dom.selectPayPalAccount.value = response.account.id;
           await syncSelectedPayPalAccount({ silent: true });
         }
-        helpers.showToast(`已保存 PayPal 账号 ${response.account?.email || ''}`, 'success', 2200);
+        helpers.showToast(`Saved PayPal account ${response.account?.email || ''}`, 'success', 2200);
       } catch (error) {
-        helpers.showToast(`保存 PayPal 账号失败：${error.message}`, 'error');
+        helpers.showToast(`Failed to save PayPal account: ${error.message}`, 'error');
         throw error;
       } finally {
         actionInFlight = false;

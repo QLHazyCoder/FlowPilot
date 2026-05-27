@@ -411,7 +411,7 @@
     function assertFiveSimMaxPriceCompatibleWithOperator(operator, maxPriceLimit) {
       const normalizedOperator = normalizeFiveSimCountryCode(operator, DEFAULT_FIVE_SIM_OPERATOR);
       if (maxPriceLimit !== null && maxPriceLimit !== undefined && normalizedOperator !== DEFAULT_FIVE_SIM_OPERATOR) {
-        throw new Error('5sim 价格上限仅支持运营商为 "any" 时使用；请清空价格上限，或先把运营商切换为 any。');
+        throw new Error('5sim price cap is only supported when operator is "any". Please clear the price cap or switch operator to any first.');
       }
     }
 
@@ -941,30 +941,30 @@
     function formatStep9Reason(reason = '') {
       const text = String(reason || '').trim();
       if (!text) {
-        return '未知';
+        return 'Unknown';
       }
       const normalized = text.toLowerCase();
       const reasonMap = {
-        returned_to_add_phone_loop: '反复返回添加手机号页',
-        phone_number_used: '手机号已被使用',
-        sms_not_received: '未收到短信',
-        sms_timeout: '短信超时',
-        resend_throttled: '重发短信被限流',
-        code_rejected: '验证码被拒绝',
-        add_phone_rejected: '添加手机号被拒绝',
-        activation_not_found: '接码订单不存在或已失效',
-        resend_phone_banned: 'OpenAI 无法向该号码发送短信',
-        phone_max_usage_exceeded: '手机号达到使用上限',
-        resend_server_error: '重发短信后进入服务器错误页',
-        whatsapp_resend_channel: '页面重发入口切换为 WhatsApp 通道',
-        unknown: '未知',
+        returned_to_add_phone_loop: 'Repeatedly returned to add phone page',
+        phone_number_used: 'Phone number already used',
+        sms_not_received: 'SMS not received',
+        sms_timeout: 'SMS timeout',
+        resend_throttled: 'SMS resend throttled',
+        code_rejected: 'Verification code rejected',
+        add_phone_rejected: 'Add phone rejected',
+        activation_not_found: 'SMS order does not exist or expired',
+        resend_phone_banned: 'OpenAI cannot send SMS to this number',
+        phone_max_usage_exceeded: 'Phone number reached usage limit',
+        resend_server_error: 'Entered server error page after SMS resend',
+        whatsapp_resend_channel: 'Page resend entry switched to WhatsApp channel',
+        unknown: 'Unknown',
       };
       if (reasonMap[normalized]) {
         return reasonMap[normalized];
       }
       const timeoutWindowMatch = text.match(/^sms_timeout_after_(\d+)_windows$/i);
       if (timeoutWindowMatch) {
-        return `连续 ${timeoutWindowMatch[1]} 轮等待后仍未收到短信`;
+        return `Still no SMS received after ${timeoutWindowMatch[1]} wait rounds`;
       }
       return text;
     }
@@ -972,49 +972,49 @@
     function formatPhoneSmsApiFailureReason(reason = '') {
       const text = String(reason || '').trim();
       if (!text) {
-        return '未知错误';
+        return 'Unknown error';
       }
       if (/\bBAD_KEY\b|\bWRONG_KEY\b|\bINVALID_KEY\b/i.test(text)) {
-        return 'API Key 无效（BAD_KEY）';
+        return 'Invalid API Key (BAD_KEY)';
       }
       if (/\bNO_BALANCE\b|\bNOT_ENOUGH_BALANCE\b/i.test(text)) {
-        return '余额不足';
+        return 'Insufficient balance';
       }
       if (/\bBANNED\b|\bACCOUNT_BANNED\b/i.test(text)) {
-        return '账号已被封禁';
+        return 'Account banned';
       }
       if (/\bNO_NUMBERS\b/i.test(text)) {
-        return '暂无可用号码（NO_NUMBERS）';
+        return 'No available numbers (NO_NUMBERS)';
       }
       if (/no\s+free\s+phones|numbers?\s+not\s+found|no\s+numbers\s+available|no\s+numbers\s+within|暂无可用号码|均无可用号码|无可用号码/i.test(text)) {
-        return '暂无可用号码';
+        return 'No available numbers';
       }
       const wrongMaxPrice = text.match(/\bWRONG_MAX_PRICE(?::|\s+requires\s+)?(\d+(?:\.\d+)?)?\b/i);
       if (wrongMaxPrice) {
         return wrongMaxPrice[1]
-          ? `价格上限过低，平台要求至少 ${wrongMaxPrice[1]}（WRONG_MAX_PRICE）`
-          : '价格上限不符合平台要求（WRONG_MAX_PRICE）';
+          ? `Price cap too low; platform requires at least ${wrongMaxPrice[1]} (WRONG_MAX_PRICE)`
+          : 'Price cap does not meet platform requirements (WRONG_MAX_PRICE)';
       }
       if (/rate\s*limit|too\s+many\s+requests|限流/i.test(text)) {
-        return '请求限流';
+        return 'Request throttled';
       }
       if (/unauthorized|forbidden|invalid\s+token|bad\s+key|wrong\s+key/i.test(text)) {
-        return 'API Key 无效';
+        return 'Invalid API Key';
       }
       if (/order\s+not\s+found|activation\s+not\s+found|no\s+such\s+order/i.test(text)) {
-        return '订单不存在或已失效';
+        return 'Order does not exist or expired';
       }
       if (/timed\s*out|timeout/i.test(text)) {
-        return '请求超时';
+        return 'Request timed out';
       }
       if (/failed\s+to\s+fetch|networkerror|load\s+failed/i.test(text)) {
-        return '网络请求失败';
+        return 'Network request failed';
       }
       if (/empty\s+response/i.test(text)) {
-        return '空响应';
+        return 'Empty response';
       }
       if (/unknown\s+terminal\s+error/i.test(text)) {
-        return '未知终止错误';
+        return 'Unknown termination error';
       }
       return text;
     }
@@ -1022,24 +1022,24 @@
     function formatHeroSmsActionName(action = '') {
       const normalized = String(action || '').trim().toLowerCase();
       if (normalized === 'getnumber' || normalized === 'getnumberv2') {
-        return '获取手机号';
+        return 'Acquire phone number';
       }
       if (normalized === 'getstatus' || normalized === 'getstatusv2') {
-        return '查询短信状态';
+        return 'Query SMS status';
       }
       if (normalized === 'setstatus') {
-        return '更新订单状态';
+        return 'Update order status';
       }
       if (normalized === 'getprices' || normalized === 'getpricesextended') {
-        return '查询价格';
+        return 'Query price';
       }
-      return action ? `${action} 请求` : '请求';
+      return action ? `${action} request` : 'request';
     }
 
     function formatPhoneSmsActionLabel(actionLabel = '') {
       const text = String(actionLabel || '').trim();
       if (!text) {
-        return '接码平台请求';
+        return 'SMS platform request';
       }
       const normalized = text.toLowerCase();
       const heroMatch = text.match(/^HeroSMS\s+(.+)$/i);
@@ -1047,40 +1047,40 @@
         return `HeroSMS ${formatHeroSmsActionName(heroMatch[1])}`;
       }
       if (normalized === '5sim guest prices') {
-        return '5sim 查询游客价格';
+        return '5sim query guest price';
       }
       if (normalized === '5sim user prices') {
-        return '5sim 查询账号价格';
+        return '5sim query account price';
       }
       if (normalized === '5sim buy activation') {
-        return '5sim 购买手机号';
+        return '5sim purchase phone number';
       }
       if (normalized === '5sim check activation') {
-        return '5sim 查询短信状态';
+        return '5sim query SMS status';
       }
       if (normalized === '5sim reuse activation') {
-        return '5sim 复用手机号';
+        return '5sim reuse phone number';
       }
       if (normalized === 'nexsms getcountrybyservice') {
-        return 'NexSMS 查询服务国家';
+        return 'NexSMS query service countries';
       }
       if (normalized === 'nexsms price lookup') {
-        return 'NexSMS 查询价格';
+        return 'NexSMS query price';
       }
       if (normalized === 'nexsms purchase') {
-        return 'NexSMS 购买手机号';
+        return 'NexSMS purchase phone number';
       }
       if (normalized === 'nexsms close activation') {
-        return 'NexSMS 关闭订单';
+        return 'NexSMS close order';
       }
       if (normalized === 'nexsms get sms messages') {
-        return 'NexSMS 查询短信';
+        return 'NexSMS query SMS';
       }
       return text;
     }
 
     function createPhoneSmsActionFailureError(actionLabel, reason = '', payload = null, status = 0) {
-      const message = `${formatPhoneSmsActionLabel(actionLabel)}失败：${formatPhoneSmsApiFailureReason(reason || status)}`;
+      const message = `${formatPhoneSmsActionLabel(actionLabel)} failed: ${formatPhoneSmsApiFailureReason(reason || status)}`;
       const error = new Error(message);
       if (payload !== null && payload !== undefined) {
         error.payload = payload;
@@ -1106,7 +1106,7 @@
 
     function createHeroSmsActionFailureError(action, reason = '') {
       const normalizedReason = stripRepeatedHeroSmsFailurePrefix(action, describeHeroSmsPayload(reason));
-      const error = new Error(`HeroSMS ${formatHeroSmsActionName(action)}失败：${formatPhoneSmsApiFailureReason(normalizedReason)}`);
+      const error = new Error(`HeroSMS ${formatHeroSmsActionName(action)} failed: ${formatPhoneSmsApiFailureReason(normalizedReason)}`);
       error.localizedPhoneSmsFailure = true;
       return error;
     }
@@ -1115,34 +1115,34 @@
       const providerLabel = getPhoneSmsProviderLabel(providerId);
       let text = String(message || '').trim();
       if (!text) {
-        return '未知错误';
+        return 'Unknown error';
       }
       text = text.replace(/^Step\s+\d+\s*[:：]\s*/i, '').trim();
       const heroFailureMatch = text.match(/^HeroSMS\s+([A-Za-z0-9]+)\s+failed\s*:\s*(.+)$/i);
       if (heroFailureMatch) {
-        return `${formatHeroSmsActionName(heroFailureMatch[1])}失败：${formatPhoneSmsApiFailureReason(stripRepeatedHeroSmsFailurePrefix(heroFailureMatch[1], heroFailureMatch[2]))}`;
+        return `${formatHeroSmsActionName(heroFailureMatch[1])} failed: ${formatPhoneSmsApiFailureReason(stripRepeatedHeroSmsFailurePrefix(heroFailureMatch[1], heroFailureMatch[2]))}`;
       }
-      if (normalizePhoneSmsProvider(providerId) === PHONE_SMS_PROVIDER_HERO && /^HeroSMS\s+.+失败：/.test(text)) {
+      if (normalizePhoneSmsProvider(providerId) === PHONE_SMS_PROVIDER_HERO && /^HeroSMS\s+.+(?:failed|失败)[:：]/.test(text)) {
         return text.replace(/^HeroSMS\s+/, '').trim();
       }
       if (/countries\s+are\s+empty|未选择国家/i.test(text)) {
-        return '未选择国家，请先在接码设置中至少选择 1 个国家';
+        return 'No country selected. Please select at least 1 country in SMS settings.';
       }
       if (/failed\s+to\s+acquire\s+(?:a\s+)?phone(?:\s+number|\s+activation)?/i.test(text)) {
-        return '获取手机号失败';
+        return 'Failed to acquire phone number';
       }
       if (/no\s+numbers\s+available\s+across|no\s+free\s+phones|numbers?\s+not\s+found|no\s+numbers\s+within|暂无可用号码|均无可用号码|无可用号码|\bNO_NUMBERS\b/i.test(text)) {
         return formatPhoneSmsApiFailureReason(text);
       }
       if (/buy activation failed|purchase failed|price lookup failed|check activation failed/i.test(text)) {
         return text
-          .replace(/^5sim\s+buy activation failed\s*:\s*/i, '购买手机号失败：')
-          .replace(/^5sim\s+check activation failed\s*:\s*/i, '查询短信状态失败：')
-          .replace(/^NexSMS\s+purchase failed\s*:\s*/i, '购买手机号失败：')
-          .replace(/^NexSMS\s+price lookup failed\s*:\s*/i, '查询价格失败：');
+          .replace(/^5sim\s+buy activation failed\s*:\s*/i, 'Purchase phone number failed: ')
+          .replace(/^5sim\s+check activation failed\s*:\s*/i, 'Query SMS status failed: ')
+          .replace(/^NexSMS\s+purchase failed\s*:\s*/i, 'Purchase phone number failed: ')
+          .replace(/^NexSMS\s+price lookup failed\s*:\s*/i, 'Query price failed: ');
       }
-      if (providerLabel && text.startsWith(`${providerLabel}：`)) {
-        return text.slice(providerLabel.length + 1).trim() || text;
+      if (providerLabel && text.startsWith(`${providerLabel}: `)) {
+        return text.slice(providerLabel.length + 2).trim() || text;
       }
       return text;
     }
@@ -1178,7 +1178,7 @@
       return normalized || fallback;
     }
 
-    function normalizeFiveSimCountryLabel(value = '', fallback = '英国 (England)') {
+    function normalizeFiveSimCountryLabel(value = '', fallback = 'England') {
       const rootScope = typeof self !== 'undefined' ? self : globalThis;
       if (rootScope.PhoneSmsFiveSimProvider?.normalizeFiveSimCountryLabel) {
         return rootScope.PhoneSmsFiveSimProvider.normalizeFiveSimCountryLabel(value, fallback);
@@ -1628,8 +1628,8 @@
     }
 
     function buildPhoneCodeTimeoutError(lastResponse = '') {
-      const suffix = lastResponse ? ` HeroSMS 最后状态：${lastResponse}` : '';
-      return new Error(`${PHONE_CODE_TIMEOUT_ERROR_PREFIX}等待手机验证码超时。${suffix}`);
+      const suffix = lastResponse ? ` HeroSMS last status: ${lastResponse}` : '';
+      return new Error(`${PHONE_CODE_TIMEOUT_ERROR_PREFIX}Phone verification code wait timed out.${suffix}`);
     }
 
     function isSignupEmailVerificationPageState(pageState = {}) {
@@ -1643,7 +1643,7 @@
 
     function buildSignupPhoneStaleEmailVerificationError(pageState = {}) {
       const url = String(pageState?.url || pageState?.href || '').trim();
-      const message = `步骤 4：OpenAI 在手机短信验证码提交前已切到邮箱验证${url ? `（URL: ${url}）` : ''}。这通常表示当前手机号已关联现有账号或登录路径，请更换手机号后重新开始注册。`;
+      const message = `Step 4: OpenAI switched to email verification before the phone SMS code was submitted${url ? ` (URL: ${url})` : ''}. This usually means the current phone number is associated with an existing account or login path; please replace the phone number and start the signup over.`;
       const error = new Error(message);
       error.code = PHONE_STALE_SIGNUP_EMAIL_VERIFICATION_ERROR_CODE;
       error.stalePhoneSignupEmailVerification = true;
@@ -1703,7 +1703,7 @@
       if (message.startsWith(PHONE_RESEND_SERVER_ERROR_PREFIX)) {
         return new Error(message);
       }
-      return new Error(`${PHONE_RESEND_SERVER_ERROR_PREFIX}${message || 'OpenAI contact-verification 页面在重发短信后返回 HTTP ERROR 500。'}`);
+      return new Error(`${PHONE_RESEND_SERVER_ERROR_PREFIX}${message || 'OpenAI contact-verification page returned HTTP ERROR 500 after SMS resend.'}`);
     }
 
     function getPhoneResendServerErrorFromSnapshot(snapshot = {}) {
@@ -1721,7 +1721,7 @@
         .trim();
       const titleText = String(snapshot?.title || '').replace(/\s+/g, ' ').trim();
       if (!bodyText) {
-        return isPhoneResendServerError(titleText) ? (titleText || 'OpenAI contact-verification 页面在重发短信后返回 HTTP ERROR 500。') : '';
+        return isPhoneResendServerError(titleText) ? (titleText || 'OpenAI contact-verification page returned HTTP ERROR 500 after SMS resend.') : '';
       }
       const combined = [
         bodyText,
@@ -1734,7 +1734,7 @@
       if (!isPhoneResendServerError(combined)) {
         return '';
       }
-      return combined || 'OpenAI contact-verification 页面在重发短信后返回 HTTP ERROR 500。';
+      return combined || 'OpenAI contact-verification page returned HTTP ERROR 500 after SMS resend.';
     }
 
     async function readPhoneResendServerErrorFromAuthTab(tabId) {
@@ -1760,11 +1760,11 @@
     }
 
     function buildHighRiskResendThrottledError(message = '') {
-      return new Error(`${PHONE_RESEND_THROTTLED_ERROR_PREFIX}${message || 'OpenAI 重发短信被限流，且当前配置会按高概率封禁手机号处理。'}`);
+      return new Error(`${PHONE_RESEND_THROTTLED_ERROR_PREFIX}${message || 'OpenAI SMS resend was throttled, and current config treats this as high-probability number ban.'}`);
     }
 
     function buildPhoneMaxUsageExceededError(message = '') {
-      return new Error(`PHONE_MAX_USAGE_EXCEEDED::${message || 'OpenAI 返回 phone_max_usage_exceeded，当前手机号已达到使用上限。'}`);
+      return new Error(`PHONE_MAX_USAGE_EXCEEDED::${message || 'OpenAI returned phone_max_usage_exceeded. Current phone has reached usage limit.'}`);
     }
 
     function isPhoneMaxUsageExceededFlowError(error) {
@@ -1800,8 +1800,8 @@
       if (!message) {
         return false;
       }
-      return message === '流程已被用户停止。'
-        || /已被用户停止/.test(message)
+      return message === 'Flow stopped by user.'
+        || /Stopped by user/.test(message)
         || /flow\s+was\s+stopped|stopped\s+by\s+user/i.test(message);
     }
 
@@ -1811,9 +1811,9 @@
     }
 
     function buildPhoneRestartStep7Error(phoneNumber = '') {
-      const suffix = phoneNumber ? ` 当前号码：${phoneNumber}。` : '';
+      const suffix = phoneNumber ? ` Current number: ${phoneNumber}.` : '';
       return new Error(
-        `${PHONE_RESTART_STEP7_ERROR_PREFIX}手机验证重发后仍未收到短信，请从步骤 7 重新获取新号码。${suffix}`
+        `${PHONE_RESTART_STEP7_ERROR_PREFIX}SMS not received after phone verification resend. Please get a new number from Step 7.${suffix}`
       );
     }
 
@@ -1821,7 +1821,7 @@
       const safeMax = Math.max(0, Math.floor(Number(maxNumberReplacementAttempts) || 0));
       const safeReason = String(reason || 'unknown').trim() || 'unknown';
       return new Error(
-        `步骤 9：更换 ${safeMax} 次号码后手机号验证仍未成功。最后原因：${formatStep9Reason(safeReason)}。`
+        `Step 9: Phone verification still failed after replacing the number ${safeMax} times. Last reason: ${formatStep9Reason(safeReason)}.`
       );
     }
 
@@ -1830,7 +1830,7 @@
       if (!message.startsWith(PHONE_CODE_TIMEOUT_ERROR_PREFIX)) {
         return error;
       }
-      return new Error(message.slice(PHONE_CODE_TIMEOUT_ERROR_PREFIX.length).trim() || '等待手机验证码超时。');
+      return new Error(message.slice(PHONE_CODE_TIMEOUT_ERROR_PREFIX.length).trim() || 'Phone verification code wait timed out.');
     }
 
     function sanitizePhoneRestartStep7Error(error) {
@@ -1840,7 +1840,7 @@
       }
       return new Error(
         message.slice(PHONE_RESTART_STEP7_ERROR_PREFIX.length).trim()
-        || '手机验证重发后仍未收到短信，请从步骤 7 重新获取新号码。'
+        || 'SMS not received after phone verification resend. Please get a new number from Step 7.'
       );
     }
 
@@ -1872,7 +1872,7 @@
         return payload;
       } catch (error) {
         if (error?.name === 'AbortError') {
-          throw new Error(`${formatPhoneSmsActionLabel(actionLabel)}超时。`);
+          throw new Error(`${formatPhoneSmsActionLabel(actionLabel)} timed out.`);
         }
         throw error;
       } finally {
@@ -1949,7 +1949,7 @@
         return payload;
       } catch (error) {
         if (error?.name === 'AbortError') {
-          throw new Error(`${formatPhoneSmsActionLabel(actionLabel)}超时。`);
+          throw new Error(`${formatPhoneSmsActionLabel(actionLabel)} timed out.`);
         }
         throw error;
       } finally {
@@ -2044,7 +2044,7 @@
         return payload;
       } catch (error) {
         if (error?.name === 'AbortError') {
-          throw new Error(`${formatPhoneSmsActionLabel(actionLabel)}超时。`);
+          throw new Error(`${formatPhoneSmsActionLabel(actionLabel)} timed out.`);
         }
         throw error;
       } finally {
@@ -2059,7 +2059,7 @@
       if (provider === PHONE_SMS_PROVIDER_5SIM) {
         const apiKey = normalizeApiKey(state.fiveSimApiKey || state.heroSmsApiKey);
         if (!apiKey) {
-          throw new Error('5sim API Key 缺失，请先在侧边栏保存接码 API Key。');
+          throw new Error('5sim API Key missing. Please save SMS API Key in the side panel first.');
         }
         const configuredMaxPrice = normalizeHeroSmsPriceLimit(state.fiveSimMaxPrice);
         const operator = normalizeFiveSimCountryCode(state.fiveSimOperator, DEFAULT_FIVE_SIM_OPERATOR);
@@ -2081,7 +2081,7 @@
       if (provider === PHONE_SMS_PROVIDER_NEXSMS) {
         const apiKey = normalizeApiKey(state.nexSmsApiKey || state.heroSmsApiKey);
         if (!apiKey) {
-          throw new Error('NexSMS API Key 缺失，请先在侧边栏保存接码 API Key。');
+          throw new Error('NexSMS API Key missing. Please save SMS API Key in the side panel first.');
         }
         return {
           provider,
@@ -2094,7 +2094,7 @@
 
       const apiKey = normalizeApiKey(state.heroSmsApiKey);
       if (!apiKey) {
-        throw new Error('HeroSMS API Key 缺失，请先在侧边栏保存接码 API Key。');
+        throw new Error('HeroSMS API Key missing. Please save SMS API Key in the side panel first.');
       }
       return {
         provider,
@@ -2107,7 +2107,7 @@
     function resolveHeroSmsPhoneConfig(state = {}) {
       const apiKey = normalizeApiKey(state.heroSmsApiKey);
       if (!apiKey) {
-        throw new Error('HeroSMS API Key 缺失，请先在侧边栏保存接码 API Key。');
+        throw new Error('HeroSMS API Key missing. Please save SMS API Key in the side panel first.');
       }
       return {
         provider: PHONE_SMS_PROVIDER_HERO,
@@ -2370,35 +2370,35 @@
       const hasMinPrice = Number.isFinite(minPrice) && minPrice > 0;
       const hasMaxPrice = Number.isFinite(maxPrice) && maxPrice > 0;
       if (context?.priceRangeInvalid) {
-        suggestions.push('先修正价格区间（最低购买价不能高于价格上限）');
+        suggestions.push('Fix the price range first (min purchase price cannot exceed price cap)');
       } else if (hasMinPrice && hasMaxPrice) {
-        suggestions.push(`先适当放宽价格区间（当前 ${context.priceRangeText || `${minPrice}~${maxPrice}`}）`);
+        suggestions.push(`Widen the price range a bit (currently ${context.priceRangeText || `${minPrice}~${maxPrice}`})`);
       } else if (hasMinPrice) {
-        suggestions.push(`可适当降低最低购买价（当前 ${context.priceRangeText || `${minPrice}~`}）`);
+        suggestions.push(`Consider lowering the min purchase price (currently ${context.priceRangeText || `${minPrice}~`})`);
       } else if (!hasMaxPrice) {
-        suggestions.push('先设置价格上限（建议 >= 0.12）');
+        suggestions.push('Set a price cap first (suggested >= 0.12)');
       } else if (maxPrice < 0.12) {
-        suggestions.push('先提高价格上限（当前偏低）');
+        suggestions.push('Raise the price cap (currently too low)');
       }
 
       if ((context?.heroCountryCount || 0) <= 1) {
-        suggestions.push('HeroSMS 增加国家回退');
+        suggestions.push('Add country fallbacks for HeroSMS');
       }
       if ((context?.fiveSimCountryCount || 0) <= 0) {
-        suggestions.push('5sim 至少选择 1 个国家');
+        suggestions.push('Select at least 1 country for 5sim');
       }
       if ((context?.nexSmsCountryCount || 0) <= 0) {
-        suggestions.push('NexSMS 至少选择 1 个国家');
+        suggestions.push('Select at least 1 country for NexSMS');
       }
       if (String(context?.acquirePriority || '') === HERO_SMS_ACQUIRE_PRIORITY_COUNTRY) {
-        suggestions.push('可尝试切到“价格优先”');
+        suggestions.push('Try switching to "price-first"');
       }
 
       const unique = Array.from(new Set(suggestions));
       if (!unique.length) {
-        return '优先提高价格上限，并调整服务商/国家优先级后重试';
+        return 'Raise the price cap first, then adjust provider/country priority and retry';
       }
-      return unique.slice(0, 3).join('；');
+      return unique.slice(0, 3).join('; ');
     }
 
     async function resetPhoneNoSupplyFailureStreak(state = {}) {
@@ -2438,13 +2438,13 @@
         latestState && typeof latestState === 'object' ? latestState : state,
         providerOrder
       );
-      const minPriceText = context.minPrice === null ? '未设置' : String(context.minPrice);
-      const maxPriceText = context.maxPrice === null ? '未设置' : String(context.maxPrice);
+      const minPriceText = context.minPrice === null ? 'not set' : String(context.minPrice);
+      const maxPriceText = context.maxPrice === null ? 'not set' : String(context.maxPrice);
       const priceRangeText = context.priceRangeText || formatPhonePriceRangeText(context.minPrice, context.maxPrice);
       const providerOrderText = context.order.join(' > ');
       const suggestion = formatNoSupplySuggestion(context);
       await addLog(
-        `步骤 9 诊断：无号连续失败 ${nextStreak} 次；价格区间=${priceRangeText}；最低价=${minPriceText}；最高价=${maxPriceText}；平台顺序=${providerOrderText}；国家数 HeroSMS=${context.heroCountryCount}, 5sim=${context.fiveSimCountryCount}, NexSMS=${context.nexSmsCountryCount}。建议：${suggestion}。`,
+        `Step 9 diagnostics: No-supply failed ${nextStreak} times in a row; price range=${priceRangeText}; min=${minPriceText}; max=${maxPriceText}; provider order=${providerOrderText}; country counts HeroSMS=${context.heroCountryCount}, 5sim=${context.fiveSimCountryCount}, NexSMS=${context.nexSmsCountryCount}. Suggestion: ${suggestion}.`,
         nextStreak >= 2 ? 'warn' : 'info'
       );
       return true;
@@ -2569,12 +2569,12 @@
           ) {
             if (userLimit !== null && updatedMaxPrice > userLimit) {
               throw new Error(
-                `HeroSMS ${formatHeroSmsActionName(action)}失败：价格上限过低，平台要求至少 ${updatedMaxPrice}，已超过当前配置的价格上限 ${userLimit}。`
+                `HeroSMS ${formatHeroSmsActionName(action)} failed: Price cap is too low; platform requires at least ${updatedMaxPrice}, which exceeds the currently configured price cap ${userLimit}.`
               );
             }
             if (userMinLimit !== null && updatedMaxPrice < userMinLimit) {
               throw new Error(
-                `HeroSMS ${formatHeroSmsActionName(action)}失败：平台要求价格 ${updatedMaxPrice} 低于当前配置的最低购买价 ${userMinLimit}。`
+                `HeroSMS ${formatHeroSmsActionName(action)} failed: Platform required price ${updatedMaxPrice} is below the currently configured min purchase price ${userMinLimit}.`
               );
             }
             nextMaxPrice = updatedMaxPrice;
@@ -2691,9 +2691,9 @@
 
     function buildFiveSimRateLimitError(details = []) {
       const suffix = Array.isArray(details) && details.length
-        ? `：${details.join(' | ')}。`
-        : '。';
-      return new Error(`${FIVE_SIM_RATE_LIMIT_ERROR_PREFIX}5sim 购买接口触发限流，请稍后再试${suffix}`);
+        ? `: ${details.join(' | ')}.`
+        : '.';
+      return new Error(`${FIVE_SIM_RATE_LIMIT_ERROR_PREFIX}5sim purchase API was rate-limited; please retry later${suffix}`);
     }
 
     function isFiveSimTerminalError(payloadOrMessage, status = 0) {
@@ -2779,7 +2779,7 @@
         ? config.countryCandidates
         : [];
       if (!allCountryCandidates.length) {
-        throw new Error(`步骤 ${getActivePhoneVerificationVisibleStep()}：5sim 未选择国家，请先在接码设置中至少选择 1 个国家。`);
+        throw new Error(`Step ${getActivePhoneVerificationVisibleStep()}: 5sim has no country selected. Please select at least 1 country in SMS settings.`);
       }
       const blockedCountryIds = new Set(
         (Array.isArray(options?.blockedCountryIds) ? options.blockedCountryIds : [])
@@ -2793,7 +2793,7 @@
         countryCandidates = allCountryCandidates;
         if (blockedCountryIds.size) {
           await addLog(
-            '步骤 9：已选国家均达到临时收码失败跳过阈值，本轮解除跳过并重新尝试。',
+            'Step 9: All selected countries reached temporary SMS failure skip threshold. Lifting skip this round and retrying.',
             'warn'
           );
         }
@@ -2802,7 +2802,7 @@
       const priceRange = resolvePhonePriceRange(state, PHONE_SMS_PROVIDER_5SIM);
       if (priceRange.invalidRange) {
         throw new Error(
-          `5sim 价格区间无效：最低购买价 ${priceRange.minPriceLimit} 高于价格上限 ${priceRange.maxPriceLimit}。`
+          `5sim price range is invalid: min purchase price ${priceRange.minPriceLimit} is greater than price cap ${priceRange.maxPriceLimit}.`
         );
       }
       const maxPriceLimit = priceRange.maxPriceLimit;
@@ -2825,7 +2825,7 @@
       for (let round = 1; round <= maxAcquireRounds; round += 1) {
         if (maxAcquireRounds > 1) {
           await addLog(
-            `步骤 9：5sim 正在获取手机号（第 ${round}/${maxAcquireRounds} 轮）...`,
+            `Step 9: 5sim is acquiring phone number (round ${round}/${maxAcquireRounds})...`,
             'info'
           );
         }
@@ -2871,10 +2871,10 @@
                 const countryLabel = String(entry.countryConfig.label || countryCode).trim() || countryCode;
                 return Number.isFinite(entry.lowestPrice)
                   ? `${countryLabel}:${entry.lowestPrice}`
-                  : `${countryLabel}:无`;
+                  : `${countryLabel}:none`;
               })
             .join(' | ');
-          await addLog(`步骤 9：5sim 价格优先排序：${rankedSummary}`, 'info');
+          await addLog(`Step 9: 5sim price priority ranking: ${rankedSummary}`, 'info');
         }
 
         for (const countryConfig of orderedCountryCandidates) {
@@ -2988,7 +2988,7 @@
                 && rawPriceCandidates.length
               ) {
                 noNumbersByCountry.push(
-                  `${countryLabel}: 价格区间 ${formatPhonePriceRangeText(minPriceLimit, maxPriceLimit)} 内暂无可用号码；可见档位=${rawPriceCandidates.join(', ')}`
+                  `${countryLabel}: No numbers available in price range ${formatPhonePriceRangeText(minPriceLimit, maxPriceLimit)}; visible tiers=${rawPriceCandidates.join(', ')}`
                 );
               } else if (
                 maxPriceLimit !== null
@@ -2996,18 +2996,18 @@
                 && Number(lowestCatalog) > Number(maxPriceLimit)
               ) {
                 noNumbersByCountry.push(
-                  `${countryLabel}: 价格上限 ${maxPriceLimit} 内暂无可用号码；平台最低价=${lowestCatalog}`
+                  `${countryLabel}: No numbers available within price cap ${maxPriceLimit}; platform lowest price=${lowestCatalog}`
                 );
               } else if (countryPriceFloor !== null && rangeFilteredPriceCandidates.length) {
                 noNumbersByCountry.push(
-                  `${countryLabel}: 当前回退尝试没有高于 ${countryPriceFloor} 的价格档位`
+                  `${countryLabel}: Current fallback attempt has no price tier above ${countryPriceFloor}`
                 );
               } else if (rawPriceCandidates.length) {
                 const tierText = rawPriceCandidates.join(', ');
-                noNumbersByCountry.push(`${countryLabel}: 可见价格档位均不可用（${tierText}）`);
+                noNumbersByCountry.push(`${countryLabel}: All visible price tiers unavailable (${tierText})`);
                 retryableNoNumberCountries.push(countryLabel);
               } else {
-                noNumbersByCountry.push(`${countryLabel}: 暂无可用号码`);
+                noNumbersByCountry.push(`${countryLabel}: No numbers available`);
                 retryableNoNumberCountries.push(countryLabel);
               }
               continue;
@@ -3045,7 +3045,7 @@
                   continue;
                 }
                 if (isFiveSimNoNumbersError(payload)) {
-                  countryNoNumbersText = payloadText || countryNoNumbersText || '暂无可用号码';
+                  countryNoNumbersText = payloadText || countryNoNumbersText || 'No numbers available';
                   continue;
                 }
                 if (isFiveSimTerminalError(payload)) {
@@ -3061,7 +3061,7 @@
                   throw createPhoneSmsActionFailureError('5sim buy activation', describeFiveSimPayload(error?.payload || error?.message) || 'unknown terminal error', error?.payload, error?.status);
                 }
                 if (isFiveSimNoNumbersError(error?.payload || error?.message)) {
-                  countryNoNumbersText = describeFiveSimPayload(error?.payload || error?.message) || countryNoNumbersText || '暂无可用号码';
+                  countryNoNumbersText = describeFiveSimPayload(error?.payload || error?.message) || countryNoNumbersText || 'No numbers available';
                   continue;
                 }
                 lastError = error;
@@ -3081,16 +3081,16 @@
               && rawPriceCandidates.length
             ) {
               noNumbersByCountry.push(
-                `${countryLabel}: 价格区间 ${formatPhonePriceRangeText(minPriceLimit, maxPriceLimit)} 内暂无可用号码；可见档位=${rawPriceCandidates.join(', ')}`
+                `${countryLabel}: No numbers available in price range ${formatPhonePriceRangeText(minPriceLimit, maxPriceLimit)}; visible tiers=${rawPriceCandidates.join(', ')}`
               );
             } else if (maxPriceLimit !== null && lowestCatalogPrice !== null && Number(lowestCatalogPrice) > Number(maxPriceLimit)) {
               noNumbersByCountry.push(
-                `${countryLabel}: 价格上限 ${maxPriceLimit} 内暂无可用号码；平台最低价=${lowestCatalogPrice}`
+                `${countryLabel}: No numbers available within price cap ${maxPriceLimit}; platform lowest price=${lowestCatalogPrice}`
               );
             } else if (isFiveSimRateLimitError(countryNoNumbersText)) {
               rateLimitByCountry.push(`${countryLabel}: ${countryNoNumbersText || 'rate limit'}`);
             } else {
-              noNumbersByCountry.push(`${countryLabel}: ${countryNoNumbersText || '暂无可用号码'}`);
+              noNumbersByCountry.push(`${countryLabel}: ${countryNoNumbersText || 'No numbers available'}`);
               retryableNoNumberCountries.push(countryLabel);
             }
             continue;
@@ -3109,14 +3109,14 @@
                 : lowestRangePrice;
               if (minPriceLimit !== null && lowestRangePrice === null) {
                 noNumbersByCountry.push(
-                  `${countryLabel}: 价格区间 ${formatPhonePriceRangeText(minPriceLimit, maxPriceLimit)} 内暂无可用号码`
+                  `${countryLabel}: No numbers available in price range ${formatPhonePriceRangeText(minPriceLimit, maxPriceLimit)}`
                 );
               } else if (maxPriceLimit !== null && lowestCatalogPrice !== null && lowestCatalogPrice > maxPriceLimit) {
                 noNumbersByCountry.push(
-                  `${countryLabel}: 价格上限 ${maxPriceLimit} 内暂无可用号码；平台最低价=${lowestCatalogPrice}`
+                  `${countryLabel}: No numbers available within price cap ${maxPriceLimit}; platform lowest price=${lowestCatalogPrice}`
                 );
               } else {
-                noNumbersByCountry.push(`${countryLabel}: ${describeFiveSimPayload(error?.payload || error?.message) || '暂无可用号码'}`);
+                noNumbersByCountry.push(`${countryLabel}: ${describeFiveSimPayload(error?.payload || error?.message) || 'No numbers available'}`);
                 retryableNoNumberCountries.push(countryLabel);
               }
               continue;
@@ -3139,7 +3139,7 @@
           && retryableNoNumberCountries.length > 0
         ) {
           await addLog(
-            `步骤 9：5sim 暂无可用号码（第 ${round}/${maxAcquireRounds} 轮）；${Math.ceil(retryDelayMs / 1000)} 秒后重试。国家：${retryableNoNumberCountries.join(', ')}。`,
+            `Step 9: 5sim has no available numbers (round ${round}/${maxAcquireRounds}). Retrying in ${Math.ceil(retryDelayMs / 1000)} seconds. Countries: ${retryableNoNumberCountries.join(', ')}.`,
             'warn'
           );
           await sleepWithStop(retryDelayMs);
@@ -3151,7 +3151,7 @@
 
       if (finalNoNumbersByCountry.length) {
         throw new Error(
-          `5sim 已尝试 ${countryCandidates.length} 个候选国家，均无可用号码：${finalNoNumbersByCountry.join(' | ')}。`
+          `5sim tried ${countryCandidates.length} candidate countries; none had available numbers: ${finalNoNumbersByCountry.join(' | ')}.`
         );
       }
       if (finalRateLimitByCountry.length) {
@@ -3160,7 +3160,7 @@
       if (finalLastError) {
         throw finalLastError;
       }
-      throw new Error('5sim 获取手机号失败。');
+      throw new Error('5sim failed to acquire phone number.');
     }
 
     function isNexSmsNoNumbersError(payloadOrMessage) {
@@ -3210,7 +3210,7 @@
     async function resolveNexSmsCountryPricePlan(config, countryConfig, state = {}) {
       const countryId = normalizeNexSmsCountryId(countryConfig?.id, -1);
       if (countryId < 0) {
-        throw new Error(`NexSMS 国家 ID 无效：${countryConfig?.id}`);
+        throw new Error(`NexSMS country ID is invalid: ${countryConfig?.id}`);
       }
       const payload = await fetchNexSmsPayload(
         config,
@@ -3308,7 +3308,7 @@
         ? config.countryCandidates
         : resolveNexSmsCountryCandidates(state);
       if (!allCountryCandidates.length) {
-        throw new Error(`步骤 ${getActivePhoneVerificationVisibleStep()}：NexSMS 未选择国家，请先在接码设置中至少选择 1 个国家。`);
+        throw new Error(`Step ${getActivePhoneVerificationVisibleStep()}: NexSMS has no country selected. Please select at least 1 country in SMS settings.`);
       }
       const blockedCountryIds = new Set(
         (Array.isArray(options?.blockedCountryIds) ? options.blockedCountryIds : [])
@@ -3323,7 +3323,7 @@
         countryCandidates = allCountryCandidates;
         if (blockedCountryIds.size) {
           await addLog(
-            '步骤 9：已选国家均达到临时收码失败跳过阈值，本轮解除跳过并重新尝试。',
+            'Step 9: All selected countries reached temporary SMS failure skip threshold. Lifting skip this round and retrying.',
             'warn'
           );
         }
@@ -3333,7 +3333,7 @@
       const priceRange = resolvePhonePriceRange(state, PHONE_SMS_PROVIDER_NEXSMS);
       if (priceRange.invalidRange) {
         throw new Error(
-          `NexSMS 价格区间无效：最低购买价 ${priceRange.minPriceLimit} 高于价格上限 ${priceRange.maxPriceLimit}。`
+          `NexSMS price range is invalid: min purchase price ${priceRange.minPriceLimit} is greater than price cap ${priceRange.maxPriceLimit}.`
         );
       }
       const minPriceLimit = priceRange.minPriceLimit;
@@ -3353,7 +3353,7 @@
       for (let round = 1; round <= maxAcquireRounds; round += 1) {
         if (maxAcquireRounds > 1) {
           await addLog(
-            `步骤 9：NexSMS 正在获取手机号（第 ${round}/${maxAcquireRounds} 轮）...`,
+            `Step 9: NexSMS is acquiring phone number (round ${round}/${maxAcquireRounds})...`,
             'info'
           );
         }
@@ -3407,9 +3407,9 @@
             const label = String(attempt.countryConfig.label || `Country #${id}`).trim() || `Country #${id}`;
             return Number.isFinite(attempt.orderingPrice)
               ? `${label}:${attempt.orderingPrice}`
-              : `${label}:无`;
+              : `${label}:none`;
           }).join(' | ');
-          await addLog(`步骤 9：NexSMS 价格优先排序：${rankingSummary}`, 'info');
+          await addLog(`Step 9: NexSMS price priority ranking: ${rankingSummary}`, 'info');
         }
 
         const noNumbersByCountry = [];
@@ -3440,10 +3440,10 @@
               && pricePlan.minCatalogPrice > pricePlan.userLimit
             ) {
               noNumbersByCountry.push(
-                `${countryLabel}: 价格上限 ${pricePlan.userLimit} 内暂无可用号码；平台最低价=${pricePlan.minCatalogPrice}`
+                `${countryLabel}: No numbers available within price cap ${pricePlan.userLimit}; platform lowest price=${pricePlan.minCatalogPrice}`
               );
             } else {
-              const reason = describeNexSmsPayload(pricePlan.rawPayload) || '无可用价格档位';
+              const reason = describeNexSmsPayload(pricePlan.rawPayload) || 'No available price tiers';
               noNumbersByCountry.push(`${countryLabel}: ${reason}`);
               retryableNoNumberCountries.push(countryLabel);
             }
@@ -3481,7 +3481,7 @@
             if (!pricesToTry.length) {
               if (priceRange.hasMinPriceLimit && !rangeFilteredPrices.length) {
                 noNumbersByCountry.push(
-                  `${countryLabel}: 价格区间 ${formatPhonePriceRangeText(minPriceLimit, maxPriceLimit)} 内暂无可用号码`
+                  `${countryLabel}: No numbers available in price range ${formatPhonePriceRangeText(minPriceLimit, maxPriceLimit)}`
                 );
                 continue;
               }
@@ -3491,10 +3491,10 @@
                 && pricePlan.prices.length > 0
               ) {
                 noNumbersByCountry.push(
-                  `${countryLabel}: 当前回退尝试没有高于 ${countryPriceFloor} 的价格档位`
+                  `${countryLabel}: Current fallback attempt has no price tier above ${countryPriceFloor}`
                 );
               } else {
-                noNumbersByCountry.push(`${countryLabel}: ${describeNexSmsPayload(pricePlan.rawPayload) || '暂无可用号码'}`);
+                noNumbersByCountry.push(`${countryLabel}: ${describeNexSmsPayload(pricePlan.rawPayload) || 'No numbers available'}`);
                 retryableNoNumberCountries.push(countryLabel);
               }
               continue;
@@ -3531,7 +3531,7 @@
                 serviceCode: config.serviceCode,
               });
               if (!activation) {
-                lastError = new Error('NexSMS 购买成功，但未返回手机号。');
+                lastError = new Error('NexSMS purchase succeeded but did not return a phone number.');
                 continue;
               }
               const numericPrice = Number(price);
@@ -3548,7 +3548,7 @@
             }
           }
 
-          const fallbackReason = describeNexSmsPayload(pricePlan.rawPayload) || '暂无可用号码';
+          const fallbackReason = describeNexSmsPayload(pricePlan.rawPayload) || 'No numbers available';
           noNumbersByCountry.push(`${countryLabel}: ${fallbackReason}`);
           retryableNoNumberCountries.push(countryLabel);
         }
@@ -3562,7 +3562,7 @@
           && retryableNoNumberCountries.length > 0
         ) {
           await addLog(
-            `步骤 9：NexSMS 暂无可用号码（第 ${round}/${maxAcquireRounds} 轮）；${Math.ceil(retryDelayMs / 1000)} 秒后重试。国家：${retryableNoNumberCountries.join(', ')}。`,
+            `Step 9: NexSMS has no available numbers (round ${round}/${maxAcquireRounds}); retrying in ${Math.ceil(retryDelayMs / 1000)} seconds. Countries: ${retryableNoNumberCountries.join(', ')}.`,
             'warn'
           );
           await sleepWithStop(retryDelayMs);
@@ -3574,13 +3574,13 @@
 
       if (finalNoNumbersByCountry.length) {
         throw new Error(
-          `NexSMS 已尝试 ${countryCandidates.length} 个候选国家，均无可用号码：${finalNoNumbersByCountry.join(' | ')}。`
+          `NexSMS tried ${countryCandidates.length} candidate countries; none had available numbers: ${finalNoNumbersByCountry.join(' | ')}.`
         );
       }
       if (finalLastError) {
         throw finalLastError;
       }
-      throw new Error('NexSMS 获取手机号失败。');
+      throw new Error('NexSMS failed to acquire phone number.');
     }
 
     async function requestPhoneActivation(state = {}, options = {}) {
@@ -3601,7 +3601,7 @@
         ? config.countryCandidates
         : resolveCountryCandidates(state);
       if (!allCountryCandidates.length) {
-        throw new Error(`步骤 ${getActivePhoneVerificationVisibleStep()}：HeroSMS 未选择国家，请先在接码设置中至少选择 1 个国家。`);
+        throw new Error(`Step ${getActivePhoneVerificationVisibleStep()}: HeroSMS has no country selected. Please select at least 1 country in SMS settings.`);
       }
       const blockedCountryIds = new Set(
         (Array.isArray(options?.blockedCountryIds) ? options.blockedCountryIds : [])
@@ -3615,7 +3615,7 @@
         countryCandidates = allCountryCandidates;
         if (blockedCountryIds.size) {
           await addLog(
-            '步骤 9：已选国家均达到临时收码失败跳过阈值，本轮解除跳过并重新尝试。',
+            'Step 9: All selected countries reached temporary SMS failure skip threshold. Lifting skip this round and retrying.',
             'warn'
           );
         }
@@ -3624,7 +3624,7 @@
       const priceRange = resolvePhonePriceRange(state, PHONE_SMS_PROVIDER_HERO);
       if (priceRange.invalidRange) {
         throw new Error(
-          `HeroSMS 价格区间无效：最低购买价 ${priceRange.minPriceLimit} 高于价格上限 ${priceRange.maxPriceLimit}。`
+          `HeroSMS price range is invalid: min purchase price ${priceRange.minPriceLimit} is greater than price cap ${priceRange.maxPriceLimit}.`
         );
       }
       const minPriceLimit = priceRange.minPriceLimit;
@@ -3651,7 +3651,7 @@
       for (let round = 1; round <= maxAcquireRounds; round += 1) {
         if (maxAcquireRounds > 1) {
           await addLog(
-            `步骤 9：HeroSMS 正在获取手机号（第 ${round}/${maxAcquireRounds} 轮）...`,
+            `Step 9: HeroSMS is acquiring phone number (round ${round}/${maxAcquireRounds})...`,
             'info'
           );
         }
@@ -3759,26 +3759,26 @@
             : (floorFilteredPrices.length ? floorFilteredPrices : candidatePrices);
           const rawTierText = Array.isArray(pricePlan?.prices) && pricePlan.prices.length
             ? pricePlan.prices
-                .map((value) => (value === null || value === undefined ? '自动' : String(value)))
+                .map((value) => (value === null || value === undefined ? 'auto' : String(value)))
                 .join(', ')
-            : '无';
+            : 'none';
           await addLog(
-            `步骤 9：HeroSMS ${countryConfig.label} 价格方案：档位=[${rawTierText}]，用户上限=${pricePlan?.userLimit ?? '未设置'}，目录最低价=${pricePlan?.minCatalogPrice ?? '未知'}。`,
+            `Step 9: HeroSMS ${countryConfig.label} price plan: tiers=[${rawTierText}], user cap=${pricePlan?.userLimit ?? 'not set'}, catalog lowest=${pricePlan?.minCatalogPrice ?? 'unknown'}.`,
             'info'
           );
           if (pricesToTry.length > 1 || countryPriceFloor !== null) {
             const tierText = pricesToTry
-              .map((value) => (value === null || value === undefined ? '自动' : String(value)))
+              .map((value) => (value === null || value === undefined ? 'auto' : String(value)))
               .join(', ');
             await addLog(
-              `步骤 9：HeroSMS ${countryConfig.label} 本轮候选价格：${tierText}${countryPriceFloor !== null ? `（高于 ${countryPriceFloor}）` : ''}。`,
+              `Step 9: HeroSMS ${countryConfig.label} candidate prices this round: ${tierText}${countryPriceFloor !== null ? ` (above ${countryPriceFloor})` : ''}.`,
               'info'
             );
           }
           if (!pricesToTry.length) {
             if (priceRange.hasMinPriceLimit && !rangeFilteredPrices.length) {
               noNumbersByCountry.push(
-                `${countryConfig.label}: 价格区间 ${formatPhonePriceRangeText(minPriceLimit, maxPriceLimit)} 内暂无可用号码`
+                `${countryConfig.label}: No numbers available in price range ${formatPhonePriceRangeText(minPriceLimit, maxPriceLimit)}`
               );
               continue;
             }
@@ -3788,7 +3788,7 @@
               && pricePlan.prices.length > 0
             ) {
               noNumbersByCountry.push(
-                `${countryConfig.label}: 当前回退尝试没有高于 ${countryPriceFloor} 的价格档位`
+                `${countryConfig.label}: Current fallback attempt has no price tier above ${countryPriceFloor}`
               );
               continue;
             }
@@ -3798,7 +3798,7 @@
               && pricePlan.minCatalogPrice > pricePlan.userLimit
             ) {
               noNumbersByCountry.push(
-                `${countryConfig.label}: 价格上限 ${pricePlan.userLimit} 内暂无可用号码；平台最低价=${pricePlan.minCatalogPrice}`
+                `${countryConfig.label}: No numbers available within price cap ${pricePlan.userLimit}; platform lowest price=${pricePlan.minCatalogPrice}`
               );
             } else {
               noNumbersByCountry.push(
@@ -3813,7 +3813,7 @@
               try {
                 const fixedPrice = !Boolean(pricePlan.syntheticUserLimitProbe);
                 await addLog(
-                  `步骤 9：HeroSMS ${countryConfig.label} 正在尝试${formatHeroSmsActionName(requestAction)}，价格档位 ${maxPrice === null || maxPrice === undefined ? '自动' : maxPrice}。`,
+                  `Step 9: HeroSMS ${countryConfig.label} is trying ${formatHeroSmsActionName(requestAction)} at price tier ${maxPrice === null || maxPrice === undefined ? 'auto' : maxPrice}.`,
                   'info'
                 );
                 const payload = await requestPhoneActivationWithPrice(
@@ -3868,7 +3868,7 @@
 
           if (noNumbersObservedInCountry) {
             const tiersTriedText = pricesToTry
-              .map((value) => (value === null || value === undefined ? '自动' : String(value)))
+              .map((value) => (value === null || value === undefined ? 'auto' : String(value)))
               .join(', ');
             if (
               pricePlan.userLimit !== null
@@ -3876,11 +3876,11 @@
               && pricePlan.minCatalogPrice > pricePlan.userLimit
             ) {
               noNumbersByCountry.push(
-                `${countryConfig.label}: 价格上限 ${pricePlan.userLimit} 内暂无可用号码；平台最低价=${pricePlan.minCatalogPrice}`
+                `${countryConfig.label}: No numbers available within price cap ${pricePlan.userLimit}; platform lowest price=${pricePlan.minCatalogPrice}`
               );
             } else {
               noNumbersByCountry.push(
-                `${countryConfig.label}: ${lastFailureText || 'NO_NUMBERS'}${tiersTriedText ? `（已尝试档位：${tiersTriedText}）` : ''}`
+                `${countryConfig.label}: ${lastFailureText || 'NO_NUMBERS'}${tiersTriedText ? ` (tiers tried: ${tiersTriedText})` : ''}`
               );
               retryableNoNumberCountries.push(countryConfig.label);
             }
@@ -3898,11 +3898,11 @@
           && retryableNoNumberCountries.length > 0
         ) {
           await addLog(
-            `步骤 9：HeroSMS 暂无可用号码（第 ${round}/${maxAcquireRounds} 轮）；${Math.ceil(retryDelayMs / 1000)} 秒后重试。国家：${retryableNoNumberCountries.join(', ')}。`,
+            `Step 9: HeroSMS has no available numbers (round ${round}/${maxAcquireRounds}). Retrying in ${Math.ceil(retryDelayMs / 1000)} seconds. Countries: ${retryableNoNumberCountries.join(', ')}.`,
             'warn'
           );
           await addLog(
-            `步骤 9：HeroSMS 暂无可用号码（第 ${round}/${maxAcquireRounds} 轮），${Math.ceil(retryDelayMs / 1000)} 秒后重试。国家：${retryableNoNumberCountries.join(', ')}。`,
+            `Step 9: HeroSMS has no available numbers (round ${round}/${maxAcquireRounds}). Retrying in ${Math.ceil(retryDelayMs / 1000)} seconds. Countries: ${retryableNoNumberCountries.join(', ')}.`,
             'warn'
           );
           await sleepWithStop(retryDelayMs);
@@ -3914,19 +3914,19 @@
 
       if (finalNoNumbersByCountry.length) {
         throw new Error(
-          `HeroSMS 已尝试 ${countryCandidates.length} 个候选国家，均无可用号码：${finalNoNumbersByCountry.join(' | ')}。`
+          `HeroSMS tried ${countryCandidates.length} candidate countries; none had available numbers: ${finalNoNumbersByCountry.join(' | ')}.`
         );
       }
       if (finalLastError) {
         throw finalLastError;
       }
-      throw new Error(`HeroSMS 获取手机号失败，最后状态：${finalLastFailureText || '未知'}。`);
+      throw new Error(`HeroSMS failed to acquire phone number; last status: ${finalLastFailureText || 'unknown'}.`);
     }
 
     async function reactivatePhoneActivation(state = {}, activation) {
       const normalizedActivation = normalizeActivation(activation);
       if (!normalizedActivation) {
-        throw new Error('缺少可复用的手机号接码订单。');
+        throw new Error('No reusable SMS phone order available.');
       }
       if (getActivationProviderId(normalizedActivation, state) === PHONE_SMS_PROVIDER_FIVE_SIM) {
         const provider = getFiveSimProviderForState(state);
@@ -3949,7 +3949,7 @@
         };
       }
       if (config.provider === PHONE_SMS_PROVIDER_NEXSMS) {
-        throw new Error('NexSMS 当前流程不支持复用手机号订单。');
+        throw new Error('NexSMS current flow does not support reusing phone orders.');
       }
       const payload = await fetchHeroSmsPayload(config, {
         action: 'reactivate',
@@ -3958,7 +3958,7 @@
       const nextActivation = parseActivationPayload(payload, normalizedActivation);
       if (!nextActivation) {
         const text = describeHeroSmsPayload(payload);
-        throw new Error(`HeroSMS 复用手机号失败：${text || '空响应'}`);
+        throw new Error(`HeroSMS reuse phone number failed: ${text || 'empty response'}`);
       }
       return nextActivation;
     }
@@ -3975,7 +3975,7 @@
       ) {
         const identifier = normalizedActivation.phoneNumber || normalizedActivation.activationId || 'current activation';
         await addLog(
-          `步骤 9：白嫖复用模式仅请求短信，跳过 ${identifier} 的 setStatus(${normalizedStatus})。`,
+          `Step 9: Free-reuse mode only requests SMS; skipping setStatus(${normalizedStatus}) for ${identifier}.`,
           'info'
         );
         return `free reuse setStatus(${normalizedStatus}) skipped`;
@@ -4021,7 +4021,7 @@
         const normalizedActivation = normalizeActivation(activation);
         const identifier = normalizedActivation?.phoneNumber || normalizedActivation?.activationId || 'current activation';
         await addLog(
-          `步骤 9：白嫖复用模式仅请求短信，跳过 ${identifier} 的接码完成状态。`,
+          `Step 9: Free-reuse mode only requests SMS; skipping SMS completion status for ${identifier}.`,
           'info'
         );
         return;
@@ -4042,7 +4042,7 @@
         if (shouldSkipTerminalStatusForFreeReuse(state, activation)) {
           const identifier = normalizedActivation?.phoneNumber || normalizedActivation?.activationId || 'current activation';
           await addLog(
-            `步骤 9：白嫖复用模式仅请求短信，跳过 ${identifier} 的接码取消状态。`,
+            `Step 9: Free-reuse mode only requests SMS; skipping SMS cancel status for ${identifier}.`,
             'info'
           );
           return;
@@ -4062,7 +4062,7 @@
 
     async function retireFreeReusableActivation(reason = '') {
       const suffix = reason ? ` ${reason}` : '';
-      await addLog(`步骤 9：已清除白嫖复用手机号记录。${suffix}`, 'warn');
+      await addLog(`Step 9: Cleared free-reuse phone number record.${suffix}`, 'warn');
       await clearFreeReusableActivation();
     }
 
@@ -4095,7 +4095,7 @@
       if (Object.keys(updates).length) {
         await setPhoneRuntimeState(updates);
         await addLog(
-          `步骤 9：已从复用记录中移除手机号 ${rejectedPhoneNumber}。${reason || '目标站拒绝该号码。'}`,
+          `Step 9: Removed phone number ${rejectedPhoneNumber} from reuse records.${reason || ' Target site rejected this number.'}`,
           'warn'
         );
       }
@@ -4143,7 +4143,7 @@
           const normalizedActivation = normalizeActivation(activation);
           const identifier = normalizedActivation?.phoneNumber || normalizedActivation?.activationId || 'current activation';
           await addLog(
-            `步骤 9：白嫖复用模式仅请求短信，跳过 ${identifier} 的接码封禁状态。`,
+              `Step 9: Free-reuse mode only requests SMS; skipping SMS ban status for ${identifier}.`,
             'info'
           );
           return;
@@ -4195,7 +4195,7 @@
         return {
           ok: false,
           reason: 'missing_free_reusable_activation',
-          message: '免费复用手机号激活记录缺失。',
+          message: 'Free-reuse phone activation record missing.',
         };
       }
       if (normalizedActivation.provider === PHONE_SMS_PROVIDER_5SIM) {
@@ -4208,7 +4208,7 @@
             return {
               ok: false,
               reason: 'five_sim_reuse_check_failed',
-              message: error.message || '5sim 复用手机号基线检查失败。',
+              message: error.message || '5sim phone reuse baseline check failed.',
             };
           }
           return {
@@ -4231,7 +4231,7 @@
         return {
           ok: false,
           reason: 'missing_activation_id',
-          message: '已保存的免费复用手机号缺少 HeroSMS 激活 ID，无法自动重新激活。',
+          message: 'Saved free-reuse phone number has no HeroSMS activation ID; cannot reactivate automatically.',
         };
       }
 
@@ -4253,20 +4253,20 @@
             { ...state, phoneSmsProvider: PHONE_SMS_PROVIDER_HERO },
             normalizedActivation,
             3,
-            'HeroSMS 自动复用设置订单状态'
+            'HeroSMS auto-reuse set order status'
           );
         } catch (error) {
           return {
             ok: false,
             reason: 'set_status_failed',
-            message: error.message || 'HeroSMS 更新订单状态失败。',
+            message: error.message || 'HeroSMS update order status failed.',
             lastStatus,
             prepareRound,
           };
         }
 
         await addLog(
-          `步骤 9：自动白嫖复用已刷新 ${normalizedActivation.phoneNumber}，${Math.ceil(FREE_PHONE_REUSE_PREPARE_INTERVAL_MS / 1000)} 秒后检查等待状态（${prepareRound}/${FREE_PHONE_REUSE_PREPARE_MAX_ROUNDS}）。`,
+          `Step 9: Auto free-reuse refreshed ${normalizedActivation.phoneNumber}; will check waiting status in ${Math.ceil(FREE_PHONE_REUSE_PREPARE_INTERVAL_MS / 1000)} seconds (${prepareRound}/${FREE_PHONE_REUSE_PREPARE_MAX_ROUNDS}).`,
           'info'
         );
         await sleepWithStop(FREE_PHONE_REUSE_PREPARE_INTERVAL_MS);
@@ -4275,11 +4275,11 @@
           const payload = await fetchHeroSmsPayload(config, {
             action: statusAction,
             id: normalizedActivation.activationId,
-          }, `HeroSMS 自动复用${statusAction}`);
+          }, `HeroSMS auto-reuse ${statusAction}`);
           const statusText = describeHeroSmsPayload(payload);
           lastStatus = statusText;
           await addLog(
-            `步骤 9：自动白嫖复用号码 ${normalizedActivation.phoneNumber} 状态：${statusText || '空响应'}（${prepareRound}/${FREE_PHONE_REUSE_PREPARE_MAX_ROUNDS}）。`,
+            `Step 9: Auto free-reuse number ${normalizedActivation.phoneNumber} status: ${statusText || 'empty response'} (${prepareRound}/${FREE_PHONE_REUSE_PREPARE_MAX_ROUNDS}).`,
             'info'
           );
 
@@ -4300,7 +4300,7 @@
           }
           if (/^STATUS_OK:/i.test(statusText)) {
             await addLog(
-              `步骤 9：自动白嫖复用仍看到旧验证码，将再次刷新等待短信状态。`,
+              `Step 9: Auto free-reuse still sees the old verification code; will refresh again and wait for SMS status.`,
               'warn'
             );
             continue;
@@ -4309,7 +4309,7 @@
             return {
               ok: false,
               reason: 'activation_cancelled',
-              message: 'HeroSMS 订单在自动白嫖复用前已被取消。',
+              message: 'HeroSMS order was canceled before auto free-reuse.',
               lastStatus,
               prepareRound,
             };
@@ -4318,7 +4318,7 @@
           return {
             ok: false,
             reason: 'get_status_failed',
-            message: error.message || 'HeroSMS 查询短信状态失败。',
+            message: error.message || 'HeroSMS query SMS status failed.',
             lastStatus,
             prepareRound,
           };
@@ -4328,7 +4328,7 @@
       return {
         ok: false,
         reason: 'prepare_timeout',
-        message: `等待已保存手机号进入短信等待状态超时。最后状态：${lastStatus || '未知'}。`,
+        message: `Timed out waiting for the saved phone number to enter the SMS-waiting state. Last status: ${lastStatus || 'unknown'}.`,
         lastStatus,
         prepareRound,
       };
@@ -4337,7 +4337,7 @@
     async function pollPhoneActivationCode(state = {}, activation, options = {}) {
       const normalizedActivation = normalizeActivation(activation);
       if (!normalizedActivation) {
-        throw new Error('缺少手机号接码订单。');
+        throw new Error('Missing phone SMS order.');
       }
       if (getActivationProviderId(normalizedActivation, state) === PHONE_SMS_PROVIDER_FIVE_SIM) {
         const provider = getFiveSimProviderForState(state);
@@ -4435,7 +4435,7 @@
           }
 
           if (/^(CANCELED|CANCELLED|BANNED|FINISHED|EXPIRED|TIMEOUT)$/i.test(statusText)) {
-            throw new Error(`5sim 订单在收到短信前已结束：${statusText}`);
+            throw new Error(`5sim order ended before SMS arrived: ${statusText}`);
           }
 
           throw createPhoneSmsActionFailureError('5sim check activation', text || statusText || 'empty response');
@@ -4560,7 +4560,7 @@
         }
 
         if (/^STATUS_CANCEL$/i.test(text)) {
-          throw new Error('HeroSMS 订单在短信到达前已被取消。');
+          throw new Error('HeroSMS order was cancelled before SMS arrived.');
         }
 
         throw createHeroSmsActionFailureError(statusAction, text || 'empty response');
@@ -4575,13 +4575,13 @@
       let timeoutId = null;
       const timeoutPromise = new Promise((_, reject) => {
         timeoutId = setTimeout(() => {
-          reject(new Error(`步骤 ${visibleStep}：等待认证页状态检查超时。`));
+          reject(new Error(`Step ${visibleStep}: Timed out waiting for auth page status check.`));
         }, deadlineMs);
       });
       const readPromise = (async () => {
         await ensureStep8SignupPageReady(tabId, {
           timeoutMs: deadlineMs,
-          logMessage: '步骤 9：等待认证页脚本恢复后继续手机号验证。',
+          logMessage: 'Step 9: Waiting for auth page script recovery before continuing phone verification.',
           visibleStep,
           logStepKey: 'phone-verification',
         });
@@ -4593,7 +4593,7 @@
           timeoutMs: deadlineMs,
           responseTimeoutMs: deadlineMs,
           retryDelayMs: 600,
-          logMessage: '步骤 9：认证页正在切换，等待后重新检查手机号验证状态...',
+          logMessage: 'Step 9: Auth page is switching. Waiting to re-check phone verification status...',
           logStep: visibleStep,
           logStepKey: 'phone-verification',
         });
@@ -4674,7 +4674,7 @@
       const countryConfig = resolveCountryConfigFromActivation(activation, state);
       const visibleStep = normalizeLogStep(activePhoneVerificationLogStep) || 9;
       const timeoutMs = typeof getOAuthFlowStepTimeoutMs === 'function'
-        ? await getOAuthFlowStepTimeoutMs(30000, { step: visibleStep, actionLabel: '提交添加手机号' })
+        ? await getOAuthFlowStepTimeoutMs(30000, { step: visibleStep, actionLabel: 'Submit add phone' })
         : 30000;
       const result = await sendToContentScriptResilient('openai-auth', {
         type: 'SUBMIT_PHONE_NUMBER',
@@ -4688,7 +4688,7 @@
         timeoutMs,
         responseTimeoutMs: timeoutMs,
         retryDelayMs: 600,
-        logMessage: '步骤 9：等待添加手机号页面就绪...',
+        logMessage: 'Step 9: Waiting for add phone page to be ready...',
         logStep: visibleStep,
         logStepKey: 'phone-verification',
       });
@@ -4721,7 +4721,7 @@
         })()
         : null;
       const timeoutMs = typeof getOAuthFlowStepTimeoutMs === 'function'
-        ? await getOAuthFlowStepTimeoutMs(45000, { step: visibleStep, actionLabel: '提交手机验证码' })
+        ? await getOAuthFlowStepTimeoutMs(45000, { step: visibleStep, actionLabel: 'Submit phone verification code' })
         : 45000;
       const result = await sendToContentScriptResilient('openai-auth', {
         type: 'SUBMIT_PHONE_VERIFICATION_CODE',
@@ -4734,7 +4734,7 @@
         timeoutMs,
         responseTimeoutMs: timeoutMs,
         retryDelayMs: 600,
-        logMessage: '步骤 9：等待手机验证码页面就绪后填写短信验证码...',
+        logMessage: 'Step 9: Waiting for phone verification code page to be ready before filling SMS code...',
         logStep: visibleStep,
         logStepKey: 'phone-verification',
       });
@@ -4764,7 +4764,7 @@
         timeoutMs,
         responseTimeoutMs: timeoutMs,
         retryDelayMs: 600,
-        logMessage: '步骤 9：等待手机验证码重发按钮出现...',
+        logMessage: 'Step 9: Waiting for phone verification code resend button to appear...',
         logStep: visibleStep,
         logStepKey: 'phone-verification',
       });
@@ -4778,7 +4778,7 @@
     async function submitSignupPhoneVerificationCode(tabId, code, options = {}) {
       const visibleStep = 4;
       const timeoutMs = typeof getOAuthFlowStepTimeoutMs === 'function'
-        ? await getOAuthFlowStepTimeoutMs(45000, { step: visibleStep, actionLabel: '提交注册手机验证码' })
+        ? await getOAuthFlowStepTimeoutMs(45000, { step: visibleStep, actionLabel: 'Submit signup phone verification code' })
         : 45000;
       const result = await sendToContentScriptResilient('openai-auth', {
         type: 'SUBMIT_PHONE_VERIFICATION_CODE',
@@ -4793,7 +4793,7 @@
         timeoutMs,
         responseTimeoutMs: timeoutMs,
         retryDelayMs: 600,
-        logMessage: '步骤 4：等待注册手机验证码页面就绪后填写短信验证码...',
+        logMessage: 'Step 4: Waiting for signup phone verification code page to be ready before filling SMS code...',
         logStep: visibleStep,
         logStepKey: 'fetch-signup-code',
       });
@@ -4807,7 +4807,7 @@
     async function resendSignupPhoneVerificationCode(tabId) {
       const visibleStep = 4;
       const timeoutMs = typeof getOAuthFlowStepTimeoutMs === 'function'
-        ? await getOAuthFlowStepTimeoutMs(65000, { step: visibleStep, actionLabel: '重新发送注册手机验证码' })
+        ? await getOAuthFlowStepTimeoutMs(65000, { step: visibleStep, actionLabel: 'Resend signup phone verification code' })
         : 65000;
       const result = await sendToContentScriptResilient('openai-auth', {
         type: 'RESEND_VERIFICATION_CODE',
@@ -4818,7 +4818,7 @@
         timeoutMs,
         responseTimeoutMs: timeoutMs,
         retryDelayMs: 600,
-        logMessage: '步骤 4：等待注册手机验证码重发按钮出现...',
+        logMessage: 'Step 4: Waiting for signup phone verification code resend button to appear...',
         logStep: visibleStep,
         logStepKey: 'fetch-signup-code',
       });
@@ -4842,7 +4842,7 @@
         timeoutMs,
         responseTimeoutMs: timeoutMs,
         retryDelayMs: 600,
-        logMessage: '步骤 9：返回添加手机号页面以更换号码...',
+        logMessage: 'Step 9: Returning to add phone page to change number...',
         logStep: visibleStep,
         logStepKey: 'phone-verification',
       });
@@ -4911,7 +4911,7 @@
             message: error.message,
           };
         }
-        await addLog(`步骤 9：检查手机重发错误时遇到暂时性问题，已忽略。${error.message}`, 'warn');
+        await addLog(`Step 9: Hit a transient issue while checking the phone resend error; ignored. ${error.message}`, 'warn');
         return {
           hasError: false,
           reason: '',
@@ -5007,7 +5007,7 @@
 
       if (freeReusableActivation.successfulUses >= freeReusableActivation.maxUses) {
         await retireFreeReusableActivation(
-          `保存的手机号 ${freeReusableActivation.phoneNumber} 已达到 ${freeReusableActivation.successfulUses}/${freeReusableActivation.maxUses} 次。`
+          `Saved phone number ${freeReusableActivation.phoneNumber} reached ${freeReusableActivation.successfulUses}/${freeReusableActivation.maxUses} uses.`
         );
         return null;
       }
@@ -5018,20 +5018,20 @@
 
       if (canPrepareAutomaticFreeReuse) {
         await addLog(
-          `步骤 9：准备自动白嫖复用已保存手机号 ${freeReusableActivation.phoneNumber}（${freeReusableActivation.successfulUses + 1}/${freeReusableActivation.maxUses}）。`,
+          `Step 9: Preparing auto free-reuse of saved phone number ${freeReusableActivation.phoneNumber} (${freeReusableActivation.successfulUses + 1}/${freeReusableActivation.maxUses}).`,
           'info'
         );
         const prepared = await prepareFreeReusablePhoneActivation(state, freeReusableActivation);
         if (!prepared.ok) {
           const reason = prepared.message || prepared.reason || 'unknown error';
-          const stopMessage = `自动白嫖复用准备失败：${freeReusableActivation.phoneNumber} 未确认进入等待短信状态，本次不购买新 HeroSMS 号码。原因：${reason}`;
+          const stopMessage = `Auto free-reuse preparation failed: ${freeReusableActivation.phoneNumber} did not reach SMS-waiting state. Not purchasing a new HeroSMS number this run. Reason: ${reason}`;
           await addLog(
-            `步骤 9：自动白嫖复用准备失败，停止本次接码且不购买新 HeroSMS 号码。${reason}`,
+            `Step 9: Auto free-reuse preparation failed; stopping this SMS attempt and not purchasing a new HeroSMS number. ${reason}`,
             'error'
           );
           if (prepared.reason === 'activation_cancelled') {
             await retireFreeReusableActivation(
-              `自动白嫖复用号码 ${freeReusableActivation.phoneNumber} 已被 HeroSMS 取消。`
+              `Auto free-reuse number ${freeReusableActivation.phoneNumber} was canceled by HeroSMS.`
             );
           }
           if (typeof requestStop === 'function') {
@@ -5045,8 +5045,8 @@
 
       const fillResult = await submitPhoneNumber(tabId, freeReusableActivation.phoneNumber, freeReusableActivation);
       await clearCurrentActivation();
-      const message = `开始手动复用手机 ${freeReusableActivation.phoneNumber}，请到 SMS 上刷新。`;
-      await addLog(`步骤 9：${message}`, 'warn');
+      const message = `Starting manual reuse of phone ${freeReusableActivation.phoneNumber}. Please refresh on SMS.`;
+      await addLog(`Step 9: ${message}`, 'warn');
       if (typeof requestStop === 'function') {
         await requestStop({ logMessage: message });
       }
@@ -5108,7 +5108,7 @@
         (provider === PHONE_SMS_PROVIDER_5SIM || provider === PHONE_SMS_PROVIDER_NEXSMS)
         && !countryCandidates.length
       ) {
-        throw new Error(`步骤 ${getActivePhoneVerificationVisibleStep()}：${provider === PHONE_SMS_PROVIDER_5SIM ? '5sim' : 'NexSMS'} 未选择国家，请先在接码设置中至少选择 1 个国家。`);
+        throw new Error(`Step ${getActivePhoneVerificationVisibleStep()}: ${provider === PHONE_SMS_PROVIDER_5SIM ? '5sim' : 'NexSMS'} has no country selected. Please select at least 1 country in SMS settings.`);
       }
       const normalizeCountryKey = (value) => (
         provider === PHONE_SMS_PROVIDER_5SIM
@@ -5172,7 +5172,7 @@
         try {
           const reactivated = await reactivatePhoneActivation(state, preferredActivation);
           await addLog(
-            `步骤 9：优先复用手动选择号码 ${reactivated.phoneNumber}${reactivated.countryId ? `（${resolveCountryLabelById(reactivated.countryId)}）` : ''}。`,
+            `Step 9: Reusing manually selected number ${reactivated.phoneNumber}${reactivated.countryId ? ` (${resolveCountryLabelById(reactivated.countryId)})` : ''}.`,
             'info'
           );
           await resetPhoneNoSupplyFailureStreak(state);
@@ -5181,7 +5181,7 @@
           failedPreferredActivation = preferredActivation;
           await removeReusableActivationFromPool(preferredActivation, { state }).catch(() => {});
           await addLog(
-            `步骤 9：手动选择号码 ${preferredActivation.phoneNumber} 不可用，将改为获取新号码。${error.message}`,
+            `Step 9: Manually selected number ${preferredActivation.phoneNumber} is unavailable; will get a new number instead. ${error.message}`,
             'warn'
           );
         }
@@ -5226,13 +5226,13 @@
           try {
             const reactivated = await reactivatePhoneActivation(state, candidateActivation);
             await addLog(
-              `步骤 9：复用 ${resolveCountryLabelById(reactivated.countryId)} 号码 ${reactivated.phoneNumber}（第 ${reactivated.successfulUses + 1}/${reactivated.maxUses} 次）。`,
+              `Step 9: Reusing ${resolveCountryLabelById(reactivated.countryId)} number ${reactivated.phoneNumber} (use ${reactivated.successfulUses + 1}/${reactivated.maxUses}).`,
               'info'
             );
             await resetPhoneNoSupplyFailureStreak(state);
             return reactivated;
           } catch (error) {
-            await addLog(`步骤 9：复用号码 ${candidateActivation.phoneNumber} 失败，将改为获取新号码。${error.message}`, 'warn');
+            await addLog(`Step 9: Failed to reuse number ${candidateActivation.phoneNumber}; will get a new number instead. ${error.message}`, 'warn');
             await removeReusableActivationFromPool(candidateActivation, { state }).catch(() => {});
             if (isSameActivation(reusableActivation, candidateActivation)) {
               await clearReusableActivation();
@@ -5269,12 +5269,12 @@
             : String(activation?.countryLabel || activation?.countryId || '').trim();
           if (providerCandidate !== provider) {
             await addLog(
-              `步骤 9：主接码平台 ${getPhoneSmsProviderLabel(provider)} 暂无可用号码，已回退到 ${providerLabel}${providerCountryLabel ? ` / ${providerCountryLabel}` : ''}。`,
+              `Step 9: Primary SMS provider ${getPhoneSmsProviderLabel(provider)} has no available numbers; falling back to ${providerLabel}${providerCountryLabel ? ` / ${providerCountryLabel}` : ''}.`,
               'warn'
             );
           }
           await addLog(
-            `步骤 9：已从 ${providerLabel}${providerCountryLabel ? ` / ${providerCountryLabel}` : ''} 获取号码 ${activation.phoneNumber}。`,
+            `Step 9: Got number ${activation.phoneNumber} from ${providerLabel}${providerCountryLabel ? ` / ${providerCountryLabel}` : ''}.`,
             'info'
           );
           await resetPhoneNoSupplyFailureStreak(state);
@@ -5289,37 +5289,37 @@
             providerCandidate !== provider
             && /(?:step|步骤)\s*9\s*[:：]\s*(?:5sim|nexsms).*(?:countries\s+are\s+empty|未选择国家)/i.test(providerErrorMessage)
           ) {
-            skippedFallbackProviders.push(`${providerLabel}：未选择国家`);
+            skippedFallbackProviders.push(`${providerLabel}: no country selected`);
             await addLog(
-              `步骤 9：跳过回退接码平台 ${providerLabel}，因为接码设置中未选择国家。`,
+              `Step 9: Skipping fallback SMS provider ${providerLabel} because no country is selected in SMS settings.`,
               'warn'
             );
             continue;
           }
           lastProviderError = error;
-          providerErrors.push(`${providerLabel}：${formatProviderAcquireFailure(providerCandidate, providerErrorMessage)}`);
+          providerErrors.push(`${providerLabel}: ${formatProviderAcquireFailure(providerCandidate, providerErrorMessage)}`);
         }
       }
 
       if (providerErrors.length) {
         await logNoSupplyDiagnostics(state, providerOrder, providerErrors);
         const skippedSuffix = skippedFallbackProviders.length
-          ? `；已跳过回退平台：${skippedFallbackProviders.join('；')}`
+          ? `; skipped fallback providers: ${skippedFallbackProviders.join('; ')}`
           : '';
-        throw new Error(`步骤 ${getActivePhoneVerificationVisibleStep()}：所有接码平台候选均未获取到手机号。${providerErrors.join('；')}${skippedSuffix}`);
+        throw new Error(`Step ${getActivePhoneVerificationVisibleStep()}: All SMS provider candidates failed to acquire a phone number. ${providerErrors.join('; ')}${skippedSuffix}`);
       }
-      throw lastProviderError || new Error(`步骤 ${getActivePhoneVerificationVisibleStep()}：获取手机号订单失败。`);
+      throw lastProviderError || new Error(`Step ${getActivePhoneVerificationVisibleStep()}: Failed to acquire phone number order.`);
     }
 
     async function prepareSignupPhoneActivation(state = {}, options = {}) {
       return withPhoneVerificationLogContext({ step: 2, stepKey: 'submit-signup-email' }, async () => {
         const activation = await acquirePhoneActivation(state, {
           ...options,
-          logLabel: options?.logLabel || '步骤 2',
+          logLabel: options?.logLabel || 'Step 2',
         });
         const normalizedActivation = normalizeActivation(activation);
         if (!normalizedActivation) {
-          throw new Error('步骤 2：接码平台返回的手机号订单无效。');
+          throw new Error('Step 2: SMS provider returned an invalid phone activation.');
         }
         const countryConfig = resolveCountryConfigFromActivation(normalizedActivation, state);
         const signupActivation = normalizeActivation({
@@ -5476,7 +5476,7 @@
         recordedAt: Date.now(),
       });
       await addLog(
-        `步骤 9：收到有效短信后已保存白嫖复用手机号 ${normalizedActivation.phoneNumber}。`,
+        `Step 9: Saved free-reuse phone number ${normalizedActivation.phoneNumber} after receiving a valid SMS.`,
         'info'
       );
     }
@@ -5506,7 +5506,7 @@
       if (successfulUses >= maxUses) {
         await clearFreeReusableActivation();
         await addLog(
-          `步骤 9：自动白嫖复用手机号 ${savedActivation.phoneNumber} 已达到 ${successfulUses}/${maxUses} 次，已清除本地记录。`,
+          `Step 9: Auto free-reuse phone number ${savedActivation.phoneNumber} reached ${successfulUses}/${maxUses} uses; cleared local record.`,
           'info'
         );
         return;
@@ -5519,7 +5519,7 @@
         maxUses,
       });
       await addLog(
-        `步骤 9：自动白嫖复用手机号 ${savedActivation.phoneNumber} 成功（${successfulUses}/${maxUses}），保留供后续注册使用。`,
+        `Step 9: Auto free-reuse phone number ${savedActivation.phoneNumber} succeeded (${successfulUses}/${maxUses}); keeping it for later signups.`,
         'info'
       );
     }
@@ -5562,7 +5562,7 @@
       if (successfulUses >= maxUses) {
         await clearFreeReusableActivation();
         await addLog(
-          `步骤 9：白嫖复用手机号 ${savedActivation.phoneNumber} 已达到 ${successfulUses}/${maxUses} 次，已清除本地记录。`,
+          `Step 9: Free-reuse phone number ${savedActivation.phoneNumber} reached ${successfulUses}/${maxUses} uses; cleared local record.`,
           'info'
         );
         return;
@@ -5581,7 +5581,7 @@
     async function waitForPhoneCodeOrRotateNumber(tabId, state, activation) {
       const normalizedActivation = normalizeActivation(activation);
       if (!normalizedActivation) {
-        throw new Error('缺少手机号接码订单。');
+        throw new Error('Missing phone SMS order.');
       }
       const providerLabel = normalizedActivation.provider === PHONE_SMS_PROVIDER_5SIM
         ? '5sim'
@@ -5601,14 +5601,14 @@
       for (let windowIndex = 1; windowIndex <= timeoutWindows; windowIndex += 1) {
         await setPhoneRuntimeCountdown(normalizedActivation, waitSeconds, windowIndex, timeoutWindows);
         await addLog(
-          `步骤 9：等待号码 ${normalizedActivation.phoneNumber} 接收短信（等待窗口 ${windowIndex}/${timeoutWindows}，最长 ${waitSeconds} 秒，每 ${pollIntervalSeconds} 秒轮询一次，最多 ${pollMaxRounds} 次轮询）。`,
+          `Step 9: Waiting for number ${normalizedActivation.phoneNumber} to receive SMS (window ${windowIndex}/${timeoutWindows}, up to ${waitSeconds} seconds, polling every ${pollIntervalSeconds} seconds, max ${pollMaxRounds} polls).`,
           'info'
         );
         try {
           const code = await pollPhoneActivationCode(state, normalizedActivation, {
             actionLabel: windowIndex === 1
-              ? '从接码平台轮询手机验证码'
-              : '从接码平台轮询重发后的手机验证码',
+              ? 'Poll phone verification code from SMS provider'
+              : 'Poll phone verification code from SMS provider after resend',
             timeoutMs: waitSeconds * 1000,
             intervalMs: pollIntervalSeconds * 1000,
             maxRounds: pollMaxRounds,
@@ -5616,7 +5616,7 @@
               if (/^STATUS_(WAIT_CODE|WAIT_RETRY|WAIT_RESEND)(?::.+)?$/i.test(String(statusText || '').trim())) {
                 const pageError = await checkPhoneResendPageError(tabId, state);
                 if (pageError?.reason === 'resend_phone_banned') {
-                  throw new Error(`${PHONE_RESEND_BANNED_NUMBER_ERROR_PREFIX}${pageError.message || 'OpenAI 无法向此手机号发送短信。'}`);
+                  throw new Error(`${PHONE_RESEND_BANNED_NUMBER_ERROR_PREFIX}${pageError.message || 'OpenAI cannot send SMS to this phone number.'}`);
                 }
                 if (pageError?.reason === 'phone_max_usage_exceeded') {
                   throw buildPhoneMaxUsageExceededError(pageError.message);
@@ -5629,13 +5629,13 @@
                     throw buildHighRiskResendThrottledError(pageError.message);
                   }
                   await addLog(
-                    `步骤 9：检测到号码 ${normalizedActivation.phoneNumber} 重发限流，但未启用“按疑似封禁处理”，继续等待短信。${pageError.message || ''}`.trim(),
+                    `Step 9: Number ${normalizedActivation.phoneNumber} resend was rate-limited, but "treat as suspected ban" is not enabled; continuing to wait for SMS. ${pageError.message || ''}`.trim(),
                     'warn'
                   );
                 }
               }
               await addLog(
-                `步骤 9：${getPhoneSmsProviderLabel(normalizedActivation.provider)} 号码 ${normalizedActivation.phoneNumber} 状态：${statusText}（已等待 ${Math.ceil(elapsedMs / 1000)} 秒，第 ${pollCount}/${pollMaxRounds} 次轮询）。`,
+                `Step 9: ${getPhoneSmsProviderLabel(normalizedActivation.provider)} number ${normalizedActivation.phoneNumber} status: ${statusText} (waited ${Math.ceil(elapsedMs / 1000)} seconds, poll ${pollCount}/${pollMaxRounds}).`,
                 'info'
               );
             },
@@ -5649,7 +5649,7 @@
           if (!isPhoneCodeTimeoutError(error)) {
             if (isPhoneResendBannedNumberError(error)) {
               await addLog(
-                `步骤 9：OpenAI 无法向号码 ${normalizedActivation.phoneNumber} 发送短信，立即更换号码。${error.message}`,
+                `Step 9: OpenAI cannot send SMS to number ${normalizedActivation.phoneNumber}; replacing the number immediately. ${error.message}`,
                 'warn'
               );
               await clearPhoneRuntimeCountdown();
@@ -5661,7 +5661,7 @@
             }
             if (isPhoneMaxUsageExceededFlowError(error)) {
               await addLog(
-                `步骤 9：OpenAI 提示号码 ${normalizedActivation.phoneNumber} 达到使用上限，立即更换号码。${error.message}`,
+                `Step 9: OpenAI reports number ${normalizedActivation.phoneNumber} reached its usage limit; replacing the number immediately. ${error.message}`,
                 'warn'
               );
               await clearPhoneRuntimeCountdown();
@@ -5673,7 +5673,7 @@
             }
             if (isPhoneResendServerError(error)) {
               await addLog(
-                `步骤 9：重发短信后进入 contact-verification 500 页面，立即更换号码。${error.message}`,
+                `Step 9: Page hit contact-verification 500 after SMS resend; replacing the number immediately. ${error.message}`,
                 'warn'
               );
               await clearPhoneRuntimeCountdown();
@@ -5686,7 +5686,7 @@
             if (isPhoneResendThrottledError(error)) {
               if (shouldTreatResendThrottledAsBanned(state)) {
                 await addLog(
-                  `步骤 9：号码 ${normalizedActivation.phoneNumber} 重发限流且配置为高风险封禁，立即更换号码。${error.message}`,
+                  `Step 9: Number ${normalizedActivation.phoneNumber} resend was rate-limited and is configured as high-risk banned; replacing the number immediately. ${error.message}`,
                   'warn'
                 );
                 await clearPhoneRuntimeCountdown();
@@ -5697,7 +5697,7 @@
                 };
               }
               await addLog(
-                `步骤 9：号码 ${normalizedActivation.phoneNumber} 重发限流，但未启用高风险换号，继续原等待逻辑。${error.message}`,
+                `Step 9: Number ${normalizedActivation.phoneNumber} resend was rate-limited; high-risk replacement not enabled, keeping original wait logic. ${error.message}`,
                 'warn'
               );
               await sleepWithStop(pollIntervalSeconds * 1000);
@@ -5705,7 +5705,7 @@
             }
             if (isPhoneActivationOrderMissingError(error, normalizedActivation.provider)) {
               await addLog(
-                `步骤 9：${providerLabel} 号码 ${normalizedActivation.phoneNumber} 的接码订单已失效（${error.message || error}），立即更换号码。`,
+                `Step 9: ${providerLabel} SMS order for number ${normalizedActivation.phoneNumber} has expired (${error.message || error}); replacing the number immediately.`,
                 'warn'
               );
               await clearPhoneRuntimeCountdown();
@@ -5720,19 +5720,19 @@
 
           if (windowIndex < timeoutWindows) {
             await addLog(
-              `步骤 9：号码 ${normalizedActivation.phoneNumber} 在 ${waitSeconds} 秒内未收到短信，正在请求再次发送。`,
+              `Step 9: Number ${normalizedActivation.phoneNumber} did not receive SMS within ${waitSeconds} seconds; requesting resend.`,
               'warn'
             );
             if (!usePageResend) {
               await addLog(
-                `步骤 9：${providerLabel} 保持当前验证码页会话并跳过页面重发，避免触发 405 或重发限流；继续轮询当前号码。`,
+                `Step 9: ${providerLabel} keeps the current verification page session and skips the page resend to avoid triggering 405 or rate limiting; continuing to poll the current number.`,
                 'warn'
               );
               continue;
             }
             if (resendTriggeredForCurrentNumber) {
               await addLog(
-                `步骤 9：号码 ${normalizedActivation.phoneNumber} 已触发过一次页面重发；为避免限流，将继续轮询不再点击重发。`,
+                `Step 9: Number ${normalizedActivation.phoneNumber} has already triggered one page resend; to avoid rate limiting, will keep polling without clicking resend again.`,
                 'warn'
               );
               continue;
@@ -5741,7 +5741,7 @@
               const resendProbeResult = await resendPhoneVerificationCode(tabId, { probeOnly: true });
               if (isWhatsAppPhoneResendResult(resendProbeResult)) {
                 await addLog(
-                  `步骤 9：页面重发入口显示 WhatsApp 通道（${resendProbeResult.channelText || resendProbeResult.text || 'WhatsApp'}），当前接码平台无法读取 WhatsApp 消息，立即更换号码。`,
+                  `Step 9: Page resend entry shows WhatsApp channel (${resendProbeResult.channelText || resendProbeResult.text || 'WhatsApp'}); the SMS provider cannot read WhatsApp messages, so replacing the number immediately.`,
                   'warn'
                 );
                 await clearPhoneRuntimeCountdown();
@@ -5756,7 +5756,7 @@
                 const resendResult = await resendPhoneVerificationCode(tabId);
                 if (isWhatsAppPhoneResendResult(resendResult)) {
                   await addLog(
-                    `步骤 9：页面重发入口切换为 WhatsApp 通道（${resendResult.channelText || resendResult.text || 'WhatsApp'}），当前接码平台无法读取 WhatsApp 消息，立即更换号码。`,
+                      `Step 9: Page resend entry switched to WhatsApp channel (${resendResult.channelText || resendResult.text || 'WhatsApp'}); the SMS provider cannot read WhatsApp messages, so replacing the number immediately.`,
                     'warn'
                   );
                   await clearPhoneRuntimeCountdown();
@@ -5768,14 +5768,14 @@
                 }
               }
               resendTriggeredForCurrentNumber = true;
-              await addLog('步骤 9：已点击手机验证码页面的“重新发送短信”。', 'info');
+              await addLog('Step 9: Clicked "Resend SMS" on the phone verification code page.', 'info');
             } catch (resendError) {
               if (isStopRequestedError(resendError)) {
                 throw resendError;
               }
               if (isPhoneResendBannedNumberError(resendError)) {
                 await addLog(
-                  `步骤 9：OpenAI 无法向号码 ${normalizedActivation.phoneNumber} 发送短信，立即更换号码。${resendError.message}`,
+                  `Step 9: OpenAI cannot send SMS to number ${normalizedActivation.phoneNumber}; replacing the number immediately. ${resendError.message}`,
                   'warn'
                 );
                 await clearPhoneRuntimeCountdown();
@@ -5787,7 +5787,7 @@
               }
               if (isPhoneResendThrottledError(resendError)) {
                 await addLog(
-                  `步骤 9：号码 ${normalizedActivation.phoneNumber} 重发短信被限流，立即更换号码。${resendError.message}`,
+                  `Step 9: Number ${normalizedActivation.phoneNumber} SMS resend was rate-limited; replacing the number immediately. ${resendError.message}`,
                   'warn'
                 );
                 await clearPhoneRuntimeCountdown();
@@ -5801,7 +5801,7 @@
               }
               if (isPhoneResendServerError(resendError)) {
                 await addLog(
-                  `步骤 9：重发短信后进入 contact-verification 500 页面，立即更换号码。${resendError.message}`,
+                  `Step 9: Page hit contact-verification 500 after SMS resend; replacing the number immediately. ${resendError.message}`,
                   'warn'
                 );
                 await clearPhoneRuntimeCountdown();
@@ -5811,13 +5811,13 @@
                   reason: 'resend_server_error',
                 };
               }
-              await addLog(`步骤 9：点击手机验证码页面重发按钮失败。${resendError.message}`, 'warn');
+              await addLog(`Step 9: Failed to click the resend button on the phone verification code page. ${resendError.message}`, 'warn');
             }
             continue;
           }
 
           await addLog(
-            `步骤 9：号码 ${normalizedActivation.phoneNumber} 连续 ${timeoutWindows} 轮未收到短信，将在步骤 9 内更换号码。`,
+            `Step 9: Number ${normalizedActivation.phoneNumber} did not receive SMS in ${timeoutWindows} consecutive windows; will replace the number within step 9.`,
             'warn'
           );
           await clearPhoneRuntimeCountdown();
@@ -5829,7 +5829,7 @@
         }
       }
 
-      throw new Error('手机号验证未完成。');
+      throw new Error('Phone verification incomplete.');
     }
 
     function buildCompletedActivationSnapshot(activation) {
@@ -5851,7 +5851,7 @@
       const actionLabelPrefix = String(options?.actionLabelPrefix || 'signup phone verification').trim() || 'phone verification';
       const onPollStatus = typeof options?.onPollStatus === 'function' ? options.onPollStatus : null;
       if (!normalizedActivation) {
-        throw new Error(options?.missingActivationMessage || `步骤 ${visibleStep}：手机号激活记录缺失，请重新执行前置步骤。`);
+        throw new Error(options?.missingActivationMessage || `Step ${visibleStep}: Phone activation record missing. Please re-execute prerequisite steps.`);
       }
 
       return withPhoneVerificationLogContext({ step: visibleStep, stepKey }, async () => {
@@ -5876,7 +5876,7 @@
             [PHONE_RUNTIME_COUNTDOWN_WINDOW_TOTAL_KEY]: timeoutWindows,
           });
           await addLog(
-            `步骤 ${visibleStep}：正在等待 ${normalizedActivation.phoneNumber} 的短信验证码（等待窗口 ${windowIndex}/${timeoutWindows}，最长 ${waitSeconds} 秒，每 ${pollIntervalSeconds} 秒轮询一次，最多 ${pollMaxRounds} 次轮询）。`,
+            `Step ${visibleStep}: Waiting for the SMS code on ${normalizedActivation.phoneNumber} (window ${windowIndex}/${timeoutWindows}, up to ${waitSeconds} seconds, polling every ${pollIntervalSeconds} seconds, max ${pollMaxRounds} polls).`,
             'info',
             { step: visibleStep, stepKey }
           );
@@ -5890,7 +5890,7 @@
               maxRounds: pollMaxRounds,
               onStatus: async ({ elapsedMs, pollCount, statusText }) => {
                 await addLog(
-                  `步骤 ${visibleStep}：${providerLabel} 状态 ${normalizedActivation.phoneNumber}: ${statusText}（已等待 ${Math.ceil(elapsedMs / 1000)} 秒，第 ${pollCount}/${pollMaxRounds} 次轮询）。`,
+                  `Step ${visibleStep}: ${providerLabel} status ${normalizedActivation.phoneNumber}: ${statusText} (waited ${Math.ceil(elapsedMs / 1000)} seconds, poll ${pollCount}/${pollMaxRounds}).`,
                   'info',
                   { step: visibleStep, stepKey }
                 );
@@ -5910,14 +5910,14 @@
           } catch (error) {
             if (!isPhoneCodeTimeoutError(error)) {
               if (isPhoneActivationOrderMissingError(error, normalizedActivation.provider)) {
-                throw new Error(`步骤 ${visibleStep}：当前手机号激活已失效，请重新执行前置步骤获取新短信。${error.message || error}`);
+                throw new Error(`Step ${visibleStep}: Current phone activation has expired. Please re-execute prerequisite steps to get new SMS.${error.message || error}`);
               }
               throw error;
             }
 
             if (windowIndex < timeoutWindows) {
               await addLog(
-                `步骤 ${visibleStep}：${normalizedActivation.phoneNumber} 在 ${waitSeconds} 秒内未收到短信，准备请求重发。`,
+                `Step ${visibleStep}: ${normalizedActivation.phoneNumber} did not receive SMS within ${waitSeconds} seconds; preparing to request a resend.`,
                 'warn',
                 { step: visibleStep, stepKey }
               );
@@ -5937,7 +5937,7 @@
           }
         }
 
-        throw new Error(`步骤 ${visibleStep}：手机验证码未能成功获取。`);
+        throw new Error(`Step ${visibleStep}: Phone verification code could not be acquired successfully.`);
       });
     }
 
@@ -5948,7 +5948,7 @@
         stepKey: 'fetch-signup-code',
         purpose: 'signup',
         actionLabelPrefix: 'signup phone verification',
-        missingActivationMessage: '步骤 4：注册手机号激活记录缺失，请重新执行步骤 2。',
+        missingActivationMessage: 'Step 4: Signup phone activation record missing. Please re-execute Step 2.',
       });
     }
 
@@ -5960,7 +5960,7 @@
         stepKey: 'fetch-login-code',
         purpose: 'login',
         actionLabelPrefix: 'login phone verification',
-        missingActivationMessage: `步骤 ${visibleStep}：登录手机号激活记录缺失，请重新执行步骤 ${visibleStep >= 11 ? 10 : 7}。`,
+        missingActivationMessage: `Step ${visibleStep}: Login phone activation record missing. Please re-execute Step ${visibleStep >= 11 ? 10 : 7}.`,
       });
     }
 
@@ -5995,7 +5995,7 @@
         const activation = normalizeActivation(options?.activation || state?.signupPhoneActivation);
         const pageStateCheckTimeoutMs = Math.max(1, Math.floor(Number(options?.pageStateCheckTimeoutMs) || 5000));
         if (!activation) {
-          throw new Error('步骤 4：未找到当前注册手机号激活记录，请重新执行步骤 2。');
+          throw new Error('Step 4: Current signup phone activation record not found. Please re-execute Step 2.');
         }
 
         const assertSignupPhoneStillApplicable = async (phaseLabel) => {
@@ -6011,7 +6011,7 @@
             }
             await throwPhoneResendServerErrorIfAuthTabShowsIt(tabId);
             await addLog(
-              `步骤 4：检查注册手机号页面状态（${phaseLabel}）失败，将继续等待短信。${error.message}`,
+              `Step 4: Failed to check the signup phone page state (${phaseLabel}); continuing to wait for SMS. ${error.message}`,
               'warn',
               {
                 step: 4,
@@ -6035,7 +6035,7 @@
               onTimeoutWindow: async () => {
                 try {
                   await resendSignupPhoneVerificationCode(tabId);
-                  await addLog('步骤 4：已点击注册手机验证码页面的“重新发送”。', 'info', {
+                  await addLog('Step 4: Clicked "Resend" on the signup phone verification code page.', 'info', {
                     step: 4,
                     stepKey: 'fetch-signup-code',
                   });
@@ -6047,7 +6047,7 @@
                     throw buildPhoneResendServerError(resendError);
                   }
                   await throwPhoneResendServerErrorIfAuthTabShowsIt(tabId);
-                  await addLog(`步骤 4：注册手机验证码页面重发失败，将继续轮询短信。${resendError.message}`, 'warn', {
+                  await addLog(`Step 4: Failed to resend on the signup phone verification page; continuing to poll for SMS. ${resendError.message}`, 'warn', {
                     step: 4,
                     stepKey: 'fetch-signup-code',
                   });
@@ -6062,7 +6062,7 @@
               signupPhoneVerificationRequestedAt: Date.now(),
               signupPhoneVerificationPurpose: 'signup',
             });
-            await addLog(`步骤 4：已获取手机验证码 ${code}。`, 'info', {
+            await addLog(`Step 4: Acquired phone verification code ${code}.`, 'info', {
               step: 4,
               stepKey: 'fetch-signup-code',
             });
@@ -6072,9 +6072,9 @@
             });
 
             if (submitResult.invalidCode) {
-              const invalidErrorText = String(submitResult.errorText || submitResult.url || '未知错误').trim();
+              const invalidErrorText = String(submitResult.errorText || submitResult.url || 'unknown error').trim();
               if (attempt >= DEFAULT_PHONE_SUBMIT_ATTEMPTS) {
-                throw new Error(`步骤 4：手机验证码连续 ${DEFAULT_PHONE_SUBMIT_ATTEMPTS} 次被拒绝：${invalidErrorText}`);
+                throw new Error(`Step 4: Phone verification code was rejected ${DEFAULT_PHONE_SUBMIT_ATTEMPTS} times in a row: ${invalidErrorText}`);
               }
 
               await requestAdditionalPhoneSms(state, activation);
@@ -6088,13 +6088,13 @@
                   throw buildPhoneResendServerError(resendError);
                 }
                 await throwPhoneResendServerErrorIfAuthTabShowsIt(tabId);
-                await addLog(`步骤 4：验证码被拒后点击重发失败。${resendError.message}`, 'warn', {
+                await addLog(`Step 4: Failed to click resend after code rejection. ${resendError.message}`, 'warn', {
                   step: 4,
                   stepKey: 'fetch-signup-code',
                 });
               }
               await addLog(
-                `步骤 4：手机验证码被拒绝，已请求新短信（${attempt + 1}/${DEFAULT_PHONE_SUBMIT_ATTEMPTS}）。`,
+                `Step 4: Phone verification code was rejected; requested a new SMS (${attempt + 1}/${DEFAULT_PHONE_SUBMIT_ATTEMPTS}).`,
                 'warn',
                 { step: 4, stepKey: 'fetch-signup-code' }
               );
@@ -6108,14 +6108,14 @@
               signupPhoneVerificationRequestedAt: null,
               signupPhoneVerificationPurpose: '',
             });
-            await addLog('步骤 4：手机验证码已通过，继续进入资料填写。', 'ok', {
+            await addLog('Step 4: Phone verification code passed. Continuing to profile entry.', 'ok', {
               step: 4,
               stepKey: 'fetch-signup-code',
             });
             return submitResult || {};
           }
 
-          throw new Error('步骤 4：手机验证码未能成功提交。');
+          throw new Error('Step 4: Phone verification code could not be submitted successfully.');
         } catch (error) {
           if (shouldCancelActivation && activation) {
             await cancelSignupPhoneActivation(state, activation).catch(() => {});
@@ -6133,7 +6133,7 @@
     async function submitLoginPhoneVerificationCode(tabId, code, options = {}) {
       const visibleStep = normalizeLogStep(options?.visibleStep || options?.step) || 8;
       const timeoutMs = typeof getOAuthFlowStepTimeoutMs === 'function'
-        ? await getOAuthFlowStepTimeoutMs(45000, { step: visibleStep, actionLabel: '提交登录手机验证码' })
+        ? await getOAuthFlowStepTimeoutMs(45000, { step: visibleStep, actionLabel: 'Submit login phone verification code' })
         : 45000;
       const result = await sendToContentScriptResilient('openai-auth', {
         type: 'SUBMIT_PHONE_VERIFICATION_CODE',
@@ -6148,7 +6148,7 @@
         timeoutMs,
         responseTimeoutMs: timeoutMs,
         retryDelayMs: 600,
-        logMessage: `步骤 ${visibleStep}：等待登录手机验证码页面就绪后填写短信验证码...`,
+        logMessage: `Step ${visibleStep}: Waiting for the login phone verification code page to be ready before filling the SMS code...`,
         logStep: visibleStep,
         logStepKey: 'fetch-login-code',
       });
@@ -6162,7 +6162,7 @@
     async function resendLoginPhoneVerificationCode(tabId, options = {}) {
       const visibleStep = normalizeLogStep(options?.visibleStep || options?.step) || 8;
       const timeoutMs = typeof getOAuthFlowStepTimeoutMs === 'function'
-        ? await getOAuthFlowStepTimeoutMs(65000, { step: visibleStep, actionLabel: '重新发送登录手机验证码' })
+        ? await getOAuthFlowStepTimeoutMs(65000, { step: visibleStep, actionLabel: 'Resend login phone verification code' })
         : 65000;
       const result = await sendToContentScriptResilient('openai-auth', {
         type: 'RESEND_VERIFICATION_CODE',
@@ -6173,7 +6173,7 @@
         timeoutMs,
         responseTimeoutMs: timeoutMs,
         retryDelayMs: 600,
-        logMessage: `步骤 ${visibleStep}：等待登录手机验证码重发按钮出现...`,
+        logMessage: `Step ${visibleStep}: Waiting for the login phone verification code resend button to appear...`,
         logStep: visibleStep,
         logStepKey: 'fetch-login-code',
       });
@@ -6193,7 +6193,7 @@
           || state?.signupPhoneActivation
         );
         if (!preferredActivation) {
-          throw new Error(`步骤 ${visibleStep}：缺少已注册手机号激活记录，无法继续手机号登录验证码流程。`);
+          throw new Error(`Step ${visibleStep}: Missing registered phone activation record; cannot continue the phone-login verification flow.`);
         }
 
         const activeActivation = normalizeActivation(state?.signupPhoneActivation);
@@ -6208,7 +6208,7 @@
         const reactivated = await reactivatePhoneActivation(state, preferredActivation);
         const normalizedActivation = normalizeActivation(reactivated);
         if (!normalizedActivation) {
-          throw new Error(`步骤 ${visibleStep}：无法复用当前注册手机号，请重新执行步骤 ${visibleStep >= 11 ? 10 : 7}。`);
+          throw new Error(`Step ${visibleStep}: Could not reuse the current signup phone number. Please re-execute Step ${visibleStep >= 11 ? 10 : 7}.`);
         }
 
         await setPhoneRuntimeState({
@@ -6264,7 +6264,7 @@
           || state?.signupPhoneActivation
         );
         if (!baseActivation) {
-          throw new Error(`步骤 ${visibleStep}：未找到当前登录手机号激活记录，请重新执行步骤 ${visibleStep >= 11 ? 10 : 7}。`);
+          throw new Error(`Step ${visibleStep}: Current login phone activation record not found. Please re-execute Step ${visibleStep >= 11 ? 10 : 7}.`);
         }
 
         let activation = await prepareLoginPhoneActivation(state, {
@@ -6282,7 +6282,7 @@
               onTimeoutWindow: async () => {
                 try {
                   await resendLoginPhoneVerificationCode(tabId, { visibleStep });
-                  await addLog(`步骤 ${visibleStep}：已点击登录手机验证码页面的“重新发送”。`, 'info', {
+                  await addLog(`Step ${visibleStep}: Clicked "Resend" on the login phone verification code page.`, 'info', {
                     step: visibleStep,
                     stepKey: 'fetch-login-code',
                   });
@@ -6293,7 +6293,7 @@
                   if (isPhoneResendServerError(resendError)) {
                     throw buildPhoneResendServerError(resendError);
                   }
-                  await addLog(`步骤 ${visibleStep}：登录手机验证码页面重发失败，将继续轮询短信。${resendError.message}`, 'warn', {
+                  await addLog(`Step ${visibleStep}: Failed to resend on the login phone verification page; continuing to poll for SMS. ${resendError.message}`, 'warn', {
                     step: visibleStep,
                     stepKey: 'fetch-login-code',
                   });
@@ -6306,7 +6306,7 @@
               signupPhoneVerificationRequestedAt: Date.now(),
               signupPhoneVerificationPurpose: 'login',
             });
-            await addLog(`步骤 ${visibleStep}：已获取登录手机验证码 ${code}。`, 'info', {
+            await addLog(`Step ${visibleStep}: Got login phone verification code ${code}.`, 'info', {
               step: visibleStep,
               stepKey: 'fetch-login-code',
             });
@@ -6316,9 +6316,9 @@
             });
 
             if (submitResult.invalidCode) {
-              const invalidErrorText = String(submitResult.errorText || submitResult.url || '未知错误').trim();
+              const invalidErrorText = String(submitResult.errorText || submitResult.url || 'unknown error').trim();
               if (attempt >= DEFAULT_PHONE_SUBMIT_ATTEMPTS) {
-                throw new Error(`步骤 ${visibleStep}：登录手机验证码连续 ${DEFAULT_PHONE_SUBMIT_ATTEMPTS} 次被拒绝：${invalidErrorText}`);
+                throw new Error(`Step ${visibleStep}: Login phone verification code was rejected ${DEFAULT_PHONE_SUBMIT_ATTEMPTS} times in a row: ${invalidErrorText}`);
               }
 
               await requestAdditionalPhoneSms(state, activation);
@@ -6331,13 +6331,13 @@
                 if (isPhoneResendServerError(resendError)) {
                   throw buildPhoneResendServerError(resendError);
                 }
-                await addLog(`步骤 ${visibleStep}：登录手机验证码被拒后点击重发失败。${resendError.message}`, 'warn', {
+                await addLog(`Step ${visibleStep}: Failed to click resend after the login phone verification code was rejected. ${resendError.message}`, 'warn', {
                   step: visibleStep,
                   stepKey: 'fetch-login-code',
                 });
               }
               await addLog(
-                `步骤 ${visibleStep}：登录手机验证码被拒绝，已请求新短信（${attempt + 1}/${DEFAULT_PHONE_SUBMIT_ATTEMPTS}）。`,
+                `Step ${visibleStep}: Login phone verification code was rejected; requested a new SMS (${attempt + 1}/${DEFAULT_PHONE_SUBMIT_ATTEMPTS}).`,
                 'warn',
                 { step: visibleStep, stepKey: 'fetch-login-code' }
               );
@@ -6346,14 +6346,14 @@
 
             await finalizeLoginPhoneActivationAfterSuccess(state, activation, { visibleStep });
             shouldCancelActivation = false;
-            await addLog(`步骤 ${visibleStep}：登录手机验证码已通过，继续进入后续授权流程。`, 'ok', {
+            await addLog(`Step ${visibleStep}: Login phone verification code passed; continuing to the next authorization step.`, 'ok', {
               step: visibleStep,
               stepKey: 'fetch-login-code',
             });
             return submitResult || {};
           }
 
-          throw new Error(`步骤 ${visibleStep}：登录手机验证码未能成功提交。`);
+          throw new Error(`Step ${visibleStep}: Login phone verification code could not be submitted successfully.`);
         } catch (error) {
           if (shouldCancelActivation && activation) {
             await cancelPhoneActivation(state, activation).catch(() => {});
@@ -6452,7 +6452,7 @@
         const result = await navigateAuthTabToAddPhone(tabId, {
           visibleStep,
           timeoutMs: 30000,
-          logMessage: '步骤 9：认证页已失联，直接打开添加手机号页面后等待脚本恢复。',
+          logMessage: 'Step 9: Auth page is unreachable; opening the add-phone page directly and waiting for the script to recover.',
           logStepKey: 'phone-verification',
           attemptLabel,
         });
@@ -6476,7 +6476,7 @@
         } catch (error) {
           snapshotError = error;
           await addLog(
-            `步骤 9：检查认证页状态失败（${attemptLabel}）。${error.message}`,
+            `Step 9: Failed to check auth page state (${attemptLabel}). ${error.message}`,
             'warn'
           );
           snapshot = null;
@@ -6499,7 +6499,7 @@
         } catch (error) {
           returnError = error;
           await addLog(
-            `步骤 9：返回添加手机号页面失败（${attemptLabel}）。${error.message}`,
+            `Step 9: Failed to return to the add-phone page (${attemptLabel}). ${error.message}`,
             'warn'
           );
         }
@@ -6531,7 +6531,7 @@
         }
         if (!latest?.addPhonePage) {
           throw new Error(
-            `步骤 9：提交手机号前认证页未停留在添加手机号页面（${attemptLabel}）。URL: ${latest?.url || 'unknown'}`
+            `Step 9: Before submitting phone number, the auth page did not stay on the add-phone page (${attemptLabel}). URL: ${latest?.url || 'unknown'}`
           );
         }
         return latest;
@@ -6562,7 +6562,7 @@
         if (nextCount >= PHONE_SMS_FAILURE_SKIP_THRESHOLD) {
           const countryLabel = resolveCountryLabelByFailureKey(countryKey, providerId);
           await addLog(
-            `步骤 9：${countryLabel} 已累计 ${nextCount} 次短信失败（${formatStep9Reason(reason)}）；下次获取号码会优先尝试其它已选国家。`,
+            `Step 9: ${countryLabel} accumulated ${nextCount} SMS failures (${formatStep9Reason(reason)}); the next phone number acquisition will prioritize other selected countries.`,
             'warn'
           );
         }
@@ -6644,7 +6644,7 @@
         countryPriceFloorByKey.set(countryKey, normalizedFloor);
         const countryLabel = resolveCountryLabelByFailureKey(countryKey, normalizedActivation.provider);
         await addLog(
-          `步骤 9：${countryLabel} 因 ${formatStep9Reason(reason || 'sms_timeout')} 将尝试更高价格档位（> ${normalizedFloor}）。`,
+          `Step 9: ${countryLabel} will try a higher price tier (> ${normalizedFloor}) due to ${formatStep9Reason(reason || 'sms_timeout')}.`,
           'warn'
         );
       };
@@ -6662,7 +6662,7 @@
         }
         preferredActivationExhausted = true;
         await addLog(
-          `步骤 9：优先号码 ${activation.phoneNumber} 失败（${formatStep9Reason(reason || 'unknown')}），将改为获取新号码。`,
+          `Step 9: Preferred number ${activation.phoneNumber} failed (${formatStep9Reason(reason || 'unknown')}); will get a new number instead.`,
           'warn'
         );
       };
@@ -6674,7 +6674,7 @@
           throw buildPhoneReplacementLimitError(maxNumberReplacementAttempts, failureCode || 'add_phone_rejected');
         }
         await addLog(
-          `步骤 9：添加手机号失败后正在更换号码（${formatStep9Reason(failureReason)}，${usedNumberReplacementAttempts}/${maxNumberReplacementAttempts}）。`,
+          `Step 9: Replacing the number after add-phone failed (${formatStep9Reason(failureReason)}, ${usedNumberReplacementAttempts}/${maxNumberReplacementAttempts}).`,
           'warn'
         );
         if (shouldCancelActivation && activation) {
@@ -6701,7 +6701,7 @@
           };
         } catch (returnError) {
           await addLog(
-            `步骤 9：号码被拒后返回添加手机号页面失败，将用当前可用状态继续。${returnError.message}`,
+            `Step 9: Failed to return to the add-phone page after the number was rejected; continuing with the current available state. ${returnError.message}`,
             'warn'
           );
         }
@@ -6715,7 +6715,7 @@
           };
         } catch (verifyError) {
           await addLog(
-            `步骤 9：号码被拒后确认添加手机号页面状态失败。${verifyError.message}`,
+            `Step 9: Failed to confirm the add-phone page state after the number was rejected. ${verifyError.message}`,
             'warn'
           );
         }
@@ -6759,12 +6759,12 @@
                   throw buildPhoneReplacementLimitError(maxNumberReplacementAttempts, 'returned_to_add_phone_loop');
                 }
                 await addLog(
-                  `步骤 9：当前号码 ${activation.phoneNumber} 反复返回添加手机号页，正在更换号码（${usedNumberReplacementAttempts}/${maxNumberReplacementAttempts}）。`,
+                  `Step 9: Current number ${activation.phoneNumber} keeps returning to the add-phone page; replacing the number (${usedNumberReplacementAttempts}/${maxNumberReplacementAttempts}).`,
                   'warn'
                 );
                 if (shouldRetireFreeReusableActivationOnFailure(await getState(), activation)) {
                   await retireFreeReusableActivation(
-                    `自动白嫖复用号码 ${activation.phoneNumber} 反复返回添加手机号页。`
+                    `Auto free-reuse number ${activation.phoneNumber} keeps returning to the add-phone page.`
                   );
                 }
                 if (shouldCancelActivation && activation) {
@@ -6783,7 +6783,7 @@
                 continue;
               }
               await addLog(
-                `步骤 9：页面返回添加手机号，将先重新提交当前号码 ${activation.phoneNumber}，暂不获取新号码。`,
+                `Step 9: Page returned to add-phone; will resubmit the current number ${activation.phoneNumber} first instead of acquiring a new one.`,
                 'warn'
               );
             }
@@ -6809,22 +6809,22 @@
                 usedNumberReplacementAttempts += 1;
                 if (usedNumberReplacementAttempts > maxNumberReplacementAttempts) {
                   throw new Error(
-                    `步骤 9：更换 ${maxNumberReplacementAttempts} 次号码后手机号验证仍未成功。最后原因：${formatStep9Reason('phone_number_used')}。`
+                    `Step 9: Phone verification still failed after replacing the number ${maxNumberReplacementAttempts} times. Last reason: ${formatStep9Reason('phone_number_used')}.`
                   );
                 }
 
                 await addLog(
-                  `步骤 9：添加手机号页面提示 ${activation.phoneNumber} 已被使用（${addPhoneRejectText}），正在更换号码（${usedNumberReplacementAttempts}/${maxNumberReplacementAttempts}）。`,
+                  `Step 9: Add-phone page reports ${activation.phoneNumber} is already in use (${addPhoneRejectText}); replacing the number (${usedNumberReplacementAttempts}/${maxNumberReplacementAttempts}).`,
                   'warn'
                 );
                 await discardPhoneActivationFromReuse(
-                  `目标站拒绝该号码（${addPhoneRejectText}）。`,
+                  `Target site rejected this number (${addPhoneRejectText}).`,
                   activation,
                   await getState()
                 );
                 if (shouldRetireFreeReusableActivationOnFailure(await getState(), activation)) {
                   await retireFreeReusableActivation(
-                    `自动白嫖复用号码 ${activation.phoneNumber} 被目标站拒绝。`
+                    `Auto free-reuse number ${activation.phoneNumber} was rejected by the target site.`
                   );
                 }
                 if (shouldCancelActivation && activation) {
@@ -6853,7 +6853,7 @@
               }
 
               await addLog(
-                `步骤 9：添加手机号页面拒绝当前号码，但未明确提示已使用（${addPhoneRejectText}），将用同一号码再试一次。`,
+                `Step 9: Add-phone page rejected the current number, but did not explicitly report "already in use" (${addPhoneRejectText}); will retry once with the same number.`,
                 'warn'
               );
               let retrySubmitError = null;
@@ -6884,12 +6884,12 @@
                   continue;
                 }
                 throw new Error(
-                  `步骤 9：添加手机号页面持续拒绝当前号码，但没有明确“已使用”状态：${submitResult.errorText || submitResult.url || '未知错误'}。`
+                  `Step 9: Add-phone page keeps rejecting the current number with no clear "already used" status: ${submitResult.errorText || submitResult.url || 'unknown error'}.`
                 );
               }
             }
 
-            await addLog('步骤 9：已在添加手机号页面提交号码。', 'info');
+            await addLog('Step 9: Submitted the phone number on the add-phone page.', 'info');
             pageState = {
               ...pageState,
               ...submitResult,
@@ -6909,7 +6909,7 @@
           }
 
           if (!activation) {
-            throw new Error('认证页面正在等待手机验证码，但当前运行没有保存手机号接码订单。');
+            throw new Error('Auth page is waiting for the phone verification code, but the current run has no saved phone SMS order.');
           }
 
           let shouldReplaceNumber = false;
@@ -6935,12 +6935,12 @@
               [PHONE_VERIFICATION_CODE_STATE_KEY]: String(codeResult.code || '').trim(),
             });
             await markFreeReusableActivationAfterCode(state, activation);
-            await addLog(`步骤 9：已收到手机验证码 ${codeResult.code}。`, 'info');
+            await addLog(`Step 9: Received phone verification code ${codeResult.code}.`, 'info');
             const submitResult = await submitPhoneVerificationCode(tabId, codeResult.code);
 
             if (submitResult.returnedToAddPhone) {
               await addLog(
-                '步骤 9：提交验证码后返回添加手机号页面，将先重试当前号码。',
+                'Step 9: After submitting the verification code the page returned to add-phone; will retry the current number first.',
                 'warn'
               );
               preferReuseExistingActivationOnAddPhone = true;
@@ -6959,13 +6959,13 @@
                 shouldReplaceNumber = true;
                 replaceReason = 'phone_number_used';
                 await discardPhoneActivationFromReuse(
-                  `目标站拒绝该号码（${invalidErrorText}）。`,
+                  `Target site rejected this number (${invalidErrorText}).`,
                   activation,
                   await getState()
                 );
                 if (shouldRetireFreeReusableActivationOnFailure(await getState(), activation)) {
                   await retireFreeReusableActivation(
-                    `自动白嫖复用号码 ${activation.phoneNumber} 被目标站拒绝。`
+                    `Auto free-reuse number ${activation.phoneNumber} was rejected by the target site.`
                   );
                 }
                 if (shouldCancelActivation && activation) {
@@ -6973,7 +6973,7 @@
                   shouldCancelActivation = false;
                 }
                 await addLog(
-                  `步骤 9：手机号被提示已使用（${invalidErrorText}），立即更换新号码。`,
+                  `Step 9: Phone number reported as already used (${invalidErrorText}); switching to a new number immediately.`,
                   'warn'
                 );
                 break;
@@ -6987,7 +6987,7 @@
                   shouldCancelActivation = false;
                 }
                 await addLog(
-                  `步骤 9：手机验证码连续 ${DEFAULT_PHONE_SUBMIT_ATTEMPTS} 次被拒（${invalidErrorText}），将更换号码。`,
+                  `Step 9: Phone verification code was rejected ${DEFAULT_PHONE_SUBMIT_ATTEMPTS} times in a row (${invalidErrorText}); replacing the number.`,
                   'warn'
                 );
                 break;
@@ -7001,7 +7001,7 @@
                     shouldReplaceNumber = true;
                     replaceReason = 'whatsapp_resend_channel';
                     await addLog(
-                      `步骤 9：验证码被拒后的重发入口显示 WhatsApp 通道（${resendProbeResult.channelText || resendProbeResult.text || 'WhatsApp'}），当前接码平台无法读取 WhatsApp 消息，将更换号码。`,
+                      `Step 9: After the verification code was rejected, the resend entry shows WhatsApp channel (${resendProbeResult.channelText || resendProbeResult.text || 'WhatsApp'}); the SMS provider cannot read WhatsApp messages, so switching numbers.`,
                       'warn'
                     );
                     break;
@@ -7013,26 +7013,26 @@
                       shouldReplaceNumber = true;
                       replaceReason = 'whatsapp_resend_channel';
                       await addLog(
-                        `步骤 9：验证码被拒后的重发入口切换为 WhatsApp 通道（${resendResult.channelText || resendResult.text || 'WhatsApp'}），当前接码平台无法读取 WhatsApp 消息，将更换号码。`,
+                        `Step 9: After the verification code was rejected, the resend entry switched to WhatsApp channel (${resendResult.channelText || resendResult.text || 'WhatsApp'}); the SMS provider cannot read WhatsApp messages, so switching numbers.`,
                         'warn'
                       );
                       break;
                     }
                   }
-                  await addLog('步骤 9：手机验证码被拒后已点击“重新发送短信”。', 'info');
+                  await addLog('Step 9: Clicked "Resend SMS" after the verification code was rejected.', 'info');
                 } catch (resendError) {
-                  await addLog(`步骤 9：验证码被拒后点击重发失败。${resendError.message}`, 'warn');
+                  await addLog(`Step 9: Failed to click resend after the verification code was rejected. ${resendError.message}`, 'warn');
                 }
                 if (shouldReplaceNumber) {
                   break;
                 }
                 await addLog(
-                  `步骤 9：手机验证码被拒，已请求再次发送短信（剩余 ${remainingResendRequests} 次重发）。`,
+                  `Step 9: Phone verification code was rejected; requested another SMS (${remainingResendRequests} resends remaining).`,
                   'warn'
                 );
               } else {
                 await addLog(
-                  '步骤 9：手机验证码被拒，配置的重发次数已用完，将在当前接码窗口内继续重试。',
+                  'Step 9: Phone verification code was rejected and the configured resend count is used up; will keep retrying in the current SMS window.',
                   'warn'
                 );
               }
@@ -7043,7 +7043,7 @@
             if (shouldSkipTerminalStatusForFreeReuse(latestSuccessState, activation)) {
               const terminalProviderLabel = getPhoneSmsProviderLabel(activation.provider);
               await addLog(
-                `步骤 9：已跳过 ${terminalProviderLabel} 完成状态，保留 ${activation.phoneNumber} 供白嫖复用。`,
+                `Step 9: Skipped ${terminalProviderLabel} completion status to keep ${activation.phoneNumber} for free reuse.`,
                 'info'
               );
               await markFreeReusableActivationAfterInitialSuccess(latestSuccessState, activation);
@@ -7061,7 +7061,7 @@
               phoneNumber: activation.phoneNumber,
             });
             addPhoneReentryWithSameActivation = 0;
-            await addLog('步骤 9：手机号验证已完成，等待 OAuth 授权页。', 'ok');
+            await addLog('Step 9: Phone verification complete; waiting for the OAuth authorization page.', 'ok');
             return submitResult;
           }
 
@@ -7069,7 +7069,7 @@
             if (pageState?.addPhonePage) {
               continue;
             }
-            throw new Error('手机号验证未完成。');
+            throw new Error('Phone verification incomplete.');
           }
 
           if (
@@ -7095,12 +7095,12 @@
           }
           if (shouldRetireFreeReusableActivationOnFailure(await getState(), activation)) {
             await retireFreeReusableActivation(
-              `自动白嫖复用号码 ${activation.phoneNumber} 在失败后被更换。`
+              `Auto free-reuse number ${activation.phoneNumber} was replaced after failing.`
             );
           }
           if (isPhoneNumberUsedError(replaceReason)) {
             await discardPhoneActivationFromReuse(
-              `目标站拒绝该号码（${replaceReason}）。`,
+              `Target site rejected this number (${replaceReason}).`,
               activation,
               await getState()
             );
@@ -7114,7 +7114,7 @@
           try {
             returnResult = await returnToAddPhone(tabId);
           } catch (returnError) {
-            await addLog(`步骤 9：更换号码前返回添加手机号页面失败。${returnError.message}`, 'warn');
+            await addLog(`Step 9: Failed to return to the add-phone page before replacing the number. ${returnError.message}`, 'warn');
           }
 
           if (!returnResult?.addPhonePage) {
@@ -7144,7 +7144,7 @@
           };
 
           await addLog(
-            `步骤 9：正在更换号码并在步骤 9 内重试（${usedNumberReplacementAttempts}/${maxNumberReplacementAttempts}）。`,
+            `Step 9: Replacing the number and retrying within step 9 (${usedNumberReplacementAttempts}/${maxNumberReplacementAttempts}).`,
             'warn'
           );
           pageState = {
@@ -7164,7 +7164,7 @@
         }
         if (shouldRetireFreeReusableActivationOnFailure(await getState(), activation)) {
           await retireFreeReusableActivation(
-            `自动白嫖复用号码 ${activation.phoneNumber} 执行失败：${errorMessage || 'unknown error'}。`
+            `Auto free-reuse number ${activation.phoneNumber} failed during execution: ${errorMessage || 'unknown error'}.`
           );
         }
         if (shouldCancelActivation && activation) {

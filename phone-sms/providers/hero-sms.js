@@ -1,4 +1,4 @@
-// phone-sms/providers/hero-sms.js — HeroSMS 接码平台适配层
+// phone-sms/providers/hero-sms.js — HeroSMS SMS verification provider adapter
 (function attachHeroSmsProvider(root, factory) {
   root.PhoneSmsHeroSmsProvider = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createHeroSmsProviderModule() {
@@ -109,7 +109,7 @@
       query = { api_key: config.apiKey, ...query };
     }
     if (!config.fetchImpl) {
-      throw new Error('HeroSMS 网络请求实现不可用。');
+      throw new Error('HeroSMS network fetch implementation is unavailable.');
     }
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     const timeoutId = controller
@@ -123,7 +123,7 @@
       const text = await response.text();
       const payload = parsePayload(text);
       if (!response.ok) {
-        const error = new Error(`${actionLabel}失败：${describePayload(payload) || response.status}`);
+        const error = new Error(`${actionLabel} failed: ${describePayload(payload) || response.status}`);
         error.payload = payload;
         error.status = response.status;
         throw error;
@@ -131,7 +131,7 @@
       return payload;
     } catch (error) {
       if (error?.name === 'AbortError') {
-        throw new Error(`${actionLabel}超时。`);
+        throw new Error(`${actionLabel} timed out.`);
       }
       throw error;
     } finally {
@@ -162,7 +162,7 @@
   async function fetchBalance(state = {}, deps = {}) {
     const config = resolveConfig(state, deps);
     if (!config.apiKey) {
-      throw new Error('HeroSMS API Key 缺失，请先在侧边栏保存接码 API Key。');
+      throw new Error('HeroSMS API key is missing. Please save the SMS verification API key in the side panel first.');
     }
     const payload = await fetchPayload(config, { action: 'getBalance' }, 'HeroSMS getBalance');
     const balance = Number(String(describePayload(payload)).replace(/^ACCESS_BALANCE:/i, '').trim());

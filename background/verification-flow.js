@@ -87,7 +87,7 @@
     }
 
     function getVerificationCodeLabel(step) {
-      return step === 4 ? '注册' : '登录';
+      return step === 4 ? 'signup' : 'login';
     }
 
     function isIcloudMail(mail) {
@@ -248,7 +248,7 @@
                 timeoutMs: requestTimeoutMs,
                 responseTimeoutMs: requestTimeoutMs,
                 retryDelayMs: 400,
-                logMessage: `步骤 ${step}：验证码提交后页面正在切换，等待页面恢复并确认授权状态...`,
+                logMessage: `Step ${step}: Page is switching after verification code submission, waiting for it to recover and confirm authorization state...`,
               }
             )
             : await sendToContentScript('openai-auth', request, {
@@ -391,23 +391,23 @@
       const completionStep = getCompletionStep(step, options);
       const promptStep = getCompletionStep(step, { completionStep: options.promptStep ?? completionStep });
       const verificationLabel = getVerificationCodeLabel(step);
-      await addLog(`步骤 ${completionStep}：当前为自定义邮箱模式，请手动在页面中输入${verificationLabel}验证码并进入下一页面。`, 'warn');
+      await addLog(`Step ${completionStep}: Currently in custom email mode. Please enter the ${verificationLabel} verification code on the page manually and proceed to the next page.`, 'warn');
 
       let response = null;
       try {
         response = await confirmCustomVerificationStepBypassRequest(promptStep);
       } catch {
-        throw new Error(`步骤 ${completionStep}：无法打开确认弹窗，请先保持侧边栏打开后重试。`);
+        throw new Error(`Step ${completionStep}: Could not open the confirmation dialog. Please keep the side panel open and retry.`);
       }
 
       if (response?.error) {
         throw new Error(response.error);
       }
       if (step === 8 && response?.addPhoneDetected) {
-        throw new Error(`步骤 ${completionStep}：验证码提交后页面进入手机号页面，当前流程无法继续自动授权。 URL: https://auth.openai.com/add-phone`);
+        throw new Error(`Step ${completionStep}: After verification code submission, the page entered the phone-number page; the current flow cannot continue automatic authorization. URL: https://auth.openai.com/add-phone`);
       }
       if (!response?.confirmed) {
-        throw new Error(`步骤 ${completionStep}：已取消手动${verificationLabel}验证码确认。`);
+        throw new Error(`Step ${completionStep}: Manual ${verificationLabel} verification code confirmation was canceled.`);
       }
 
       await setState({
@@ -417,10 +417,10 @@
       });
       const completionNodeId = await getNodeIdForStep(completionStep);
       if (!completionNodeId) {
-        throw new Error(`步骤 ${completionStep} 未映射到验证码节点。`);
+        throw new Error(`Step ${completionStep} is not mapped to a verification code node.`);
       }
       await setNodeStatus(completionNodeId, 'skipped');
-      await addLog(`步骤 ${completionStep}：已确认手动完成${verificationLabel}验证码输入，当前步骤已跳过。`, 'warn');
+      await addLog(`Step ${completionStep}: Confirmed manual ${verificationLabel} verification code entry; the current step has been skipped.`, 'warn');
     }
 
     function getVerificationPollPayload(step, state, overrides = {}) {
@@ -518,7 +518,7 @@
       throwIfStopped();
       const signupTabId = await getTabId('openai-auth');
       if (!signupTabId) {
-        throw new Error('认证页面标签页已关闭，无法重新请求验证码。');
+        throw new Error('Auth page tab was closed; cannot request a new verification code.');
       }
 
       throwIfStopped();
@@ -535,7 +535,7 @@
           step,
           options,
           30000,
-          `重新发送${getVerificationCodeLabel(step)}验证码`
+          `Resend ${getVerificationCodeLabel(step)} verification code`
         ),
       });
 
@@ -543,7 +543,7 @@
         throw new Error(result.error);
       }
 
-      await addLog(`步骤 ${step}：已请求新的${getVerificationCodeLabel(step)}验证码。`, 'warn');
+      await addLog(`Step ${step}: Requested a new ${getVerificationCodeLabel(step)} verification code.`, 'warn');
 
       const requestedAt = Date.now();
       if (step === 4) {
@@ -558,7 +558,7 @@
         const mailTabId = await getTabId('mail-2925');
         if (mailTabId) {
           await chrome.tabs.update(mailTabId, { active: true });
-          await addLog(`步骤 ${step}：已切换到 2925 邮箱标签页等待新邮件。`, 'info');
+          await addLog(`Step ${step}: Switched to the 2925 mailbox tab to wait for new mail.`, 'info');
         }
       }
 
@@ -579,14 +579,14 @@
       }
 
       throwIfStopped();
-      await addLog(`步骤 ${step}：开始刷新 2925 邮箱前先清空全部邮件，避免读取旧验证码邮件。`, 'warn');
+      await addLog(`Step ${step}: Clearing all emails before refreshing the 2925 mailbox to avoid reading old verification code emails.`, 'warn');
 
       try {
         const responseTimeoutMs = await getResponseTimeoutMsForStep(
           step,
           options,
           15000,
-          '清空 2925 邮箱历史邮件'
+          'Clear 2925 mailbox history'
         );
         const result = await sendToMailContentScriptResilient(
           mail,
@@ -610,16 +610,16 @@
         }
 
         if (result?.deleted === false) {
-          await addLog(`步骤 ${step}：未能确认 2925 邮箱已清空，将继续刷新等待新邮件。`, 'warn');
+          await addLog(`Step ${step}: Could not confirm that the 2925 mailbox was cleared; will keep refreshing and wait for new mail.`, 'warn');
           return;
         }
 
-        await addLog(`步骤 ${step}：2925 邮箱已预先清空，开始刷新等待新邮件。`, 'info');
+        await addLog(`Step ${step}: 2925 mailbox cleared in advance; refreshing and waiting for new mail.`, 'info');
       } catch (err) {
         if (isStopError(err)) {
           throw err;
         }
-        await addLog(`步骤 ${step}：预清空 2925 邮箱失败，将继续刷新等待新邮件：${err.message}`, 'warn');
+        await addLog(`Step ${step}: Failed to pre-clear the 2925 mailbox; will keep refreshing and wait for new mail: ${err.message}`, 'warn');
       }
     }
 
@@ -634,7 +634,7 @@
 
       if (Number.isInteger(tabId)) {
         await chrome.tabs.remove(tabId).catch(() => {});
-        await addLog(`步骤 ${step}：已关闭 iCloud 邮箱标签页，避免长期累积。`, 'info');
+        await addLog(`Step ${step}: Closed the iCloud mailbox tab to avoid long-term accumulation.`, 'info');
         return;
       }
 
@@ -723,7 +723,7 @@
         if (round === 1 && initialRoundNoResendUntil > 0) {
           const waitSeconds = Math.max(1, Math.ceil((initialRoundNoResendUntil - Date.now()) / 1000));
           await addLog(
-            `步骤 ${step}：首次进入验证码轮询，先等待 ${waitSeconds} 秒观察新邮件，避免过早重复重发。`,
+            `Step ${step}: Entering verification code polling for the first time; will wait ${waitSeconds} seconds to watch for new mail and avoid resending too early.`,
             'info'
           );
         }
@@ -758,7 +758,7 @@
               step,
               payload,
               pollOverrides,
-              `轮询${getVerificationCodeLabel(step)}验证码邮箱`
+              `Poll ${getVerificationCodeLabel(step)} verification code mailbox`
             );
             const timeoutWindow = resolveMailPollingTimeouts(mail, timedPoll);
             const result = await sendToMailContentScriptResilient(
@@ -783,11 +783,11 @@
             }
 
             if (!result || !result.code) {
-              throw new Error(`步骤 ${step}：邮箱轮询结束，但未获取到验证码。`);
+              throw new Error(`Step ${step}: Mailbox polling ended but no verification code was found.`);
             }
 
             if (rejectedCodes.has(result.code)) {
-              throw new Error(`步骤 ${step}：再次收到了相同的${getVerificationCodeLabel(step)}验证码：${result.code}`);
+              throw new Error(`Step ${step}: Received the same ${getVerificationCodeLabel(step)} verification code again: ${result.code}`);
             }
 
             transportErrorStreak = 0;
@@ -811,10 +811,10 @@
             if (isTransportError) {
               transportErrorStreak += 1;
               lastError = err;
-              await addLog(`步骤 ${step}：${err.message}`, 'warn');
+              await addLog(`Step ${step}: ${err.message}`, 'warn');
               if (transportErrorStreak >= maxTransportErrorStreak) {
                 throw new Error(
-                  `步骤 ${step}：${mail?.label || '邮箱'}页面通信异常连续 ${transportErrorStreak} 次，已停止当前轮询以避免重复重发验证码。最后错误：${err.message}`
+                  `Step ${step}: ${mail?.label || 'Mailbox'} page communication failed ${transportErrorStreak} times in a row. Stopped the current polling to avoid resending the verification code repeatedly. Last error: ${err.message}`
                 );
               }
               const fallbackIntervalMs = Math.max(
@@ -831,14 +831,14 @@
             }
             transportErrorStreak = 0;
             lastError = err;
-            await addLog(`步骤 ${step}：${err.message}`, 'warn');
+            await addLog(`Step ${step}: ${err.message}`, 'warn');
           }
 
           if (mail?.source === 'icloud-mail' && maxIcloudNoResendRounds > 0) {
             pollOnlyNoResendRounds += 1;
             if (pollOnlyNoResendRounds >= maxIcloudNoResendRounds) {
               throw new Error(
-                `步骤 ${step}：iCloud 邮箱连续 ${pollOnlyNoResendRounds} 轮轮询均未拿到验证码且未触发重发，已停止当前链路以避免空轮询循环，请刷新邮箱页后重试。`
+                `Step ${step}: The iCloud mailbox failed to produce a verification code in ${pollOnlyNoResendRounds} consecutive polling rounds without triggering a resend. Stopped the current chain to avoid an empty polling loop. Please refresh the mailbox page and retry.`
               );
             }
           }
@@ -852,7 +852,7 @@
           const effectiveCooldownMs = Math.max(remainingBeforeResendMs, initialCooldownMs);
           if (effectiveCooldownMs > 0) {
             await addLog(
-              `步骤 ${step}：距离下次重新发送验证码还差 ${Math.ceil(effectiveCooldownMs / 1000)} 秒，继续刷新邮箱（第 ${round}/${maxRounds} 轮）...`,
+              `Step ${step}: ${Math.ceil(effectiveCooldownMs / 1000)} seconds remain until the next verification code resend; continuing to refresh the mailbox (round ${round}/${maxRounds})...`,
               'info'
             );
             const configuredIntervalMs = Math.max(
@@ -870,13 +870,13 @@
           }
 
           if (round < maxRounds) {
-            await addLog(`步骤 ${step}：已到 25 秒重发间隔，准备重新发送验证码（第 ${round + 1}/${maxRounds} 轮）...`, 'warn');
+            await addLog(`Step ${step}: Reached the 25-second resend interval; preparing to resend the verification code (round ${round + 1}/${maxRounds})...`, 'warn');
           }
           break;
         }
       }
 
-      throw lastError || new Error(`步骤 ${step}：无法获取新的${getVerificationCodeLabel(step)}验证码。`);
+      throw lastError || new Error(`Step ${step}: Could not get a new ${getVerificationCodeLabel(step)} verification code.`);
     }
 
     function shouldRequestLuckmailResendBeforeRetry(error) {
@@ -885,7 +885,7 @@
         return true;
       }
 
-      return !/没有可用 token|token 对应邮箱与当前邮箱不一致/i.test(message);
+      return !/没有可用 token|token 对应邮箱与当前邮箱不一致|no available token|token does not match current email/i.test(message);
     }
 
     async function pollLuckmailVerificationCodeWithResend(step, state, pollOverrides = {}) {
@@ -931,16 +931,16 @@
               if (isStopError(resendError)) {
                 throw resendError;
               }
-              await addLog(`步骤 ${step}：LuckMail 点击重新发送验证码失败：${resendError.message}，仍将在 ${Math.ceil(intervalMs / 1000)} 秒后继续轮询 /code 接口。`, 'warn');
+              await addLog(`Step ${step}: LuckMail failed to click resend verification code: ${resendError.message}. Will continue polling the /code endpoint in ${Math.ceil(intervalMs / 1000)} seconds.`, 'warn');
             }
           }
 
-          await addLog(`步骤 ${step}：LuckMail 暂未获取到新的${getVerificationCodeLabel(step)}验证码，等待 ${Math.ceil(intervalMs / 1000)} 秒后继续轮询 /code 接口（${attempt + 1}/${maxAttempts}）...`, 'warn');
+          await addLog(`Step ${step}: LuckMail has not yet returned a new ${getVerificationCodeLabel(step)} verification code; waiting ${Math.ceil(intervalMs / 1000)} seconds before continuing to poll the /code endpoint (${attempt + 1}/${maxAttempts})...`, 'warn');
           await sleepWithStop(intervalMs);
         }
       }
 
-      throw lastError || new Error(`步骤 ${step}：无法获取新的${getVerificationCodeLabel(step)}验证码。`);
+      throw lastError || new Error(`Step ${step}: Could not get a new ${getVerificationCodeLabel(step)} verification code.`);
     }
 
     async function pollFreshVerificationCode(step, state, mail, pollOverrides = {}) {
@@ -959,14 +959,14 @@
           ...getVerificationPollPayload(step, state),
           ...hotmailPollConfig,
           ...cleanPollOverrides,
-        }, cleanPollOverrides, `轮询${getVerificationCodeLabel(step)}验证码邮箱`);
+        }, cleanPollOverrides, `Poll ${getVerificationCodeLabel(step)} verification code mailbox`);
         return pollHotmailVerificationCode(step, state, timedPoll.payload);
       }
       if (mail.provider === LUCKMAIL_PROVIDER) {
         const timedPoll = await applyMailPollingTimeBudget(step, {
           ...getVerificationPollPayload(step, state),
           ...cleanPollOverrides,
-        }, cleanPollOverrides, `轮询${getVerificationCodeLabel(step)}验证码邮箱`);
+        }, cleanPollOverrides, `Poll ${getVerificationCodeLabel(step)} verification code mailbox`);
         return pollLuckmailVerificationCodeWithResend(step, state, {
           ...cleanPollOverrides,
           ...timedPoll.payload,
@@ -977,21 +977,21 @@
         const timedPoll = await applyMailPollingTimeBudget(step, {
           ...getVerificationPollPayload(step, state),
           ...cleanPollOverrides,
-        }, cleanPollOverrides, `轮询${getVerificationCodeLabel(step)}验证码邮箱`);
+        }, cleanPollOverrides, `Poll ${getVerificationCodeLabel(step)} verification code mailbox`);
         return pollCloudflareTempEmailVerificationCode(step, state, timedPoll.payload);
       }
       if (mail.provider === CLOUD_MAIL_PROVIDER) {
         const timedPoll = await applyMailPollingTimeBudget(step, {
           ...getVerificationPollPayload(step, state),
           ...cleanPollOverrides,
-        }, cleanPollOverrides, `轮询${getVerificationCodeLabel(step)}验证码邮箱`);
+        }, cleanPollOverrides, `Poll ${getVerificationCodeLabel(step)} verification code mailbox`);
         return pollCloudMailVerificationCode(step, state, timedPoll.payload);
       }
       if (mail.provider === YYDS_MAIL_PROVIDER) {
         const timedPoll = await applyMailPollingTimeBudget(step, {
           ...getVerificationPollPayload(step, state),
           ...cleanPollOverrides,
-        }, cleanPollOverrides, `轮询${getVerificationCodeLabel(step)}验证码邮箱`);
+        }, cleanPollOverrides, `Poll ${getVerificationCodeLabel(step)} verification code mailbox`);
         return pollYydsMailVerificationCode(step, state, timedPoll.payload);
       }
 
@@ -1051,7 +1051,7 @@
             step,
             payload,
             pollOverrides,
-            `轮询${getVerificationCodeLabel(step)}验证码邮箱`
+            `Poll ${getVerificationCodeLabel(step)} verification code mailbox`
           );
           const timeoutWindow = resolveMailPollingTimeouts(mail, timedPoll);
           const result = await sendToMailContentScriptResilient(
@@ -1076,11 +1076,11 @@
           }
 
           if (!result || !result.code) {
-            throw new Error(`步骤 ${step}：邮箱轮询结束，但未获取到验证码。`);
+            throw new Error(`Step ${step}: Mailbox polling ended but no verification code was found.`);
           }
 
           if (rejectedCodes.has(result.code)) {
-            throw new Error(`步骤 ${step}：再次收到了相同的${getVerificationCodeLabel(step)}验证码：${result.code}`);
+            throw new Error(`Step ${step}: Received the same ${getVerificationCodeLabel(step)} verification code again: ${result.code}`);
           }
 
           return {
@@ -1098,14 +1098,14 @@
             throw err;
           }
           lastError = err;
-          await addLog(`步骤 ${step}：${err.message}`, 'warn');
+          await addLog(`Step ${step}: ${err.message}`, 'warn');
           if (round < maxRounds) {
-            await addLog(`步骤 ${step}：将重新发送验证码后重试（${round + 1}/${maxRounds}）...`, 'warn');
+            await addLog(`Step ${step}: Will resend the verification code and retry (${round + 1}/${maxRounds})...`, 'warn');
           }
         }
       }
 
-      throw lastError || new Error(`步骤 ${step}：无法获取新的${getVerificationCodeLabel(step)}验证码。`);
+      throw lastError || new Error(`Step ${step}: Could not get a new ${getVerificationCodeLabel(step)} verification code.`);
     }
 
     async function submitVerificationCode(step, code, options = {}) {
@@ -1113,7 +1113,7 @@
       const authLoginStep = completionStep >= 11 ? 10 : 7;
       const signupTabId = await getTabId('openai-auth');
       if (!signupTabId) {
-        throw new Error('认证页面标签页已关闭，无法填写验证码。');
+        throw new Error('Auth page tab was closed; cannot fill the verification code.');
       }
 
       await chrome.tabs.update(signupTabId, { active: true });
@@ -1127,7 +1127,7 @@
           }
           : options,
         step === 7 ? 45000 : 30000,
-        `填写${getVerificationCodeLabel(step)}验证码`
+        `Fill ${getVerificationCodeLabel(step)} verification code`
       );
       const message = {
         type: 'FILL_CODE',
@@ -1147,7 +1147,7 @@
             timeoutMs: Math.max(baseResponseTimeoutMs + 15000, 30000),
             retryDelayMs: 700,
             responseTimeoutMs: baseResponseTimeoutMs,
-            logMessage: '认证页正在切换，等待页面重新就绪后继续确认验证码提交结果...',
+            logMessage: 'Auth page is switching, waiting for it to become ready again before confirming the verification code submission result...',
             logStep: completionStep,
             logStepKey: step === 4 ? 'fetch-signup-code' : 'fetch-login-code',
           });
@@ -1159,9 +1159,9 @@
             });
             if (fallback.success) {
               const fallbackLabel = fallback.reason === 'chatgpt_home'
-                ? 'ChatGPT 已登录首页'
-                : '注册资料页';
-              await addLog(`步骤 4：验证码提交后页面已切换到${fallbackLabel}，按提交成功继续。`, 'warn');
+                ? 'ChatGPT logged-in home'
+                : 'signup profile page';
+              await addLog(`Step 4: After verification code submission, the page switched to ${fallbackLabel}; treating as success and continuing.`, 'warn');
               return {
                 success: true,
                 assumed: true,
@@ -1179,12 +1179,12 @@
             });
             if (fallback.success) {
               if (fallback.addPhonePage) {
-                await addLog('验证码提交后通信中断，但页面已进入手机号验证页，按提交成功继续。', 'warn', {
+                await addLog('Communication was interrupted after verification code submission, but the page already entered the phone verification page; treating as success and continuing.', 'warn', {
                   step: completionStep,
                   stepKey: 'fetch-login-code',
                 });
               } else {
-                await addLog('验证码提交后通信中断，但页面已进入 OAuth 授权页，按提交成功继续。', 'warn', {
+                await addLog('Communication was interrupted after verification code submission, but the page already entered the OAuth consent page; treating as success and continuing.', 'warn', {
                   step: completionStep,
                   stepKey: 'fetch-login-code',
                 });
@@ -1199,7 +1199,7 @@
             }
             if (fallback.restartStep7) {
               const urlPart = fallback.url ? ` URL: ${fallback.url}` : '';
-              throw new Error(`STEP8_RESTART_STEP7::步骤 ${completionStep}：验证码提交后认证页进入登录超时报错页，请回到步骤 ${authLoginStep} 重新开始。${urlPart}`.trim());
+              throw new Error(`STEP8_RESTART_STEP7::Step ${completionStep}: After verification code submission, the auth page entered the login timeout error page. Please go back to step ${authLoginStep} and start again.${urlPart}`.trim());
             }
           }
           throw err;
@@ -1211,7 +1211,7 @@
           });
         } catch (err) {
           if (isRetryableVerificationTransportError(err)) {
-            await addLog('认证页正在切换，等待页面重新就绪后继续确认验证码提交结果...', 'warn', {
+            await addLog('Auth page is switching, waiting for it to become ready again before confirming the verification code submission result...', 'warn', {
               step: completionStep,
               stepKey: 'fetch-login-code',
             });
@@ -1223,18 +1223,18 @@
             if (fallback.invalidCode) {
               return {
                 invalidCode: true,
-                errorText: fallback.errorText || '验证码被拒绝。',
+                errorText: fallback.errorText || 'Verification code was rejected.',
                 url: fallback.url || '',
               };
             }
             if (fallback.success) {
               if (fallback.addPhonePage) {
-                await addLog('验证码提交后通信中断，但页面已进入手机号验证页，按提交成功继续。', 'warn', {
+                await addLog('Communication was interrupted after verification code submission, but the page already entered the phone verification page; treating as success and continuing.', 'warn', {
                   step: completionStep,
                   stepKey: 'fetch-login-code',
                 });
               } else {
-                await addLog('验证码提交后通信中断，但页面已进入 OAuth 授权页，按提交成功继续。', 'warn', {
+                await addLog('Communication was interrupted after verification code submission, but the page already entered the OAuth consent page; treating as success and continuing.', 'warn', {
                   step: completionStep,
                   stepKey: 'fetch-login-code',
                 });
@@ -1249,7 +1249,7 @@
             }
             if (fallback.restartStep7) {
               const urlPart = fallback.url ? ` URL: ${fallback.url}` : '';
-              throw new Error(`STEP8_RESTART_STEP7::步骤 ${completionStep}：验证码提交后认证页进入登录超时报错页，请回到步骤 ${authLoginStep} 重新开始。${urlPart}`.trim());
+              throw new Error(`STEP8_RESTART_STEP7::Step ${completionStep}: After verification code submission, the auth page entered the login timeout error page. Please go back to step ${authLoginStep} and start again.${urlPart}`.trim());
             }
           }
           throw err;
@@ -1320,18 +1320,18 @@
 
       if (requestFreshCodeFirst) {
         if (remainingAutomaticResendCount <= 0) {
-          await addLog(`步骤 ${step}：当前自动重新发送验证码次数为 0，将直接使用当前时间窗口轮询邮箱。`, 'info');
+          await addLog(`Step ${step}: Current auto-resend verification code count is 0; will poll the mailbox using the current time window directly.`, 'info');
         } else {
           try {
             lastResendAt = await requestVerificationCodeResend(step, options);
             remainingAutomaticResendCount -= 1;
             await updateFilterAfterTimestampForVerificationStep(lastResendAt);
-            await addLog(`步骤 ${step}：已先请求一封新的${getVerificationCodeLabel(step)}验证码，再开始轮询邮箱。`, 'warn');
+            await addLog(`Step ${step}: Requested a new ${getVerificationCodeLabel(step)} verification code first before polling the mailbox.`, 'warn');
           } catch (err) {
             if (isStopError(err)) {
               throw err;
             }
-            await addLog(`步骤 ${step}：首次重新获取验证码失败：${err.message}，将继续使用当前时间窗口轮询。`, 'warn');
+            await addLog(`Step ${step}: First refresh of the verification code failed: ${err.message}. Will keep polling the current time window.`, 'warn');
           }
         }
       }
@@ -1342,12 +1342,12 @@
             const remainingMs = await getRemainingTimeBudgetMs(
               step,
               options,
-              `等待${getVerificationCodeLabel(step)}验证码邮件到达`
+              `Wait for ${getVerificationCodeLabel(step)} verification code email to arrive`
             );
             const delayMs = remainingMs === null
               ? initialDelayMs
               : Math.min(initialDelayMs, Math.max(0, remainingMs));
-            await addLog(`步骤 ${step}：等待 ${Math.round(initialDelayMs / 1000)} 秒，让 Hotmail 验证码邮件先到达...`, 'info');
+            await addLog(`Step ${step}: Waiting ${Math.round(initialDelayMs / 1000)} seconds so the Hotmail verification code email can arrive first...`, 'info');
             await sleepWithStop(delayMs);
           }
         }
@@ -1379,7 +1379,7 @@
           );
 
           throwIfStopped();
-          await addLog(`步骤 ${step}：已获取${getVerificationCodeLabel(step)}验证码：${result.code}`);
+          await addLog(`Step ${step}: Got ${getVerificationCodeLabel(step)} verification code: ${result.code}`);
           if (beforeSubmit) {
             await beforeSubmit(result, {
               attempt,
@@ -1393,27 +1393,27 @@
 
           if (submitResult.invalidCode) {
             rejectedCodes.add(result.code);
-            await addLog(`步骤 ${step}：验证码被页面拒绝：${submitResult.errorText || result.code}`, 'warn');
+            await addLog(`Step ${step}: Verification code was rejected by the page: ${submitResult.errorText || result.code}`, 'warn');
 
             if (attempt >= maxSubmitAttempts) {
-              throw new Error(`步骤 ${step}：验证码连续失败，已达到 ${maxSubmitAttempts} 次重试上限。`);
+              throw new Error(`Step ${step}: Verification code failed repeatedly and reached the retry limit of ${maxSubmitAttempts}.`);
             }
 
             if (mail.provider === LUCKMAIL_PROVIDER) {
-              await addLog(`步骤 ${step}：LuckMail 验证码提交失败，等待 15 秒后重新轮询 /code 接口（${attempt + 1}/${maxSubmitAttempts}）...`, 'warn');
+              await addLog(`Step ${step}: LuckMail verification code submission failed; waiting 15 seconds before polling the /code endpoint again (${attempt + 1}/${maxSubmitAttempts})...`, 'warn');
               await sleepWithStop(15000);
               continue;
             }
 
             if (remainingAutomaticResendCount <= 0) {
-              await addLog(`步骤 ${step}：已达到自动重新发送验证码次数上限，将排除已拒绝验证码并继续轮询新邮件。`, 'warn');
+              await addLog(`Step ${step}: Reached the auto-resend verification code limit; will exclude the rejected codes and continue polling for new mail.`, 'warn');
               continue;
             }
 
             lastResendAt = await requestVerificationCodeResend(step, options);
             remainingAutomaticResendCount -= 1;
             await updateFilterAfterTimestampForVerificationStep(lastResendAt);
-            await addLog(`步骤 ${step}：提交失败后已请求新验证码（${attempt + 1}/${maxSubmitAttempts}）...`, 'warn');
+            await addLog(`Step ${step}: Requested a new verification code after submission failure (${attempt + 1}/${maxSubmitAttempts})...`, 'warn');
             continue;
           }
 
@@ -1423,7 +1423,7 @@
           });
 
           if (!completionNodeId) {
-            throw new Error(`步骤 ${completionStep} 未映射到验证码节点。`);
+            throw new Error(`Step ${completionStep} is not mapped to a verification code node.`);
           }
           await completeNodeFromBackground(completionNodeId, {
             emailTimestamp: result.emailTimestamp,

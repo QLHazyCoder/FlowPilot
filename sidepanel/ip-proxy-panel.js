@@ -1,4 +1,4 @@
-// sidepanel/ip-proxy-panel.js — IP代理面板（轻量解耦）
+// sidepanel/ip-proxy-panel.js — IP Proxy Panel (lightweight decoupled)
 function normalizeIpProxyService(value = '') {
   const normalized = String(value || '').trim().toLowerCase();
   const enabledServices = Array.isArray(globalThis.IP_PROXY_ENABLED_SERVICES)
@@ -66,11 +66,11 @@ function normalizeIpProxyActionType(value = '') {
 
 function getIpProxyActionLabel(action = '') {
   const normalized = normalizeIpProxyActionType(action);
-  if (normalized === 'refresh') return '同步代理';
-  if (normalized === 'next') return '切换代理';
-  if (normalized === 'change') return '会话换出口';
-  if (normalized === 'probe') return '检测出口';
-  return '代理操作';
+  if (normalized === 'refresh') return 'Sync Proxy';
+  if (normalized === 'next') return 'Switch Proxy';
+  if (normalized === 'change') return 'Change Session Exit';
+  if (normalized === 'probe') return 'Probe Exit';
+  return 'Proxy Action';
 }
 
 function isIpProxyActionBusy() {
@@ -93,13 +93,13 @@ function setIpProxyActionBusy(action = '', busy = false) {
 
 async function runIpProxyActionWithLock(action = '', runner) {
   if (typeof runner !== 'function') {
-    throw new Error('代理操作执行器无效。');
+    throw new Error('Invalid proxy action runner.');
   }
   const nextAction = normalizeIpProxyActionType(action);
   const currentState = getIpProxyActionState();
   if (currentState.busy) {
     if (typeof showToast === 'function') {
-      showToast(`${getIpProxyActionLabel(currentState.action)}进行中，请稍候。`, 'info', 1600);
+      showToast(`${getIpProxyActionLabel(currentState.action)} in progress, please wait.`, 'info', 1600);
     }
     return { skipped: true };
   }
@@ -117,7 +117,7 @@ async function runIpProxyActionWithLock(action = '', runner) {
       Promise.resolve().then(() => runner()),
       new Promise((_, reject) => {
         timeoutId = globalThis.setTimeout(() => {
-          reject(new Error(`${actionLabel}超时（${Math.round(timeoutMs / 1000)} 秒），已自动解锁，请重试。`));
+          reject(new Error(`${actionLabel} timed out (${Math.round(timeoutMs / 1000)} seconds), automatically unlocked, please retry.`));
         }, timeoutMs);
       }),
     ]);
@@ -226,7 +226,7 @@ function normalizeIpProxyAccountList(value = '') {
       if (!line) {
         return false;
       }
-      // 与后台保持一致：支持 # / // / ; 注释行，注释行不参与生效。
+      // Same as background: support # / // / ; comment lines, comment lines are not effective.
       if (/^(?:#|\/\/|;)/.test(line)) {
         return false;
       }
@@ -578,8 +578,8 @@ function getIpProxyRuntimeSnapshot(state = latestState, mode = normalizeIpProxyM
   const hasModeCurrent = state?.[fields.currentKey] !== undefined && state?.[fields.currentKey] !== null;
   const hasModeIndex = state?.[fields.indexKey] !== undefined && state?.[fields.indexKey] !== null;
   const modePool = Array.isArray(state?.[fields.poolKey]) ? state[fields.poolKey] : [];
-  // 账号模式在“固定账号”场景下不应读取历史 runtime 缓存，否则会出现
-  // “状态显示 A 节点、当前节点显示 B 节点”的错位。
+  // Account mode under "fixed account" scenario should not read historical runtime cache, otherwise
+  // a "status shows node A, current node shows node B" mismatch will occur.
   const allowAccountRuntimeCache = normalizedMode !== 'account' || hasAccountListConfigured;
   const pool = hasModePool && allowAccountRuntimeCache ? modePool : [];
   const current = hasModeCurrent && allowAccountRuntimeCache ? state?.[fields.currentKey] : null;
@@ -604,7 +604,7 @@ function buildIpProxyRuntimeStatePatchForMode(mode = DEFAULT_IP_PROXY_MODE, resp
   const patch = {};
   if (response?.pool !== undefined) {
     patch[fields.poolKey] = Array.isArray(response.pool) ? response.pool : [];
-    // 兼容旧字段：始终反映当前激活模式的运行态。
+    // Compat with old field: always reflect current active mode runtime.
     patch.ipProxyPool = patch[fields.poolKey];
   }
   if (response?.index !== undefined) {
@@ -961,24 +961,24 @@ function buildIpProxyActionHintText(options = {}) {
 
   if (mode === 'api') {
     const nextPart = poolCount > 1
-      ? `下一条：当前共 ${dynamicPoolCount} 条节点，切到已拉取代理池的下一条节点。`
-      : `下一条：当前仅 ${dynamicPoolCount} 条节点，执行重绑复测（不保证更换出口）。`;
-    return `${nextPart} Change：仅账号模式可用。`;
+      ? `Next: currently ${dynamicPoolCount} nodes total, switch to next node in fetched proxy pool.`
+      : `Next: only ${dynamicPoolCount} node currently, re-bind and re-test (does not guarantee changing exit).`;
+    return `${nextPart} Change: only available in account mode.`;
   }
 
   const nextPart = poolCount > 1
-    ? `下一条：当前共 ${dynamicPoolCount} 条节点，切到代理池的下一条节点。`
-    : `下一条：当前仅 ${dynamicPoolCount} 条节点，执行重绑复测（不保证更换出口）。`;
+    ? `Next: currently ${dynamicPoolCount} nodes total, switch to next node in proxy pool.`
+    : `Next: only ${dynamicPoolCount} node currently, re-bind and re-test (does not guarantee changing exit).`;
   const changePart = changeAvailable
-    ? 'Change：保持当前 session 重绑链路并复测出口。'
-    : 'Change：需 711 账号模式且用户名包含 session。';
+    ? 'Change: keep current session, re-bind link and re-test exit.'
+    : 'Change: requires 711 account mode with username containing session.';
   return `${nextPart} ${changePart}`;
 }
 
 function setIpProxyCurrentDisplay(text = '', hasValue = false) {
   if (!ipProxyCurrent) return;
-  ipProxyCurrent.textContent = text || '暂无可用代理';
-  ipProxyCurrent.title = text || '暂无可用代理';
+  ipProxyCurrent.textContent = text || 'No available proxy';
+  ipProxyCurrent.title = text || 'No available proxy';
   ipProxyCurrent.classList.toggle('has-value', Boolean(hasValue));
 }
 
@@ -988,7 +988,7 @@ function formatIpProxyCurrentDisplay(state = latestState) {
     const current = getIpProxyCurrentEntry(state);
     if (!current) {
       return {
-        text: '账号模式：请填写代理列表，或填写 Host / Port',
+        text: 'Account mode: please fill in proxy list, or fill in Host / Port',
         hasValue: false,
       };
     }
@@ -1004,7 +1004,7 @@ function formatIpProxyCurrentDisplay(state = latestState) {
   const index = runtime.index;
   if (!current) {
     return {
-      text: count ? `已拉取 ${count} 条，点击“下一条”切换` : '暂无可用代理',
+      text: count ? `Fetched ${count} entries, click "Next" to switch` : 'No available proxy',
       hasValue: false,
     };
   }
@@ -1046,13 +1046,13 @@ function formatIpProxyRuntimeStatus(state = latestState) {
   const hasAccountListConfigured = mode === 'account'
     && normalizeIpProxyAccountList(state?.ipProxyAccountList || '').split('\n').filter(Boolean).length > 0;
   const accountSourceTag = mode === 'account'
-    ? (hasAccountListConfigured ? '（账号列表）' : '（固定账号）')
+    ? (hasAccountListConfigured ? '(account list)' : '(fixed account)')
     : '';
   const accountSourceDetail = mode === 'account'
     ? (
       hasAccountListConfigured
-        ? '当前生效来源：账号列表（固定账号字段已忽略）。'
-        : '当前生效来源：固定账号字段。'
+        ? 'Current effective source: account list (fixed account fields ignored).'
+        : 'Current effective source: fixed account fields.'
     )
     : '';
   const activeEntry = getIpProxyCurrentEntry(state);
@@ -1079,7 +1079,7 @@ function formatIpProxyRuntimeStatus(state = latestState) {
   const endpoint = host && port > 0 ? `${host}:${port}` : '';
   const endpointWithRegion = endpoint ? `${endpoint}${region ? ` [${region}]` : ''}` : '';
   const hasAuth = Boolean(state?.ipProxyAppliedHasAuth);
-  const authSuffix = hasAuth ? '（需要鉴权）' : '';
+  const authSuffix = hasAuth ? ' (auth required)' : '';
   const errorText = String(state?.ipProxyAppliedError || '').trim();
   const warningText = String(state?.ipProxyAppliedWarning || '').trim();
   const exitIp = String(state?.ipProxyAppliedExitIp || '').trim();
@@ -1088,16 +1088,16 @@ function formatIpProxyRuntimeStatus(state = latestState) {
   const exitError = String(state?.ipProxyAppliedExitError || '').trim();
   const exitSource = String(state?.ipProxyAppliedExitSource || '').trim().toLowerCase();
   const exitSourceSuffix = exitSource === 'page_context'
-    ? '（页面探测）'
+    ? ' (page probe)'
     : (exitSource === 'background_fallback'
-      ? '（后台兜底，可能受全局代理影响）'
+      ? ' (background fallback, may be affected by global proxy)'
       : '');
   const endpointSummary = endpointWithRegion
     ? `${endpointWithRegion}${authSuffix}`
     : (endpoint ? `${endpoint}${authSuffix}` : '');
   const exitSummary = exitIp
     ? `${exitIp}${exitRegion ? ` [${exitRegion}]` : ''}${exitSourceSuffix}`
-    : (exitDetecting ? '检测中...' : '未检测到');
+    : (exitDetecting ? 'Detecting...' : 'Not detected');
   const details = [accountSourceDetail, errorText, warningText, exitError]
     .map((item) => String(item || '').trim())
     .filter(Boolean)
@@ -1106,7 +1106,7 @@ function formatIpProxyRuntimeStatus(state = latestState) {
   if (!enabled) {
     return {
       stateClass: 'state-idle',
-      text: '未启用，沿用浏览器默认/全局代理。',
+      text: 'Not enabled, using browser default/global proxy.',
       details: '',
       hideCurrentDisplay: false,
     };
@@ -1114,11 +1114,11 @@ function formatIpProxyRuntimeStatus(state = latestState) {
 
   if (applied) {
     const statusPrefix = endpointSummary
-      ? `当前代理：${endpointSummary}${accountSourceTag}`
-      : '当前代理：已启用';
-    const statusText = `${statusPrefix}；当前出口：${exitSummary}`;
+      ? `Current proxy: ${endpointSummary}${accountSourceTag}`
+      : 'Current proxy: enabled';
+    const statusText = `${statusPrefix}; current exit: ${exitSummary}`;
     const briefWarning = warningText
-      ? '；地区校验未通过（详情可展开查看）'
+      ? '; region check failed (expand details to view)'
       : '';
     return {
       stateClass: warningText ? 'state-warning' : 'state-applied',
@@ -1132,7 +1132,7 @@ function formatIpProxyRuntimeStatus(state = latestState) {
     if (errorText) {
       return {
         stateClass: 'state-warning',
-        text: '已启用，但当前没有可用代理（已阻断直连）。',
+        text: 'Enabled, but no available proxy currently (direct connection blocked).',
         details: errorText,
         hideCurrentDisplay: false,
       };
@@ -1140,8 +1140,8 @@ function formatIpProxyRuntimeStatus(state = latestState) {
     return {
       stateClass: 'state-warning',
       text: mode === 'account'
-        ? '已启用，但账号模式没有可用代理。请先填写代理列表，或填写 Host/Port。已阻断所有网站直连。'
-        : '已启用，但当前没有可用代理。请先点击“拉取”获取 IP 列表。已阻断所有网站直连。',
+        ? 'Enabled, but account mode has no available proxy. Please fill in proxy list, or fill in Host/Port. All site direct connections blocked.'
+        : 'Enabled, but no available proxy currently. Please click "Fetch" to get IP list. All site direct connections blocked.',
       details: '',
       hideCurrentDisplay: false,
     };
@@ -1149,7 +1149,7 @@ function formatIpProxyRuntimeStatus(state = latestState) {
   if (reason === 'proxy_api_unavailable') {
     return {
       stateClass: 'state-error',
-      text: '已启用，但当前浏览器不支持扩展代理 API，无法应用。',
+      text: 'Enabled, but current browser does not support extension proxy API, cannot apply.',
       details,
       hideCurrentDisplay: false,
     };
@@ -1157,20 +1157,20 @@ function formatIpProxyRuntimeStatus(state = latestState) {
   if (reason === 'apply_failed') {
     return {
       stateClass: 'state-error',
-      text: '已启用，但代理应用失败（已回退默认代理）。',
+      text: 'Enabled, but proxy application failed (reverted to default proxy).',
       details: errorText || details,
       hideCurrentDisplay: false,
     };
   }
   if (reason === 'connectivity_failed') {
-    const prefix = endpointSummary ? `当前代理：${endpointSummary}${accountSourceTag}` : '当前代理：未知';
+    const prefix = endpointSummary ? `Current proxy: ${endpointSummary}${accountSourceTag}` : 'Current proxy: unknown';
     const targetUnreachable = /真实目标|chatgpt\.com 不可达|target:page_context/i.test(errorText || details);
-    const exitPart = exitIp ? `；当前出口：${exitSummary}` : '';
+    const exitPart = exitIp ? `; current exit: ${exitSummary}` : '';
     return {
       stateClass: 'state-error',
       text: targetUnreachable && exitIp
-        ? `${prefix}${exitPart}；ChatGPT 目标不可达，请切换支持 ChatGPT 的节点。`
-        : `${prefix}${exitPart}；连通性失败，请切换节点或重试。`,
+        ? `${prefix}${exitPart}; ChatGPT target unreachable, please switch to a ChatGPT-compatible node.`
+        : `${prefix}${exitPart}; connectivity failed, please switch nodes or retry.`,
       details: errorText || details,
       hideCurrentDisplay: true,
     };
@@ -1179,8 +1179,8 @@ function formatIpProxyRuntimeStatus(state = latestState) {
   return {
     stateClass: 'state-warning',
     text: endpointWithRegion
-      ? `已启用，等待生效：${endpointWithRegion}${authSuffix}`
-      : '已启用，等待拉取并应用代理。',
+      ? `Enabled, waiting to take effect: ${endpointWithRegion}${authSuffix}`
+      : 'Enabled, waiting to fetch and apply proxy.',
     details,
     hideCurrentDisplay: false,
   };
@@ -1190,7 +1190,7 @@ function setIpProxyRuntimeStatusDisplay(status = {}) {
   if (!ipProxyRuntimeStatus || !ipProxyRuntimeText) {
     return;
   }
-  const text = String(status?.text || '未启用，沿用浏览器默认/全局代理。').trim();
+  const text = String(status?.text || 'Not enabled, using browser default/global proxy.').trim();
   const stateClass = String(status?.stateClass || 'state-idle').trim() || 'state-idle';
   ipProxyRuntimeStatus.classList.remove('state-idle', 'state-applied', 'state-warning', 'state-error');
   ipProxyRuntimeStatus.classList.add(stateClass);
@@ -1228,7 +1228,7 @@ function setIpProxyEnabledInlineStatus(state = {}, enabled = getSelectedIpProxyE
   ipProxyEnabledStatus.classList.remove('is-off', 'is-on');
 
   if (!enabled) {
-    const text = '未开启';
+    const text = 'Off';
     ipProxyEnabledStatus.classList.add('is-off');
     ipProxyEnabledStatusText.textContent = text;
     ipProxyEnabledStatusText.title = text;
@@ -1242,7 +1242,7 @@ function setIpProxyEnabledInlineStatus(state = {}, enabled = getSelectedIpProxyE
   const region = normalizeIpProxyEnabledInlineRegion(state?.ipProxyAppliedExitRegion)
     || normalizeIpProxyEnabledInlineRegion(state?.ipProxyAppliedRegion)
     || normalizeIpProxyEnabledInlineRegion(state?.ipProxyRegion);
-  const text = region ? `已开启 · ${region}` : '已开启';
+  const text = region ? `On · ${region}` : 'On';
   ipProxyEnabledStatus.classList.add('is-on');
   ipProxyEnabledStatusText.textContent = text;
   ipProxyEnabledStatusText.title = text;
@@ -1274,10 +1274,10 @@ function updateIpProxyUI(state = latestState) {
   }
   if (btnToggleIpProxySection) {
     btnToggleIpProxySection.disabled = !enabled;
-    btnToggleIpProxySection.textContent = showSettings ? '收起设置' : '展开设置';
+    btnToggleIpProxySection.textContent = showSettings ? 'Collapse Settings' : 'Expand Settings';
     btnToggleIpProxySection.title = enabled
-      ? (showSettings ? '收起 IP 代理设置' : '展开 IP 代理设置')
-      : '开启 IP 代理后可展开设置';
+      ? (showSettings ? 'Collapse IP proxy settings' : 'Expand IP proxy settings')
+      : 'Enable IP proxy to expand settings';
     btnToggleIpProxySection.setAttribute('aria-expanded', String(showSettings));
   }
   if (rowIpProxyFold) {
@@ -1432,35 +1432,35 @@ function updateIpProxyUI(state = latestState) {
   const hasCurrentEntry = Boolean(getIpProxyCurrentEntry(runtimeState));
   const changeAvailable = canChangeIpProxyExitWithCurrentSession(runtimeState);
   const nextActionTitle = runtimePoolCount > 1
-    ? `切换到代理池下一条节点并应用（当前共 ${runtimePoolCountForDisplay} 条）`
-    : `当前仅 ${runtimePoolCountForDisplay} 条节点：重绑当前节点并复测连通性（不保证更换出口）`;
+    ? `Switch to next node in proxy pool and apply (currently ${runtimePoolCountForDisplay} nodes total)`
+    : `Only ${runtimePoolCountForDisplay} node currently: re-bind current node and re-test connectivity (does not guarantee changing exit)`;
 
   if (btnIpProxyRefresh) {
     btnIpProxyRefresh.disabled = actionBusy || !enabled || !canOperate;
     btnIpProxyRefresh.textContent = busyAction === 'refresh'
-      ? (isApiMode ? '拉取中...' : '同步中...')
-      : (isApiMode ? '拉取' : '同步');
-    btnIpProxyRefresh.title = isApiMode ? '拉取代理池并应用当前代理' : '同步账号代理列表并应用当前代理';
+      ? (isApiMode ? 'Fetching...' : 'Syncing...')
+      : (isApiMode ? 'Fetch' : 'Sync');
+    btnIpProxyRefresh.title = isApiMode ? 'Fetch proxy pool and apply current proxy' : 'Sync account proxy list and apply current proxy';
   }
   if (btnIpProxyNext) {
     btnIpProxyNext.disabled = actionBusy || !enabled || !canOperate || !hasCurrentEntry;
-    btnIpProxyNext.textContent = busyAction === 'next' ? '切换中...' : '下一条';
+    btnIpProxyNext.textContent = busyAction === 'next' ? 'Switching...' : 'Next';
     btnIpProxyNext.title = nextActionTitle;
   }
   if (btnIpProxyChange) {
     btnIpProxyChange.disabled = actionBusy || !enabled || !canOperate || !changeAvailable;
-    btnIpProxyChange.textContent = busyAction === 'change' ? 'Change中...' : 'Change';
+    btnIpProxyChange.textContent = busyAction === 'change' ? 'Changing...' : 'Change';
     btnIpProxyChange.title = changeAvailable
-      ? '保持当前会话并刷新出口（仅 711 + session）'
-      : '当前模式不支持 Change（需 711 账号模式且用户名包含 session）';
+      ? 'Keep current session and refresh exit (711 + session only)'
+      : 'Current mode does not support Change (requires 711 account mode with username containing session)';
   }
   if (btnIpProxyProbe) {
     btnIpProxyProbe.disabled = actionBusy || !enabled || !canOperate;
-    btnIpProxyProbe.textContent = busyAction === 'probe' ? '检测中...' : '检测出口';
+    btnIpProxyProbe.textContent = busyAction === 'probe' ? 'Probing...' : 'Probe Exit';
   }
   if (btnIpProxyCheckIp) {
     btnIpProxyCheckIp.disabled = false;
-    btnIpProxyCheckIp.title = '打开公网 IP 检测页';
+    btnIpProxyCheckIp.title = 'Open public IP detection page';
   }
   if (ipProxyActionHint) {
     const actionHint = buildIpProxyActionHintText({
@@ -1516,9 +1516,9 @@ async function refreshIpProxyPoolByApi(options = {}) {
 
   if (!silent) {
     if (mode === 'account') {
-      showToast(`已同步账号代理：${response?.display || formatIpProxyCurrentDisplay(latestState).text}`, 'success', 1800);
+      showToast(`Synced account proxy: ${response?.display || formatIpProxyCurrentDisplay(latestState).text}`, 'success', 1800);
     } else {
-      showToast(`已拉取代理池：${Number(response?.count) || 0} 条`, 'success', 1800);
+      showToast(`Fetched proxy pool: ${Number(response?.count) || 0} entries`, 'success', 1800);
     }
   }
   return response;
@@ -1566,7 +1566,7 @@ async function switchIpProxyToNext(options = {}) {
   updateIpProxyUI(latestState);
   scheduleIpProxyExitProbe({ silent: true });
   if (!silent) {
-    showToast(`已切换代理：${response?.display || formatIpProxyCurrentDisplay(latestState).text}`, 'success', 1800);
+    showToast(`Switched proxy: ${response?.display || formatIpProxyCurrentDisplay(latestState).text}`, 'success', 1800);
   }
   return response;
 }
@@ -1611,7 +1611,7 @@ async function changeIpProxyExitBySession(options = {}) {
   updateIpProxyUI(latestState);
   scheduleIpProxyExitProbe({ silent: true });
   if (!silent) {
-    showToast(`已执行 Change：${response?.display || formatIpProxyCurrentDisplay(latestState).text}`, 'success', 1800);
+    showToast(`Executed Change: ${response?.display || formatIpProxyCurrentDisplay(latestState).text}`, 'success', 1800);
   }
   return response;
 }
@@ -1654,12 +1654,12 @@ async function probeIpProxyExit(options = {}) {
     const exitRegion = String(routing?.exitRegion || '').trim();
     const exitSource = String(routing?.exitSource || '').trim().toLowerCase();
     const sourceHint = exitSource === 'background_fallback'
-      ? '（后台兜底，可能受全局代理影响）'
+      ? ' (background fallback, may be affected by global proxy)'
       : '';
     if (exitIp) {
-      showToast(`出口检测成功：${exitIp}${exitRegion ? ` [${exitRegion}]` : ''}${sourceHint}`, 'success', 2600);
+      showToast(`Exit probe successful: ${exitIp}${exitRegion ? ` [${exitRegion}]` : ''}${sourceHint}`, 'success', 2600);
     } else {
-      showToast('出口检测完成，但未获取到出口 IP', 'warn', 2200);
+      showToast('Exit probe completed but did not get exit IP', 'warn', 2200);
     }
   }
   return response;

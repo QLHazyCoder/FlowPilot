@@ -26,7 +26,7 @@ if (document.documentElement.getAttribute(WHATSAPP_FLOW_LISTENER_SENTINEL) !== '
     }
   });
 } else {
-  console.log('[MultiPage:whatsapp-flow] 消息监听已存在，跳过重复注册');
+  console.log('[MultiPage:whatsapp-flow] message listener already exists, skipping duplicate registration');
 }
 
 async function handleWhatsAppCommand(message) {
@@ -36,7 +36,7 @@ async function handleWhatsAppCommand(message) {
     case 'WHATSAPP_FIND_CODE':
       return findWhatsAppCode(message.payload || {});
     default:
-      throw new Error(`whatsapp-flow.js 不处理消息：${message.type}`);
+      throw new Error(`whatsapp-flow.js does not handle message: ${message.type}`);
   }
 }
 

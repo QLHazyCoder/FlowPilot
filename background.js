@@ -1276,7 +1276,7 @@ function setupDeclarativeNetRequestRules() {
 }
 
 // ============================================================
-// 状态管理（chrome.storage.session + chrome.storage.local）
+// State management (chrome.storage.session + chrome.storage.local)
 // ============================================================
 
 const PERSISTED_SETTING_DEFAULTS = {
@@ -1518,14 +1518,14 @@ const DEFAULT_STATE = {
   nodeStatuses: { ...DEFAULT_NODE_STATUSES },
   runtimeState: runtimeStateHelpers?.buildDefaultRuntimeState?.() || null,
   ...CONTRIBUTION_RUNTIME_DEFAULTS,
-  accounts: [], // 已生成账号记录：{ email, password, createdAt }。
-  accountRunHistory: [], // 账号运行历史快照，实际持久化在 chrome.storage.local。
+  accounts: [], // Generated account records: { email, password, createdAt }.
+  accountRunHistory: [], // Account run-history snapshot; actually persisted in chrome.storage.local.
   manualAliasUsage: {},
   preservedAliases: {},
   icloudAliasCache: [],
   icloudAliasCacheAt: 0,
-  logs: [], // 侧边栏展示的运行日志。
-  ...PERSISTED_SETTING_DEFAULTS, // 合并 chrome.storage.local 中持久化保存的用户配置。
+  logs: [], // Run logs shown in the side panel.
+  ...PERSISTED_SETTING_DEFAULTS, // Merge user config persisted in chrome.storage.local.
   luckmailApiKey: '',
   luckmailBaseUrl: DEFAULT_LUCKMAIL_BASE_URL,
   luckmailEmailType: DEFAULT_LUCKMAIL_EMAIL_TYPE,
@@ -1539,14 +1539,14 @@ const DEFAULT_STATE = {
   heroSmsLastPriceUserLimit: '',
   heroSmsLastPriceAt: 0,
   pendingPhoneActivationConfirmation: null,
-  autoRunning: false, // 当前是否处于自动运行中。
-  autoRunPhase: 'idle', // 当前自动运行阶段。
-  autoRunCurrentRun: 0, // 自动运行当前执行到第几轮。
-  autoRunTotalRuns: 1, // 自动运行计划总轮数。
-  autoRunAttemptRun: 0, // 当前轮次的重试序号。
+  autoRunning: false, // Whether auto-run is currently active.
+  autoRunPhase: 'idle', // Current auto-run phase.
+  autoRunCurrentRun: 0, // The current round number in auto-run.
+  autoRunTotalRuns: 1, // Total planned auto-run rounds.
+  autoRunAttemptRun: 0, // Retry sequence number within the current round.
   autoRunSessionId: 0,
-  autoRunRoundSummaries: [], // 自动运行轮次摘要。
-  autoRunTimerPlan: null, // 自动运行可恢复计时计划快照。
+  autoRunRoundSummaries: [], // Auto-run round summaries.
+  autoRunTimerPlan: null, // Resumable auto-run timer plan snapshot.
   autoRunCountdownAt: null,
   autoRunCountdownTitle: '',
   autoRunCountdownNote: '',
@@ -15327,7 +15327,7 @@ async function executeStep8(state) {
 }
 
 // ============================================================
-// Step 9: 完成 OAuth（自动点击 + localhost 回调监听）
+// Step 9: Complete OAuth (auto-click + localhost callback listener)
 // ============================================================
 
 let webNavListener = null;
@@ -15957,7 +15957,7 @@ async function executeStep9(state) {
 }
 
 // ============================================================
-// Step 10: 平台回调验证
+// Step 10: Platform callback verification
 // ============================================================
 
 async function executeContributionStep10(state) {

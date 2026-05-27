@@ -346,12 +346,12 @@
 
       const nodeId = String(message?.payload?.nodeId || message?.nodeId || '').trim();
       if (!nodeId) {
-        throw new Error(`${type} 缺少 nodeId。`);
+        throw new Error(`${type} missing nodeId.`);
       }
       const state = await getState();
       const step = findStepByNodeId(nodeId, state);
       if (!step) {
-        throw new Error(`当前 flow 中未找到节点：${nodeId}`);
+        throw new Error(`Node not found in current flow: ${nodeId}`);
       }
 
       const payload = {
@@ -549,7 +549,7 @@
     async function setNodeStatusByStep(step, status, state = {}) {
       const nodeId = getStepKeyForState(step, state);
       if (!nodeId) {
-        throw new Error(`未找到步骤 ${step} 对应节点。`);
+        throw new Error(`Step ${step} has no matching node.`);
       }
       await setNodeStatus(nodeId, status);
       return nodeId;
@@ -572,10 +572,10 @@
     function getPlusPaymentMethodLabel(value = '') {
       const method = normalizePlusPaymentMethodForDisplay(value);
       if (method === 'none') {
-        return '无需支付';
+        return 'No payment';
       }
       if (method === 'paypal-hosted') {
-        return 'PayPal 无卡直绑';
+        return 'PayPal cardless direct bind';
       }
       if (method === 'gpc-helper') {
         return 'GPC';
@@ -596,7 +596,7 @@
 
     function getPlusAccountAccessStrategyLabel(value = '') {
       return normalizePlusAccountAccessStrategyForDisplay(value) === 'sub2api_codex_session'
-        ? '导入当前 ChatGPT 会话到 SUB2API'
+        ? 'Import current ChatGPT session into SUB2API'
         : 'OAuth';
     }
 
@@ -604,19 +604,19 @@
       const strategy = normalizePlusAccountAccessStrategyForDisplay(value);
       const normalizedTargetId = String(targetId || '').trim().toLowerCase();
       if (strategy === 'sub2api_codex_session') {
-        return '导入当前 ChatGPT 会话到 SUB2API';
+        return 'Import current ChatGPT session into SUB2API';
       }
       if (strategy === 'cpa_codex_session') {
-        return '导入当前 ChatGPT 会话到 CPA';
+        return 'Import current ChatGPT session into CPA';
       }
       if (normalizedTargetId === 'cpa') {
-        return '通过 OAuth 回调创建 CPA 账号';
+        return 'Create CPA account via OAuth callback';
       }
       if (normalizedTargetId === 'sub2api') {
-        return '通过 OAuth 回调创建 SUB2API 账号';
+        return 'Create SUB2API account via OAuth callback';
       }
       if (normalizedTargetId === 'codex2api') {
-        return '通过 OAuth 回调创建 Codex2API 账号';
+        return 'Create Codex2API account via OAuth callback';
       }
       return 'OAuth';
     }
@@ -628,7 +628,7 @@
       const latestState = await getState();
       if (typeof markCurrentRegistrationAccountUsed === 'function') {
         await markCurrentRegistrationAccountUsed(latestState, {
-          logPrefix: '流程完成',
+          logPrefix: 'Flow completed',
           level: 'ok',
         });
       } else if (latestState.currentHotmailAccountId && isHotmailProvider(latestState)) {
@@ -636,23 +636,23 @@
           used: true,
           lastUsedAt: Date.now(),
         });
-        await addLog('当前 Hotmail 账号已自动标记为已用。', 'ok');
+        await addLog('Current Hotmail account automatically marked as used.', 'ok');
       }
       if (typeof markCurrentRegistrationAccountUsed !== 'function' && String(latestState.mailProvider || '').trim().toLowerCase() === '2925' && latestState.currentMail2925AccountId) {
         await patchMail2925Account(latestState.currentMail2925AccountId, {
           lastUsedAt: Date.now(),
           lastError: '',
         });
-        await addLog('当前 2925 账号已记录最近使用时间。', 'ok');
+        await addLog('Current 2925 account: last used time recorded.', 'ok');
       }
       if (typeof markCurrentRegistrationAccountUsed !== 'function' && isLuckmailProvider(latestState)) {
         const currentPurchase = getCurrentLuckmailPurchase(latestState);
         if (currentPurchase?.id) {
           await setLuckmailPurchaseUsedState(currentPurchase.id, true);
-          await addLog(`当前 LuckMail 邮箱 ${currentPurchase.email_address} 已在本地标记为已用。`, 'ok');
+          await addLog(`Current LuckMail email ${currentPurchase.email_address} marked as used locally.`, 'ok');
         }
         await clearLuckmailRuntimeState({ clearEmail: true });
-        await addLog('当前 LuckMail 邮箱运行态已清空，下轮将优先复用未用邮箱或重新购买邮箱。', 'ok');
+        await addLog('Current LuckMail email runtime state cleared. Next round will prefer reusing unused emails or purchasing new ones.', 'ok');
       }
       if (
         typeof markCurrentRegistrationAccountUsed !== 'function'
@@ -660,7 +660,7 @@
         && typeof clearYydsMailRuntimeState === 'function'
       ) {
         await clearYydsMailRuntimeState({ clearEmail: true });
-        await addLog('当前 YYDS Mail 邮箱运行态已清空，下轮将重新创建邮箱。', 'ok');
+        await addLog('Current YYDS Mail runtime state cleared. Next round will create new mailbox.', 'ok');
       }
       const localhostPrefix = buildLocalhostCleanupPrefix(payload.localhostUrl);
       if (localhostPrefix) {
@@ -721,7 +721,7 @@
             const currentStatus = getNodeStatusByStep(loginCodeStep, latestState);
             if (!isStepProtectedFromAutoSkip(currentStatus)) {
               await setNodeStatusByStep(loginCodeStep, 'skipped', latestState);
-              await addLog(`认证页已直接进入 OAuth 授权页，已自动跳过步骤 ${loginCodeStep} 的登录验证码。`, 'warn', {
+              await addLog(`Auth page directly entered OAuth consent page — auto-skipped Step ${loginCodeStep} login verification code.`, 'warn', {
                 step,
                 stepKey: 'oauth-login',
               });
@@ -786,7 +786,7 @@
       if (stepKey === 'confirm-oauth') {
         if (payload.localhostUrl) {
           if (!isLocalhostOAuthCallbackUrl(payload.localhostUrl)) {
-            throw new Error(`步骤 ${step} 返回了无效的 localhost OAuth 回调地址。`);
+            throw new Error(`Step ${step} returned invalid localhost OAuth callback URL.`);
           }
           await setState({ localhostUrl: payload.localhostUrl });
           broadcastDataUpdate({ localhostUrl: payload.localhostUrl });
@@ -832,7 +832,7 @@
               }
               await setNodeStatusByStep(skippedStep, 'skipped', latestState);
             }
-            await addLog('步骤 2：检测到当前已登录会话，已自动跳过步骤 3/4/5，流程将直接进入步骤 6。', 'warn');
+            await addLog('Step 2: Existing logged-in session detected — auto-skipped Steps 3/4/5, flow will go directly to Step 6.', 'warn');
             break;
           }
           if (payload.skippedPasswordStep) {
@@ -840,8 +840,8 @@
             const step3Status = getNodeStatusByStep(3, latestState);
             if (step3Status !== 'running' && step3Status !== 'completed' && step3Status !== 'manual_completed') {
               await setNodeStatusByStep(3, 'skipped', latestState);
-              const identityLabel = payload.accountIdentifierType === 'phone' ? '手机号' : '邮箱';
-              await addLog(`步骤 2：提交${identityLabel}后页面直接进入验证码页，已自动跳过步骤 3。`, 'warn');
+              const identityLabel = payload.accountIdentifierType === 'phone' ? 'phone number' : 'email';
+              await addLog(`Step 2: After submitting ${identityLabel}, page went directly to verification code page — auto-skipped Step 3.`, 'warn');
             }
           }
           break;
@@ -855,7 +855,7 @@
             const step5Status = getNodeStatusByStep(5, latestState);
             if (step5Status !== 'running' && step5Status !== 'completed' && step5Status !== 'manual_completed') {
               await setNodeStatusByStep(5, 'skipped', latestState);
-              await addLog('步骤 3：页面已直接进入已登录态，已自动跳过步骤 5。', 'warn');
+              await addLog('Step 3: Page directly entered logged-in state — auto-skipped Step 5.', 'warn');
             }
           }
           if (payload.loginVerificationRequestedAt) {
@@ -879,9 +879,9 @@
             if (step5Status !== 'running' && step5Status !== 'completed' && step5Status !== 'manual_completed') {
               await setNodeStatusByStep(5, 'skipped', latestState);
               if (payload.skipProfileStepReason === 'combined_verification_profile') {
-                await addLog('步骤 4：当前验证码页已内嵌完成注册资料提交，已自动跳过步骤 5。', 'warn');
+                await addLog('Step 4: Current verification code page embedded registration profile submission — auto-skipped Step 5.', 'warn');
               } else {
-                await addLog('步骤 4：检测到账号已直接进入已登录态，已自动跳过步骤 5。', 'warn');
+                await addLog('Step 4: Account directly entered logged-in state — auto-skipped Step 5.', 'warn');
               }
             }
           }
@@ -907,7 +907,7 @@
         case 9:
           if (payload.localhostUrl) {
             if (!isLocalhostOAuthCallbackUrl(payload.localhostUrl)) {
-              throw new Error('步骤 9 返回了无效的 localhost OAuth 回调地址。');
+              throw new Error('Step 9 returned invalid localhost OAuth callback URL.');
             }
             await setState({ localhostUrl: payload.localhostUrl });
             broadcastDataUpdate({ localhostUrl: payload.localhostUrl });
@@ -926,7 +926,7 @@
           if (tabId && message.source) {
             await registerTab(message.source, tabId);
             flushCommand(message.source, tabId);
-            await addLog(`内容脚本已就绪：${getSourceLabel(message.source)}（标签页 ${tabId}）`);
+            await addLog(`Content script ready: ${getSourceLabel(message.source)} (tab ${tabId})`);
           }
           return { ok: true };
         }
@@ -950,12 +950,12 @@
           const nodeId = String(message.nodeId || message.payload?.nodeId || '').trim();
           const resolvedStep = findStepByNodeId(nodeId, currentStateForNode);
           if (!nodeId || !resolvedStep) {
-            throw new Error('NODE_COMPLETE 缺少 nodeId。');
+            throw new Error('NODE_COMPLETE missing nodeId.');
           }
           const currentState = await getState();
           if (isStaleAutoRunNodeMessage(nodeId, currentState)) {
             await addLog(
-              `自动运行：忽略过期的节点 ${nodeId} 完成消息，当前流程已在节点 ${currentState.currentNodeId || '未知'}。`,
+              `Auto-run: Ignoring stale completion message for node ${nodeId}, current flow already at node ${currentState.currentNodeId || 'unknown'}.`,
               'warn',
               { nodeId }
             );
@@ -963,8 +963,8 @@
           }
           if (getStopRequested()) {
             await setNodeStatus(nodeId, 'stopped');
-            await appendManualAccountRunRecordIfNeeded(`node:${nodeId}:stopped`, null, '流程已被用户停止。');
-            notifyNodeError(nodeId, '流程已被用户停止。');
+            await appendManualAccountRunRecordIfNeeded(`node:${nodeId}:stopped`, null, 'Flow stopped by user.');
+            notifyNodeError(nodeId, 'Flow stopped by user.');
             return { ok: true };
           }
           try {
@@ -976,12 +976,12 @@
               const userMessage = typeof handleCloudflareSecurityBlocked === 'function'
                 ? await handleCloudflareSecurityBlocked(error)
                 : (error?.message || String(error || ''));
-              notifyNodeError(nodeId, '流程已被用户停止。');
+              notifyNodeError(nodeId, 'Flow stopped by user.');
               return { ok: true, error: userMessage };
             }
-            const errorMessage = error?.message || String(error || '步骤 3 提交后确认失败');
+            const errorMessage = error?.message || String(error || 'Step 3 post-submit confirmation failed');
             await setNodeStatus(nodeId, 'failed');
-            await addLog(`失败：${errorMessage}`, 'error', {
+            await addLog(`Failed: ${errorMessage}`, 'error', {
               nodeId,
             });
             await appendManualAccountRunRecordIfNeeded(`node:${nodeId}:failed`, null, errorMessage);
@@ -997,9 +997,9 @@
           const completionState = isFinalNode ? completionStateCandidate : null;
           if (!deferCompletionUntilBackgroundValidation) {
             await setNodeStatus(nodeId, 'completed');
-            await addLog('已完成', 'ok', { nodeId });
+            await addLog('Completed', 'ok', { nodeId });
           } else {
-            await addLog('步骤 5：已收到资料页完成信号，等待后台最终复核后再标记完成。', 'info', {
+            await addLog('Step 5: Profile page completion signal received — waiting for background final review before marking as complete.', 'info', {
               step: 5,
               stepKey: nodeId,
             });
@@ -1017,12 +1017,12 @@
           const nodeId = String(message.nodeId || message.payload?.nodeId || '').trim();
           const resolvedStep = findStepByNodeId(nodeId, stateForNode);
           if (!nodeId || !resolvedStep) {
-            throw new Error('NODE_ERROR 缺少 nodeId。');
+            throw new Error('NODE_ERROR missing nodeId.');
           }
           const staleCheckState = await getState();
           if (isStaleAutoRunNodeMessage(nodeId, staleCheckState)) {
             await addLog(
-              `自动运行：忽略过期的节点 ${nodeId} 失败消息，当前流程已在节点 ${staleCheckState.currentNodeId || '未知'}。原始错误：${message.error || '未知错误'}`,
+              `Auto-run: Ignoring stale failure message for node ${nodeId}, current flow already at node ${staleCheckState.currentNodeId || 'unknown'}. Original error: ${message.error || 'unknown error'}`,
               'warn',
               { nodeId }
             );
@@ -1032,7 +1032,7 @@
             const userMessage = typeof handleCloudflareSecurityBlocked === 'function'
               ? await handleCloudflareSecurityBlocked(message.error)
               : (typeof message.error === 'string' ? message.error : String(message.error || ''));
-            notifyNodeError(nodeId, '流程已被用户停止。');
+            notifyNodeError(nodeId, 'Flow stopped by user.');
             return { ok: true, error: userMessage };
           }
           const currentState = await getState();
@@ -1040,13 +1040,13 @@
           const isSignupPhonePasswordMismatch = /SIGNUP_PHONE_PASSWORD_MISMATCH::/i.test(String(message.error || ''));
           if (isStopError(message.error)) {
             await setNodeStatus(nodeId, 'stopped');
-            await addLog('已被用户停止', 'warn', { nodeId });
+            await addLog('Stopped by user', 'warn', { nodeId });
             await appendManualAccountRunRecordIfNeeded(`node:${nodeId}:stopped`, null, message.error);
             notifyNodeError(nodeId, message.error);
           } else {
             if (!(isSignupPhonePasswordMismatch && currentNodeStatus === 'failed')) {
               await setNodeStatus(nodeId, 'failed');
-              await addLog(`失败：${message.error}`, 'error', {
+              await addLog(`Failed: ${message.error}`, 'error', {
                 nodeId,
               });
               await appendManualAccountRunRecordIfNeeded(`node:${nodeId}:failed`, null, message.error);
@@ -1084,7 +1084,7 @@
           if (isGpcOtp && confirmed) {
             const otp = String(message.payload?.otp || message.payload?.code || '').trim().replace(/[^\d]/g, '');
             if (!otp) {
-              throw new Error('请输入 GPC OTP 验证码。');
+              throw new Error('Please enter the GPC OTP verification code.');
             }
             const otpUpdates = {
               ...clearManualConfirmationState,
@@ -1094,7 +1094,7 @@
             if (typeof broadcastDataUpdate === 'function') {
               broadcastDataUpdate(otpUpdates);
             }
-            await addLog(`步骤 ${step}：已收到 GPC OTP，准备提交验证。`, 'ok');
+            await addLog(`Step ${step}: Received GPC OTP, ready to submit verification.`, 'ok');
             return { ok: true };
           }
 
@@ -1104,8 +1104,8 @@
           }
 
           if (confirmed) {
-            const methodLabel = method === 'gopay' ? 'GoPay' : '手动';
-            await addLog(`步骤 ${step}：已确认${methodLabel}订阅完成，准备继续下一步。`, 'ok');
+            const methodLabel = method === 'gopay' ? 'GoPay' : 'Manual';
+            await addLog(`Step ${step}: Confirmed ${methodLabel} subscription complete, ready to continue.`, 'ok');
             await completeNodeFromBackground(confirmationNodeId, {
               plusManualConfirmationMethod: currentState?.plusManualConfirmationMethod || '',
               plusManualConfirmedAt: Date.now(),
@@ -1114,10 +1114,10 @@
           }
 
           const cancelMessage = method === 'gopay'
-            ? '已取消 GoPay 订阅确认'
-            : (isGpcOtp ? '已取消 GPC OTP 输入' : '已取消当前手动确认');
+            ? 'GoPay subscription confirmation cancelled'
+            : (isGpcOtp ? 'GPC OTP input cancelled' : 'Current manual confirmation cancelled');
           await setNodeStatus(confirmationNodeId, 'failed');
-          await addLog(`步骤 ${step}：${cancelMessage}。`, 'warn');
+          await addLog(`Step ${step}: ${cancelMessage}.`, 'warn');
           await appendManualAccountRunRecordIfNeeded(
             confirmationNodeId ? `node:${confirmationNodeId}:failed` : 'failed',
             null,
@@ -1135,39 +1135,39 @@
           clearStopRequest();
           await clearAutoRunTimerAlarm();
           await resetState();
-          await addLog('流程已重置', 'info');
+          await addLog('Flow has been reset', 'info');
           return { ok: true };
         }
 
         case 'CLEAR_FREE_REUSABLE_PHONE': {
           if (typeof clearFreeReusablePhoneActivation !== 'function') {
-            throw new Error('白嫖复用手机号清除能力未接入。');
+            throw new Error('Free reusable phone clearing capability not connected.');
           }
           return await clearFreeReusablePhoneActivation();
         }
 
         case 'CLEAR_GROK_SSO_COOKIES': {
           if (typeof clearGrokSsoCookies !== 'function') {
-            throw new Error('Grok SSO 清空能力未接入。');
+            throw new Error('Grok SSO clearing capability not connected.');
           }
           return await clearGrokSsoCookies();
         }
 
         case 'SET_FREE_REUSABLE_PHONE': {
           if (typeof setFreeReusablePhoneActivation !== 'function') {
-            throw new Error('白嫖复用手机号记录能力未接入。');
+            throw new Error('Free reusable phone recording capability not connected.');
           }
           return await setFreeReusablePhoneActivation(message.payload || {});
         }
 
         case 'SET_ACCOUNT_CONTRIBUTION_MODE': {
           const enabled = Boolean(message.payload?.enabled);
-          const state = await ensureManualInteractionAllowed(enabled ? '进入账号贡献' : '退出账号贡献');
+          const state = await ensureManualInteractionAllowed(enabled ? 'Enter account contribution' : 'Exit account contribution');
           if (Object.values(state.nodeStatuses || {}).some((status) => status === 'running')) {
-            throw new Error(enabled ? '当前有步骤正在执行，无法进入账号贡献。' : '当前有步骤正在执行，无法退出账号贡献。');
+            throw new Error(enabled ? 'A step is currently running — cannot enter account contribution.' : 'A step is currently running — cannot exit account contribution.');
           }
           if (typeof setAccountContributionMode !== 'function') {
-            throw new Error('账号贡献切换能力未接入。');
+            throw new Error('Account contribution toggle capability not connected.');
           }
           return {
             ok: true,
@@ -1179,15 +1179,15 @@
         }
 
         case 'START_FLOW_CONTRIBUTION': {
-          const state = await ensureManualInteractionAllowed('开始贡献');
+          const state = await ensureManualInteractionAllowed('Start contribution');
           if (Object.values(state.nodeStatuses || {}).some((status) => status === 'running')) {
-            throw new Error('当前有步骤正在执行，无法开始贡献流程。');
+            throw new Error('A step is currently running — cannot start contribution flow.');
           }
           if (!state?.accountContributionEnabled) {
-            throw new Error('请先进入账号贡献。');
+            throw new Error('Please enter account contribution first.');
           }
           if (typeof startFlowContribution !== 'function') {
-            throw new Error('贡献 OAuth 流程尚未接入。');
+            throw new Error('Contribution OAuth flow not connected.');
           }
           return {
             ok: true,
@@ -1201,10 +1201,10 @@
         case 'SUBMIT_FLOW_CONTRIBUTION': {
           const state = await getState();
           if (!state?.accountContributionEnabled) {
-            throw new Error('请先进入账号贡献。');
+            throw new Error('Please enter account contribution first.');
           }
           if (typeof submitFlowContribution !== 'function') {
-            throw new Error('贡献提交能力尚未接入。');
+            throw new Error('Contribution submission capability not connected.');
           }
           return {
             ok: true,
@@ -1216,7 +1216,7 @@
 
         case 'POLL_FLOW_CONTRIBUTION_STATUS': {
           if (typeof pollContributionStatus !== 'function') {
-            throw new Error('贡献状态轮询能力尚未接入。');
+            throw new Error('Contribution status polling capability not connected.');
           }
           return {
             ok: true,
@@ -1229,7 +1229,7 @@
         case 'CLEAR_ACCOUNT_RUN_HISTORY': {
           const state = await getState();
           if (isAutoRunLockedState(state)) {
-            throw new Error('自动流程运行中，当前不能清理邮箱记录。');
+            throw new Error('Auto flow is running — cannot clear mailbox records currently.');
           }
           if (typeof clearAccountRunHistory !== 'function') {
             return { ok: true, clearedCount: 0 };
@@ -1241,7 +1241,7 @@
         case 'DELETE_ACCOUNT_RUN_HISTORY_RECORDS': {
           const state = await getState();
           if (isAutoRunLockedState(state)) {
-            throw new Error('自动流程运行中，当前不能删除邮箱记录。');
+            throw new Error('Auto flow is running — cannot delete mailbox records currently.');
           }
           if (typeof deleteAccountRunHistoryRecords !== 'function') {
             return { ok: true, deletedCount: 0, remainingCount: 0 };
@@ -1257,17 +1257,17 @@
           const nodeId = String(message.nodeId || message.payload?.nodeId || '').trim();
           const resolvedStep = findStepByNodeId(nodeId, requestState);
           if (!nodeId || !resolvedStep) {
-            throw new Error('EXECUTE_NODE 缺少 nodeId。');
+            throw new Error('EXECUTE_NODE missing nodeId.');
           }
           if (message.source === 'sidepanel') {
             await lockAutomationWindowFromMessage(message, sender);
-            await ensureManualInteractionAllowed('手动执行节点');
+            await ensureManualInteractionAllowed('Manual node execution');
           }
           if (typeof assertNodeExecutionAllowedForState === 'function') {
-            assertNodeExecutionAllowedForState(nodeId, requestState, '手动执行节点');
+            assertNodeExecutionAllowedForState(nodeId, requestState, 'Manual node execution');
           }
           if (message.source === 'sidepanel') {
-            await invalidateDownstreamAfterStepRestart(resolvedStep, { logLabel: `节点 ${nodeId} 重新执行` });
+            await invalidateDownstreamAfterStepRestart(resolvedStep, { logLabel: `Node ${nodeId} re-execution` });
           }
           if (message.payload.email) {
             await setEmailState(message.payload.email);
@@ -1318,10 +1318,10 @@
             state,
           });
           if (autoRunStartValidation?.ok === false) {
-            throw new Error(autoRunStartValidation.errors?.[0]?.message || '当前设置不支持启动自动流程。');
+            throw new Error(autoRunStartValidation.errors?.[0]?.message || 'Current settings do not support starting the auto flow.');
           }
           if (getPendingAutoRunTimerPlan(state)) {
-            throw new Error('已有线程间隔等待，请先停止或立即继续。');
+            throw new Error('A thread interval is already waiting. Please stop or continue immediately first.');
           }
           const totalRuns = normalizeRunCount(message.payload?.totalRuns || 1);
           const autoRunSkipFailures = Boolean(message.payload?.autoRunSkipFailures);
@@ -1338,7 +1338,7 @@
           }
           const skipped = await skipAutoRunCountdown();
           if (!skipped) {
-            throw new Error('当前没有可立即开始的倒计时。');
+            throw new Error('No countdown available to start immediately.');
           }
           return { ok: true };
         }
@@ -1358,15 +1358,15 @@
         }
 
         case 'TAKEOVER_AUTO_RUN': {
-          await requestStop({ logMessage: '已确认手动接管，正在停止自动流程并切换为手动控制...' });
-          await addLog('自动流程已切换为手动控制。', 'warn');
+          await requestStop({ logMessage: 'Manual takeover confirmed — stopping auto flow and switching to manual control...' });
+          await addLog('Auto flow has been switched to manual control.', 'warn');
           return { ok: true };
         }
 
         case 'SKIP_NODE': {
           const nodeId = String(message.nodeId || message.payload?.nodeId || '').trim();
           if (!nodeId) {
-            throw new Error('SKIP_NODE 缺少 nodeId。');
+            throw new Error('SKIP_NODE missing nodeId.');
           }
           return await skipNode(nodeId);
         }
@@ -1501,8 +1501,8 @@
           const nextIpProxyEnabled = hasIpProxyEnabledUpdate
             ? Boolean(updates.ipProxyEnabled)
             : previousIpProxyEnabled;
-          // 仅在“手动开关代理”时自动应用。
-          // 其他字段改动（host/账号/地区/session 等）需由“同步/下一条/检测出口/Change”显式触发。
+          // Automatically apply only when "manually toggling proxy".
+          // Other field changes (host/account/region/session etc.) require explicit triggers via "Sync/Next/Detect Exit/Change".
           const shouldApplyIpProxyOnSave = hasIpProxyUpdates
             && hasIpProxyEnabledUpdate
             && previousIpProxyEnabled !== nextIpProxyEnabled;
@@ -1510,8 +1510,8 @@
           if (shouldApplyIpProxyOnSave && typeof applyIpProxySettingsFromState === 'function') {
             const isEnablingProxy = !previousIpProxyEnabled && nextIpProxyEnabled;
             proxyRouting = await applyIpProxySettingsFromState(mergedState, {
-              // 手动开启时自动应用一次代理，不做出口探测；
-              // 出口探测由“同步/检测出口”按钮显式触发，避免开启即误判为失败。
+              // When manually enabling, apply proxy once automatically without exit probing;
+              // Exit probing is triggered explicitly by "Sync/Detect Exit" button to avoid false failures on enable.
               skipExitProbe: true,
               resetNetworkState: false,
               forceAuthRebind: false,
@@ -1519,7 +1519,7 @@
             }).catch((error) => ({
               applied: false,
               reason: 'apply_failed',
-              error: error?.message || String(error || '代理应用失败'),
+              error: error?.message || String(error || 'Proxy apply failed'),
             }));
           }
           if (Boolean(currentState?.accountContributionEnabled) && typeof setAccountContributionMode === 'function') {
@@ -1543,15 +1543,15 @@
             );
             await addLog(
               Boolean(updates.plusModeEnabled)
-                ? `Plus 模式已开启，已切换为 Plus Checkout 步骤，当前支付方式：${selectedPlusPaymentMethod}，账号接入策略：${selectedPlusAccountAccessStrategy}。`
-                : 'Plus 模式已关闭，已恢复普通注册授权步骤。',
+                ? `Plus mode enabled — switched to Plus Checkout steps. Current payment method: ${selectedPlusPaymentMethod}, account access strategy: ${selectedPlusAccountAccessStrategy}.`
+                : 'Plus mode disabled — restored to regular registration authorization steps.',
               'info'
             );
           } else if (plusPaymentChanged && nextPlusModeEnabled) {
             const selectedPlusPaymentMethod = getPlusPaymentMethodLabel(
               stateUpdates.plusPaymentMethod ?? currentState?.plusPaymentMethod ?? 'paypal'
             );
-            await addLog(`Plus 支付方式已切换为 ${selectedPlusPaymentMethod}，已更新对应的 Plus 步骤。`, 'info');
+            await addLog(`Plus payment method switched to ${selectedPlusPaymentMethod}. Updated corresponding Plus steps.`, 'info');
           } else if (plusAccountAccessStrategyChanged && nextPlusModeEnabled) {
             const selectedPlusAccountAccessStrategy = getPlusAccountAccessStrategyLabel(
               stateUpdates.plusAccountAccessStrategy ?? currentState?.plusAccountAccessStrategy ?? 'oauth',
@@ -1559,7 +1559,7 @@
                 ?? currentState?.targetId
                 ?? 'cpa'
             );
-            await addLog(`Plus 账号接入策略已切换为 ${selectedPlusAccountAccessStrategy}，已更新对应的 Plus 尾链。`, 'info');
+            await addLog(`Plus account access strategy switched to ${selectedPlusAccountAccessStrategy}. Updated corresponding Plus tail chain.`, 'info');
           }
           return {
             ok: true,
@@ -1571,7 +1571,7 @@
 
         case 'REFRESH_GPC_CARD_BALANCE': {
           if (typeof refreshGpcCardBalance !== 'function') {
-            throw new Error('GPC API Key 余额查询能力尚未接入。');
+            throw new Error('GPC API Key balance query capability not connected.');
           }
           const state = await getState();
           const result = await refreshGpcCardBalance({
@@ -1585,7 +1585,7 @@
 
         case 'CHECK_KIRO_RS_CONNECTION': {
           if (typeof testKiroRsConnection !== 'function') {
-            throw new Error('kiro.rs 连接测试能力尚未接入。');
+            throw new Error('kiro.rs connection test capability not connected.');
           }
           const currentState = await getState();
           const activeFlowId = normalizeMessageFlowId(
@@ -1623,7 +1623,7 @@
 
         case 'RUN_IP_PROXY_AUTO_SYNC_NOW': {
           if (typeof runIpProxyAutoSync !== 'function') {
-            throw new Error('IP 代理自动同步能力尚未接入。');
+            throw new Error('IP proxy auto-sync capability not connected.');
           }
           const result = await runIpProxyAutoSync('manual');
           return { ok: true, ...result };
@@ -1631,7 +1631,7 @@
 
         case 'REFRESH_IP_PROXY_POOL': {
           if (typeof refreshIpProxyPool !== 'function') {
-            throw new Error('IP 代理池能力尚未接入。');
+            throw new Error('IP proxy pool capability not connected.');
           }
           const result = await refreshIpProxyPool({
             maxItems: message.payload?.maxItems,
@@ -1643,7 +1643,7 @@
 
         case 'SWITCH_IP_PROXY': {
           if (typeof switchIpProxy !== 'function') {
-            throw new Error('IP 代理切换能力尚未接入。');
+            throw new Error('IP proxy switching capability not connected.');
           }
           const result = await switchIpProxy(message.payload?.direction || 'next', {
             maxItems: message.payload?.maxItems,
@@ -1656,7 +1656,7 @@
 
         case 'CHANGE_IP_PROXY_EXIT': {
           if (typeof changeIpProxyExit !== 'function') {
-            throw new Error('IP 代理 Change 能力尚未接入。');
+            throw new Error('IP proxy Change capability not connected.');
           }
           const result = await changeIpProxyExit({
             mode: message.payload?.mode,
@@ -1670,7 +1670,7 @@
             await lockAutomationWindowFromMessage(message, sender);
           }
           if (typeof probeIpProxyExit !== 'function') {
-            throw new Error('IP 代理出口检测能力尚未接入。');
+            throw new Error('IP proxy exit detection capability not connected.');
           }
           const probeState = await getState();
           const mode = typeof normalizeIpProxyMode === 'function'
@@ -1682,7 +1682,7 @@
           const is711AccountMode = mode === 'account' && provider === '711proxy';
           const previousReason = String(probeState?.ipProxyAppliedReason || '').trim().toLowerCase();
           const previousExitError = String(probeState?.ipProxyAppliedExitError || '').trim();
-          const hadMissingAuthChallenge = /challenge=0|provided=0|未触发代理鉴权挑战|未收到 407/i.test(previousExitError);
+          const hadMissingAuthChallenge = /challenge=0|provided=0|did not trigger proxy auth challenge|did not receive 407|未触发代理鉴权挑战|未收到 407/i.test(previousExitError);
           const shouldPreRebindBeforeProbe = Boolean(
             probeState?.ipProxyEnabled
             && is711AccountMode
@@ -1692,7 +1692,7 @@
             ? Number(message.payload.timeoutMs)
             : (is711AccountMode ? (shouldPreRebindBeforeProbe ? 15000 : 12000) : undefined);
 
-          // 手动“检测出口”前先轻量应用当前配置，避免读取到旧代理链路状态。
+          // Before manual "Detect Exit", lightly apply the current config so we don't read stale proxy link state.
           if (probeState?.ipProxyEnabled && typeof applyIpProxySettingsFromState === 'function') {
             await applyIpProxySettingsFromState(probeState, {
               skipExitProbe: true,
@@ -1765,7 +1765,7 @@
           try {
             const result = await verifyHotmailAccount(accountId);
             await setCurrentHotmailAccount(result.account.id, { markUsed: false, syncEmail: true });
-            await addLog(`Hotmail 账号 ${result.account.email} 校验通过，可直接用于收信。`, 'ok');
+            await addLog(`Hotmail account ${result.account.email} verified — ready for receiving mail.`, 'ok');
             return { ok: true, account: result.account, messageCount: result.messageCount };
           } catch (err) {
             const state = await getState();
@@ -1821,12 +1821,12 @@
             updateLastUsedAt: false,
           });
           if (typeof deps.ensureMail2925MailboxSession !== 'function') {
-            throw new Error('2925 登录能力尚未接入。');
+            throw new Error('2925 login capability not connected.');
           }
           await deps.ensureMail2925MailboxSession({
             accountId: account.id,
             forceRelogin: Boolean(message.payload?.forceRelogin),
-            actionLabel: '侧边栏手动登录 2925 账号',
+            actionLabel: 'Side panel manual login of 2925 account',
           });
           return { ok: true, account };
         }
@@ -1869,7 +1869,7 @@
         case 'SET_EMAIL_STATE': {
           const state = await getState();
           if (isAutoRunLockedState(state)) {
-            throw new Error('自动流程运行中，当前不能手动修改邮箱。');
+            throw new Error('Auto flow is running — cannot manually modify email at this time.');
           }
           const email = String(message.payload?.email || '').trim() || null;
           await setEmailStateSilently(email, { source: 'manual' });
@@ -1879,7 +1879,7 @@
         case 'SAVE_EMAIL': {
           const state = await getState();
           if (isAutoRunLockedState(state)) {
-            throw new Error('自动流程运行中，当前不能手动修改邮箱。');
+            throw new Error('Auto flow is running — cannot manually modify email at this time.');
           }
           await setEmailState(message.payload.email, { source: 'manual' });
           await resumeAutoRun();
@@ -1889,7 +1889,7 @@
         case 'SET_SIGNUP_PHONE_STATE': {
           const state = await getState();
           if (isAutoRunLockedState(state)) {
-            throw new Error('自动流程运行中，当前不能手动修改注册手机号。');
+            throw new Error('Auto flow is running — cannot manually modify signup phone number at this time.');
           }
           const phoneNumber = resolveSignupPhonePayload(message.payload) || null;
           await setSignupPhoneStateSilently(phoneNumber);
@@ -1899,7 +1899,7 @@
         case 'SAVE_SIGNUP_PHONE': {
           const state = await getState();
           if (isAutoRunLockedState(state)) {
-            throw new Error('自动流程运行中，当前不能手动修改注册手机号。');
+            throw new Error('Auto flow is running — cannot manually modify signup phone number at this time.');
           }
           const phoneNumber = resolveSignupPhonePayload(message.payload) || null;
           await setSignupPhoneState(phoneNumber);
@@ -1910,7 +1910,7 @@
           clearStopRequest();
           const state = await getState();
           if (isAutoRunLockedState(state)) {
-            throw new Error('自动流程运行中，当前不能手动获取邮箱。');
+            throw new Error('Auto flow is running — cannot manually fetch email at this time.');
           }
           const email = await fetchGeneratedEmail(state, message.payload || {});
           await resumeAutoRun();
@@ -1921,7 +1921,7 @@
           clearStopRequest();
           const state = await getState();
           if (isAutoRunLockedState(state)) {
-            throw new Error('自动流程运行中，当前不能手动获取邮箱。');
+            throw new Error('Auto flow is running — cannot manually fetch email at this time.');
           }
           const email = await fetchGeneratedEmail(state, { ...(message.payload || {}), generator: 'duck' });
           await resumeAutoRun();

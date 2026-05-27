@@ -110,10 +110,10 @@
 
     function importSettings(input = {}) {
       if (!isPlainObject(input)) {
-        throw new Error('配置文件中的 settings 内容无效。');
+        throw new Error('Settings payload in the config file is invalid.');
       }
       if (!settingsSchemaApi?.normalizeSettingsState) {
-        throw new Error('设置导入器未完成初始化。');
+        throw new Error('Settings importer is not initialized.');
       }
 
       const importInput = buildImportInput(input);

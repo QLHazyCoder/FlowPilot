@@ -56,8 +56,9 @@ def is_macos() -> bool:
 def require_macos() -> None:
     if not is_macos():
         raise RuntimeError(
-            "GPC 本地 SMS Helper 仅支持 macOS：需要读取 ~/Library/Messages/chat.db。"
-            "请确认接收验证码的 iPhone 已开启短信转发，并能在 Mac 信息 app 中看到短信。"
+            "GPC local SMS Helper only supports macOS: it needs to read ~/Library/Messages/chat.db. "
+            "Make sure the iPhone receiving the verification code has SMS forwarding enabled, "
+            "and that the messages are visible in the Mac Messages app."
         )
 
 
@@ -99,7 +100,7 @@ def get_state() -> dict:
 
 def copy_messages_db(db_path: Path) -> Path:
     if not db_path.exists():
-        raise FileNotFoundError(f"Messages 数据库不存在：{db_path}")
+        raise FileNotFoundError(f"Messages database not found: {db_path}")
     tmpdir = Path(tempfile.mkdtemp(prefix="gpc_messages_"))
     copied = tmpdir / "chat.db"
     shutil.copy2(db_path, copied)
@@ -377,7 +378,7 @@ class HelperHandler(BaseHTTPRequestHandler):
             state = get_state()
             record = select_otp_record(state, after_ms=after_ms, phone=phone)
             if not record:
-                write_json(self, 200, {"ok": True, "otp": "", "code": "", "status": "waiting", "message": "未查询到验证码"})
+                write_json(self, 200, {"ok": True, "otp": "", "code": "", "status": "waiting", "message": "No verification code found yet"})
                 return
             payload = {"ok": True, "status": "found", **record}
             if consume:
@@ -410,7 +411,7 @@ def main() -> int:
         scanner.start()
         server = ThreadingHTTPServer((args.host, int(args.port)), HelperHandler)
         print(f"GPC SMS Helper listening on http://{args.host}:{int(args.port)}", flush=True)
-        print("请确认 iPhone 短信已转发到本机 Messages。", flush=True)
+        print("Make sure iPhone SMS forwarding is enabled to this machine's Messages app.", flush=True)
         server.serve_forever()
         return 0
     except KeyboardInterrupt:

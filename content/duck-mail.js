@@ -10,7 +10,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse(result);
   }).catch((err) => {
     if (isStopError(err)) {
-      log('Duck 邮箱：已被用户停止。', 'warn');
+      log('Duck Mail: Stopped by user.', 'warn');
       sendResponse({ stopped: true, error: err.message });
       return;
     }
@@ -26,7 +26,7 @@ async function fetchDuckEmail(payload = {}) {
     baselineEmail = '',
   } = payload;
 
-  log(`Duck 邮箱：正在${generateNew ? '生成' : '读取'}私有地址...`);
+  log(`Duck Mail: ${generateNew ? 'Generating' : 'Reading'} private address...`);
 
   await waitForElement(
     'input.AutofillSettingsPanel__PrivateDuckAddressValue, button.AutofillSettingsPanel__GeneratorButton',
@@ -140,7 +140,7 @@ async function fetchDuckEmail(payload = {}) {
       }
       await sleep(150);
     }
-    throw new Error('等待 Duck 地址变化超时。');
+    throw new Error('Timed out waiting for Duck address to change.');
   };
 
   const knownBaselineEmail = normalizeDuckEmail(baselineEmail);
@@ -150,25 +150,25 @@ async function fetchDuckEmail(payload = {}) {
   }
 
   if (currentEmail && !generateNew) {
-    log(`Duck 邮箱：已发现现有地址 ${currentEmail}`);
+    log(`Duck Mail: Found existing address ${currentEmail}`);
     return { email: currentEmail, generated: false };
   }
 
   const generatorButton = getGeneratorButton();
   if (!generatorButton) {
     if (generateNew) {
-      throw new Error('未找到“生成新 Duck 地址”按钮（可能是页面结构、文案或登录状态发生变化）。');
+      throw new Error('"Generate new Duck address" button not found (page structure, copy, or login state may have changed).');
     }
     if (currentEmail) {
-      log(`Duck 邮箱：未找到生成按钮，复用现有地址 ${currentEmail}`, 'warn');
+      log(`Duck Mail: Generate button not found, reusing existing address ${currentEmail}`, 'warn');
       return { email: currentEmail, generated: false };
     }
-    throw new Error('未找到 Duck 私有地址生成按钮。');
+    throw new Error('Duck private address generate button not found.');
   }
 
   const comparisonEmails = [currentEmail, knownBaselineEmail].filter(Boolean);
   if (!currentEmail && knownBaselineEmail) {
-    log(`Duck 邮箱：当前地址尚未显示，改用已知基线 ${knownBaselineEmail} 作为对比基线。`, 'warn');
+    log(`Duck Mail: Current address not yet displayed, using known baseline ${knownBaselineEmail} as comparison baseline.`, 'warn');
   }
 
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -187,20 +187,20 @@ async function fetchDuckEmail(payload = {}) {
         }
       }
     );
-    log(`Duck 邮箱：已点击“生成 Duck 私有地址”按钮（${attempt}/2）`);
+    log(`Duck Mail: Clicked "Generate Duck Private Address" button (${attempt}/2)`);
 
     try {
       const nextEmail = await waitForEmailValue(comparisonEmails);
-      log(`Duck 邮箱：地址已就绪 ${nextEmail}`, 'ok');
+      log(`Duck Mail: Address ready ${nextEmail}`, 'ok');
       return { email: nextEmail, generated: true };
     } catch (err) {
       if (attempt >= 2) {
         throw err;
       }
-      log('Duck 邮箱：首次生成后地址未变化，准备再试一次...', 'warn');
+      log('Duck Mail: Address did not change after first generation, retrying...', 'warn');
       await sleep(800);
     }
   }
 
-  throw new Error('Duck 地址生成失败。');
+  throw new Error('Failed to generate Duck address.');
 }

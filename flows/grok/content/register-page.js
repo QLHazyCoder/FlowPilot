@@ -45,7 +45,7 @@ function findGrokClickableByText(pattern) {
 function simulateGrokClick(element) {
   throwIfStopped();
   if (!element) {
-    throw new Error('无法点击空元素。');
+    throw new Error('Cannot click empty element.');
   }
   const rect = element.getBoundingClientRect();
   const clientX = Math.max(0, Math.floor(rect.left + Math.min(rect.width - 1, Math.max(1, rect.width / 2))));
@@ -152,7 +152,7 @@ async function openGrokSignupPage() {
   const emailButton = await waitForGrok(() => (
     findGrokClickableByText(GROK_EMAIL_SIGNUP_TEXT_PATTERN) || findGrokEmailInput()
   ), { timeoutMs: 30000 });
-  if (!emailButton) throw new Error('未找到 x.ai 邮箱注册入口。');
+  if (!emailButton) throw new Error('x.ai email signup entry not found.');
   if (!(emailButton instanceof HTMLInputElement)) {
     simulateGrokClick(emailButton);
     await sleep(500);
@@ -195,18 +195,18 @@ async function waitForGrokVerificationPageAfterEmailSubmit() {
     throw new Error(errorText);
   }
   const finalState = getGrokPageState();
-  throw new Error(`提交 Grok 注册邮箱后未进入验证码页面，当前页面状态：${finalState || 'unknown'}。请确认页面已跳转到“验证您的邮箱”后再继续。`);
+  throw new Error(`Did not reach verification-code page after submitting Grok registration email. Current page state: ${finalState || 'unknown'}. Please confirm the page has navigated to "Verify your email" before continuing.`);
 }
 
 async function submitGrokEmail(payload = {}) {
   const email = String(payload.email || '').trim();
-  if (!email) throw new Error('缺少 Grok 注册邮箱。');
+  if (!email) throw new Error('Missing Grok registration email.');
   const input = await waitForGrok(findGrokEmailInput, { timeoutMs: 45000 });
-  if (!input) throw new Error('未找到 x.ai 邮箱输入框。');
+  if (!input) throw new Error('x.ai email input not found.');
   fillInput(input, email);
   await sleep(200);
   const button = findGrokSubmitButton();
-  if (!button) throw new Error('未找到 x.ai 邮箱提交按钮。');
+  if (!button) throw new Error('x.ai email submit button not found.');
   simulateGrokClick(button);
   await sleep(1200);
   const errorText = getGrokEmailErrorText();
@@ -234,9 +234,9 @@ function getGrokVerificationErrorText() {
 
 async function submitGrokVerificationCode(payload = {}) {
   const normalizedCode = String(payload.code || '').replace(/[^A-Za-z0-9]/g, '').trim();
-  if (!normalizedCode) throw new Error('缺少 xAI 验证码。');
+  if (!normalizedCode) throw new Error('Missing xAI verification code.');
   const inputs = await waitForGrok(() => findGrokOtpInputs(), { timeoutMs: 45000 });
-  if (!inputs?.length) throw new Error('未找到 xAI 验证码输入框。');
+  if (!inputs?.length) throw new Error('xAI verification-code input not found.');
   if (inputs.length === 1) {
     fillInput(inputs[0], normalizedCode);
   } else {
@@ -258,10 +258,10 @@ async function submitGrokVerificationCode(payload = {}) {
     throw new Error(settledState.error);
   }
   if (finalState === 'email_entry') {
-    throw new Error('x.ai 验证码提交后回到邮箱注册页，可能是验证码无效、会话过期或注册风控重置。');
+    throw new Error('x.ai verification-code submission returned to the email signup page. The code may be invalid, the session expired, or registration risk control was reset.');
   }
   if (!['profile_entry', 'signed_in'].includes(finalState)) {
-    throw new Error(`x.ai 验证码提交后进入未知页面状态：${finalState || 'unknown'}。`);
+    throw new Error(`x.ai verification-code submission entered an unknown page state: ${finalState || 'unknown'}.`);
   }
   return { submitted: true, state: finalState, url: location.href };
 }
@@ -270,20 +270,20 @@ async function submitGrokProfile(payload = {}) {
   const firstName = String(payload.firstName || '').trim();
   const lastName = String(payload.lastName || '').trim();
   const password = String(payload.password || '');
-  if (!firstName || !lastName || !password) throw new Error('缺少 Grok 注册资料。');
+  if (!firstName || !lastName || !password) throw new Error('Missing Grok registration profile.');
   const ready = await waitForGrok(() => {
     const firstInput = findGrokProfileInput(['givenName', 'firstName', 'given-name']);
     const lastInput = findGrokProfileInput(['familyName', 'lastName', 'family-name']);
     const passwordInputs = findGrokPasswordInputs();
     return firstInput && lastInput && passwordInputs.length ? { firstInput, lastInput, passwordInputs } : null;
   }, { timeoutMs: 45000 });
-  if (!ready) throw new Error('未找到 x.ai 资料或密码表单。');
+  if (!ready) throw new Error('x.ai profile or password form not found.');
   fillInput(ready.firstInput, firstName);
   fillInput(ready.lastInput, lastName);
   ready.passwordInputs.forEach((input) => fillInput(input, password));
   await sleep(GROK_PROFILE_SUBMIT_PRE_CLICK_DELAY_MS);
   const button = findGrokSubmitButton();
-  if (!button) throw new Error('未找到 x.ai 资料提交按钮。');
+  if (!button) throw new Error('x.ai profile submit button not found.');
   simulateGrokClick(button);
   return { submitted: true, state: 'profile_submitted', url: location.href };
 }
@@ -313,7 +313,7 @@ async function executeGrokCommand(command, payload = {}) {
     case 'GET_PAGE_STATE':
       return { state: getGrokPageState(), url: location.href };
     default:
-      throw new Error(`未知 Grok 注册命令：${command}`);
+      throw new Error(`Unknown Grok registration command: ${command}`);
   }
 }
 

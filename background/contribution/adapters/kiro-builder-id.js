@@ -16,7 +16,7 @@
   }
 
   function getErrorMessage(error) {
-    return error instanceof Error ? error.message : String(error ?? '未知错误');
+    return error instanceof Error ? error.message : String(error ?? 'Unknown error');
   }
 
   function normalizeFlowId(state = {}) {
@@ -82,7 +82,7 @@
   async function submitContributionArtifact(artifact = {}, options = {}) {
     const fetchImpl = options.fetchImpl;
     if (typeof fetchImpl !== 'function') {
-      throw new Error('账号贡献提交能力缺少 fetch。');
+      throw new Error('Account contribution submission capability is missing fetch.');
     }
     const endpoint = normalizeContributionApiUrl(options.apiUrl);
     const payload = {
@@ -106,13 +106,13 @@
     });
     const body = await readJsonResponse(response);
     if (!response.ok || body?.ok === false) {
-      throw new Error(cleanString(body?.message || body?.detail || body?.error) || `贡献服务请求失败（HTTP ${response.status}）。`);
+      throw new Error(cleanString(body?.message || body?.detail || body?.error) || `Contribution service request failed (HTTP ${response.status}).`);
     }
     return {
       ok: true,
       status: response.status,
       contributionId: cleanString(body?.contribution_id || body?.contributionId || body?.id),
-      message: cleanString(body?.message) || '贡献提交成功',
+      message: cleanString(body?.message) || 'Contribution submitted successfully',
       raw: body,
     };
   }
@@ -164,7 +164,7 @@
           lastMessage: message,
           updatedAt: Date.now(),
         });
-        await log(`Kiro 账号贡献已跳过：${message}`, 'warn', nodeId);
+        await log(`Kiro account contribution skipped: ${message}`, 'warn', nodeId);
         return {
           ok: false,
           skipped: true,
@@ -177,12 +177,12 @@
         enabled: true,
         status: 'submitting',
         error: '',
-        lastMessage: '正在提交 Kiro Builder ID 贡献',
+        lastMessage: 'Submitting Kiro Builder ID contribution',
         updatedAt: Date.now(),
       });
 
       const safeSummary = artifactApi.buildSafeArtifactSummary?.(artifact) || {};
-      await log(`Kiro 账号贡献：正在提交 Builder ID，邮箱 ${safeSummary.email || '未知'}。`, 'info', nodeId);
+      await log(`Kiro account contribution: Submitting Builder ID, email ${safeSummary.email || 'unknown'}.`, 'info', nodeId);
 
       try {
         const result = await submitContributionArtifact(artifact, {
@@ -200,7 +200,7 @@
           submittedAt: Date.now(),
           updatedAt: Date.now(),
         });
-        await log(`Kiro 账号贡献：提交完成，${result.message}。`, 'ok', nodeId);
+        await log(`Kiro account contribution: Submission complete, ${result.message}.`, 'ok', nodeId);
         return result;
       } catch (error) {
         const message = redactKnownArtifactSecrets(getErrorMessage(error), artifact);
@@ -211,7 +211,7 @@
           lastMessage: message,
           updatedAt: Date.now(),
         });
-        await log(`Kiro 账号贡献提交失败：${message}`, 'warn', nodeId);
+        await log(`Kiro account contribution submission failed: ${message}`, 'warn', nodeId);
         return {
           ok: false,
           skipped: false,

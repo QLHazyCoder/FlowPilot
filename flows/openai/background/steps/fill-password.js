@@ -66,14 +66,14 @@
       const identity = resolveStep3AccountIdentity(state);
       if (!identity.accountIdentifier) {
         if (identity.accountIdentifierType === 'phone') {
-          throw new Error('缺少注册手机号，请先完成步骤 2 或在侧栏填写注册手机号后再执行步骤 3。');
+          throw new Error('Missing registration phone number. Please complete step 2 or set the registration phone number in the side panel before running step 3.');
         }
-        throw new Error('缺少注册账号，请先完成步骤 2。');
+        throw new Error('Missing registration account, please complete step 2 first.');
       }
 
       const signupTabId = await getTabId('openai-auth');
       if (!signupTabId || !(await isTabAlive('openai-auth'))) {
-        throw new Error('认证页面标签页已关闭，请先重新完成步骤 2。');
+        throw new Error('Auth page tab is closed, please re-run step 2 first.');
       }
 
       const password = state.customPassword || state.password || generatePassword();
@@ -95,14 +95,14 @@
         injectSource: 'openai-auth',
         timeoutMs: 45000,
         retryDelayMs: 900,
-        logMessage: '步骤 3：密码页内容脚本未就绪，正在等待页面恢复...',
+        logMessage: 'Step 3: password page content script not ready, waiting for page recovery...',
       });
 
       const identityLabel = identity.accountIdentifierType === 'phone'
-        ? `注册手机号为 ${identity.accountIdentifier}`
-        : `邮箱为 ${identity.accountIdentifier}`;
+        ? `registration phone ${identity.accountIdentifier}`
+        : `email ${identity.accountIdentifier}`;
       await addLog(
-        `步骤 3：正在填写密码，${identityLabel}，密码为${state.customPassword ? '自定义' : '自动生成'}（${password.length} 位）`
+        `Step 3: filling password, ${identityLabel}, password is ${state.customPassword ? 'custom' : 'auto-generated'} (${password.length} chars)`
       );
       await sendToContentScript('openai-auth', {
         type: 'EXECUTE_NODE',

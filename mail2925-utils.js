@@ -102,15 +102,15 @@
 
   function getMail2925BulkActionLabel(mode = 'all', count = 0) {
     const normalizedCount = Number.isFinite(Number(count)) ? Math.max(0, Number(count)) : 0;
-    const prefix = mode === 'cooldown' ? '清空冷却' : '全部删除';
-    const suffix = normalizedCount > 0 ? `（${normalizedCount}）` : '';
+    const prefix = mode === 'cooldown' ? 'Clear Cooldown' : 'Delete All';
+    const suffix = normalizedCount > 0 ? ` (${normalizedCount})` : '';
     return `${prefix}${suffix}`;
   }
 
   function getMail2925ListToggleLabel(expanded, count = 0) {
     const normalizedCount = Number.isFinite(Number(count)) ? Math.max(0, Number(count)) : 0;
-    const suffix = normalizedCount > 0 ? `（${normalizedCount}）` : '';
-    return `${expanded ? '收起列表' : '展开列表'}${suffix}`;
+    const suffix = normalizedCount > 0 ? ` (${normalizedCount})` : '';
+    return `${expanded ? 'Collapse List' : 'Expand List'}${suffix}`;
   }
 
   function upsertMail2925AccountInList(accounts, nextAccount) {

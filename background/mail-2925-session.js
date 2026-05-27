@@ -53,7 +53,7 @@
         provider: '2925',
         source: MAIL2925_SOURCE,
         url: MAIL2925_URL,
-        label: '2925 邮箱',
+        label: '2925 Mail',
         inject: MAIL2925_INJECT,
         injectSource: MAIL2925_INJECT_SOURCE,
       };
@@ -81,7 +81,7 @@
       }
 
       await requestStop({
-        logMessage: errorMessage || '2925 登录失败，已按手动停止逻辑暂停自动流程。',
+        logMessage: errorMessage || '2925 login failed; paused auto-run via manual-stop logic.',
       });
       return true;
     }
@@ -90,7 +90,9 @@
       const message = getErrorMessage(error);
       return message.startsWith(MAIL2925_LIMIT_ERROR_PREFIX)
         || message.includes('子邮箱已达上限')
-        || message.includes('已达上限邮箱');
+        || message.includes('已达上限邮箱')
+        || message.includes('sub-mailbox limit reached')
+        || message.includes('mailbox limit reached');
     }
 
     function isMail2925ThreadTerminatedError(error) {
@@ -188,7 +190,7 @@
       const accounts = normalizeMail2925Accounts(state.mail2925Accounts);
       const account = findMail2925Account(accounts, accountId);
       if (!account) {
-        throw new Error('未找到对应的 2925 账号。');
+        throw new Error('Corresponding 2925 account not found.');
       }
 
       let nextAccount = account;
@@ -214,7 +216,7 @@
       const accounts = normalizeMail2925Accounts(state.mail2925Accounts);
       const account = findMail2925Account(accounts, accountId);
       if (!account) {
-        throw new Error('未找到对应的 2925 账号。');
+        throw new Error('Corresponding 2925 account not found.');
       }
 
       const nextAccount = normalizeMail2925Account({
@@ -293,17 +295,17 @@
       }
 
       if (!account) {
-        throw new Error('没有可用的 2925 账号。请先在侧边栏添加至少一个带密码的 2925 账号。');
+        throw new Error('No available 2925 account. Please add at least one 2925 account with password in the side panel first.');
       }
       if (!account.password) {
-        throw new Error(`2925 账号 ${account.email || account.id} 缺少密码，无法自动登录。`);
+        throw new Error(`2925 account ${account.email || account.id} is missing password — cannot auto-login.`);
       }
       if (!isMail2925AccountAvailable(account, now)) {
         const disabledUntil = Number(account.disabledUntil || 0);
         if (disabledUntil > now) {
-          throw new Error(`2925 账号 ${account.email || account.id} 当前处于冷却期，将在 ${new Date(disabledUntil).toLocaleString('zh-CN', { hour12: false })} 后恢复。`);
+          throw new Error(`2925 account ${account.email || account.id} is currently in cooldown — will recover after ${new Date(disabledUntil).toLocaleString('zh-CN', { hour12: false })}.`);
         }
-        throw new Error(`2925 账号 ${account.email || account.id} 当前不可用。`);
+        throw new Error(`2925 account ${account.email || account.id} is currently unavailable.`);
       }
 
       return setCurrentMail2925Account(account.id, { updateLastUsedAt: markUsed });
@@ -417,7 +419,7 @@
 
       const currentUrl = (await getMail2925TabUrlById(numericTabId)) || await getMail2925CurrentTabUrl();
       await addLog(
-        `2925：登录提交后页面发生跳转或重载，正在等待当前标签页恢复后继续确认登录态。当前地址：${currentUrl || 'unknown'}`,
+        `2925: Login submission triggered navigation or reload — waiting for the current tab to recover before re-confirming session. Current URL: ${currentUrl || 'unknown'}`,
         'warn'
       );
 
@@ -427,7 +429,7 @@
           retryDelayMs: 300,
         });
         await addLog(
-          `2925：登录跳转等待结束，当前标签地址：${String(completedTab?.url || '').trim() || 'unknown'}`,
+          `2925: Login navigation wait ended, current tab URL: ${String(completedTab?.url || '').trim() || 'unknown'}`,
           completedTab?.url ? 'info' : 'warn'
         );
       }
@@ -438,19 +440,19 @@
           injectSource: MAIL2925_INJECT_SOURCE,
           timeoutMs: MAIL2925_LOGIN_PAGE_RECOVERY_TIMEOUT_MS,
           retryDelayMs: 800,
-          logMessage: '步骤 0：2925 登录后页面仍在跳转，正在等待邮箱页重新就绪...',
+          logMessage: 'Step 0: 2925 page is still navigating after login — waiting for mailbox page to be ready again...',
         });
       }
 
       const recoveredUrl = (await getMail2925TabUrlById(numericTabId)) || await getMail2925CurrentTabUrl();
-      await addLog(`2925：登录跳转恢复后当前标签地址：${recoveredUrl || 'unknown'}`, 'info');
+      await addLog(`2925: After login navigation recovery, current tab URL: ${recoveredUrl || 'unknown'}`, 'info');
     }
 
     async function ensureMail2925MailboxSession(options = {}) {
       const {
         accountId = null,
         forceRelogin = false,
-        actionLabel = '确保 2925 邮箱登录态',
+        actionLabel = 'Ensure 2925 mailbox session',
         allowLoginWhenOnLoginPage = true,
         expectedMailboxEmail = '',
       } = options;
@@ -488,18 +490,18 @@
       });
 
       const failMailboxSession = async (message) => {
-        const stopped = await stopAutoRunForMail2925LoginFailure(`${message}已按手动停止逻辑暂停自动流程。`);
+        const stopped = await stopAutoRunForMail2925LoginFailure(`${message} Paused auto-run via manual-stop logic.`);
         if (stopped) {
-          throw new Error('流程已被用户停止。');
+          throw new Error('Flow stopped by user.');
         }
         throw new Error(message);
       };
 
       if (forceRelogin) {
         const removedCount = await clearMail2925SessionCookies();
-        await addLog(`2925：已清理 ${removedCount} 个登录相关 cookie，准备使用 ${account.email} 重新登录。`, 'info');
+        await addLog(`2925: Cleared ${removedCount} login-related cookies, preparing to login with ${account.email}.`, 'info');
         if (typeof sleepWithStop === 'function') {
-          await addLog('2925：清理 cookie 后等待 3 秒，再打开登录页...', 'info');
+          await addLog('2925: Waiting 3 seconds after cookie cleanup before opening login page...', 'info');
           await sleepWithStop(3000);
         }
       }
@@ -508,8 +510,8 @@
       const targetUrl = forceRelogin ? MAIL2925_LOGIN_URL : MAIL2925_URL;
       await addLog(
         forceRelogin
-          ? `2925：准备打开登录页 ${MAIL2925_LOGIN_URL}（强制重登录）`
-          : `2925：准备打开邮箱页 ${MAIL2925_URL}（登录页自动登录=${allowLoginWhenOnLoginPage ? '开启' : '关闭'}）`,
+          ? `2925: Preparing to open login page ${MAIL2925_LOGIN_URL} (force relogin)`
+          : `2925: Preparing to open mailbox page ${MAIL2925_URL} (auto-login on login page = ${allowLoginWhenOnLoginPage ? 'enabled' : 'disabled'})`,
         'info'
       );
       const tabId = await reuseOrCreateTab(MAIL2925_SOURCE, targetUrl, {
@@ -521,7 +523,7 @@
       if (!openedUrl) {
         openedUrl = await getMail2925CurrentTabUrl();
       }
-      await addLog(`2925：打开页后当前标签地址：${openedUrl || 'unknown'}`, 'info');
+      await addLog(`2925: After opening, current tab URL: ${openedUrl || 'unknown'}`, 'info');
 
       if (forceRelogin && typeof waitForTabUrlMatch === 'function') {
         const matchedLoginTab = await waitForTabUrlMatch(
@@ -529,7 +531,7 @@
           (url) => isMail2925LoginUrl(url),
           { timeoutMs: 15000, retryDelayMs: 300 }
         );
-        await addLog(`2925：等待最终落到登录页结果：${matchedLoginTab?.url || '超时'}`, matchedLoginTab ? 'info' : 'warn');
+        await addLog(`2925: Wait for login page result: ${matchedLoginTab?.url || 'timeout'}`, matchedLoginTab ? 'info' : 'warn');
         if (matchedLoginTab?.url) {
           openedUrl = String(matchedLoginTab.url || '').trim();
         }
@@ -541,17 +543,17 @@
           injectSource: MAIL2925_INJECT_SOURCE,
           timeoutMs: 20000,
           retryDelayMs: 800,
-          logMessage: '步骤 0：2925 登录页内容脚本未就绪，正在等待页面稳定后继续登录...',
+          logMessage: 'Step 0: 2925 login page content script not ready — waiting for page to stabilize before continuing login...',
         });
       }
 
       if (!forceRelogin && !isMail2925LoginUrl(openedUrl) && !normalizedExpectedMailboxEmail) {
-        await addLog('2925：当前邮箱页未跳转到登录页，将直接复用已登录会话。', 'info');
+        await addLog('2925: Current mailbox page did not navigate to login page — reusing existing session.', 'info');
         return buildSuccessPayload();
       }
 
       if (!forceRelogin && isMail2925LoginUrl(openedUrl) && !allowLoginWhenOnLoginPage) {
-        await failMailboxSession(`2925：${actionLabel}失败，当前页面已跳转到登录页，且当前未启用 2925 账号池，不执行自动登录。`);
+        await failMailboxSession(`2925: ${actionLabel} failed — current page has navigated to login page, but 2925 account pool is not enabled, so auto-login will not run.`);
       }
 
       if (!account && (forceRelogin || allowLoginWhenOnLoginPage)) {
@@ -562,14 +564,14 @@
       }
 
       if (forceRelogin && typeof sleepWithStop === 'function') {
-        await addLog('2925：登录页已打开，等待 3 秒后开始检查输入框并执行登录...', 'info');
+        await addLog('2925: Login page opened — waiting 3 seconds before checking inputs and executing login...', 'info');
         await sleepWithStop(3000);
       }
 
       let result;
       const sendEnsureSessionRequest = async () => {
         const beforeSendUrl = (await getMail2925TabUrlById(tabId)) || await getMail2925CurrentTabUrl();
-        await addLog(`2925：发送 ENSURE_MAIL2925_SESSION 前当前地址：${beforeSendUrl || 'unknown'}`, 'info');
+        await addLog(`2925: URL before sending ENSURE_MAIL2925_SESSION: ${beforeSendUrl || 'unknown'}`, 'info');
         return sendLoginMessage(
           MAIL2925_SOURCE,
           {
@@ -587,7 +589,7 @@
             timeoutMs: MAIL2925_LOGIN_MESSAGE_RETRY_WINDOW_MS,
             retryDelayMs: 800,
             responseTimeoutMs: MAIL2925_LOGIN_RESPONSE_TIMEOUT_MS,
-            logMessage: '步骤 0：2925 登录页通信异常，正在等待页面恢复...',
+            logMessage: 'Step 0: 2925 login page communication anomaly — waiting for page recovery...',
           }
         );
       };
@@ -597,7 +599,7 @@
         if (isRetryableMail2925TransportError(err)) {
           try {
             await recoverMail2925LoginPageAfterTransportError(tabId);
-            await addLog('2925：页面恢复完成，正在重新确认登录态...', 'info');
+            await addLog('2925: Page recovery complete — re-confirming login state...', 'info');
             result = await sendEnsureSessionRequest();
           } catch (recoveryErr) {
             err = recoveryErr;
@@ -605,26 +607,26 @@
         }
 
         if (!result) {
-          const message = `2925：${actionLabel}失败（${getErrorMessage(err) || '登录结果确认超时'}）。`;
-          const stopped = await stopAutoRunForMail2925LoginFailure(`${message}已按手动停止逻辑暂停自动流程。`);
+          const message = `2925: ${actionLabel} failed (${getErrorMessage(err) || 'login result confirmation timed out'}).`;
+          const stopped = await stopAutoRunForMail2925LoginFailure(`${message} Paused auto-run via manual-stop logic.`);
           if (stopped) {
-            throw new Error('流程已被用户停止。');
+            throw new Error('Flow stopped by user.');
           }
           throw err;
         }
       }
 
       if (result?.error) {
-        await failMailboxSession(`2925：${actionLabel}失败（${result.error}）。`);
+        await failMailboxSession(`2925: ${actionLabel} failed (${result.error}).`);
       }
       if (result?.limitReached) {
-        throw new Error(`${MAIL2925_LIMIT_ERROR_PREFIX}${result.limitMessage || '子邮箱已达上限邮箱'}`);
+        throw new Error(`${MAIL2925_LIMIT_ERROR_PREFIX}${result.limitMessage || 'Sub-mailbox limit reached.'}`);
       }
       const actualMailboxEmail = normalizeMailboxEmail(result?.mailboxEmail || '');
       if (normalizedExpectedMailboxEmail && actualMailboxEmail && actualMailboxEmail !== normalizedExpectedMailboxEmail) {
         if (allowLoginWhenOnLoginPage) {
           await addLog(
-            `2925：当前邮箱页显示账号 ${actualMailboxEmail}，与目标账号 ${normalizedExpectedMailboxEmail} 不一致，准备登出当前账号并登录目标账号。`,
+            `2925: Current mailbox page shows account ${actualMailboxEmail}, which does not match target account ${normalizedExpectedMailboxEmail}. Preparing to log out current account and log in target account.`,
             'warn'
           );
           return ensureMail2925MailboxSession({
@@ -636,18 +638,18 @@
           });
         }
         await failMailboxSession(
-          `2925：${actionLabel}失败，当前邮箱页显示账号 ${actualMailboxEmail}，与目标账号 ${normalizedExpectedMailboxEmail} 不一致，且当前未启用 2925 账号池。`
+          `2925: ${actionLabel} failed — current mailbox page shows account ${actualMailboxEmail}, which does not match target account ${normalizedExpectedMailboxEmail}, and 2925 account pool is not enabled.`
         );
       }
       if (normalizedExpectedMailboxEmail && !actualMailboxEmail && result?.currentView === 'mailbox') {
-        await addLog('2925：未能识别当前邮箱页顶部邮箱地址，已跳过邮箱一致性校验。', 'warn');
+        await addLog('2925: Could not detect current mailbox email at top of page — skipped email consistency check.', 'warn');
       }
       if (!result?.loggedIn) {
-        await failMailboxSession(`2925：${actionLabel}失败，登录后仍未进入收件箱。`);
+        await failMailboxSession(`2925: ${actionLabel} failed — did not enter inbox after login.`);
       }
 
       if (!account) {
-        await addLog('2925：未触发自动登录，继续复用当前已登录会话。', 'info');
+        await addLog('2925: Auto-login not triggered — reusing existing logged-in session.', 'info');
         return {
           account: null,
           mail: getMail2925MailConfig(),
@@ -666,7 +668,7 @@
       broadcastDataUpdate({ currentMail2925AccountId: account.id });
 
       const finalUrl = (await getMail2925TabUrlById(tabId)) || await getMail2925CurrentTabUrl();
-      await addLog(`2925：登录态确认成功，当前地址=${finalUrl || 'unknown'}`, 'ok');
+      await addLog(`2925: Login state confirmed, current URL=${finalUrl || 'unknown'}`, 'ok');
 
       return {
         account: await ensureMail2925AccountForFlow({
@@ -680,7 +682,7 @@
 
     async function handleMail2925LimitReachedError(step, error) {
       const reason = getErrorMessage(error).replace(MAIL2925_LIMIT_ERROR_PREFIX, '').trim()
-        || '子邮箱已达上限邮箱';
+        || 'Sub-mailbox limit reached.';
       const state = await getState();
       const currentAccount = getCurrentMail2925Account(state);
       const poolEnabled = Boolean(state?.mail2925UseAccountPool);
@@ -688,19 +690,19 @@
       if (!poolEnabled) {
         if (typeof requestStop === 'function') {
           await requestStop({
-            logMessage: `步骤 ${step}：2925 检测到“${reason}”，当前未启用账号池，已按手动停止逻辑暂停自动流程。`,
+            logMessage: `Step ${step}: 2925 detected "${reason}", account pool not enabled — paused auto-run via manual-stop logic.`,
           });
         }
-        return new Error('流程已被用户停止。');
+        return new Error('Flow stopped by user.');
       }
 
       if (!currentAccount) {
         if (typeof requestStop === 'function') {
           await requestStop({
-            logMessage: `步骤 ${step}：2925 检测到“${reason}”，但当前没有可识别的账号可供切换。`,
+            logMessage: `Step ${step}: 2925 detected "${reason}", but no identifiable account is available to switch.`,
           });
         }
-        return new Error('流程已被用户停止。');
+        return new Error('Flow stopped by user.');
       }
 
       const disabledUntil = Date.now() + Math.max(1, Number(MAIL2925_LIMIT_COOLDOWN_MS) || (24 * 60 * 60 * 1000));
@@ -710,7 +712,7 @@
         lastError: reason,
       });
       await addLog(
-        `步骤 ${step}：2925 账号 ${currentAccount.email} 命中“${reason}”，已禁用到 ${new Date(disabledUntil).toLocaleString('zh-CN', { hour12: false })}。`,
+        `Step ${step}: 2925 account ${currentAccount.email} hit "${reason}", disabled until ${new Date(disabledUntil).toLocaleString('zh-CN', { hour12: false })}.`,
         'warn'
       );
 
@@ -726,10 +728,10 @@
         broadcastDataUpdate({ currentMail2925AccountId: null });
         if (typeof requestStop === 'function') {
           await requestStop({
-            logMessage: `步骤 ${step}：2925 账号 ${currentAccount.email} 命中“${reason}”，但当前没有可切换的下一个账号。`,
+            logMessage: `Step ${step}: 2925 account ${currentAccount.email} hit "${reason}", and there is no next account available to switch.`,
           });
         }
-        return new Error('流程已被用户停止。');
+        return new Error('Flow stopped by user.');
       }
 
       await setCurrentMail2925Account(nextAccount.id);
@@ -737,11 +739,11 @@
         accountId: nextAccount.id,
         forceRelogin: true,
         allowLoginWhenOnLoginPage: true,
-        actionLabel: `步骤 ${step}：切换 2925 账号`,
+        actionLabel: `Step ${step}: Switch 2925 account`,
       });
-      await addLog(`步骤 ${step}：2925 已切换到下一个账号 ${nextAccount.email}。`, 'warn');
+      await addLog(`Step ${step}: 2925 switched to next account ${nextAccount.email}.`, 'warn');
       return buildMail2925ThreadTerminatedError(
-        `步骤 ${step}：2925 账号 ${currentAccount.email} 命中“${reason}”，已切换到 ${nextAccount.email}，当前尝试结束，等待下一轮重试。`
+        `Step ${step}: 2925 account ${currentAccount.email} hit "${reason}", switched to ${nextAccount.email}. Current attempt ended, waiting for next retry.`
       );
     }
 

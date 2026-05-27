@@ -46,7 +46,7 @@ function getRuntimeScriptSource() {
 }
 
 const LOG_PREFIX = `[MultiPage:${SCRIPT_SOURCE}]`;
-const STOP_ERROR_MESSAGE = '流程已被用户停止。';
+const STOP_ERROR_MESSAGE = 'Flow stopped by user.';
 let flowStopped = false;
 
 if (!window.__MULTIPAGE_UTILS_LISTENER_READY__) {
@@ -96,14 +96,14 @@ function waitForElement(selector, timeout = 10000) {
 
     const existing = document.querySelector(selector);
     if (existing) {
-      console.log(LOG_PREFIX, `立即找到元素: ${selector}`);
-      log(`已找到元素：${selector}`);
+      console.log(LOG_PREFIX, `Found element immediately: ${selector}`);
+      log(`Element found: ${selector}`);
       resolve(existing);
       return;
     }
 
-    console.log(LOG_PREFIX, `等待元素: ${selector}（超时 ${timeout}ms）`);
-    log(`正在等待选择器：${selector}...`);
+    console.log(LOG_PREFIX, `Waiting for element: ${selector} (timeout ${timeout}ms)`);
+    log(`Waiting for selector: ${selector}...`);
 
     let settled = false;
     let stopTimer = null;
@@ -124,8 +124,8 @@ function waitForElement(selector, timeout = 10000) {
       const el = document.querySelector(selector);
       if (el) {
         cleanup();
-        console.log(LOG_PREFIX, `等待后找到元素: ${selector}`);
-        log(`已找到元素：${selector}`);
+        console.log(LOG_PREFIX, `Element found after wait: ${selector}`);
+        log(`Element found: ${selector}`);
         resolve(el);
       }
     });
@@ -137,7 +137,7 @@ function waitForElement(selector, timeout = 10000) {
 
     const timer = setTimeout(() => {
       cleanup();
-      const msg = `在 ${location.href} 等待 ${selector} 超时，已超过 ${timeout}ms`;
+      const msg = `Timed out waiting for ${selector} at ${location.href}, exceeded ${timeout}ms`;
       console.error(LOG_PREFIX, msg);
       reject(new Error(msg));
     }, timeout);
@@ -178,14 +178,14 @@ function waitForElementByText(containerSelector, textPattern, timeout = 10000) {
 
     const existing = search();
     if (existing) {
-      console.log(LOG_PREFIX, `立即按文本找到元素: ${containerSelector} 匹配 ${textPattern}`);
-      log(`已按文本找到元素：${textPattern}`);
+      console.log(LOG_PREFIX, `Element found immediately by text: ${containerSelector} matches ${textPattern}`);
+      log(`Element found by text: ${textPattern}`);
       resolve(existing);
       return;
     }
 
-    console.log(LOG_PREFIX, `等待文本匹配: ${containerSelector} / ${textPattern}`);
-    log(`正在等待包含文本的元素：${textPattern}...`);
+    console.log(LOG_PREFIX, `Waiting for text match: ${containerSelector} / ${textPattern}`);
+    log(`Waiting for element containing text: ${textPattern}...`);
 
     let settled = false;
     let stopTimer = null;
@@ -206,8 +206,8 @@ function waitForElementByText(containerSelector, textPattern, timeout = 10000) {
       const el = search();
       if (el) {
         cleanup();
-        console.log(LOG_PREFIX, `等待后按文本找到元素: ${textPattern}`);
-        log(`已按文本找到元素：${textPattern}`);
+        console.log(LOG_PREFIX, `Element found by text after wait: ${textPattern}`);
+        log(`Element found by text: ${textPattern}`);
         resolve(el);
       }
     });
@@ -219,7 +219,7 @@ function waitForElementByText(containerSelector, textPattern, timeout = 10000) {
 
     const timer = setTimeout(() => {
       cleanup();
-      const msg = `在 ${location.href} 的 ${containerSelector} 中等待文本 "${textPattern}" 超时，已超过 ${timeout}ms`;
+      const msg = `Timed out waiting for text "${textPattern}" in ${containerSelector} at ${location.href}, exceeded ${timeout}ms`;
       console.error(LOG_PREFIX, msg);
       reject(new Error(msg));
     }, timeout);
@@ -252,8 +252,8 @@ function fillInput(el, value) {
   nativeInputValueSetter.call(el, value);
   el.dispatchEvent(new Event('input', { bubbles: true }));
   el.dispatchEvent(new Event('change', { bubbles: true }));
-  console.log(LOG_PREFIX, `已填写输入框 ${el.name || el.id || el.type}: ${value}`);
-  log(`已填写输入框 [${el.name || el.id || el.type || '未知'}]`);
+  console.log(LOG_PREFIX, `Filled input ${el.name || el.id || el.type}: ${value}`);
+  log(`Filled input [${el.name || el.id || el.type || 'unknown'}]`);
 }
 
 /**
@@ -265,8 +265,8 @@ function fillSelect(el, value) {
   throwIfStopped();
   el.value = value;
   el.dispatchEvent(new Event('change', { bubbles: true }));
-  console.log(LOG_PREFIX, `已在 ${el.name || el.id} 中选择值: ${value}`);
-  log(`已选择 [${el.name || el.id || '未知'}] = ${value}`);
+  console.log(LOG_PREFIX, `Selected value in ${el.name || el.id}: ${value}`);
+  log(`Selected [${el.name || el.id || 'unknown'}] = ${value}`);
 }
 
 function normalizeLogStep(value) {
@@ -338,7 +338,7 @@ function reportReady() {
     console.warn(LOG_PREFIX, 'skip CONTENT_SCRIPT_READY for unknown source');
     return;
   }
-  console.log(LOG_PREFIX, '内容脚本已就绪');
+  console.log(LOG_PREFIX, 'Content script ready');
   const message = {
     type: 'CONTENT_SCRIPT_READY',
     source: getRuntimeScriptSource(),
@@ -363,8 +363,8 @@ function reportReady() {
 function reportComplete(stepOrNodeId, data = {}) {
   const nodeId = resolveReportNodeId(stepOrNodeId, data);
   const step = normalizeLogStep(stepOrNodeId || data?.step || data?.visibleStep);
-  console.log(LOG_PREFIX, `节点 ${nodeId || stepOrNodeId} 已完成`, data);
-  log('已成功完成', 'ok', { step, stepKey: nodeId });
+  console.log(LOG_PREFIX, `Node ${nodeId || stepOrNodeId} completed`, data);
+  log('Completed successfully', 'ok', { step, stepKey: nodeId });
   const message = {
     type: 'NODE_COMPLETE',
     source: getRuntimeScriptSource(),
@@ -394,7 +394,7 @@ function reportComplete(stepOrNodeId, data = {}) {
 
 function reportNodeComplete(nodeId, data = {}) {
   const normalizedNodeId = String(nodeId || '').trim();
-  console.log(LOG_PREFIX, `节点 ${normalizedNodeId} 已完成`, data);
+  console.log(LOG_PREFIX, `Node ${normalizedNodeId} completed`, data);
   const message = {
     type: 'NODE_COMPLETE',
     source: getRuntimeScriptSource(),
@@ -429,7 +429,7 @@ function reportNodeComplete(nodeId, data = {}) {
 function reportError(stepOrNodeId, errorMessage) {
   const nodeId = resolveReportNodeId(stepOrNodeId);
   const step = normalizeLogStep(stepOrNodeId);
-  console.error(LOG_PREFIX, `节点 ${nodeId || stepOrNodeId} 失败: ${errorMessage}`);
+  console.error(LOG_PREFIX, `Node ${nodeId || stepOrNodeId} failed: ${errorMessage}`);
   const message = {
     type: 'NODE_ERROR',
     source: getRuntimeScriptSource(),
@@ -458,7 +458,7 @@ function reportError(stepOrNodeId, errorMessage) {
 
 function reportNodeError(nodeId, errorMessage) {
   const normalizedNodeId = String(nodeId || '').trim();
-  console.error(LOG_PREFIX, `节点 ${normalizedNodeId} 失败: ${errorMessage}`);
+  console.error(LOG_PREFIX, `Node ${normalizedNodeId} failed: ${errorMessage}`);
   const message = {
     type: 'NODE_ERROR',
     source: getRuntimeScriptSource(),
@@ -491,7 +491,7 @@ function reportNodeError(nodeId, errorMessage) {
 function simulateClick(el) {
   throwIfStopped();
   if (!el) {
-    throw new Error('无法点击空元素。');
+    throw new Error('Cannot click null element.');
   }
 
   const form = el.form || el.closest?.('form') || null;
@@ -517,8 +517,8 @@ function simulateClick(el) {
     el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
   }
 
-  console.log(LOG_PREFIX, `已点击(${method}): ${el.tagName} ${textBeforeClick.slice(0, 30)}`);
-  log(`已点击(${method}) [${el.tagName}] "${textBeforeClick.trim().slice(0, 30) || ''}"`);
+  console.log(LOG_PREFIX, `Clicked (${method}): ${el.tagName} ${textBeforeClick.slice(0, 30)}`);
+  log(`Clicked (${method}) [${el.tagName}] "${textBeforeClick.trim().slice(0, 30) || ''}"`);
 }
 
 /**

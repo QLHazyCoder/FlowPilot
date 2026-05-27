@@ -38,11 +38,11 @@
       trigger,
       current,
       menu,
-      emptyLabel = '请先添加',
+      emptyLabel = 'Please add first',
       fallbackItems = [],
       minItems = 0,
-      deleteLabel = '删除',
-      itemLabel = '项目',
+      deleteLabel = 'Delete',
+      itemLabel = 'Item',
       normalizeItems = normalizeEditableListValues,
       normalizeValue = (value) => String(value || '').trim(),
       getItemValue = (item) => String(item || '').trim(),
@@ -69,7 +69,7 @@
       return picker.items.find((item) => getNormalizedItemValue(item) === normalized) || null;
     };
     const reportDeleteError = (error) => {
-      const fallbackMessage = `${deleteLabel}${itemLabel}失败。`;
+      const fallbackMessage = `Failed to ${deleteLabel.toLowerCase()} ${itemLabel.toLowerCase()}.`;
       if (typeof onDeleteError === 'function') {
         onDeleteError(error, fallbackMessage);
         return;
@@ -170,8 +170,8 @@
         deleteButton.type = 'button';
         deleteButton.className = 'editable-list-delete';
         deleteButton.textContent = deleteLabel;
-        deleteButton.title = `${deleteLabel}${itemLabel} ${getItemDeleteLabel(item)}`;
-        deleteButton.setAttribute('aria-label', `${deleteLabel}${itemLabel} ${getItemDeleteLabel(item)}`);
+        deleteButton.title = `${deleteLabel} ${itemLabel} ${getItemDeleteLabel(item)}`;
+        deleteButton.setAttribute('aria-label', `${deleteLabel} ${itemLabel} ${getItemDeleteLabel(item)}`);
         deleteButton.disabled = picker.items.length <= minItems;
         deleteButton.addEventListener('click', (event) => {
           event.preventDefault();

@@ -7,7 +7,7 @@
 
     function importAccountRecords(records = []) {
       if (!Array.isArray(records)) {
-        throw new Error('账号记录导入内容必须是数组。');
+        throw new Error('Account-records import payload must be an array.');
       }
       if (typeof createAccountRunHistoryHelpers !== 'function') {
         return records

@@ -50,7 +50,7 @@ const PAYMENT_METHOD_CONFIGS = {
   },
   [PLUS_PAYMENT_METHOD_PAYPAL_HOSTED]: {
     id: PLUS_PAYMENT_METHOD_PAYPAL_HOSTED,
-    label: 'PayPal 无卡直绑',
+    label: 'PayPal no-card direct bind',
     diagnosticLabel: 'PayPal hosted',
     checkoutMerchantPath: 'openai_llc',
     billingDetails: {
@@ -109,7 +109,7 @@ if (document.documentElement.getAttribute(PLUS_CHECKOUT_LISTENER_SENTINEL) !== '
     }
   });
 } else {
-  console.log('[MultiPage:plus-checkout] 消息监听已存在，跳过重复注册');
+  console.log('[MultiPage:plus-checkout] message listener already exists, skipping duplicate registration');
 }
 
 async function handlePlusCheckoutCommand(message) {
@@ -137,13 +137,13 @@ async function handlePlusCheckoutCommand(message) {
     case 'PLUS_CHECKOUT_GET_STATE':
       return inspectPlusCheckoutState(message.payload || {});
     default:
-      throw new Error(`plus-checkout.js 不处理消息：${message.type}`);
+      throw new Error(`plus-checkout.js does not handle message: ${message.type}`);
   }
 }
 
 async function waitUntil(predicate, options = {}) {
   const intervalMs = Math.max(50, Math.floor(Number(options.intervalMs) || 250));
-  const label = String(options.label || '条件').trim() || '条件';
+  const label = String(options.label || 'Condition').trim() || 'Condition';
   const timeoutMs = Math.max(0, Math.floor(Number(options.timeoutMs) || 0));
   const startedAt = Date.now();
   while (true) {
@@ -153,7 +153,7 @@ async function waitUntil(predicate, options = {}) {
       return value;
     }
     if (timeoutMs > 0 && Date.now() - startedAt >= timeoutMs) {
-      throw new Error(`${label}等待超时`);
+      throw new Error(`${label} timed out`);
     }
     await sleep(intervalMs);
   }
@@ -161,7 +161,7 @@ async function waitUntil(predicate, options = {}) {
 
 async function waitForDocumentComplete() {
   await waitUntil(() => document.readyState === 'complete', {
-    label: '页面加载完成',
+    label: 'Page load complete',
     intervalMs: 200,
   });
   await sleep(1000);
@@ -236,7 +236,7 @@ function findHostedSubmitButton() {
     || document.querySelector('button.SubmitButton--complete')
     || findClickableByText([
       /next|continue|pay|subscribe|agree/i,
-      /下一页|继续|支付|订阅|同意/i,
+      /下一页|继续|支付|Subscribe|同意/i,
     ]);
 }
 
@@ -246,21 +246,21 @@ async function clickHostedSubmitButton() {
     const candidate = findHostedSubmitButton();
     return candidate && isEnabledControl(candidate) && isVisibleElement(candidate) ? candidate : null;
   }, {
-    label: 'hosted checkout 提交按钮',
+    label: 'Hosted checkout submit button',
     intervalMs: 500,
     timeoutMs: 15000,
   });
   document.activeElement?.blur?.();
   await sleep(300);
-  const buttonTextBeforeClick = getActionText(button) || '订阅';
-  log(`Plus Checkout：准备点击“${buttonTextBeforeClick}”提交 OpenAI Checkout。`);
+  const buttonTextBeforeClick = getActionText(button) || 'Subscribe';
+  log(`Plus Checkout: Preparing to click "${buttonTextBeforeClick}" to submit OpenAI Checkout.`);
   simulateClick(button);
   await sleep(300);
   const buttonTextAfterClick = getActionText(button);
   if (buttonTextAfterClick && SUBSCRIBE_PROCESSING_TEXT_PATTERN.test(buttonTextAfterClick)) {
-    log(`Plus Checkout：已点击“${buttonTextBeforeClick}”，按钮进入“${buttonTextAfterClick}”，正在等待 PayPal 跳转。`);
+    log(`Plus Checkout: Clicked "${buttonTextBeforeClick}", button entered "${buttonTextAfterClick}", waiting for PayPal redirect.`);
   } else {
-    log(`Plus Checkout：已点击“${buttonTextBeforeClick}”，正在等待 PayPal 跳转。`);
+    log(`Plus Checkout: Clicked "${buttonTextBeforeClick}", waiting for PayPal redirect.`);
   }
   await sleep(900);
   return {
@@ -275,12 +275,12 @@ async function clickHostedSubmitButton() {
 function fillHostedOpenAiVerificationCode(verificationCode = '') {
   const code = String(verificationCode || '').replace(/\D+/g, '').slice(0, 6);
   if (code.length !== 6) {
-    throw new Error('hosted checkout OpenAI 验证码无效。');
+    throw new Error('Hosted checkout OpenAI verification code is invalid.');
   }
   for (let index = 0; index < 6; index += 1) {
     const input = document.getElementById(`ci-ciBasic-${index}`);
     if (!input) {
-      throw new Error('hosted checkout OpenAI 页面未找到完整的验证码输入框。');
+      throw new Error('Hosted checkout OpenAI page did not find a complete verification code input.');
     }
     fillInput(input, code[index]);
   }
@@ -293,7 +293,7 @@ function fillHostedOpenAiVerificationCode(verificationCode = '') {
 async function runPayPalHostedOpenAiCheckoutStep(payload = {}) {
   await waitForDocumentComplete();
   if (!isPayPalHostedOpenAiCheckoutPage()) {
-    throw new Error('当前页面不是 PayPal 无卡直绑的 OpenAI hosted checkout 页面。');
+    throw new Error('The current page is not the OpenAI hosted checkout page for PayPal no-card direct bind.');
   }
   if (payload.verificationCode) {
     return fillHostedOpenAiVerificationCode(payload.verificationCode);
@@ -741,7 +741,7 @@ function getGoPayCandidateSummaries(limit = 6) {
 
 function getPaymentTextPreview(limit = 10) {
   const seen = new Set();
-  const pattern = /gopay|go\s*pay|paypal|card|payment|billing|subscribe|pay|银行卡|付款|支付|账单|订阅/i;
+  const pattern = /gopay|go\s*pay|paypal|card|payment|billing|subscribe|pay|银行卡|付款|支付|账单|Subscribe/i;
   return getVisibleControls('button, a, label, [role="button"], [role="radio"], input[type="radio"], input[type="button"], input[type="submit"], [data-testid]')
     .map((el) => getCombinedSearchText(el))
     .filter((text) => text && pattern.test(text))
@@ -784,7 +784,7 @@ function writePaymentMethodDiagnostics(method = PLUS_PAYMENT_METHOD_PAYPAL, reas
   const diagnostics = getPaymentMethodDiagnostics(config.id, reason);
   const writer = typeof console[level] === 'function' ? console[level] : console.info;
   writer.call(console, `[MultiPage:plus-checkout] ${config.diagnosticLabel} diagnostics`, diagnostics);
-  log(`Plus Checkout：${reason}。${config.label} 候选 ${diagnostics.paymentCandidates.length} 个，银行卡字段${diagnostics.cardFieldsVisible ? '仍可见' : '不可见'}。`, level === 'error' ? 'error' : 'warn');
+  log(`Plus Checkout: ${reason}. ${config.label} candidates: ${diagnostics.paymentCandidates.length}. Card fields ${diagnostics.cardFieldsVisible ? 'still visible' : 'not visible'}.`, level === 'error' ? 'error' : 'warn');
   return diagnostics;
 }
 
@@ -810,7 +810,7 @@ function buildPlusCheckoutPayload(paymentMethod = PLUS_PAYMENT_METHOD_PAYPAL) {
 function buildPlusCheckoutUrl(checkoutSessionId, paymentMethod = PLUS_PAYMENT_METHOD_PAYPAL) {
   const sessionId = String(checkoutSessionId || '').trim();
   if (!sessionId) {
-    throw new Error('创建 Plus Checkout 失败：未返回 checkout_session_id。');
+    throw new Error('Failed to create Plus Checkout: checkout_session_id was not returned.');
   }
   const config = getPaymentMethodConfig(paymentMethod);
   return `https://chatgpt.com/checkout/${config.checkoutMerchantPath}/${sessionId}`;
@@ -841,7 +841,7 @@ function findHostedCheckoutUrl(payload = {}) {
 
 async function createPlusCheckoutSession(options = {}) {
   await waitForDocumentComplete();
-  log('Plus：正在读取 ChatGPT 登录会话...');
+  log('Plus: Reading ChatGPT login session...');
 
   const sessionResponse = await fetch('/api/auth/session', {
     credentials: 'include',
@@ -849,10 +849,10 @@ async function createPlusCheckoutSession(options = {}) {
   const session = await sessionResponse.json().catch(() => ({}));
   const accessToken = session?.accessToken;
   if (!accessToken) {
-    throw new Error('请先登录 ChatGPT，当前页面未返回可用 accessToken。');
+    throw new Error('Please log in to ChatGPT first. The current page did not return a usable accessToken.');
   }
 
-  log('Plus：正在创建 checkout 会话...');
+  log('Plus: Creating checkout session...');
   const paymentMethod = normalizePlusPaymentMethod(options.paymentMethod);
   const checkoutPayload = buildPlusCheckoutPayload(paymentMethod);
   const response = await fetch('https://chatgpt.com/backend-api/payments/checkout', {
@@ -868,7 +868,7 @@ async function createPlusCheckoutSession(options = {}) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok || !data?.checkout_session_id) {
     const detail = data?.detail || data?.message || `HTTP ${response.status}`;
-    throw new Error(`创建 Plus Checkout 失败：${detail}`);
+    throw new Error(`Failed to create Plus Checkout: ${detail}`);
   }
 
   const checkoutUrl = buildPlusCheckoutUrl(data.checkout_session_id, paymentMethod);
@@ -898,25 +898,25 @@ async function selectPaymentMethod(method = PLUS_PAYMENT_METHOD_PAYPAL) {
     const now = Date.now();
     if (!lastDiagnosticsAt || now - lastDiagnosticsAt >= PAYPAL_DIAGNOSTIC_LOG_INTERVAL_MS) {
       lastDiagnosticsAt = now;
-      writePaymentMethodDiagnostics(config.id, `正在等待可点击的 ${config.label} 付款方式`, 'warn');
+      writePaymentMethodDiagnostics(config.id, `Waiting for a clickable ${config.label} payment method`, 'warn');
     }
     return null;
   }, {
-    label: `${config.label} 付款方式`,
+    label: `${config.label} payment method`,
     intervalMs: 250,
   });
   console.info(`[MultiPage:plus-checkout] ${config.label} target selected`, summarizeElementForDebug(target));
   await performOperationWithDelay({ stepKey: 'plus-checkout-billing', kind: 'select', label: 'select-payment-method' }, async () => {
     simulateClick(target);
   });
-  log(`Plus Checkout：已点击 ${config.label} 付款方式，正在确认选中状态。`);
+  log(`Plus Checkout: Clicked ${config.label} payment method. Confirming selected state.`);
 
   if (!await waitForPaymentMethodActive(config.id)) {
-    const diagnostics = writePaymentMethodDiagnostics(config.id, `点击 ${config.label} 后页面仍未进入 ${config.label} 账单表单`, 'error');
-    throw new Error(`Plus Checkout：已尝试点击 ${config.label}，但页面未切换到 ${config.label} 表单。请提供控制台 ${config.label} diagnostics 结构。候选数量：${diagnostics.paymentCandidates.length}，银行卡字段仍可见：${diagnostics.cardFieldsVisible ? '是' : '否'}。`);
+    const diagnostics = writePaymentMethodDiagnostics(config.id, `After clicking ${config.label}, the page still did not enter the ${config.label} billing form`, 'error');
+    throw new Error(`Plus Checkout: Tried clicking ${config.label}, but the page did not switch to the ${config.label} form. Please provide the console ${config.label} diagnostics structure. Candidate count: ${diagnostics.paymentCandidates.length}, card fields still visible: ${diagnostics.cardFieldsVisible ? 'Yes' : 'No'}.`);
   }
 
-  log(`Plus Checkout：已确认 ${config.label} 付款方式生效。`);
+  log(`Plus Checkout: Confirmed ${config.label} payment method is active.`);
   return true;
 }
 
@@ -986,7 +986,7 @@ function isLikelyAddressSearchInput(input) {
   if (isNonAddressSearchInput(input)) {
     return false;
   }
-  if (/name|email|e-mail|phone|tel|password|coupon|promo|country|region|postal|zip|city|state|province|card|card\s*number|expiry|expiration|security|cvc|cvv|cc-|全名|姓名|邮箱|电话|密码|国家|地区|邮编|城市|省|州|银行卡|卡号|有效期|安全码/i.test(text)) {
+  if (/name|email|e-mail|phone|tel|password|coupon|promo|country|region|postal|zip|city|state|province|card|card\s*number|expiry|expiration|security|cvc|cvv|cc-|全名|姓名|邮箱|电话|密码|国家|地区|Postal code|City|省|州|银行卡|卡号|有效期|安全码/i.test(text)) {
     return false;
   }
   if (/address|street|billing|search|line\s*1|地址|街道|账单/i.test(text)) {
@@ -1088,13 +1088,13 @@ async function findAddressSearchInput() {
       /address|street|billing|search|line\s*1/i,
       /地址|街道|账单/i,
     ], {
-      exclude: (input) => /city|state|province|postal|zip|country|城市|省|州|邮编|国家|地区/i.test(getFieldText(input)),
+      exclude: (input) => /city|state|province|postal|zip|country|City|省|州|Postal code|国家|地区/i.test(getFieldText(input)),
     });
     if (direct && !isNonAddressSearchInput(direct)) return direct;
     const candidates = getVisibleTextInputs().filter(isLikelyAddressSearchInput);
     return candidates[0] || null;
   }, {
-    label: '地址搜索输入框',
+    label: 'Address search input',
     intervalMs: 250,
   });
 }
@@ -1133,7 +1133,7 @@ async function clickAddressSuggestion(seed = {}) {
     const options = getAddressSuggestions();
     return options.length ? options : null;
   }, {
-    label: '地址推荐列表',
+    label: 'Address suggestion list',
     intervalMs: 250,
     timeoutMs: 6000,
   });
@@ -1436,7 +1436,7 @@ function getStructuredAddressFields() {
   ]);
   const city = findInputByFieldText([
     /city|town|suburb|locality|address[_-]?level[_-]?2|address\[city\]/i,
-    /城市|市区|区市町村|市区町村|市町村/i,
+    /City|市区|区市町村|市区町村|市町村/i,
   ]);
   const region = findInputByFieldText([
     /state|province|region|county|prefecture|administrative|administrative[_-]?area|address[_-]?level[_-]?1|address\[state\]/i,
@@ -1444,7 +1444,7 @@ function getStructuredAddressFields() {
   ]);
   const postalCode = findInputByFieldText([
     /postal|zip|postcode|postal[_-]?code|zip[_-]?code|address\[postal_code\]/i,
-    /邮编|邮政|郵便番号/i,
+    /Postal code|邮政|郵便番号/i,
   ]);
   return { address1, address2, city, region, postalCode };
 }
@@ -1481,7 +1481,7 @@ async function ensureStructuredAddress(seed, options = {}) {
     }
     return null;
   }, {
-    label: '结构化账单地址字段',
+    label: 'Structured billing address fields',
     intervalMs: 250,
     timeoutMs: 6000,
   });
@@ -1494,11 +1494,11 @@ async function ensureStructuredAddress(seed, options = {}) {
 
   const latest = getStructuredAddressFields();
   const missing = [];
-  if (!String(latest.address1?.value || '').trim()) missing.push('地址1');
-  if (!String(latest.city?.value || '').trim()) missing.push('城市');
-  if (!String(latest.postalCode?.value || '').trim()) missing.push('邮编');
+  if (!String(latest.address1?.value || '').trim()) missing.push('Address line 1');
+  if (!String(latest.city?.value || '').trim()) missing.push('City');
+  if (!String(latest.postalCode?.value || '').trim()) missing.push('Postal code');
   if (missing.length) {
-    throw new Error(`Plus Checkout：账单地址字段未填写完整：${missing.join('、')}。`);
+    throw new Error(`Plus Checkout: Billing address fields are incomplete: ${missing.join('、')}.`);
   }
 
   return {
@@ -1513,14 +1513,14 @@ function findSubscribeButton() {
   const submitButtons = getVisibleControls('button[type="submit"], input[type="submit"]');
   const exactSubmit = submitButtons.find((button) => (
     isEnabledControl(button)
-    && /订阅|subscribe|购买\s*ChatGPT\s*Plus|start\s*subscription|place\s*order/i.test(getCombinedSearchText(button))
+    && /Subscribe|subscribe|购买\s*ChatGPT\s*Plus|start\s*subscription|place\s*order/i.test(getCombinedSearchText(button))
   ));
   if (exactSubmit) {
     return exactSubmit;
   }
 
   return findClickableByText([
-    /订阅|继续|确认|支付/i,
+    /Subscribe|继续|确认|支付/i,
     /subscribe|continue|confirm|pay|start\s*subscription|place\s*order/i,
   ]);
 }
@@ -1584,7 +1584,7 @@ function getAssociatedForm(button) {
 async function humanLikeClick(el) {
   throwIfStopped();
   if (!el) {
-    throw new Error('无法点击空元素。');
+    throw new Error('Cannot click an empty element.');
   }
 
   el.scrollIntoView?.({ block: 'center', inline: 'center', behavior: 'instant' });
@@ -1647,8 +1647,8 @@ async function humanLikeClick(el) {
     form.requestSubmit(el);
   }
 
-  console.log('[MultiPage:plus-checkout] 已执行拟人工点击', summarizeElementForDebug(el));
-  log(`已拟人工点击 [${el.tagName}] "${el.textContent?.trim().slice(0, 30) || ''}"`);
+  console.log('[MultiPage:plus-checkout] Executed simulated human click', summarizeElementForDebug(el));
+  log(`Simulated human click executed [${el.tagName}] "${el.textContent?.trim().slice(0, 30) || ''}"`);
 }
 
 async function fillPlusBillingAndSubmit(payload = {}) {
@@ -1759,13 +1759,13 @@ async function clickPlusSubscribe(payload = {}) {
     const button = findSubscribeButton();
     return button || null;
   }, {
-    label: '订阅按钮',
+    label: 'Subscribe button',
     intervalMs: 250,
     timeoutMs: 10000,
   });
   const buttonState = getSubscribeButtonState(subscribeButton);
   if (!buttonState.ready) {
-    log(`订阅按钮当前状态 [${buttonState.status}] "${buttonState.text.slice(0, 40)}"，本轮不点击`);
+    log(`Current subscribe button state [${buttonState.status}] "${buttonState.text.slice(0, 40)}", not clicking in this round`);
     return {
       clicked: false,
       subscribeButtonBusy: buttonState.busy,

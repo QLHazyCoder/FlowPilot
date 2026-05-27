@@ -73,23 +73,23 @@
       const { requireToken = false, requireCredentials = false, requireDomain = false } = options;
       const config = getCloudMailConfig(state);
       if (!config.baseUrl) {
-        throw new Error('Cloud Mail 服务地址为空或格式无效。');
+        throw new Error('Cloud Mail service URL is empty or invalid.');
       }
       if (requireCredentials && (!config.adminEmail || !config.adminPassword)) {
-        throw new Error('Cloud Mail 缺少管理员邮箱或密码。');
+        throw new Error('Cloud Mail admin email or password missing.');
       }
       if (requireToken && !config.token) {
-        throw new Error('Cloud Mail 尚未获取到身份令牌，请先生成 Token。');
+        throw new Error('Cloud Mail has no auth token. Please generate a token first.');
       }
       if (requireDomain && !config.domain) {
-        throw new Error('Cloud Mail 域名为空或格式无效。');
+        throw new Error('Cloud Mail domain is empty or invalid.');
       }
       return config;
     }
 
     async function requestCloudMailJson(config, path, options = {}) {
       if (!fetchImpl) {
-        throw new Error('Cloud Mail 当前运行环境不支持 fetch。');
+        throw new Error('Cloud Mail: fetch not supported in current environment.');
       }
       const {
         method = 'POST',
@@ -113,8 +113,8 @@
         });
       } catch (err) {
         const errorMessage = err?.name === 'AbortError'
-          ? `Cloud Mail 请求超时（>${Math.round(timeoutMs / 1000)} 秒）`
-          : `Cloud Mail 请求失败：${err.message}`;
+          ? `Cloud Mail request timed out (>${Math.round(timeoutMs / 1000)} seconds)`
+          : `Cloud Mail request failed: ${err.message}`;
         throw new Error(errorMessage);
       } finally {
         clearTimeout(timeoutId);
@@ -130,10 +130,10 @@
         const payloadError = typeof parsed === 'object' && parsed
           ? (parsed.message || parsed.error || parsed.msg)
           : '';
-        throw new Error(`Cloud Mail 请求失败：${payloadError || text || `HTTP ${response.status}`}`);
+        throw new Error(`Cloud Mail request failed: ${payloadError || text || `HTTP ${response.status}`}`);
       }
       if (parsed && typeof parsed === 'object' && 'code' in parsed && Number(parsed.code) !== 200) {
-        throw new Error(`Cloud Mail 业务错误：${parsed.message || parsed.msg || `code=${parsed.code}`}`);
+        throw new Error(`Cloud Mail business error: ${parsed.message || parsed.msg || `code=${parsed.code}`}`);
       }
       return parsed;
     }
@@ -153,7 +153,7 @@
       });
       const token = getCloudMailTokenFromResponse(result);
       if (!token) {
-        throw new Error('Cloud Mail 未返回可用 Token。');
+        throw new Error('Cloud Mail did not return a usable token.');
       }
       await setPersistentSettings({ cloudMailToken: token });
       return { config: { ...config, token }, token };
@@ -198,7 +198,7 @@
         source: 'generated:cloudmail',
         preserveAccountIdentity: Boolean(options?.preserveAccountIdentity),
       });
-      await addLog(`Cloud Mail：已生成 ${address}`, 'ok');
+      await addLog(`Cloud Mail: Generated ${address}`, 'ok');
       return address;
     }
 
@@ -212,11 +212,11 @@
         })
         .slice(0, 3)
         .map((message) => {
-          const receivedAt = message?.receivedDateTime || '未知时间';
-          const sender = message?.from?.emailAddress?.address || '未知发件人';
-          const subject = message?.subject || '（无主题）';
+          const receivedAt = message?.receivedDateTime || 'unknown time';
+          const sender = message?.from?.emailAddress?.address || 'unknown sender';
+          const subject = message?.subject || '(no subject)';
           const preview = String(message?.bodyPreview || '').replace(/\s+/g, ' ').trim().slice(0, 80);
-          const address = message?.address || '未知地址';
+          const address = message?.address || 'unknown address';
           return `[${address}] ${receivedAt} | ${sender} | ${subject} | ${preview}`;
         })
         .join(' || ');
@@ -263,12 +263,12 @@
       const targetEmail = resolveCloudMailPollTargetEmail(latestState, pollPayload, config);
       const registrationEmail = normalizeCloudMailReceiveMailbox(latestState.email);
       if (!targetEmail) {
-        throw new Error('Cloud Mail 轮询前缺少目标邮箱地址，请先填写注册邮箱或"邮件接收"邮箱。');
+        throw new Error('Cloud Mail polling missing target email address. Please fill in registration email or "Receive Mail" mailbox.');
       }
       if (registrationEmail && registrationEmail !== targetEmail) {
-        await addLog(`步骤 ${step}：正在轮询 Cloud Mail 收件邮箱（${targetEmail}），注册邮箱为 ${registrationEmail}...`, 'info');
+        await addLog(`Step ${step}: Polling Cloud Mail receive mailbox (${targetEmail}), registration email is ${registrationEmail}...`, 'info');
       } else {
-        await addLog(`步骤 ${step}：正在轮询 Cloud Mail 邮件（${targetEmail}）...`, 'info');
+        await addLog(`Step ${step}: Polling Cloud Mail messages (${targetEmail})...`, 'info');
       }
       const maxAttempts = Number(pollPayload.maxAttempts) || 5;
       const intervalMs = Number(pollPayload.intervalMs) || 3000;
@@ -290,8 +290,8 @@
           const match = matchResult.match;
           if (match?.code) {
             if (matchResult.usedRelaxedFilters) {
-              const fallbackLabel = matchResult.usedTimeFallback ? '宽松匹配 + 时间回退' : '宽松匹配';
-              await addLog(`步骤 ${step}：严格规则未命中，已改用 ${fallbackLabel} 并命中 Cloud Mail 验证码。`, 'warn');
+              const fallbackLabel = matchResult.usedTimeFallback ? 'relaxed match + time fallback' : 'relaxed match';
+              await addLog(`Step ${step}: Strict rules did not match, using ${fallbackLabel} and matched Cloud Mail verification code.`, 'warn');
             }
             return {
               ok: true,
@@ -300,21 +300,21 @@
               mailId: match.message?.id || '',
             };
           }
-          lastError = new Error(`步骤 ${step}：暂未在 Cloud Mail 中找到匹配验证码（${attempt}/${maxAttempts}）。`);
+          lastError = new Error(`Step ${step}: No matching verification code found yet in Cloud Mail (${attempt}/${maxAttempts}).`);
           await addLog(lastError.message, attempt === maxAttempts ? 'warn' : 'info');
           const sample = summarizeCloudMailMessagesForLog(messages);
           if (sample) {
-            await addLog(`步骤 ${step}：最近邮件样本：${sample}`, 'info');
+            await addLog(`Step ${step}: Recent mail sample: ${sample}`, 'info');
           }
         } catch (err) {
           lastError = err;
-          await addLog(`步骤 ${step}：Cloud Mail 轮询失败：${err.message}`, 'warn');
+          await addLog(`Step ${step}: Cloud Mail polling failed: ${err.message}`, 'warn');
         }
         if (attempt < maxAttempts) {
           await sleepWithStop(intervalMs);
         }
       }
-      throw lastError || new Error(`步骤 ${step}：未在 Cloud Mail 中找到新的匹配验证码。`);
+      throw lastError || new Error(`Step ${step}: No new matching verification code found in Cloud Mail.`);
     }
 
     return {

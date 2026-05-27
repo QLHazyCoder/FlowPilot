@@ -520,7 +520,7 @@ function detectKiroFatalPageState(pageText = '', currentUrl = '', pageTitle = ''
     return {
       state: 'proxy_error_page',
       url: currentUrl,
-      fatalMessage: 'Kiro 注册页出现 AWS 请求异常，通常是当前代理 IP 或出口区域异常，请先切换代理后再重试。',
+      fatalMessage: 'Kiro registration page encountered an AWS request error, usually caused by the current proxy IP or exit region. Please switch proxy and retry.',
     };
   }
 
@@ -528,7 +528,7 @@ function detectKiroFatalPageState(pageText = '', currentUrl = '', pageTitle = ''
     return {
       state: 'cloudfront_403_page',
       url: currentUrl,
-      fatalMessage: 'Kiro 注册页返回 403（CloudFront 拒绝请求），通常是当前代理 IP 或区域触发了 AWS 风控，请更换代理后重试。',
+      fatalMessage: 'Kiro registration page returned 403 (CloudFront denied), usually caused by the current proxy IP or region triggering AWS risk control. Please switch proxy and retry.',
     };
   }
 
@@ -546,11 +546,11 @@ function getKiroFatalStateMessage(snapshot = {}) {
   }
   switch (snapshot?.state) {
     case 'cloudfront_403_page':
-      return 'Kiro 注册页返回 403（CloudFront 拒绝请求），通常是当前代理 IP 或区域触发了 AWS 风控，请更换代理后重试。';
+      return 'Kiro registration page returned 403 (CloudFront denied), usually caused by the current proxy IP or region triggering AWS risk control. Please switch proxy and retry.';
     case 'proxy_error_page':
-      return 'Kiro 注册页出现 AWS 请求异常，通常是当前代理 IP 或出口区域异常，请先切换代理后再重试。';
+      return 'Kiro registration page encountered an AWS request error, usually caused by the current proxy IP or exit region. Please switch proxy and retry.';
     default:
-      return `Kiro 页面出现异常状态：${snapshot?.state || 'unknown'}`;
+      return `Kiro page entered an unexpected state: ${snapshot?.state || 'unknown'}`;
   }
 }
 
@@ -697,7 +697,7 @@ async function waitForKiroState(predicate, options = {}) {
   if (isKiroFatalState(finalState.state)) {
     throw new Error(getKiroFatalStateMessage(finalState));
   }
-  throw new Error(options.timeoutMessage || `等待 Kiro 页面状态超时：${finalState.state}`);
+  throw new Error(options.timeoutMessage || `Timed out waiting for Kiro page state: ${finalState.state}`);
 }
 
 async function ensureKiroRegisterPageState(payload = {}) {
@@ -705,7 +705,7 @@ async function ensureKiroRegisterPageState(payload = {}) {
     ? payload.targetStates.map((entry) => String(entry || '').trim()).filter(Boolean)
     : [];
   if (!targetStates.length) {
-    throw new Error('缺少 Kiro 目标页面状态。');
+    throw new Error('Missing target Kiro page states.');
   }
 
   return waitForKiroState(
@@ -713,7 +713,7 @@ async function ensureKiroRegisterPageState(payload = {}) {
     {
       timeoutMs: payload?.timeoutMs,
       retryDelayMs: payload?.retryDelayMs,
-      timeoutMessage: payload?.timeoutMessage || `等待 Kiro 页面进入 ${targetStates.join(' / ')} 超时，当前页面：${location.href}`,
+      timeoutMessage: payload?.timeoutMessage || `Timed out waiting for Kiro page to enter ${targetStates.join(' / ')}, current page: ${location.href}`,
     }
   );
 }
@@ -723,7 +723,7 @@ async function waitForKiroRegisterStateChange(payload = {}) {
     ? payload.fromStates.map((entry) => String(entry || '').trim()).filter(Boolean)
     : [];
   if (!fromStates.length) {
-    throw new Error('缺少 Kiro 原始页面状态。');
+    throw new Error('Missing source Kiro page states.');
   }
 
   return waitForKiroState(
@@ -739,7 +739,7 @@ async function waitForKiroRegisterStateChange(payload = {}) {
     {
       timeoutMs: payload?.timeoutMs,
       retryDelayMs: payload?.retryDelayMs,
-      timeoutMessage: payload?.timeoutMessage || `等待 Kiro 页面离开 ${fromStates.join(' / ')} 超时，当前页面：${location.href}`,
+      timeoutMessage: payload?.timeoutMessage || `Timed out waiting for Kiro page to leave ${fromStates.join(' / ')}, current page: ${location.href}`,
     }
   );
 }
@@ -765,7 +765,7 @@ async function waitForKiroAuthorizationAdvance(previousState = {}, options = {})
     {
       timeoutMs: options.timeoutMs,
       retryDelayMs: options.retryDelayMs,
-      timeoutMessage: options.timeoutMessage || `等待 Kiro 授权页进入下一步超时：${location.href}`,
+      timeoutMessage: options.timeoutMessage || `Timed out waiting for Kiro authorization page to advance: ${location.href}`,
     }
   );
 }
@@ -777,7 +777,7 @@ async function selectKiroBuilderId() {
     retryDelayMs: 250,
   });
   if (!readyState.actionButton) {
-    throw new Error('Kiro 官方登录页未找到 Builder ID 登录按钮。');
+    throw new Error('Builder ID sign-in button not found on the Kiro official sign-in page.');
   }
   simulateClick(readyState.actionButton);
   return {
@@ -791,7 +791,7 @@ async function selectKiroBuilderId() {
 async function submitKiroEmail(payload = {}) {
   const email = String(payload?.email || '').trim();
   if (!email) {
-    throw new Error('缺少 Kiro 注册邮箱，无法继续提交。');
+    throw new Error('Missing Kiro registration email, cannot continue.');
   }
 
   const readyState = await ensureKiroRegisterPageState({
@@ -800,7 +800,7 @@ async function submitKiroEmail(payload = {}) {
     retryDelayMs: payload?.retryDelayMs || 250,
   });
   if (!readyState.emailInput || !readyState.continueButton) {
-    throw new Error('Kiro 邮箱页未找到可用的输入框或继续按钮。');
+    throw new Error('Kiro email page did not provide a usable input or continue button.');
   }
 
   fillInput(readyState.emailInput, email);
@@ -816,7 +816,7 @@ async function submitKiroEmail(payload = {}) {
 async function submitKiroName(payload = {}) {
   const fullName = String(payload?.fullName || '').trim();
   if (!fullName) {
-    throw new Error('缺少 Kiro 注册姓名，无法继续提交。');
+    throw new Error('Missing Kiro registration name, cannot continue.');
   }
 
   const readyState = await ensureKiroRegisterPageState({
@@ -825,7 +825,7 @@ async function submitKiroName(payload = {}) {
     retryDelayMs: payload?.retryDelayMs || 250,
   });
   if (!readyState.nameInput || !readyState.continueButton) {
-    throw new Error('Kiro 姓名页未找到可用的输入框或继续按钮。');
+    throw new Error('Kiro name page did not provide a usable input or continue button.');
   }
 
   fillInput(readyState.nameInput, fullName);
@@ -841,7 +841,7 @@ async function submitKiroName(payload = {}) {
 async function submitKiroVerificationCode(payload = {}) {
   const code = String(payload?.code || '').trim();
   if (!code) {
-    throw new Error('缺少 Kiro 邮箱验证码，无法继续提交。');
+    throw new Error('Missing Kiro email verification code, cannot continue.');
   }
 
   const readyState = await ensureKiroRegisterPageState({
@@ -850,7 +850,7 @@ async function submitKiroVerificationCode(payload = {}) {
     retryDelayMs: payload?.retryDelayMs || 250,
   });
   if (!readyState.otpInput || !readyState.verifyButton) {
-    throw new Error('Kiro 验证码页未找到可用的输入框或继续按钮。');
+    throw new Error('Kiro verification-code page did not provide a usable input or continue button.');
   }
 
   fillInput(readyState.otpInput, code);
@@ -866,7 +866,7 @@ async function submitKiroVerificationCode(payload = {}) {
 async function submitKiroPassword(payload = {}) {
   const password = String(payload?.password || '');
   if (!password) {
-    throw new Error('缺少 Kiro 账户密码，无法继续提交。');
+    throw new Error('Missing Kiro account password, cannot continue.');
   }
 
   const readyState = await ensureKiroRegisterPageState({
@@ -875,13 +875,13 @@ async function submitKiroPassword(payload = {}) {
     retryDelayMs: payload?.retryDelayMs || 250,
   });
   if (!readyState.passwordInput || !readyState.continueButton) {
-    throw new Error('Kiro 密码页未找到可用的密码框或继续按钮。');
+    throw new Error('Kiro password page did not provide a usable password field or continue button.');
   }
 
   fillInput(readyState.passwordInput, password);
   await sleep(150);
   if (String(readyState.passwordInput.value || '') !== password) {
-    throw new Error('Kiro \u5bc6\u7801\u9875\u4e3b\u5bc6\u7801\u6846\u586b\u5165\u5931\u8d25\uff0c\u5df2\u505c\u6b62\u63d0\u4ea4\uff0c\u8bf7\u68c0\u67e5\u9875\u9762\u5b57\u6bb5\u7ed3\u6784\u3002');
+    throw new Error('Failed to fill the primary password field on the Kiro password page; submission stopped. Please check the page field structure.');
   }
 
   const confirmPasswordInput = readyState.confirmPasswordInput
@@ -893,7 +893,7 @@ async function submitKiroPassword(payload = {}) {
     fillInput(confirmPasswordInput, password);
     await sleep(150);
     if (String(confirmPasswordInput.value || '') !== password) {
-      throw new Error('Kiro \u5bc6\u7801\u9875\u786e\u8ba4\u5bc6\u7801\u6846\u586b\u5165\u5931\u8d25\uff0c\u5df2\u505c\u6b62\u63d0\u4ea4\uff0c\u8bf7\u68c0\u67e5\u9875\u9762\u5b57\u6bb5\u7ed3\u6784\u3002');
+      throw new Error('Failed to fill the confirm-password field on the Kiro password page; submission stopped. Please check the page field structure.');
     }
   }
 
@@ -924,7 +924,7 @@ async function confirmKiroRegisterConsent(payload = {}) {
   const actions = [];
   while (currentState.state === 'authorization_page' && actions.length < maxActions) {
     if (!currentState.actionButton) {
-      throw new Error('Kiro 授权页未找到可用的授权按钮。');
+      throw new Error('Kiro authorization page did not provide a usable authorization button.');
     }
 
     actions.push({
@@ -935,12 +935,12 @@ async function confirmKiroRegisterConsent(payload = {}) {
     currentState = await waitForKiroAuthorizationAdvance(currentState, {
       timeoutMs: payload?.timeoutMs || DEFAULT_KIRO_PAGE_LOAD_TIMEOUT_MS,
       retryDelayMs: payload?.retryDelayMs || 250,
-      timeoutMessage: 'Kiro 授权按钮点击后页面未继续，请检查当前授权页状态。',
+      timeoutMessage: 'Page did not advance after clicking the Kiro authorization button. Please check the current authorization page state.',
     });
   }
 
   if (currentState.state !== 'success_page' && currentState.state !== 'kiro_web_signed_in') {
-    throw new Error('Kiro 授权页未完成确认访问流程。');
+    throw new Error('Kiro authorization page did not complete the confirm-access flow.');
   }
 
   return {
@@ -991,7 +991,7 @@ async function handleKiroRegisterCommand(message) {
       if (nodeId === 'kiro-complete-register-consent') {
         return confirmKiroRegisterConsent(message.payload || {});
       }
-      throw new Error(`register-page.js 不处理节点：${nodeId}`);
+      throw new Error(`register-page.js does not handle node: ${nodeId}`);
     }
     default:
       return null;
@@ -1017,7 +1017,7 @@ if (document.documentElement.getAttribute(KIRO_REGISTER_PAGE_LISTENER_SENTINEL) 
             sendResponse({ stopped: true, error: error.message });
             return;
           }
-          sendResponse({ error: error?.message || String(error || '未知错误') });
+          sendResponse({ error: error?.message || String(error || 'Unknown error') });
         });
       return true;
     }

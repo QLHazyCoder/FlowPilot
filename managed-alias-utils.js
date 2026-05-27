@@ -9,9 +9,9 @@
 
   const PROVIDER_CONFIGS = {
     [GMAIL_PROVIDER]: {
-      baseLabel: 'Gmail 原邮箱',
-      basePlaceholder: '例如 yourname@gmail.com',
-      label: 'Gmail +tag 邮箱',
+      baseLabel: 'Gmail Base Email',
+      basePlaceholder: 'e.g. yourname@gmail.com',
+      label: 'Gmail +tag Email',
       parseBaseEmail(rawValue = '') {
         const value = String(rawValue || '').trim().toLowerCase();
         const match = value.match(/^([^@\s+]+)@((?:gmail|googlemail)\.com)$/i);
@@ -30,13 +30,13 @@
       buildAlias(parsedBaseEmail, tag) {
         return `${parsedBaseEmail.localPart}+${tag}@${parsedBaseEmail.domain}`;
       },
-      generationHint: '先填写 Gmail 原邮箱后点“生成”，也可以直接手动填写完整的 Gmail 邮箱。',
-      registrationPlaceholder: '点击生成 Gmail +tag 邮箱，或手动填写完整邮箱',
+      generationHint: 'Fill in the Gmail base email then click "Generate". You can also manually enter a full Gmail address.',
+      registrationPlaceholder: 'Click to generate a Gmail +tag email, or manually enter a full email',
     },
     [MAIL_2925_PROVIDER]: {
-      baseLabel: '2925 基邮箱',
-      basePlaceholder: '例如 yourname@2925.com',
-      label: '2925 邮箱',
+      baseLabel: '2925 Base Email',
+      basePlaceholder: 'e.g. yourname@2925.com',
+      label: '2925 Email',
       parseBaseEmail(rawValue = '') {
         const value = String(rawValue || '').trim().toLowerCase();
         const match = value.match(/^([^@\s+]+)@(2925\.com)$/i);
@@ -58,8 +58,8 @@
       buildAlias(parsedBaseEmail, tag) {
         return `${parsedBaseEmail.localPart}${tag}@${parsedBaseEmail.domain}`;
       },
-      generationHint: '先填写 2925 基邮箱后点“生成”，也可以直接手动填写完整的 2925 邮箱。',
-      registrationPlaceholder: '点击生成 2925 邮箱，或手动填写完整邮箱',
+      generationHint: 'Fill in the 2925 base email then click "Generate". You can also manually enter a full 2925 address.',
+      registrationPlaceholder: 'Click to generate a 2925 email, or manually enter a full email',
     },
   };
 
@@ -133,12 +133,12 @@
 
     const parsedBaseEmail = parseManagedAliasBaseEmail(baseEmail, provider);
     if (!parsedBaseEmail) {
-      throw new Error(`${config.baseLabel}格式不正确`);
+      throw new Error(`${config.baseLabel} format is invalid`);
     }
 
     const normalizedTag = String(tag || '').trim();
     if (!normalizedTag) {
-      throw new Error(`${config.label}生成标签为空`);
+      throw new Error(`${config.label} generated tag is empty`);
     }
 
     return config.buildAlias(parsedBaseEmail, normalizedTag);
@@ -150,8 +150,8 @@
     return {
       baseLabel: config.baseLabel,
       basePlaceholder: config.basePlaceholder,
-      buttonLabel: '生成',
-      successVerb: '生成',
+      buttonLabel: 'Generate',
+      successVerb: 'Generated',
       label: config.label,
       placeholder: config.registrationPlaceholder,
       hint: config.generationHint,

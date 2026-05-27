@@ -40,7 +40,7 @@
   }
 
   function getStep1ErrorMessage(error) {
-    return error?.message || String(error || '未知错误');
+    return error?.message || String(error || 'Unknown error');
   }
 
   async function collectStep1Cookies(chromeApi) {
@@ -127,12 +127,12 @@
 
     async function clearOpenAiCookiesBeforeStep1() {
       if (!chromeApi?.cookies?.getAll || !chromeApi.cookies?.remove) {
-        await addLog('步骤 1：当前浏览器不支持 cookies API，跳过打开官网前 cookie 清理。', 'warn');
+        await addLog('Step 1: The current browser does not support the cookies API. Skipping cookie cleanup before opening the website.', 'warn');
         return;
       }
 
       const startedAt = Date.now();
-      await addLog('步骤 1：打开 ChatGPT 官网前清理 ChatGPT / OpenAI cookies...', 'info');
+      await addLog('Step 1: Clearing ChatGPT / OpenAI cookies before opening the ChatGPT website...', 'info');
       const cookies = await collectStep1Cookies(chromeApi);
       let removedCount = 0;
       for (const cookie of cookies) {
@@ -142,12 +142,12 @@
       }
 
       const elapsedMs = Date.now() - startedAt;
-      await addLog(`步骤 1：已清理 ${removedCount} 个 ChatGPT / OpenAI cookies（耗时 ${elapsedMs}ms）。`, 'ok');
+      await addLog(`Step 1: Cleared ${removedCount} ChatGPT / OpenAI cookies (took ${elapsedMs}ms).`, 'ok');
     }
 
     async function executeStep1() {
       await clearOpenAiCookiesBeforeStep1();
-      await addLog('步骤 1：正在打开 ChatGPT 官网...');
+      await addLog('Step 1: Opening the ChatGPT website...');
       await openSignupEntryTab(1);
       await completeNodeFromBackground('open-chatgpt', {});
     }

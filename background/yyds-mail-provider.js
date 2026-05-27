@@ -45,20 +45,20 @@
       const { requireApiKey = false, requireInbox = false } = options;
       const config = getYydsMailConfig(state);
       if (!config.baseUrl) {
-        throw new Error('YYDS Mail API 地址为空或格式无效。');
+        throw new Error('YYDS Mail API base URL is empty or invalid.');
       }
       if (requireApiKey && !config.apiKey) {
-        throw new Error('YYDS Mail API Key 为空，请先在侧边栏填写。');
+        throw new Error('YYDS Mail API key is empty. Please fill it in the side panel first.');
       }
       if (requireInbox && (!config.currentInbox?.address || !config.currentInbox?.token)) {
-        throw new Error('YYDS Mail 当前没有可用邮箱，请先获取邮箱。');
+        throw new Error('YYDS Mail has no available mailbox right now. Please request one first.');
       }
       return config;
     }
 
     async function requestYydsMailJson(config, path, options = {}) {
       if (!fetchImpl) {
-        throw new Error('YYDS Mail 当前运行环境不支持 fetch。');
+        throw new Error('YYDS Mail is not supported in this runtime (no fetch).');
       }
       const {
         method = 'GET',
@@ -85,8 +85,8 @@
         });
       } catch (err) {
         const errorMessage = err?.name === 'AbortError'
-          ? `YYDS Mail 请求超时（>${Math.round(timeoutMs / 1000)} 秒）`
-          : `YYDS Mail 请求失败：${err.message}`;
+          ? `YYDS Mail request timed out (>${Math.round(timeoutMs / 1000)} seconds)`
+          : `YYDS Mail request failed: ${err.message}`;
         throw new Error(errorMessage);
       } finally {
         clearTimeout(timeoutId);
@@ -104,11 +104,11 @@
         const payloadError = parsed && typeof parsed === 'object'
           ? (parsed.error || parsed.message || parsed.msg || parsed.errorCode)
           : '';
-        throw new Error(`YYDS Mail 请求失败：${payloadError || text || `HTTP ${response.status}`}`);
+        throw new Error(`YYDS Mail request failed: ${payloadError || text || `HTTP ${response.status}`}`);
       }
 
       if (parsed && typeof parsed === 'object' && parsed.success === false) {
-        throw new Error(`YYDS Mail 业务错误：${parsed.error || parsed.message || parsed.errorCode || 'unknown_error'}`);
+        throw new Error(`YYDS Mail business error: ${parsed.error || parsed.message || parsed.errorCode || 'unknown_error'}`);
       }
 
       if (parsed && typeof parsed === 'object' && Object.prototype.hasOwnProperty.call(parsed, 'data')) {
@@ -143,7 +143,7 @@
       });
       const inbox = normalizeYydsMailInbox(data);
       if (!inbox.address || !inbox.token) {
-        throw new Error('YYDS Mail 创建邮箱成功，但未返回可用 address/token。');
+        throw new Error('YYDS Mail mailbox creation succeeded but did not return a usable address/token.');
       }
 
       await setState({ currentYydsMailInbox: inbox });
@@ -151,7 +151,7 @@
         source: `generated:${YYDS_MAIL_PROVIDER}`,
         preserveAccountIdentity: Boolean(options?.preserveAccountIdentity),
       });
-      await addLog(`YYDS Mail：已创建邮箱 ${inbox.address}`, 'ok');
+      await addLog(`YYDS Mail: Created mailbox ${inbox.address}`, 'ok');
       return inbox.address;
     }
 
@@ -217,9 +217,9 @@
         })
         .slice(0, 3)
         .map((message) => {
-          const receivedAt = message?.receivedDateTime || '未知时间';
-          const sender = message?.from?.emailAddress?.address || '未知发件人';
-          const subject = message?.subject || '（无主题）';
+          const receivedAt = message?.receivedDateTime || 'unknown time';
+          const sender = message?.from?.emailAddress?.address || 'unknown sender';
+          const subject = message?.subject || '(no subject)';
           const preview = String(message?.bodyPreview || '').replace(/\s+/g, ' ').trim().slice(0, 80);
           return `${receivedAt} | ${sender} | ${subject} | ${preview}`;
         })
@@ -237,7 +237,7 @@
         try {
           details.push(await getYydsMailMessageDetail(state, message.id, { address }));
         } catch (err) {
-          await addLog(`YYDS Mail：读取邮件详情 ${message.id} 失败：${err.message}`, 'warn');
+          await addLog(`YYDS Mail: Failed to read message detail ${message.id}: ${err.message}`, 'warn');
           details.push(message);
         }
       }
@@ -248,10 +248,10 @@
       const latestState = state || await getState();
       const targetEmail = resolveYydsMailPollTargetEmail(latestState, pollPayload);
       if (!targetEmail) {
-        throw new Error('YYDS Mail 轮询前缺少目标邮箱地址，请先获取邮箱。');
+        throw new Error('YYDS Mail is missing a target email address before polling. Please request a mailbox first.');
       }
 
-      await addLog(`步骤 ${step}：正在轮询 YYDS Mail 邮件（${targetEmail}）...`, 'info');
+      await addLog(`Step ${step}: Polling YYDS Mail messages (${targetEmail})...`, 'info');
       const maxAttempts = Number(pollPayload.maxAttempts) || 5;
       const intervalMs = Number(pollPayload.intervalMs) || 3000;
       let lastError = null;
@@ -275,8 +275,8 @@
           const match = matchResult.match;
           if (match?.code) {
             if (matchResult.usedRelaxedFilters) {
-              const fallbackLabel = matchResult.usedTimeFallback ? '宽松匹配 + 时间回退' : '宽松匹配';
-              await addLog(`步骤 ${step}：严格规则未命中，已改用 ${fallbackLabel} 并命中 YYDS Mail 验证码。`, 'warn');
+              const fallbackLabel = matchResult.usedTimeFallback ? 'relaxed match + time fallback' : 'relaxed match';
+              await addLog(`Step ${step}: Strict rules did not match; switched to ${fallbackLabel} and matched a YYDS Mail verification code.`, 'warn');
             }
             return {
               ok: true,
@@ -286,22 +286,22 @@
             };
           }
 
-          lastError = new Error(`步骤 ${step}：暂未在 YYDS Mail 中找到匹配验证码（${attempt}/${maxAttempts}）。`);
+          lastError = new Error(`Step ${step}: No matching verification code found in YYDS Mail yet (${attempt}/${maxAttempts}).`);
           await addLog(lastError.message, attempt === maxAttempts ? 'warn' : 'info');
           const sample = summarizeYydsMailMessagesForLog(detailedMessages.length ? detailedMessages : messages);
           if (sample) {
-            await addLog(`步骤 ${step}：最近邮件样本：${sample}`, 'info');
+            await addLog(`Step ${step}: Recent message sample: ${sample}`, 'info');
           }
         } catch (err) {
           lastError = err;
-          await addLog(`步骤 ${step}：YYDS Mail 轮询失败：${err.message}`, 'warn');
+          await addLog(`Step ${step}: YYDS Mail polling failed: ${err.message}`, 'warn');
         }
         if (attempt < maxAttempts) {
           await sleepWithStop(intervalMs);
         }
       }
 
-      throw lastError || new Error(`步骤 ${step}：未在 YYDS Mail 中找到新的匹配验证码。`);
+      throw lastError || new Error(`Step ${step}: No new matching verification code found in YYDS Mail.`);
     }
 
     async function clearYydsMailRuntimeState(options = {}) {

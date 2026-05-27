@@ -86,7 +86,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     ensureMail2925Session(message.payload).then((result) => {
       sendResponse(result);
     }).catch((err) => {
-      sendResponse({ error: err?.message || String(err || '2925 登录失败') });
+      sendResponse({ error: err?.message || String(err || '2925 login failed') });
     });
     return true;
   }
@@ -97,12 +97,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse(result);
     }).catch((err) => {
       if (isStopError(err)) {
-        log(`步骤 ${message.step}：已被用户停止。`, 'warn');
+        log(`Step ${message.step}: Stopped by user.`, 'warn');
         sendResponse({ stopped: true, error: err.message });
         return;
       }
 
-      log(`步骤 ${message.step}：邮箱轮询失败：${err.message}`, 'warn');
+      log(`Step ${message.step}: Mailbox polling failed: ${err.message}`, 'warn');
       sendResponse({ error: err.message });
     });
     return true;
@@ -112,7 +112,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     Promise.resolve(deleteAllMailboxEmails(message.step)).then((deleted) => {
       sendResponse({ ok: true, deleted });
     }).catch((err) => {
-      sendResponse({ ok: false, error: err?.message || String(err || '删除邮件失败') });
+      sendResponse({ ok: false, error: err?.message || String(err || 'Failed to delete email') });
     });
     return true;
   }
@@ -1172,12 +1172,12 @@ async function ensureMail2925Session(payload = {}) {
   const password = String(payload?.password || '');
   const forceLogin = Boolean(payload?.forceLogin);
   const allowLoginWhenOnLoginPage = payload?.allowLoginWhenOnLoginPage !== false;
-  log(`步骤 0：2925 登录态检查开始，当前地址 ${location.href}，forceLogin=${forceLogin ? 'true' : 'false'}`, 'info');
+  log(`Step 0: 2925 login state check started, current URL ${location.href}, forceLogin=${forceLogin ? 'true' : 'false'}`, 'info');
 
   for (let attempt = 0; attempt < 10; attempt += 1) {
     throwIfStopped();
     const currentState = detectMail2925ViewState();
-    log(`步骤 0：2925 登录页状态探测，第 ${attempt + 1}/10 次，状态=${currentState.view}，地址=${location.href}`, 'info');
+    log(`Step 0: 2925 login page state detection, attempt ${attempt + 1}/10, state=${currentState.view}, URL=${location.href}`, 'info');
     if (currentState.view === 'limit') {
       return {
         ok: false,
@@ -1211,7 +1211,7 @@ async function ensureMail2925Session(payload = {}) {
   }
 
   const loginState = detectMail2925ViewState();
-  log(`步骤 0：2925 准备执行登录，当前状态=${loginState.view}，地址=${location.href}`, 'info');
+  log(`Step 0: 2925 preparing to perform login, current state=${loginState.view}, URL=${location.href}`, 'info');
   if (loginState.view === 'mailbox') {
     return {
       ok: true,
@@ -1243,10 +1243,10 @@ async function ensureMail2925Session(payload = {}) {
   const passwordInput = findMail2925LoginPasswordInput();
   const loginButton = findLoginButton();
   if (!emailInput || !passwordInput || !loginButton) {
-    throw new Error('2925：未识别到可用的登录表单，请确认当前页面处于 2925 登录页。');
+    throw new Error('2925: No usable login form recognized. Please confirm current page is the 2925 login page.');
   }
   if (!email || !password) {
-    throw new Error('2925：当前账号缺少邮箱或密码，无法自动登录。');
+    throw new Error('2925: Current account is missing email or password, cannot auto-login.');
   }
 
   await ensureAgreementChecked();
@@ -1259,16 +1259,16 @@ async function ensureMail2925Session(payload = {}) {
   });
   await sleep(200);
   await sleep(1000);
-  log(`步骤 0：2925 已定位到登录表单，准备点击“登录”，当前地址 ${location.href}`, 'info');
+  log(`Step 0: 2925 located login form, ready to click "Login", current URL ${location.href}`, 'info');
   await performOperationWithDelay({ stepKey: 'fetch-signup-code', kind: 'submit', label: 'mail2925-login-submit' }, async () => {
     simulateClick(loginButton);
   });
-  log(`步骤 0：2925 已点击“登录”，点击后地址 ${location.href}`, 'info');
+  log(`Step 0: 2925 clicked "Login", URL after click ${location.href}`, 'info');
 
   const finalState = await waitForMail2925View('mailbox', 40000);
-  log(`步骤 0：2925 登录等待结束，状态=${finalState.view}，地址=${location.href}`, 'info');
+  log(`Step 0: 2925 login wait finished, state=${finalState.view}, URL=${location.href}`, 'info');
   if (finalState.view !== 'mailbox') {
-    throw new Error('2925：提交账号密码后未进入收件箱。');
+    throw new Error('2925: Did not enter inbox after submitting credentials.');
   }
 
   return {
@@ -1300,7 +1300,7 @@ async function handlePollEmail(step, payload) {
     throwIfMail2925LimitReached();
   }
 
-  log(`步骤 ${step}：开始轮询 2925 邮箱（最多 ${maxAttempts} 次）`);
+  log(`Step ${step}: Starting 2925 mailbox polling (max ${maxAttempts} attempts)`);
 
   let initialItems = [];
   let initialLoadUsedRefresh = false;
@@ -1316,18 +1316,18 @@ async function handlePollEmail(step, payload) {
       throwIfMail2925LimitReached();
     }
     if (!refreshedMailbox.ready) {
-      throw new Error('2925 邮箱列表未加载完成，请确认当前已打开收件箱。');
+      throw new Error('2925 mailbox list did not finish loading. Please confirm inbox is open.');
     }
     initialItems = refreshedMailbox.items;
   }
 
-  log(`步骤 ${step}：邮件列表已加载，共 ${initialItems.length} 封邮件`);
+  log(`Step ${step}: Mail list loaded, ${initialItems.length} emails total`);
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     if (typeof throwIfMail2925LimitReached === 'function') {
       throwIfMail2925LimitReached();
     }
-    log(`步骤 ${step}：正在轮询 2925 邮箱，第 ${attempt}/${maxAttempts} 次`);
+    log(`Step ${step}: Polling 2925 mailbox, attempt ${attempt}/${maxAttempts}`);
 
     if (attempt > 1 || !initialLoadUsedRefresh) {
       await returnToInbox();
@@ -1337,7 +1337,7 @@ async function handlePollEmail(step, payload) {
 
     const mailbox = await waitForMailboxReady(3000);
     if (!mailbox.ready) {
-      throw new Error('2925 邮箱列表未加载完成，请确认当前已打开收件箱。');
+      throw new Error('2925 mailbox list did not finish loading. Please confirm inbox is open.');
     }
     const items = mailbox.items;
     if (items.length > 0) {
@@ -1381,19 +1381,19 @@ async function handlePollEmail(step, payload) {
         }
 
         if (excludedCodeSet.has(candidateCode)) {
-          log(`步骤 ${step}：跳过排除的验证码：${candidateCode}`, 'info');
+          log(`Step ${step}: Skipping excluded verification code: ${candidateCode}`, 'info');
           continue;
         }
         if (seenCodes.has(candidateCode)) {
-          log(`步骤 ${step}：跳过已处理过的验证码：${candidateCode}`, 'info');
+          log(`Step ${step}: Skipping already processed verification code: ${candidateCode}`, 'info');
           continue;
         }
 
         seenCodes.add(candidateCode);
         persistSeenCodes();
-        const source = bodyCode ? '邮件正文' : '邮件预览';
-        const timeLabel = itemTimestamp ? `，时间：${new Date(itemTimestamp).toLocaleString('zh-CN', { hour12: false })}` : '';
-        log(`步骤 ${step}：已找到验证码：${candidateCode}（来源：${source}${timeLabel}）`, 'ok');
+        const source = bodyCode ? 'mail body' : 'mail preview';
+        const timeLabel = itemTimestamp ? `, time: ${new Date(itemTimestamp).toLocaleString('zh-CN', { hour12: false })}` : '';
+        log(`Step ${step}: Found verification code: ${candidateCode} (source: ${source}${timeLabel})`, 'ok');
         return { ok: true, code: candidateCode, emailTimestamp: Date.now() };
       }
     }
@@ -1404,7 +1404,7 @@ async function handlePollEmail(step, payload) {
   }
 
   throw new Error(
-    `${(maxAttempts * intervalMs / 1000).toFixed(0)} 秒后仍未在 2925 邮箱中找到新的匹配邮件。请手动检查收件箱。`
+    `No new matching email found in 2925 mailbox after ${(maxAttempts * intervalMs / 1000).toFixed(0)} seconds. Please manually check the inbox.`
   );
 }
 

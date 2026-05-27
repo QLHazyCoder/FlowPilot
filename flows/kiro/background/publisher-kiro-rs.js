@@ -70,7 +70,7 @@
   function normalizeKiroRsBaseUrl(value = '') {
     const normalized = cleanString(value).replace(/\/+$/, '');
     if (!normalized) {
-      throw new Error('缺少 kiro.rs 管理后台地址。');
+      throw new Error('Missing kiro.rs admin URL.');
     }
     return normalized.endsWith('/admin')
       ? normalized.slice(0, -'/admin'.length)
@@ -80,18 +80,18 @@
   function normalizeKiroUploadMessage(value = '') {
     const rawValue = cleanString(value);
     if (!rawValue) {
-      return '上传成功';
+      return 'Upload succeeded';
     }
 
     const normalizedValue = rawValue.toLowerCase();
     if (normalizedValue === 'uploaded' || normalizedValue === 'credential uploaded.') {
-      return '上传成功';
+      return 'Upload succeeded';
     }
     return rawValue;
   }
 
   function getErrorMessage(error) {
-    return error instanceof Error ? error.message : String(error ?? '未知错误');
+    return error instanceof Error ? error.message : String(error ?? 'Unknown error');
   }
 
   async function readResponse(response) {
@@ -152,7 +152,7 @@
 
   function resolveKiroTargetConfig(state = {}, targetId = DEFAULT_TARGET_ID) {
     if (targetId !== DEFAULT_TARGET_ID) {
-      throw new Error(`暂不支持 Kiro 发布目标：${targetId}`);
+      throw new Error(`Kiro publish target not supported: ${targetId}`);
     }
     const nestedConfig = state?.settingsState?.flows?.kiro?.targets?.[targetId] || {};
     return {
@@ -193,7 +193,7 @@
   async function buildMachineId(refreshToken = '') {
     const normalizedRefreshToken = cleanString(refreshToken);
     if (!normalizedRefreshToken) {
-      throw new Error('缺少 refreshToken，无法生成 machineId。');
+      throw new Error('Missing refreshToken, cannot generate machineId.');
     }
     return sha256Hex(`KotlinNativeAPI/${normalizedRefreshToken}`);
   }
@@ -214,13 +214,13 @@
     const email = cleanString(register.email || state?.email);
 
     if (!refreshToken) {
-      throw new Error('缺少桌面授权 refreshToken，请先完成步骤 8。');
+      throw new Error('Missing desktop authorization refreshToken, please complete step 8 first.');
     }
     if (!clientId || !clientSecret) {
-      throw new Error('缺少桌面授权 clientId 或 clientSecret，请先完成步骤 7-8。');
+      throw new Error('Missing desktop authorization clientId or clientSecret, please complete steps 7-8 first.');
     }
     if (!email) {
-      throw new Error('缺少注册邮箱，无法上传到 kiro.rs。');
+      throw new Error('Missing registration email, cannot upload to kiro.rs.');
     }
 
     return {
@@ -253,34 +253,34 @@
       return {
         ok: true,
         status: response.status,
-        message: `kiro.rs 连接正常（HTTP ${response.status}）`,
+        message: `kiro.rs connection OK (HTTP ${response.status})`,
       };
     }
     if (response.status === 405) {
       return {
         ok: true,
         status: response.status,
-        message: 'kiro.rs 上传接口可访问。',
+        message: 'kiro.rs upload endpoint is reachable.',
       };
     }
     if (response.status === 401 || response.status === 403) {
       return {
         ok: false,
         status: response.status,
-        message: `kiro.rs API Key 被拒绝（HTTP ${response.status}${detail ? `：${detail}` : ''}）`,
+        message: `kiro.rs API key rejected (HTTP ${response.status}${detail ? `: ${detail}` : ''})`,
       };
     }
     if (response.status === 404) {
       return {
         ok: false,
         status: response.status,
-        message: `未找到 kiro.rs 管理接口（HTTP 404${detail ? `：${detail}` : ''}）`,
+        message: `kiro.rs admin endpoint not found (HTTP 404${detail ? `: ${detail}` : ''})`,
       };
     }
     return {
       ok: false,
       status: response.status,
-      message: detail || `kiro.rs 连接失败（HTTP ${response.status}）`,
+      message: detail || `kiro.rs connection failed (HTTP ${response.status})`,
     };
   }
 
@@ -298,7 +298,7 @@
     const body = await readResponse(response);
     if (!response.ok) {
       const message = readKiroRsResponseMessage(body, response.statusText) || `HTTP ${response.status}`;
-      throw new Error(`kiro.rs 凭据上传失败：${message}`);
+      throw new Error(`kiro.rs credential upload failed: ${message}`);
     }
 
     return {
@@ -374,13 +374,13 @@
             },
           });
 
-          await log('步骤 9：正在上传 Builder ID 到贡献池...', 'info', nodeId);
+          await log('Step 9: uploading Builder ID to contribution pool...', 'info', nodeId);
           const contributionResult = await maybeSubmitFlowContribution(currentState, {
             nodeId,
             trigger: 'kiro-step-9',
           });
           if (!contributionResult?.ok || contributionResult?.skipped) {
-            throw new Error(contributionResult?.message || 'Kiro 贡献上传失败。');
+            throw new Error(contributionResult?.message || 'Kiro contribution upload failed.');
           }
 
           const uploadedAt = Date.now();
@@ -394,11 +394,11 @@
               status: 'uploaded',
               error: '',
               credentialId: contributionResult.contributionId || '',
-              lastMessage: contributionResult.message || '贡献上传成功',
+              lastMessage: contributionResult.message || 'Contribution uploaded',
               lastUploadedAt: uploadedAt,
             },
           });
-          await log(`步骤 9：贡献上传完成，状态：${contributionResult.message || '贡献上传成功'}`, 'ok', nodeId);
+          await log(`Step 9: contribution upload complete, status: ${contributionResult.message || 'Contribution uploaded'}`, 'ok', nodeId);
           await completeNodeFromBackground(nodeId, payload);
           return;
         }
@@ -408,7 +408,7 @@
         const baseUrl = normalizeKiroRsBaseUrl(targetConfig.baseUrl);
         const apiKey = String(targetConfig.apiKey || '');
         if (!apiKey) {
-          throw new Error('缺少 kiro.rs API Key。');
+          throw new Error('Missing kiro.rs API key.');
         }
 
         const uploadInput = buildUploadPayload(currentState);
@@ -427,7 +427,7 @@
           },
         });
 
-        await log('步骤 9：正在上传 Builder ID 凭据到 kiro.rs...', 'info', nodeId);
+        await log('Step 9: uploading Builder ID credential to kiro.rs...', 'info', nodeId);
 
         const connection = await checkKiroRsConnection(baseUrl, apiKey, fetchImpl);
         if (!connection.ok) {
@@ -461,11 +461,11 @@
             status: 'uploaded',
             error: '',
             credentialId: uploadResult.credentialId,
-            lastMessage: uploadResult.message || '上传成功',
+            lastMessage: uploadResult.message || 'Upload succeeded',
             lastUploadedAt: uploadedAt,
           },
         });
-        await log(`步骤 9：kiro.rs 上传完成，状态：${uploadResult.message || '上传成功'}`, 'ok', nodeId);
+        await log(`Step 9: kiro.rs upload complete, status: ${uploadResult.message || 'Upload succeeded'}`, 'ok', nodeId);
         await completeNodeFromBackground(nodeId, payload);
       } catch (error) {
         const message = getErrorMessage(error);

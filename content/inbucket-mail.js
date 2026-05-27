@@ -45,11 +45,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse(result);
     }).catch(err => {
       if (isStopError(err)) {
-        log(`步骤 ${message.step}：已被用户停止。`, 'warn');
+        log(`Step ${message.step}: Stopped by user.`, 'warn');
         sendResponse({ stopped: true, error: err.message });
         return;
       }
-      log(`步骤 ${message.step}：邮箱轮询失败：${err.message}`, 'warn');
+      log(`Step ${message.step}: Mailbox polling failed: ${err.message}`, 'warn');
       sendResponse({ error: err.message });
     });
     return true;
@@ -208,10 +208,10 @@ async function deleteCurrentMailboxMessage(step) {
   try {
     const deleteButton = await waitForElement('.button-bar button.danger', 5000);
     simulateClick(deleteButton);
-    log(`步骤 ${step}：已删除邮箱消息`, 'ok');
+    log(`Step ${step}: Deleted mailbox message`, 'ok');
     await sleep(1200);
   } catch (err) {
-    log(`步骤 ${step}：删除邮箱消息失败：${err.message}`, 'warn');
+    log(`Step ${step}: Failed to delete mailbox message: ${err.message}`, 'warn');
   }
 }
 
@@ -227,22 +227,22 @@ async function handleMailboxPollEmail(step, payload) {
   } = payload || {};
   const excludedCodeSet = new Set(excludeCodes.filter(Boolean));
 
-  log(`步骤 ${step}：开始轮询 Inbucket 邮箱页面（最多 ${maxAttempts} 次）`);
+  log(`Step ${step}: Starting Inbucket mailbox page polling (max ${maxAttempts} attempts)`);
 
   try {
     await waitForElement('.message-list, .message-list-entry', 15000);
-    log(`步骤 ${step}：邮箱页面已加载`);
+    log(`Step ${step}: Mailbox page loaded`);
   } catch {
-    throw new Error('Inbucket 邮箱页面未加载完成，请确认已打开 /m/<mailbox>/ 页面。');
+    throw new Error('Inbucket mailbox page did not finish loading. Please confirm /m/<mailbox>/ page is open.');
   }
 
   const existingMailIds = getCurrentMailboxIds();
-  log(`步骤 ${step}：已记录当前 ${existingMailIds.size} 封旧消息快照`);
+  log(`Step ${step}: Recorded snapshot of current ${existingMailIds.size} old messages`);
 
   const FALLBACK_AFTER = 3;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    log(`步骤 ${step}：正在轮询 Inbucket 邮箱，第 ${attempt}/${maxAttempts} 次`);
+    log(`Step ${step}: Polling Inbucket mailbox, attempt ${attempt}/${maxAttempts}`);
 
     if (attempt > 1) {
       await refreshMailbox();
@@ -272,7 +272,7 @@ async function handleMailboxPollEmail(step, payload) {
       });
       if (!code) continue;
       if (excludedCodeSet.has(code)) {
-        log(`步骤 ${step}：跳过排除的验证码：${code}`, 'info');
+        log(`Step ${step}: Skipping excluded verification code: ${code}`, 'info');
         continue;
       }
 
@@ -282,9 +282,9 @@ async function handleMailboxPollEmail(step, payload) {
       seenMailIds.add(mail.mailId);
       await persistSeenMailIds();
 
-      const source = existingMailIds.has(mail.mailId) ? '回退匹配邮件' : '新邮件';
+      const source = existingMailIds.has(mail.mailId) ? 'fallback-matched email' : 'new email';
       log(
-        `步骤 ${step}：已找到验证码：${code}（来源：${source}，发件人：${mail.sender || '未知'}，主题：${(mail.subject || '').slice(0, 60)}）`,
+        `Step ${step}: Found verification code: ${code} (source: ${source}, sender: ${mail.sender || 'unknown'}, subject: ${(mail.subject || '').slice(0, 60)})`,
         'ok'
       );
 
@@ -297,7 +297,7 @@ async function handleMailboxPollEmail(step, payload) {
     }
 
     if (attempt === FALLBACK_AFTER + 1) {
-      log(`步骤 ${step}：暂未发现新消息，开始回退到较早的匹配邮件`, 'warn');
+      log(`Step ${step}: No new messages yet, starting fallback to earlier matched emails`, 'warn');
     }
 
     if (attempt < maxAttempts) {
@@ -306,14 +306,14 @@ async function handleMailboxPollEmail(step, payload) {
   }
 
   throw new Error(
-    `${(maxAttempts * intervalMs / 1000).toFixed(0)} 秒后仍未在 Inbucket 邮箱中找到匹配的验证码邮件。` +
-    '请手动检查邮箱页面。'
+    `No matching verification code email found in Inbucket mailbox after ${(maxAttempts * intervalMs / 1000).toFixed(0)} seconds. ` +
+    'Please manually check the mailbox page.'
   );
 }
 
 async function handlePollEmail(step, payload) {
   if (!location.pathname.startsWith('/m/')) {
-    throw new Error('当前 Inbucket 仅支持 /m/<mailbox>/ 这种邮箱页面。');
+    throw new Error('Current Inbucket only supports the /m/<mailbox>/ mailbox page.');
   }
   return handleMailboxPollEmail(step, payload);
 }

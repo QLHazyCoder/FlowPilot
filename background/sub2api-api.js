@@ -34,7 +34,7 @@
         parsed.pathname = '/auth/callback';
       }
       if (parsed.pathname !== '/auth/callback') {
-        throw new Error('SUB2API 回调地址必须是 /auth/callback，例如 http://localhost:1455/auth/callback');
+        throw new Error('SUB2API callback path must be /auth/callback, e.g. http://localhost:1455/auth/callback');
       }
       return parsed.toString();
     }
@@ -47,7 +47,7 @@
       try {
         return new URL(sub2apiUrl).origin;
       } catch {
-        throw new Error('SUB2API URL 格式无效，请先在侧边栏检查。');
+        throw new Error('SUB2API URL format is invalid. Please check it in the side panel first.');
       }
     }
 
@@ -59,7 +59,7 @@
         payload?.reason,
       ];
       const message = candidates.map(normalizeString).find(Boolean);
-      return message || `SUB2API 请求失败（HTTP ${responseStatus}）：${path}`;
+      return message || `SUB2API request failed (HTTP ${responseStatus}): ${path}`;
     }
 
     async function requestJson(origin, path, options = {}) {
@@ -102,7 +102,7 @@
         return payload;
       } catch (error) {
         if (error?.name === 'AbortError') {
-          throw new Error(`SUB2API 请求超时：${path}`);
+          throw new Error(`SUB2API request timed out: ${path}`);
         }
         throw error;
       } finally {
@@ -116,10 +116,10 @@
       const origin = getSub2ApiOrigin(state.sub2apiUrl);
 
       if (!email) {
-        throw new Error('尚未配置 SUB2API 登录邮箱，请先在侧边栏填写。');
+        throw new Error('SUB2API login email is not configured. Please fill it in the side panel first.');
       }
       if (!password) {
-        throw new Error('尚未配置 SUB2API 登录密码，请先在侧边栏填写。');
+        throw new Error('SUB2API login password is not configured. Please fill it in the side panel first.');
       }
 
       const loginData = await requestJson(origin, '/api/v1/auth/login', {
@@ -130,7 +130,7 @@
 
       const token = normalizeString(loginData?.access_token || loginData?.accessToken);
       if (!token) {
-        throw new Error('SUB2API 登录返回缺少 access_token。');
+        throw new Error('SUB2API login response is missing access_token.');
       }
 
       return {
@@ -181,7 +181,7 @@
       }
 
       if (missing.length) {
-        throw new Error(`SUB2API 中未找到以下 openai 分组：${missing.join('、')}。`);
+        throw new Error(`The following openai groups were not found in SUB2API: ${missing.join(', ')}.`);
       }
 
       return matched;
@@ -205,7 +205,7 @@
       }
       const numeric = Number(rawValue);
       if (!Number.isSafeInteger(numeric) || numeric < 1) {
-        throw new Error('SUB2API 账号优先级必须是大于等于 1 的整数。');
+        throw new Error('SUB2API account priority must be an integer greater than or equal to 1.');
       }
       return numeric;
     }
@@ -229,7 +229,7 @@
       const port = proxy.port === undefined || proxy.port === null ? '' : normalizeString(proxy.port);
       const address = protocol && host && port ? `${protocol}://${host}:${port}` : '';
       return [
-        name || '(未命名代理)',
+        name || '(unnamed proxy)',
         id ? `#${id}` : '',
         address,
       ].filter(Boolean).join(' ');
@@ -308,7 +308,7 @@
         timeoutMs: options.timeoutMs,
       });
       if (!Array.isArray(proxies)) {
-        throw new Error('SUB2API 代理列表返回格式异常，无法自动选择代理。');
+        throw new Error('SUB2API proxy list returned an unexpected format; cannot automatically select a proxy.');
       }
 
       const { proxy, reason, candidates } = findSub2ApiProxy(proxies, preference);
@@ -316,24 +316,24 @@
         return proxy;
       }
 
-      const configured = normalizeSub2ApiProxyPreference(preference) || '(未配置)';
+      const configured = normalizeSub2ApiProxyPreference(preference) || '(not configured)';
       const available = (candidates || [])
         .slice(0, 8)
         .map(buildProxyDisplayName)
-        .join('；') || '无可用代理';
+        .join('; ') || 'no available proxies';
       if (reason === 'ambiguous-name' || reason === 'ambiguous-fuzzy') {
-        throw new Error(`SUB2API 默认代理“${configured}”匹配到多个代理，请改填代理 ID。候选：${available}`);
+        throw new Error(`SUB2API default proxy "${configured}" matched multiple proxies; please specify the proxy ID instead. Candidates: ${available}`);
       }
       if (reason === 'missing-id') {
-        throw new Error(`SUB2API 默认代理 ID “${configured}”不存在或未启用。可用代理：${available}`);
+        throw new Error(`SUB2API default proxy ID "${configured}" does not exist or is not enabled. Available proxies: ${available}`);
       }
       if (reason === 'missing-name') {
-        throw new Error(`SUB2API 默认代理“${configured}”不存在或未启用。可用代理：${available}`);
+        throw new Error(`SUB2API default proxy "${configured}" does not exist or is not enabled. Available proxies: ${available}`);
       }
       if (reason === 'no-preference') {
-        throw new Error(`SUB2API 存在多个可用代理，请在侧边栏填写默认代理名称或 ID；留空则不使用代理。可用代理：${available}`);
+        throw new Error(`SUB2API has multiple available proxies; please fill in the default proxy name or ID in the side panel, or leave it blank to skip the proxy. Available proxies: ${available}`);
       }
-      throw new Error('SUB2API 没有可用代理；请检查默认代理配置，或将其留空以禁用代理。');
+      throw new Error('SUB2API has no available proxies. Please check the default proxy config, or leave it blank to disable the proxy.');
     }
 
     function buildDraftAccountName(groupName) {
@@ -429,7 +429,7 @@
         return normalizedAccessToken;
       }
 
-      throw new Error('未读取到可导入的 ChatGPT 会话或 accessToken。');
+      throw new Error('No importable ChatGPT session or accessToken was found.');
     }
 
     function resolveCodexSessionImportExpiresAt(session) {
@@ -470,7 +470,7 @@
 
     function buildCodexSessionImportSummary(result) {
       const normalized = normalizeCodexSessionImportResult(result);
-      return `SUB2API 会话导入完成：新建 ${normalized.created}，更新 ${normalized.updated}，跳过 ${normalized.skipped}，失败 ${normalized.failed}`;
+      return `SUB2API session import complete: created ${normalized.created}, updated ${normalized.updated}, skipped ${normalized.skipped}, failed ${normalized.failed}`;
     }
 
     function getCodexSessionImportFailureMessage(result) {
@@ -481,7 +481,7 @@
           .map((item) => normalizeString(item?.message))
           .find(Boolean)
         || buildCodexSessionImportSummary(normalized);
-      return detail || 'SUB2API 会话导入失败。';
+      return detail || 'SUB2API session import failed.';
     }
 
     function parseLocalhostCallback(rawUrl, visibleStep = 10) {
@@ -489,23 +489,23 @@
       try {
         parsed = new URL(rawUrl);
       } catch {
-        throw new Error(`步骤 ${visibleStep} 捕获到的 localhost OAuth 回调地址格式无效。`);
+        throw new Error(`Step ${visibleStep}: The captured localhost OAuth callback URL has an invalid format.`);
       }
 
       if (!['http:', 'https:'].includes(parsed.protocol)) {
-        throw new Error('回调 URL 协议不正确。');
+        throw new Error('Callback URL protocol is incorrect.');
       }
       if (!['localhost', '127.0.0.1'].includes(parsed.hostname)) {
-        throw new Error(`步骤 ${visibleStep} 只接受 localhost / 127.0.0.1 回调地址。`);
+        throw new Error(`Step ${visibleStep} only accepts localhost / 127.0.0.1 callback URLs.`);
       }
       if (parsed.pathname !== '/auth/callback') {
-        throw new Error('回调 URL 路径必须是 /auth/callback。');
+        throw new Error('Callback URL path must be /auth/callback.');
       }
 
       const code = normalizeString(parsed.searchParams.get('code'));
       const oauthState = normalizeString(parsed.searchParams.get('state'));
       if (!code || !oauthState) {
-        throw new Error('回调 URL 中缺少 code 或 state。');
+        throw new Error('Callback URL is missing code or state.');
       }
 
       return {
@@ -537,7 +537,7 @@
       }
 
       if (!credentials.access_token) {
-        throw new Error('SUB2API 交换授权码后未返回 access_token。');
+        throw new Error('SUB2API did not return access_token after exchanging the authorization code.');
       }
 
       return credentials;
@@ -561,12 +561,12 @@
     }
 
     async function generateOpenAiAuthUrl(state = {}, options = {}) {
-      const logLabel = normalizeString(options.logLabel) || 'OAuth 刷新';
+      const logLabel = normalizeString(options.logLabel) || 'OAuth refresh';
       const redirectUri = normalizeRedirectUri(options.redirectUri || DEFAULT_REDIRECT_URI);
       const groupNames = normalizeSub2ApiGroupNames(state.sub2apiGroupName || DEFAULT_SUB2API_GROUP_NAME);
       const groupName = groupNames[0] || DEFAULT_SUB2API_GROUP_NAME;
 
-      await logWithOptions(`${logLabel}：正在通过 SUB2API 管理接口登录并生成 OpenAI Auth 链接...`, 'info', options);
+      await logWithOptions(`${logLabel}: Logging in via the SUB2API admin interface and generating the OpenAI Auth URL...`, 'info', options);
       const { origin, token } = await loginSub2Api(state, options);
       const groups = await getGroupsByNames(origin, token, groupNames, options);
       const group = groups[0];
@@ -574,13 +574,13 @@
       const proxy = proxyPreference ? await resolveSub2ApiProxy(origin, token, proxyPreference, options) : null;
       const proxyId = normalizeProxyId(proxy?.id);
       const draftName = buildDraftAccountName(group.name || groupName);
-      const groupLabel = groups.map((item) => `${item.name}（#${item.id}）`).join('、');
+      const groupLabel = groups.map((item) => `${item.name} (#${item.id})`).join(', ');
 
-      await logWithOptions(`${logLabel}：已登录 SUB2API，使用分组 ${groupLabel}。`, 'info', options);
+      await logWithOptions(`${logLabel}: Logged in to SUB2API, using group ${groupLabel}.`, 'info', options);
       if (proxy) {
-        await logWithOptions(`${logLabel}：已选择 SUB2API 默认代理 ${buildProxyDisplayName(proxy)}。`, 'info', options);
+        await logWithOptions(`${logLabel}: Selected SUB2API default proxy ${buildProxyDisplayName(proxy)}.`, 'info', options);
       } else {
-        await logWithOptions(`${logLabel}：未配置 SUB2API 默认代理，本次将不使用代理。`, 'info', options);
+        await logWithOptions(`${logLabel}: No SUB2API default proxy configured; this run will not use a proxy.`, 'info', options);
       }
 
       const authRequestBody = { redirect_uri: redirectUri };
@@ -600,10 +600,10 @@
       const oauthState = normalizeString(authData?.state || extractStateFromAuthUrl(oauthUrl));
 
       if (!oauthUrl || !sessionId) {
-        throw new Error('SUB2API 未返回完整的 auth_url / session_id。');
+        throw new Error('SUB2API did not return a complete auth_url / session_id.');
       }
 
-      await logWithOptions(`${logLabel}：已获取 SUB2API OAuth 链接：${oauthUrl.slice(0, 96)}...`, 'ok', options);
+      await logWithOptions(`${logLabel}: Got SUB2API OAuth URL: ${oauthUrl.slice(0, 96)}...`, 'ok', options);
       return {
         oauthUrl,
         sub2apiSessionId: sessionId,
@@ -621,13 +621,13 @@
       const flowEmail = normalizeString(state.email);
       const sessionId = normalizeString(state.sub2apiSessionId);
       const expectedState = normalizeString(state.sub2apiOAuthState);
-      const logLabel = normalizeString(options.logLabel) || `步骤 ${visibleStep}`;
+      const logLabel = normalizeString(options.logLabel) || `Step ${visibleStep}`;
 
       if (!sessionId) {
-        throw new Error('缺少 SUB2API session_id，请重新执行步骤 1。');
+        throw new Error('Missing SUB2API session_id. Please rerun step 1.');
       }
       if (expectedState && expectedState !== callback.state) {
-        throw new Error('本次 localhost 回调中的 state 与步骤 1 生成的 state 不一致，请重新执行步骤 1。');
+        throw new Error('The state in this localhost callback does not match the state generated in step 1. Please rerun step 1.');
       }
 
       const { origin, token } = await loginSub2Api(state, options);
@@ -647,11 +647,11 @@
           ? [{ id: state.sub2apiGroupId, name: state.sub2apiGroupName || DEFAULT_SUB2API_GROUP_NAME }]
           : await getGroupsByNames(origin, token, state.sub2apiGroupName || DEFAULT_SUB2API_GROUP_NAME, options));
 
-      await logWithOptions(`${logLabel}：正在通过 SUB2API 管理接口交换 OpenAI 授权码...`, 'info', options);
+      await logWithOptions(`${logLabel}: Exchanging the OpenAI authorization code via the SUB2API admin interface...`, 'info', options);
       if (proxy) {
-        await logWithOptions(`${logLabel}：使用 SUB2API 默认代理 ${buildProxyDisplayName(proxy)}。`, 'info', options);
+        await logWithOptions(`${logLabel}: Using SUB2API default proxy ${buildProxyDisplayName(proxy)}.`, 'info', options);
       } else {
-        await logWithOptions(`${logLabel}：未配置 SUB2API 默认代理，本次将不使用代理。`, 'info', options);
+        await logWithOptions(`${logLabel}: No SUB2API default proxy configured; this run will not use a proxy.`, 'info', options);
       }
 
       const exchangeRequestBody = {
@@ -677,7 +677,7 @@
         .map((group) => Number(group.id))
         .filter((id) => Number.isFinite(id) && id > 0);
       if (!groupIds.length) {
-        throw new Error('SUB2API 返回的目标分组 ID 无效。');
+        throw new Error('SUB2API returned an invalid target group ID.');
       }
 
       const accountName = resolvedEmail
@@ -703,7 +703,7 @@
         createPayload.extra = extra;
       }
 
-      await logWithOptions(`${logLabel}：授权码交换成功，正在创建 SUB2API 账号（名称：${accountName}）...`, 'info', options);
+      await logWithOptions(`${logLabel}: Authorization code exchange succeeded, creating SUB2API account (name: ${accountName})...`, 'info', options);
       const createdAccount = await requestJson(origin, '/api/v1/admin/accounts', {
         method: 'POST',
         token,
@@ -711,7 +711,7 @@
         body: createPayload,
       });
 
-      const verifiedStatus = `SUB2API 已创建账号 #${createdAccount?.id || 'unknown'}`;
+      const verifiedStatus = `SUB2API account created #${createdAccount?.id || 'unknown'}`;
       await logWithOptions(verifiedStatus, 'ok', options);
       return {
         localhostUrl: callback.url,
@@ -720,7 +720,7 @@
     }
 
     async function importCurrentChatGptSession(state = {}, options = {}) {
-      const logLabel = normalizeString(options.logLabel) || 'SUB2API 会话导入';
+      const logLabel = normalizeString(options.logLabel) || 'SUB2API session import';
       const session = normalizeCodexSessionObject(state?.session);
       const accessToken = normalizeString(
         state?.accessToken
@@ -730,21 +730,21 @@
       const importExpiresAt = resolveCodexSessionImportExpiresAt(session);
       const preferredAccountName = resolveCodexSessionImportAccountName(state, session, accessToken);
 
-      await logWithOptions(`${logLabel}：正在通过 SUB2API 管理接口登录并准备导入当前 ChatGPT 会话...`, 'info', options);
+      await logWithOptions(`${logLabel}: Logging in via the SUB2API admin interface and preparing to import the current ChatGPT session...`, 'info', options);
       const { origin, token } = await loginSub2Api(state, options);
       const groupNames = state.sub2apiGroupName || DEFAULT_SUB2API_GROUP_NAME;
       const groups = await getGroupsByNames(origin, token, groupNames, options);
-      const groupLabel = groups.map((item) => `${item.name}（${item.id}）`).join('、');
+      const groupLabel = groups.map((item) => `${item.name} (${item.id})`).join(', ');
       const proxyPreference = resolveSub2ApiProxyPreference(state);
       const proxy = proxyPreference ? await resolveSub2ApiProxy(origin, token, proxyPreference, options) : null;
       const proxyId = normalizeProxyId(proxy?.id);
       const accountPriority = resolveSub2ApiAccountPriority(state);
 
-      await logWithOptions(`${logLabel}：已登录 SUB2API，使用分组 ${groupLabel}。`, 'info', options);
+      await logWithOptions(`${logLabel}: Logged in to SUB2API, using group ${groupLabel}.`, 'info', options);
       if (proxy) {
-        await logWithOptions(`${logLabel}：已选择 SUB2API 默认代理 ${buildProxyDisplayName(proxy)}。`, 'info', options);
+        await logWithOptions(`${logLabel}: Selected SUB2API default proxy ${buildProxyDisplayName(proxy)}.`, 'info', options);
       } else {
-        await logWithOptions(`${logLabel}：未配置 SUB2API 默认代理，本次将不使用代理。`, 'info', options);
+        await logWithOptions(`${logLabel}: No SUB2API default proxy configured; this run will not use a proxy.`, 'info', options);
       }
 
       const importPayload = {
@@ -758,7 +758,7 @@
         update_existing: true,
       };
       if (!importPayload.group_ids.length) {
-        throw new Error('SUB2API 返回的目标分组 ID 无效。');
+        throw new Error('SUB2API returned an invalid target group ID.');
       }
       if (proxyId) {
         importPayload.proxy_id = proxyId;
@@ -767,7 +767,7 @@
         importPayload.expires_at = importExpiresAt;
       }
 
-      await logWithOptions(`${logLabel}：正在导入当前 ChatGPT 会话到 SUB2API...`, 'info', options);
+      await logWithOptions(`${logLabel}: Importing the current ChatGPT session into SUB2API...`, 'info', options);
       const importResult = normalizeCodexSessionImportResult(await requestJson(origin, '/api/v1/admin/accounts/import/codex-session', {
         method: 'POST',
         token,
@@ -776,7 +776,7 @@
       }));
 
       for (const warning of importResult.warnings) {
-        await logWithOptions(`${logLabel}：${warning.message}`, 'warn', options);
+        await logWithOptions(`${logLabel}: ${warning.message}`, 'warn', options);
       }
 
       if (importResult.failed > 0) {

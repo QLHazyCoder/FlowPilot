@@ -1,4 +1,4 @@
-// flows/openai/content/sub2api-panel.js — 页内脚本：SUB2API 后台（OAuth 生成与回调提交）
+// flows/openai/content/sub2api-panel.js — In-page script: SUB2API admin (OAuth generation and callback submission)
 
 console.log('[MultiPage:sub2api-panel] Content script loaded on', location.href);
 
@@ -24,7 +24,7 @@ if (document.documentElement.getAttribute(SUB2API_PANEL_LISTENER_SENTINEL) !== '
       }).catch((err) => {
         if (isStopError(err)) {
           if (message.payload?.visibleStep || message.step) {
-            log('已被用户停止。', 'warn', { step: message.payload?.visibleStep || message.step });
+            log('Stopped by user.', 'warn', { step: message.payload?.visibleStep || message.step });
           }
           sendResponse({ stopped: true, error: err.message });
           return;
@@ -38,7 +38,7 @@ if (document.documentElement.getAttribute(SUB2API_PANEL_LISTENER_SENTINEL) !== '
     }
   });
 } else {
-  console.log('[MultiPage:sub2api-panel] 消息监听已存在，跳过重复注册');
+  console.log('[MultiPage:sub2api-panel] message listener already exists, skipping duplicate registration');
 }
 
 function getSub2ApiOrigin(payload = {}) {
@@ -58,7 +58,7 @@ function normalizeRedirectUri() {
     parsed.pathname = '/auth/callback';
   }
   if (parsed.pathname !== '/auth/callback') {
-    throw new Error('SUB2API 回调地址必须是 /auth/callback，例如 http://localhost:1455/auth/callback');
+    throw new Error('SUB2API callback URL must be /auth/callback, for example http://localhost:1455/auth/callback');
   }
   return parsed.toString();
 }
@@ -72,7 +72,7 @@ async function handleStep(step, payload = {}) {
     case 13:
       return step9_submitOpenAiCallback({ ...(payload || {}), visibleStep: step });
     default:
-      throw new Error(`sub2api-panel.js 不处理步骤 ${step}`);
+      throw new Error(`sub2api-panel.js does not handle step ${step}`);
   }
 }
 
@@ -82,7 +82,7 @@ async function handleNode(nodeId, payload = {}) {
     case 'platform-verify':
       return step9_submitOpenAiCallback(payload);
     default:
-      throw new Error(`sub2api-panel.js 不处理节点 ${normalizedNodeId}`);
+      throw new Error(`sub2api-panel.js does not handle node ${normalizedNodeId}`);
   }
 }
 
@@ -120,11 +120,11 @@ async function requestJson(origin, path, options = {}) {
     if (json.code === 0) {
       return json.data;
     }
-    throw new Error(json.message || json.detail || `请求失败（${path}）`);
+    throw new Error(json.message || json.detail || `request failed (${path})`);
   }
 
   if (!response.ok) {
-    throw new Error((json && (json.message || json.detail)) || `请求失败（HTTP ${response.status}）：${path}`);
+    throw new Error((json && (json.message || json.detail)) || `request failed (HTTP ${response.status}): ${path}`);
   }
 
   return json;
@@ -132,7 +132,7 @@ async function requestJson(origin, path, options = {}) {
 
 function storeAuthSession(loginData) {
   if (!loginData?.access_token) {
-    throw new Error('SUB2API 登录返回缺少 access_token。');
+    throw new Error('SUB2API login response is missing access_token.');
   }
 
   localStorage.setItem('auth_token', loginData.access_token);
@@ -156,13 +156,13 @@ async function loginSub2Api(payload = {}) {
   const origin = getSub2ApiOrigin(payload);
 
   if (!email) {
-    throw new Error('缺少 SUB2API 登录邮箱，请先在侧边栏填写。');
+    throw new Error('SUB2API login email is missing. Fill it in the side panel first.');
   }
   if (!password) {
-    throw new Error('缺少 SUB2API 登录密码，请先在侧边栏填写。');
+    throw new Error('SUB2API login password is missing. Fill it in the side panel first.');
   }
 
-  log('步骤：正在登录 SUB2API 后台...');
+  log('Step: Logging in to the SUB2API admin...');
   const loginData = await requestJson(origin, '/api/v1/auth/login', {
     method: 'POST',
     body: {
@@ -195,7 +195,7 @@ async function getGroupByName(origin, token, groupName) {
   });
 
   if (!group) {
-    throw new Error(`SUB2API 中未找到名为“${targetName}”的 openai 分组。`);
+    throw new Error(`No openai group named "${targetName}" was found in SUB2API.`);
   }
 
   return group;
@@ -242,7 +242,7 @@ async function getGroupsByNames(origin, token, groupNames) {
   }
 
   if (missing.length) {
-    throw new Error(`SUB2API 中未找到以下 openai 分组：${missing.join('、')}。`);
+    throw new Error(`The following openai groups were not found in SUB2API: ${missing.join(', ')}。`);
   }
 
   return matched;
@@ -272,7 +272,7 @@ function resolveSub2ApiAccountPriority(payload = {}, backgroundState = {}) {
   }
   const numeric = Number(rawValue);
   if (!Number.isSafeInteger(numeric) || numeric < 1) {
-    throw new Error('SUB2API 账号优先级必须是大于等于 1 的整数。');
+    throw new Error('SUB2API account priority must be an integer greater than or equal to 1.');
   }
   return numeric;
 }
@@ -296,7 +296,7 @@ function buildProxyDisplayName(proxy = {}) {
   const port = proxy.port === undefined || proxy.port === null ? '' : String(proxy.port).trim();
   const address = protocol && host && port ? `${protocol}://${host}:${port}` : '';
   const parts = [
-    name || '(未命名代理)',
+    name || '(Unnamed proxy)',
     id ? `#${id}` : '',
     address,
   ].filter(Boolean);
@@ -378,7 +378,7 @@ async function resolveSub2ApiProxy(origin, token, preference = '') {
     token,
   });
   if (!Array.isArray(proxies)) {
-    throw new Error('SUB2API 代理列表返回格式异常，无法自动选择代理。');
+    throw new Error('SUB2API proxy list returned an unexpected format. Cannot auto-select a proxy.');
   }
 
   const { proxy, reason, candidates } = findSub2ApiProxy(proxies, preference);
@@ -386,24 +386,24 @@ async function resolveSub2ApiProxy(origin, token, preference = '') {
     return proxy;
   }
 
-  const configured = normalizeSub2ApiProxyPreference(preference) || '(未配置)';
+  const configured = normalizeSub2ApiProxyPreference(preference) || '(Not configured)';
   const available = (candidates || [])
     .slice(0, 8)
     .map(buildProxyDisplayName)
-    .join('，') || '无可用代理';
+    .join('，') || 'No available proxy';
   if (reason === 'ambiguous-name' || reason === 'ambiguous-fuzzy') {
-    throw new Error(`SUB2API 默认代理“${configured}”匹配到多个代理，请改填代理 ID。候选：${available}`);
+    throw new Error(`SUB2API default proxy "${configured}" matched multiple proxies. Please enter a proxy ID instead. Candidates: ${available}`);
   }
   if (reason === 'missing-id') {
-    throw new Error(`SUB2API 默认代理 ID “${configured}”不存在或未启用。可用代理：${available}`);
+    throw new Error(`SUB2API default proxy ID "${configured}" does not exist or is not enabled. Available proxies: ${available}`);
   }
   if (reason === 'missing-name') {
-    throw new Error(`SUB2API 默认代理“${configured}”不存在或未启用。可用代理：${available}`);
+    throw new Error(`SUB2API default proxy "${configured}" does not exist or is not enabled. Available proxies: ${available}`);
   }
   if (reason === 'no-preference') {
-    throw new Error(`SUB2API 存在多个可用代理，请在侧边栏填写默认代理名称或 ID；留空则不使用代理。可用代理：${available}`);
+    throw new Error(`SUB2API has multiple available proxies. Fill in the default proxy name or ID in the side panel; leave it blank to disable proxy use. Available proxies: ${available}`);
   }
-  throw new Error('SUB2API 没有可用代理；请检查默认代理配置，或将其留空以禁用代理。');
+  throw new Error('SUB2API has no available proxies. Check the default proxy configuration, or leave it blank to disable proxy use.');
 }
 
 function buildDraftAccountName(groupName) {
@@ -429,23 +429,23 @@ function parseLocalhostCallback(rawUrl, visibleStep = 10) {
   try {
     parsed = new URL(rawUrl);
   } catch {
-    throw new Error('提供的回调 URL 不是合法链接。');
+    throw new Error('The provided callback URL is not a valid link.');
   }
 
   if (!['http:', 'https:'].includes(parsed.protocol)) {
-    throw new Error('回调 URL 协议不正确。');
+    throw new Error('Callback URL protocol is invalid.');
   }
   if (!['localhost', '127.0.0.1'].includes(parsed.hostname)) {
-    throw new Error(`步骤 ${visibleStep} 只接受 localhost / 127.0.0.1 回调地址。`);
+    throw new Error(`Step ${visibleStep} only accepts localhost / 127.0.0.1 callback URLs.`);
   }
   if (parsed.pathname !== '/auth/callback') {
-    throw new Error('回调 URL 路径必须是 /auth/callback。');
+    throw new Error('Callback URL path must be /auth/callback.');
   }
 
   const code = (parsed.searchParams.get('code') || '').trim();
   const state = (parsed.searchParams.get('state') || '').trim();
   if (!code || !state) {
-    throw new Error('回调 URL 中缺少 code 或 state。');
+    throw new Error('Callback URL is missing code or state.');
   }
 
   return {
@@ -477,7 +477,7 @@ function buildOpenAiCredentials(exchangeData) {
   }
 
   if (!credentials.access_token) {
-    throw new Error('SUB2API 交换授权码后未返回 access_token。');
+    throw new Error('SUB2API did not return access_token after exchanging the authorization code.');
   }
 
   return credentials;
@@ -530,15 +530,15 @@ async function step1_generateOpenAiAuthUrl(payload = {}, options = {}) {
   const proxy = proxyPreference ? await resolveSub2ApiProxy(origin, token, proxyPreference) : null;
   const proxyId = normalizeProxyId(proxy?.id);
   const draftName = buildDraftAccountName(group.name || groupName);
-  const groupLabel = groups.map((item) => `${item.name}（#${item.id}）`).join('、');
+  const groupLabel = groups.map((item) => `${item.name}（#${item.id})`).join(', ');
 
-  log(`步骤 ${logStep}：已登录 SUB2API，使用分组 ${groupLabel}。`);
+  log(`Step ${logStep}：Logged in to SUB2API, using group ${groupLabel}。`);
   if (proxy) {
-    log(`步骤 ${logStep}：已选择 SUB2API 默认代理 ${buildProxyDisplayName(proxy)}。`);
+    log(`Step ${logStep}：Selected SUB2API default proxy ${buildProxyDisplayName(proxy)}。`);
   } else {
-    log(`步骤 ${logStep}：未配置 SUB2API 默认代理，本次将不使用代理。`);
+    log(`Step ${logStep}：SUB2API default proxy is not configured. This run will not use a proxy.`);
   }
-  log(`步骤 ${logStep}：正在向 SUB2API 生成 OpenAI Auth 链接，回调地址为 ${redirectUri}。`);
+  log(`Step ${logStep}：Generating OpenAI Auth URL in SUB2API. Callback URL: ${redirectUri}。`);
 
   const authRequestBody = {
     redirect_uri: redirectUri,
@@ -558,10 +558,10 @@ async function step1_generateOpenAiAuthUrl(payload = {}, options = {}) {
   const oauthState = String(authData?.state || extractStateFromAuthUrl(oauthUrl)).trim();
 
   if (!oauthUrl || !sessionId) {
-    throw new Error('SUB2API 未返回完整的 auth_url / session_id。');
+    throw new Error('SUB2API did not return a complete auth_url / session_id.');
   }
 
-  log(`步骤 ${logStep}：已获取 SUB2API OAuth 链接：${oauthUrl.slice(0, 96)}...`, 'ok');
+  log(`Step ${logStep}：Obtained SUB2API OAuth URL: ${oauthUrl.slice(0, 96)}...`, 'ok');
   const result = {
     oauthUrl,
     sub2apiSessionId: sessionId,
@@ -607,17 +607,17 @@ async function step9_submitOpenAiCallback(payload = {}) {
       : await getGroupsByNames(origin, token, payload.sub2apiGroupName || backgroundState.sub2apiGroupName || SUB2API_DEFAULT_GROUP_NAME));
 
   if (!sessionId) {
-    throw new Error('缺少 SUB2API session_id，请重新执行步骤 1。');
+    throw new Error('Missing SUB2API session_id. Rerun Step 1.');
   }
   if (expectedState && expectedState !== callback.state) {
-    throw new Error('本次 localhost 回调中的 state 与步骤 1 生成的 state 不一致，请重新执行步骤 1。');
+    throw new Error('The state in this localhost callback does not match the state generated in Step 1. Rerun Step 1.');
   }
 
-  log('正在向 SUB2API 交换 OpenAI 授权码...', 'info', { step: visibleStep, stepKey: 'platform-verify' });
+  log('Exchanging the OpenAI authorization code with SUB2API...', 'info', { step: visibleStep, stepKey: 'platform-verify' });
   if (proxy) {
-    log(`使用 SUB2API 默认代理 ${buildProxyDisplayName(proxy)}。`, 'info', { step: visibleStep, stepKey: 'platform-verify' });
+    log(`Using SUB2API default proxy ${buildProxyDisplayName(proxy)}。`, 'info', { step: visibleStep, stepKey: 'platform-verify' });
   } else {
-    log('未配置 SUB2API 默认代理，本次将不使用代理。', 'info', { step: visibleStep, stepKey: 'platform-verify' });
+    log('SUB2API default proxy is not configured. This run will not use a proxy.', 'info', { step: visibleStep, stepKey: 'platform-verify' });
   }
   const exchangeRequestBody = {
     session_id: sessionId,
@@ -640,7 +640,7 @@ async function step9_submitOpenAiCallback(payload = {}) {
     .map((group) => Number(group.id))
     .filter((id) => Number.isFinite(id) && id > 0);
   if (!groupIds.length) {
-    throw new Error('SUB2API 返回的目标分组 ID 无效。');
+    throw new Error('SUB2API returned an invalid target group ID.');
   }
   const accountName = resolvedEmail
     || flowEmail
@@ -666,14 +666,14 @@ async function step9_submitOpenAiCallback(payload = {}) {
     createPayload.extra = extra;
   }
 
-  log(`授权码交换成功，正在创建 SUB2API 账号（名称：${accountName}）...`, 'info', { step: visibleStep, stepKey: 'platform-verify' });
+  log(`Authorization code exchange succeeded. Creating SUB2API account (name: ${accountName})...`, 'info', { step: visibleStep, stepKey: 'platform-verify' });
   const createdAccount = await requestJson(origin, '/api/v1/admin/accounts', {
     method: 'POST',
     token,
     body: createPayload,
   });
 
-  const verifiedStatus = `SUB2API 已创建账号 #${createdAccount?.id || 'unknown'}`;
+  const verifiedStatus = `SUB2API account created #${createdAccount?.id || 'unknown'}`;
   log(verifiedStatus, 'ok', { step: visibleStep, stepKey: 'platform-verify' });
   reportComplete('platform-verify', {
     localhostUrl: callback.url,

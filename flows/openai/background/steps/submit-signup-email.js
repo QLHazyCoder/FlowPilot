@@ -27,17 +27,17 @@
 
     function isSignupEntryUnavailableErrorMessage(errorLike) {
       const message = getErrorMessage(errorLike);
-      return /未找到可用的邮箱输入入口|当前页面没有可用的注册入口，也不在邮箱\/密码页/i.test(message);
+      return /No available email input entry found|当前页面没有可用的注册入口，也不在邮箱\/密码页/i.test(message);
     }
 
     function isSignupPhoneEntryUnavailableErrorMessage(errorLike) {
       const message = getErrorMessage(errorLike);
-      return /未找到可用的手机号输入入口|当前页面没有可用的手机号注册入口，也不在密码页/i.test(message);
+      return /No available phone number input entry found|The current page has no available phone signup entry and is not on the password page/i.test(message);
     }
 
     function isRetryableStep2TransportErrorMessage(errorLike) {
       const message = getErrorMessage(errorLike);
-      return /Content script on [\w-]+ did not respond in \d+s|内容脚本\s+\d+(?:\.\d+)?\s*秒内未响应|Receiving end does not exist|message channel closed|A listener indicated an asynchronous response|port closed before a response was received|did not respond in \d+s/i.test(message);
+      return /Content script on [\w-]+ did not respond in \d+s|content script\s+\d+(?:\.\d+)?\s*did not respond within seconds|Receiving end does not exist|message channel closed|A listener indicated an asynchronous response|port closed before a response was received|did not respond in \d+s/i.test(message);
     }
 
     function isLikelyLoggedInChatgptHomeUrl(rawUrl) {
@@ -86,7 +86,7 @@
         }, {
           timeoutMs: 12000,
           retryDelayMs: 500,
-          logMessage: '步骤 2：正在检查官网注册入口状态...',
+          logMessage: 'Step 2: Checking the official website signup entry state...',
         });
         if (result?.error) {
           return '';
@@ -137,8 +137,8 @@
       }
 
       const reasonText = getErrorMessage(reasonMessage);
-      const reasonSuffix = reasonText ? `（触发原因：${reasonText}）` : '';
-      const message = `步骤 2：检测到当前停留在已登录 ChatGPT 首页，已阻止自动跳过步骤 3/4/5。请先执行步骤 1 清理会话后重试。${reasonSuffix}`;
+      const reasonSuffix = reasonText ? ` (trigger reason: ${reasonText})` : '';
+      const message = `Step 2: Detected that the current page is the logged-in ChatGPT home page. Auto-skip for Steps 3/4/5 has been blocked. Run Step 1 to clear the session, then retry.${reasonSuffix}`;
       await addLog(message, 'error');
       throw new Error(message);
     }
@@ -147,7 +147,7 @@
       const {
         timeoutMs = 35000,
         retryDelayMs = 700,
-        logMessage = '步骤 2：官网注册入口正在切换，等待页面恢复后继续输入邮箱...',
+        logMessage = 'Step 2: The official website signup entry is switching. Waiting for the page to recover before continuing to enter the email...',
       } = options;
 
       try {
@@ -173,7 +173,7 @@
       }
 
       await addLog(
-        logMessage || '步骤 2：注册页标签已切换，正在等待页面加载完成并额外稳定 3 秒...',
+        logMessage || 'Step 2: Switched to the signup tab. Waiting for the page to finish loading and remain stable for another 3 seconds...',
         'info',
         { step: 2, stepKey: 'signup-entry' }
       );
@@ -195,7 +195,7 @@
 
     async function ensureSignupPhoneEntryReady(tabId) {
       if (!Number.isInteger(tabId)) {
-        throw new Error('步骤 2：未找到可用的注册页标签，无法切换到手机号注册入口。');
+        throw new Error('Step 2: No available signup tab was found. Cannot switch to the phone signup entry.');
       }
 
       const result = await sendToContentScriptResilient('openai-auth', {
@@ -206,7 +206,7 @@
       }, {
         timeoutMs: 30000,
         retryDelayMs: 700,
-        logMessage: '步骤 2：正在打开官网注册入口并切换到手机号注册...',
+        logMessage: 'Step 2: Opening the official website signup entry and switching to phone signup...',
       });
 
       if (result?.error) {
@@ -226,7 +226,7 @@
         countryId: activation?.countryId ?? null,
         countryLabel: String(activation?.countryLabel || '').trim(),
       }, {
-        logMessage: '步骤 2：官网注册入口正在切换，等待手机号注册入口恢复...',
+        logMessage: 'Step 2: The official website signup entry is switching. Waiting for the phone signup entry to recover...',
         ...options,
       });
     }
@@ -234,21 +234,21 @@
     async function ensureSignupTabForStep2() {
       let signupTabId = await getTabId('openai-auth');
       if (!signupTabId || !(await isTabAlive('openai-auth'))) {
-        await addLog('步骤 2：未发现可用的注册页标签，正在重新打开 ChatGPT 官网...', 'warn');
+        await addLog('Step 2: No available signup tab was found. Reopening the ChatGPT website...', 'warn');
         signupTabId = (await ensureSignupEntryPageReady(2)).tabId;
       } else {
         await chrome.tabs.update(signupTabId, { active: true });
         await keepSignupTabWindowInBackgroundForStep2(signupTabId);
         await waitForStep2SignupTabToSettle(
           signupTabId,
-          '步骤 2：已切换到注册页标签，正在等待页面加载完成并额外稳定 3 秒...'
+          'Step 2: Switched to the signup tab. Waiting for the page to finish loading and remain stable for another 3 seconds...'
         );
         await ensureContentScriptReadyOnTab('openai-auth', signupTabId, {
           inject: OPENAI_AUTH_INJECT_FILES,
           injectSource: 'openai-auth',
           timeoutMs: 45000,
           retryDelayMs: 900,
-          logMessage: '步骤 2：注册入口页内容脚本未就绪，正在等待页面恢复...',
+          logMessage: 'Step 2: Signup entry page content script is not ready. Waiting for the page to recover...',
         });
       }
       return signupTabId;
@@ -284,7 +284,7 @@
     async function resolveSignupPhoneForStep2(state = {}) {
       const existingActivation = normalizeSignupPhoneActivationForStep2(state?.signupPhoneActivation);
       if (existingActivation?.phoneNumber) {
-        await addLog(`步骤 2：复用当前注册手机号 ${existingActivation.phoneNumber}，不重新获取号码。`);
+        await addLog(`Step 2: Reusing the current signup phone number ${existingActivation.phoneNumber}. Not requesting a new number.`);
         return {
           phoneNumber: existingActivation.phoneNumber,
           activation: existingActivation,
@@ -293,7 +293,7 @@
 
       const manualPhoneNumber = getSignupPhoneNumberFromState(state);
       if (manualPhoneNumber) {
-        await addLog(`步骤 2：使用手动填写的注册手机号 ${manualPhoneNumber}，本轮不会重新获取号码。`, 'warn');
+        await addLog(`Step 2: Using the manually entered signup phone number ${manualPhoneNumber}. This round will not request a new number.`, 'warn');
         return {
           phoneNumber: manualPhoneNumber,
           activation: null,
@@ -301,7 +301,7 @@
       }
 
       if (typeof phoneVerificationHelpers?.prepareSignupPhoneActivation !== 'function') {
-        throw new Error('手机号注册流程不可用：接码模块尚未初始化。');
+        throw new Error('Phone signup flow unavailable: the SMS verification module is not initialized yet.');
       }
       const activation = await phoneVerificationHelpers.prepareSignupPhoneActivation(state);
       return {
@@ -313,7 +313,7 @@
     async function executeSignupPhoneEntry(state) {
       let signupTabId = await ensureSignupTabForStep2();
       if (await shouldForceAuthEntryRetry(signupTabId)) {
-        await addLog('步骤 2：检测到当前位于已登录 ChatGPT 首页，先切换认证入口页再提交手机号。', 'warn');
+        await addLog('Step 2: Detected that the current page is the logged-in ChatGPT home page. Switching to the auth entry page before submitting the phone number.', 'warn');
         try {
           signupTabId = (await ensureSignupAuthEntryPageReady(2)).tabId;
         } catch (entryError) {
@@ -321,7 +321,7 @@
           if (await failStep2OnLoggedInSession(signupTabId, entryErrorMessage)) {
             return;
           }
-          await addLog('步骤 2：切换认证入口失败，正在重新打开官网入口并重试提交手机号...', 'warn');
+          await addLog('Step 2: Failed to switch the auth entry. Reopening the official entry and retrying phone number submission...', 'warn');
           signupTabId = (await ensureSignupEntryPageReady(2)).tabId;
         }
       }
@@ -338,7 +338,7 @@
           || isSignupEntryUnavailableErrorMessage(entryErrorMessage)
           || isRetryableStep2TransportErrorMessage(entryErrorMessage)
         ) {
-          await addLog('步骤 2：手机号注册入口尚未就绪，正在重新打开官网入口后重试一次...', 'warn');
+          await addLog('Step 2: Phone signup entry is not ready yet. Reopening the official entry and retrying once...', 'warn');
           signupTabId = (await ensureSignupEntryPageReady(2)).tabId;
           await ensureSignupPhoneEntryReady(signupTabId);
         } else {
@@ -351,7 +351,7 @@
       let step2Result = await submitSignupPhone(phoneNumber, activation, {
         timeoutMs: 45000,
         retryDelayMs: 700,
-        logMessage: '步骤 2：官网注册入口正在切换，等待手机号注册入口恢复...',
+        logMessage: 'Step 2: The official website signup entry is switching. Waiting for the phone signup entry to recover...',
       });
 
       if (step2Result?.error) {
@@ -361,13 +361,13 @@
           || isSignupEntryUnavailableErrorMessage(errorMessage)
           || isRetryableStep2TransportErrorMessage(errorMessage)
         ) {
-          await addLog('步骤 2：手机号注册入口不可用或通信超时，正在重新准备手机号注册入口后重试一次...', 'warn');
+          await addLog('Step 2: Phone signup entry is unavailable or timed out. Preparing the phone signup entry again and retrying once...', 'warn');
           signupTabId = (await ensureSignupEntryPageReady(2)).tabId;
           await ensureSignupPhoneEntryReady(signupTabId);
           step2Result = await submitSignupPhone(phoneNumber, activation, {
             timeoutMs: 45000,
             retryDelayMs: 700,
-            logMessage: '步骤 2：手机号注册入口已就绪，正在重新提交手机号...',
+            logMessage: 'Step 2: Phone signup entry is ready. Resubmitting the phone number...',
           });
         }
       }
@@ -387,7 +387,7 @@
         throw new Error(finalErrorMessage);
       }
 
-      await addLog(`步骤 2：手机号 ${phoneNumber} 已提交，正在等待页面加载并确认下一步入口...`);
+      await addLog(`Step 2: Phone number ${phoneNumber} submitted. Waiting for the page to load and confirm the next entry...`);
       const landingResult = await ensureSignupPostIdentityPageReadyInTab(signupTabId, 2, {
         skipUrlWait: Boolean(step2Result?.alreadyOnPasswordPage),
       });
@@ -409,7 +409,7 @@
       let signupTabId = await ensureSignupTabForStep2();
 
       if (await shouldForceAuthEntryRetry(signupTabId)) {
-        await addLog('步骤 2：检测到当前位于已登录 ChatGPT 首页，先切换认证入口页再提交邮箱。', 'warn');
+        await addLog('Step 2: Detected that the current page is the logged-in ChatGPT home page. Switching to the auth entry page before submitting the email.', 'warn');
         try {
           signupTabId = (await ensureSignupAuthEntryPageReady(2)).tabId;
         } catch (entryError) {
@@ -417,7 +417,7 @@
           if (await failStep2OnLoggedInSession(signupTabId, entryErrorMessage)) {
             return;
           }
-          await addLog('步骤 2：切换认证入口失败，正在重新打开官网入口并重试提交邮箱...', 'warn');
+          await addLog('Step 2: Failed to switch the auth entry. Reopening the official entry and retrying email submission...', 'warn');
           signupTabId = (await ensureSignupEntryPageReady(2)).tabId;
         }
       }
@@ -425,18 +425,18 @@
       let step2Result = await submitSignupEmail(resolvedEmail, {
         timeoutMs: 35000,
         retryDelayMs: 700,
-        logMessage: '步骤 2：官网注册入口正在切换，等待页面恢复后继续输入邮箱...',
+        logMessage: 'Step 2: The official website signup entry is switching. Waiting for the page to recover before continuing to enter the email...',
       });
 
       if (step2Result?.error) {
         const errorMessage = getErrorMessage(step2Result.error);
         if (isSignupEntryUnavailableErrorMessage(errorMessage)) {
-          await addLog('步骤 2：未找到邮箱输入入口，正在切换认证入口页后重试一次...', 'warn');
+          await addLog('Step 2: Email input entry was not found. Switching the auth entry page and retrying once...', 'warn');
           signupTabId = (await ensureSignupAuthEntryPageReady(2)).tabId;
           step2Result = await submitSignupEmail(resolvedEmail, {
             timeoutMs: 35000,
             retryDelayMs: 700,
-            logMessage: '步骤 2：认证入口页已打开，正在重新提交邮箱...',
+            logMessage: 'Step 2: Auth entry page is open. Resubmitting the email...',
           });
 
           if (step2Result?.error) {
@@ -445,22 +445,22 @@
               if (await failStep2OnLoggedInSession(signupTabId, retryErrorMessage)) {
                 return;
               }
-              await addLog('步骤 2：认证入口仍不可用，正在重新进入官网注册入口再重试一次...', 'warn');
+              await addLog('Step 2: Auth entry is still unavailable. Re-entering the official website signup entry and retrying once...', 'warn');
               signupTabId = (await ensureSignupEntryPageReady(2)).tabId;
               step2Result = await submitSignupEmail(resolvedEmail, {
                 timeoutMs: 35000,
                 retryDelayMs: 700,
-                logMessage: '步骤 2：重试官网注册入口后正在重新提交邮箱...',
+                logMessage: 'Step 2: Retrying email submission after retrying the official website signup entry...',
               });
             }
           }
         } else if (isRetryableStep2TransportErrorMessage(errorMessage)) {
-          await addLog('步骤 2：注册入口页通信超时，正在切换认证入口页并重试提交邮箱...', 'warn');
+          await addLog('Step 2: Signup entry page communication timed out. Switching the auth entry page and retrying email submission...', 'warn');
           signupTabId = (await ensureSignupAuthEntryPageReady(2)).tabId;
           step2Result = await submitSignupEmail(resolvedEmail, {
             timeoutMs: 45000,
             retryDelayMs: 700,
-            logMessage: '步骤 2：认证入口页已打开，正在重新提交邮箱...',
+            logMessage: 'Step 2: Auth entry page is open. Resubmitting the email...',
           });
         }
       }
@@ -478,7 +478,7 @@
       }
 
       if (!step2Result?.alreadyOnPasswordPage) {
-        await addLog(`步骤 2：邮箱 ${resolvedEmail} 已提交，正在等待页面加载并确认下一步入口...`);
+        await addLog(`Step 2: Email ${resolvedEmail} submitted. Waiting for the page to load and confirm the next entry...`);
       }
 
       const landingResult = await ensureSignupPostEmailPageReadyInTab(signupTabId, 2, {
