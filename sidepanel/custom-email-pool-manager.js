@@ -97,9 +97,9 @@
         const haystack = [
           entry.email,
           entry.note,
-          entry.enabled ? 'enabled 启用' : 'disabled 停用',
-          entry.used ? 'used 已用' : 'unused 未用',
-          entry.current ? 'current 当前' : '',
+          entry.enabled ? 'enabled' : 'disabled',
+          entry.used ? 'used' : 'unused',
+          entry.current ? 'current' : '',
         ].join(' ').toLowerCase();
 
         return haystack.includes(normalizedSearchTerm);
@@ -124,7 +124,7 @@
       dom.checkboxCustomEmailPoolSelectAll.checked = hasVisible && selectedVisibleCount === visibleIds.length;
       dom.checkboxCustomEmailPoolSelectAll.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
       dom.checkboxCustomEmailPoolSelectAll.disabled = loading || !hasVisible;
-      dom.customEmailPoolSelectionSummary.textContent = `已选 ${selectedEntryIds.size} 个（当前显示 ${visibleIds.length} 个）`;
+      dom.customEmailPoolSelectionSummary.textContent = `Selected ${selectedEntryIds.size} (currently showing ${visibleIds.length})`;
 
       if (dom.btnCustomEmailPoolBulkUsed) dom.btnCustomEmailPoolBulkUsed.disabled = loading || !hasSelection;
       if (dom.btnCustomEmailPoolBulkUnused) dom.btnCustomEmailPoolBulkUnused.disabled = loading || !hasSelection;
@@ -159,8 +159,8 @@
 
       if (!renderedEntries.length) {
         selectedEntryIds.clear();
-        dom.customEmailPoolList.innerHTML = '<div class="luckmail-empty">还没有自定义邮箱，先导入一批邮箱再开始。</div>';
-        dom.customEmailPoolSummary.textContent = '导入你提前准备好的注册邮箱，每行一个邮箱地址。';
+        dom.customEmailPoolList.innerHTML = '<div class="luckmail-empty">No custom emails yet. Import a batch of emails to begin.</div>';
+        dom.customEmailPoolSummary.textContent = 'Import your pre-prepared registration emails, one email per line.';
         if (dom.btnCustomEmailPoolClearUsed) dom.btnCustomEmailPoolClearUsed.disabled = true;
         if (dom.btnCustomEmailPoolDeleteAll) dom.btnCustomEmailPoolDeleteAll.disabled = true;
         updateBulkUi([]);
@@ -170,13 +170,13 @@
       const entriesWithCurrent = withCurrentFlag(renderedEntries);
       const usedCount = entriesWithCurrent.filter((entry) => entry.used).length;
       const enabledCount = entriesWithCurrent.filter((entry) => entry.enabled).length;
-      dom.customEmailPoolSummary.textContent = `已加载 ${entriesWithCurrent.length} 个邮箱，其中 ${enabledCount} 个启用，${usedCount} 个已标记为已用。`;
+      dom.customEmailPoolSummary.textContent = `Loaded ${entriesWithCurrent.length} emails, of which ${enabledCount} are enabled and ${usedCount} are marked as used.`;
       if (dom.btnCustomEmailPoolClearUsed) dom.btnCustomEmailPoolClearUsed.disabled = loading || usedCount === 0;
       if (dom.btnCustomEmailPoolDeleteAll) dom.btnCustomEmailPoolDeleteAll.disabled = loading || entriesWithCurrent.length === 0;
 
       const visibleEntries = getFilteredEntries(entriesWithCurrent);
       if (!visibleEntries.length) {
-        dom.customEmailPoolList.innerHTML = '<div class="luckmail-empty">没有匹配当前筛选条件的邮箱。</div>';
+        dom.customEmailPoolList.innerHTML = '<div class="luckmail-empty">No emails match the current filter.</div>';
         updateBulkUi([]);
         return;
       }
@@ -189,27 +189,27 @@
           <input class="luckmail-item-check" type="checkbox" data-action="select" ${selectedEntryIds.has(entryId) ? 'checked' : ''} />
           <div class="luckmail-item-main">
             <div class="luckmail-item-email-row">
-              <div class="luckmail-item-email">${helpers.escapeHtml(entry.email || '(未知邮箱)')}</div>
+              <div class="luckmail-item-email">${helpers.escapeHtml(entry.email || '(unknown email)')}</div>
               <button
                 class="hotmail-copy-btn"
                 type="button"
                 data-action="copy-email"
-                title="复制邮箱"
-                aria-label="复制邮箱 ${helpers.escapeHtml(entry.email || '')}"
+                title="Copy email"
+                aria-label="Copy email ${helpers.escapeHtml(entry.email || '')}"
               >${copyIcon}</button>
             </div>
             <div class="luckmail-item-meta">
-              ${entry.current ? '<span class="luckmail-tag current">当前</span>' : ''}
-              ${entry.used ? '<span class="luckmail-tag used">已用</span>' : '<span class="luckmail-tag active">未用</span>'}
-              ${entry.enabled ? '<span class="luckmail-tag active">启用</span>' : '<span class="luckmail-tag disabled">停用</span>'}
+              ${entry.current ? '<span class="luckmail-tag current">Current</span>' : ''}
+              ${entry.used ? '<span class="luckmail-tag used">Used</span>' : '<span class="luckmail-tag active">Unused</span>'}
+              ${entry.enabled ? '<span class="luckmail-tag active">Enabled</span>' : '<span class="luckmail-tag disabled">Disabled</span>'}
               ${entry.note ? `<span class="luckmail-tag">${helpers.escapeHtml(entry.note)}</span>` : ''}
             </div>
           </div>
           <div class="luckmail-item-actions">
-            <button class="btn btn-outline btn-xs" type="button" data-action="use">使用此邮箱</button>
-            <button class="btn btn-outline btn-xs" type="button" data-action="toggle-used">${helpers.escapeHtml(entry.used ? '标记未用' : '标记已用')}</button>
-            <button class="btn btn-outline btn-xs" type="button" data-action="toggle-enabled">${helpers.escapeHtml(entry.enabled ? '停用' : '启用')}</button>
-            <button class="btn btn-outline btn-xs" type="button" data-action="delete">删除</button>
+            <button class="btn btn-outline btn-xs" type="button" data-action="use">Use this email</button>
+            <button class="btn btn-outline btn-xs" type="button" data-action="toggle-used">${helpers.escapeHtml(entry.used ? 'Mark Unused' : 'Mark Used')}</button>
+            <button class="btn btn-outline btn-xs" type="button" data-action="toggle-enabled">${helpers.escapeHtml(entry.enabled ? 'Disable' : 'Enable')}</button>
+            <button class="btn btn-outline btn-xs" type="button" data-action="delete">Delete</button>
           </div>
         `;
 
@@ -224,17 +224,17 @@
 
         item.querySelector('[data-action="copy-email"]').addEventListener('click', async () => {
           await helpers.copyTextToClipboard(entry.email || '');
-          helpers.showToast('邮箱已复制', 'success', 1600);
+          helpers.showToast('Email copied', 'success', 1600);
         });
 
         item.querySelector('[data-action="use"]').addEventListener('click', async () => {
           try {
-            setLoadingState(true, '正在切换当前邮箱...');
+            setLoadingState(true, 'Switching current email...');
             await actions.setRuntimeEmail?.(entry.email);
-            helpers.showToast(`已切换到 ${entry.email}`, 'success', 1800);
+            helpers.showToast(`Switched to ${entry.email}`, 'success', 1800);
             queueCustomEmailPoolRefresh();
           } catch (error) {
-            helpers.showToast(`切换邮箱失败：${error.message}`, 'error');
+            helpers.showToast(`Failed to switch email: ${error.message}`, 'error');
           } finally {
             setLoadingState(false);
           }
@@ -263,7 +263,7 @@
         item.querySelector('[data-action="delete"]').addEventListener('click', async () => {
           await deleteEntries({
             ids: [entry.id],
-          }, `确认删除 ${entry.email} 吗？此操作不可撤销。`);
+          }, `Are you sure you want to delete ${entry.email}? This cannot be undone.`);
         });
 
         dom.customEmailPoolList.appendChild(item);
@@ -276,7 +276,7 @@
       const previousEntries = normalizeEntries(state.getEntries?.() || []);
       const nextEntries = normalizeEntries(mutator(previousEntries.map((entry) => ({ ...entry }))));
 
-      setLoadingState(true, '正在更新自定义邮箱池...');
+      setLoadingState(true, 'Updating custom email pool...');
       state.setEntries?.(nextEntries);
       renderCustomEmailPoolEntries(nextEntries);
 
@@ -285,7 +285,7 @@
       } catch (error) {
         state.setEntries?.(previousEntries);
         renderCustomEmailPoolEntries(previousEntries);
-        helpers.showToast(`更新自定义邮箱池失败：${error.message}`, 'error');
+        helpers.showToast(`Failed to update custom email pool: ${error.message}`, 'error');
       } finally {
         setLoadingState(false);
       }
@@ -293,9 +293,9 @@
 
     async function deleteEntries(payload = {}, confirmMessage = '') {
       const confirmed = await helpers.openConfirmModal({
-        title: '删除邮箱',
-        message: confirmMessage || '确认删除选中的邮箱吗？此操作不可撤销。',
-        confirmLabel: '确认删除',
+        title: 'Delete Email',
+        message: confirmMessage || 'Are you sure you want to delete the selected emails? This cannot be undone.',
+        confirmLabel: 'Confirm Delete',
         confirmVariant: 'btn-danger',
       });
       if (!confirmed) {
@@ -327,7 +327,7 @@
     async function importEntriesFromTextarea() {
       const text = String(dom.inputCustomEmailPoolImport?.value || '');
       if (!text.trim()) {
-        helpers.showToast('请先粘贴邮箱列表，每行一个邮箱。', 'warn');
+        helpers.showToast('Please paste the email list first, one email per line.', 'warn');
         return;
       }
 
@@ -358,12 +358,12 @@
       }
 
       if (!importedEntries.length && skippedCount > 0) {
-        helpers.showToast('没有可导入的新邮箱（可能都重复或无效）。', 'warn');
+        helpers.showToast('No new emails to import (all duplicates or invalid).', 'warn');
         return;
       }
 
       const nextEntries = normalizeEntries([...previousEntries, ...importedEntries]);
-      setLoadingState(true, '正在导入邮箱...');
+      setLoadingState(true, 'Importing emails...');
       state.setEntries?.(nextEntries);
       renderCustomEmailPoolEntries(nextEntries);
 
@@ -374,15 +374,15 @@
         }
         helpers.showToast(
           skippedCount > 0
-            ? `已导入 ${importedEntries.length} 个邮箱，跳过 ${skippedCount} 条无效或重复数据。`
-            : `已导入 ${importedEntries.length} 个邮箱。`,
+            ? `Imported ${importedEntries.length} emails, skipped ${skippedCount} invalid or duplicate entries.`
+            : `Imported ${importedEntries.length} emails.`,
           importedEntries.length > 0 ? 'success' : 'warn',
           2400
         );
       } catch (error) {
         state.setEntries?.(previousEntries);
         renderCustomEmailPoolEntries(previousEntries);
-        helpers.showToast(`导入邮箱失败：${error.message}`, 'error');
+        helpers.showToast(`Failed to import emails: ${error.message}`, 'error');
       } finally {
         setLoadingState(false);
       }
@@ -395,7 +395,7 @@
       }
 
       if (!silent) {
-        setLoadingState(true, '正在刷新自定义邮箱池...');
+        setLoadingState(true, 'Refreshing custom email pool...');
       }
       renderCustomEmailPoolEntries(state.getEntries?.());
       if (!silent) {
@@ -422,7 +422,7 @@
         dom.customEmailPoolList.innerHTML = '';
       }
       if (dom.customEmailPoolSummary) {
-        dom.customEmailPoolSummary.textContent = '导入你提前准备好的注册邮箱，每行一个邮箱地址。';
+        dom.customEmailPoolSummary.textContent = 'Import your pre-prepared registration emails, one email per line.';
       }
       updateBulkUi([]);
     }
@@ -503,19 +503,19 @@
       dom.btnCustomEmailPoolBulkDelete?.addEventListener('click', async () => {
         await deleteEntries({
           ids: [...selectedEntryIds],
-        }, `确认删除当前选中的 ${selectedEntryIds.size} 个邮箱吗？此操作不可撤销。`);
+        }, `Are you sure you want to delete the ${selectedEntryIds.size} selected emails? This cannot be undone.`);
       });
 
       dom.btnCustomEmailPoolClearUsed?.addEventListener('click', async () => {
         await deleteEntries({
           mode: 'used',
-        }, '确认删除当前所有已用邮箱吗？此操作不可撤销。');
+        }, 'Are you sure you want to delete all currently used emails? This cannot be undone.');
       });
 
       dom.btnCustomEmailPoolDeleteAll?.addEventListener('click', async () => {
         await deleteEntries({
           mode: 'all',
-        }, '确认删除当前全部邮箱吗？此操作不可撤销。');
+        }, 'Are you sure you want to delete all current emails? This cannot be undone.');
       });
     }
 

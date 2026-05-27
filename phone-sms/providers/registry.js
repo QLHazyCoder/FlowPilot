@@ -112,7 +112,7 @@
     const definition = getProviderDefinition(providerId);
     const module = getProviderModule(providerId);
     if (!module || typeof module.createProvider !== 'function') {
-      throw new Error(`接码平台模块未加载：${definition.id}`);
+      throw new Error(`SMS provider module not loaded: ${definition.id}`);
     }
     return module.createProvider(deps);
   }

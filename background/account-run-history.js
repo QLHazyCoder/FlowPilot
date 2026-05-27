@@ -208,33 +208,33 @@
 
     function buildFailureLabel(finalStatus, failedNodeId = '', failedStep = null, failureDetail = '', state = {}) {
       if (finalStatus === 'success') {
-        return '流程完成';
+        return 'Flow completed';
       }
       if (finalStatus === 'running') {
-        return '正在运行';
+        return 'Running';
       }
       if (finalStatus === 'stopped') {
         if (failedNodeId) {
-          return `节点 ${getNodeDisplayName(failedNodeId, state)} 停止`;
+          return `Node ${getNodeDisplayName(failedNodeId, state)} stopped`;
         }
         if (Number.isInteger(failedStep) && failedStep > 0) {
-          return `步骤 ${failedStep} 停止`;
+          return `Step ${failedStep} stopped`;
         }
-        return '流程已停止';
+        return 'Flow stopped';
       }
       if (finalStatus !== 'failed') {
-        return '无';
+        return 'None';
       }
       if (isPhoneVerificationFailure(failureDetail)) {
-        return '出现手机号验证';
+        return 'Phone verification required';
       }
       if (failedNodeId) {
-        return `节点 ${getNodeDisplayName(failedNodeId, state)} 失败`;
+        return `Node ${getNodeDisplayName(failedNodeId, state)} failed`;
       }
       if (Number.isInteger(failedStep) && failedStep > 0) {
-        return `步骤 ${failedStep} 失败`;
+        return `Step ${failedStep} failed`;
       }
-      return '流程失败';
+      return 'Flow failed';
     }
 
     function normalizeAccountIdentifierType(value = '') {
@@ -674,11 +674,11 @@
       try {
         payload = await response.json();
       } catch (err) {
-        throw new Error(`账号记录快照同步失败：本地 helper 返回了无法解析的响应（${getErrorMessage(err)}）`);
+        throw new Error(`Account run snapshot sync failed: local helper returned unparseable response (${getErrorMessage(err)})`);
       }
 
       if (!response.ok || payload?.ok === false) {
-        throw new Error(`账号记录快照同步失败：${payload?.error || `HTTP ${response.status}`}`);
+        throw new Error(`Account run snapshot sync failed: ${payload?.error || `HTTP ${response.status}`}`);
       }
 
       return payload?.filePath || '';
@@ -695,7 +695,7 @@
         const history = await getPersistedAccountRunHistory();
         const filePath = await syncAccountRunHistorySnapshot(history, state);
         if (filePath) {
-          await addLog(`账号记录快照已同步到本地：${filePath}`, 'info');
+          await addLog(`Account run snapshot synced locally: ${filePath}`, 'info');
         }
       } catch (err) {
         await addLog(getErrorMessage(err), 'warn');
@@ -712,7 +712,7 @@
       try {
         const filePath = await syncAccountRunHistorySnapshot([], state);
         if (filePath) {
-          await addLog(`账号记录快照已同步到本地：${filePath}`, 'info');
+          await addLog(`Account run snapshot synced locally: ${filePath}`, 'info');
         }
       } catch (err) {
         await addLog(getErrorMessage(err), 'warn');
@@ -740,7 +740,7 @@
       try {
         const filePath = await syncAccountRunHistorySnapshot(nextHistory, state);
         if (filePath) {
-          await addLog(`账号记录快照已同步到本地：${filePath}`, 'info');
+          await addLog(`Account run snapshot synced locally: ${filePath}`, 'info');
         }
       } catch (err) {
         await addLog(getErrorMessage(err), 'warn');

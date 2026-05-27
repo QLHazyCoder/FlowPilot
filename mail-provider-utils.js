@@ -16,11 +16,11 @@
   const ICLOUD_TARGET_MAILBOX_TYPE_INBOX = 'icloud-inbox';
   const ICLOUD_TARGET_MAILBOX_TYPE_FORWARD = 'forward-mailbox';
   const ICLOUD_FORWARD_MAIL_PROVIDER_OPTIONS = [
-    { value: 'qq', label: 'QQ 邮箱' },
-    { value: '163', label: '163 邮箱' },
-    { value: '163-vip', label: '163 VIP 邮箱' },
-    { value: '126', label: '126 邮箱' },
-    { value: GMAIL_PROVIDER, label: 'Gmail 邮箱' },
+    { value: 'qq', label: 'QQ Mail' },
+    { value: '163', label: '163 Mail' },
+    { value: '163-vip', label: '163 VIP Mail' },
+    { value: '126', label: '126 Mail' },
+    { value: GMAIL_PROVIDER, label: 'Gmail' },
   ];
 
   function normalizeMailProvider(value = '') {
@@ -62,7 +62,7 @@
       return {
         source: 'gmail-mail',
         url: 'https://mail.google.com/mail/u/0/#inbox',
-        label: 'Gmail 邮箱',
+        label: 'Gmail',
         inject: ['content/activation-utils.js', 'content/utils.js', 'content/gmail-mail.js'],
         injectSource: 'gmail-mail',
       };
@@ -76,7 +76,7 @@
     const normalizeInbucketOrigin = options.normalizeInbucketOrigin || (() => '');
 
     if (provider === HOTMAIL_PROVIDER) {
-      return { provider: HOTMAIL_PROVIDER, label: 'Hotmail（微软 Graph）' };
+      return { provider: HOTMAIL_PROVIDER, label: 'Hotmail (Microsoft Graph)' };
     }
     if (provider === YYDS_MAIL_PROVIDER) {
       return { provider: YYDS_MAIL_PROVIDER, label: 'YYDS Mail' };
@@ -85,42 +85,42 @@
       return {
         source: 'mail-163',
         url: `https://mail.163.com${NETEASE_LIST_PATH}`,
-        label: '163 邮箱',
+        label: '163 Mail',
       };
     }
     if (provider === '163-vip') {
       return {
         source: 'mail-163',
         url: `https://webmail.vip.163.com${NETEASE_LIST_PATH}`,
-        label: '163 VIP 邮箱',
+        label: '163 VIP Mail',
       };
     }
     if (provider === '126') {
       return {
         source: 'mail-163',
         url: `https://mail.126.com${NETEASE_LIST_PATH}`,
-        label: '126 邮箱',
+        label: '126 Mail',
       };
     }
     if (provider === 'inbucket') {
       const host = normalizeInbucketOrigin(state.inbucketHost);
       const mailbox = String(state.inbucketMailbox || '').trim();
       if (!host) {
-        return { error: 'Inbucket 主机地址为空或无效。' };
+        return { error: 'Inbucket host address is empty or invalid.' };
       }
       if (!mailbox) {
-        return { error: 'Inbucket 邮箱名称为空。' };
+        return { error: 'Inbucket mailbox name is empty.' };
       }
       return {
         source: 'inbucket-mail',
         url: `${host}/m/${encodeURIComponent(mailbox)}/`,
-        label: `Inbucket 邮箱（${mailbox}）`,
+        label: `Inbucket Mail (${mailbox})`,
         navigateOnReuse: true,
         inject: ['content/activation-utils.js', 'content/utils.js', 'content/inbucket-mail.js'],
         injectSource: 'inbucket-mail',
       };
     }
-    return { source: 'qq-mail', url: 'https://wx.mail.qq.com/', label: 'QQ 邮箱' };
+    return { source: 'qq-mail', url: 'https://wx.mail.qq.com/', label: 'QQ Mail' };
   }
 
   return {

@@ -28,11 +28,11 @@ if (shouldHandlePollEmailInCurrentFrame) {
         sendResponse(result);
       }).catch((err) => {
         if (isStopError(err)) {
-          log(`步骤 ${message.step}：已被用户停止。`, 'warn');
+          log(`Step ${message.step}: Stopped by user.`, 'warn');
           sendResponse({ stopped: true, error: err.message });
           return;
         }
-        log(`步骤 ${message.step}：iCloud 邮箱轮询失败：${err.message}`, 'warn');
+        log(`Step ${message.step}: iCloud mail polling failed: ${err.message}`, 'warn');
         sendResponse({ error: err.message });
       });
       return true;
@@ -215,7 +215,7 @@ if (shouldHandlePollEmailInCurrentFrame) {
       }
       await sleep(100);
     }
-    throw new Error('打开邮件后未找到详情区域，请确认邮件内容已加载。');
+    throw new Error('Did not find email detail area after opening mail. Please confirm email content has loaded.');
   }
 
   async function openMailItemAndRead(item) {
@@ -326,7 +326,7 @@ if (shouldHandlePollEmailInCurrentFrame) {
     const normalizedSenderFilters = senderFilters.map((filter) => String(filter || '').toLowerCase()).filter(Boolean);
     const normalizedSubjectFilters = subjectFilters.map((filter) => String(filter || '').toLowerCase()).filter(Boolean);
 
-    log(`步骤 ${step}：开始轮询 iCloud 邮箱（最多 ${maxAttempts} 次）`);
+    log(`Step ${step}: Starting iCloud mail polling (max ${maxAttempts} attempts)`);
     await waitForElement('.content-container', 10000);
     await sleep(1500);
     const currentItems = collectThreadItems();
@@ -334,13 +334,13 @@ if (shouldHandlePollEmailInCurrentFrame) {
     const existingSignatures = sessionBaseline.signatures;
     let fallbackCarry = sessionBaseline.fallbackCarry;
     if (sessionBaseline.fromCache) {
-      log(`步骤 ${step}：已复用当前会话旧邮件快照（${existingSignatures.size} 封）。`);
+      log(`Step ${step}: Reusing current session's old email snapshot (${existingSignatures.size} emails).`);
     } else {
-      log(`步骤 ${step}：已记录当前 ${existingSignatures.size} 封旧邮件快照`);
+      log(`Step ${step}: Recorded snapshot of current ${existingSignatures.size} old emails`);
     }
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      log(`步骤 ${step}：正在轮询 iCloud 邮箱，第 ${attempt}/${maxAttempts} 次`);
+      log(`Step ${step}: Polling iCloud mail, attempt ${attempt}/${maxAttempts}`);
 
       if (attempt > 1) {
         await refreshInbox();
@@ -389,12 +389,12 @@ if (shouldHandlePollEmailInCurrentFrame) {
           continue;
         }
         if (excludedCodeSet.has(code)) {
-          log(`步骤 ${step}：跳过排除的验证码：${code}`, 'info');
+          log(`Step ${step}: Skipping excluded verification code: ${code}`, 'info');
           continue;
         }
 
-        const source = useFallback && existingSignatures.has(signature) ? '回退匹配邮件' : '新邮件';
-        log(`步骤 ${step}：已找到验证码：${code}（来源：${source}）`, 'ok');
+        const source = useFallback && existingSignatures.has(signature) ? 'fallback-matched email' : 'new email';
+        log(`Step ${step}: Found verification code: ${code} (source: ${source})`, 'ok');
         persistPollSessionBaseline(
           pollSessionKey,
           new Set(collectThreadItems().map(buildItemSignature)),
@@ -409,7 +409,7 @@ if (shouldHandlePollEmailInCurrentFrame) {
       }
 
       if (attempt === FALLBACK_AFTER + 1) {
-        log(`步骤 ${step}：连续 ${FALLBACK_AFTER} 次未发现新邮件，开始回退到首封匹配邮件`, 'warn');
+        log(`Step ${step}: ${FALLBACK_AFTER} consecutive attempts with no new emails, starting fallback to first matched email`, 'warn');
       }
 
       if (attempt < maxAttempts) {
@@ -425,7 +425,7 @@ if (shouldHandlePollEmailInCurrentFrame) {
     );
 
     throw new Error(
-      `${Math.round((maxAttempts * intervalMs) / 1000)} 秒后仍未在 iCloud 邮箱中找到新的匹配邮件。请手动检查收件箱。`
+      `No new matching email found in iCloud mail after ${Math.round((maxAttempts * intervalMs) / 1000)} seconds. Please manually check the inbox.`
     );
   }
 }

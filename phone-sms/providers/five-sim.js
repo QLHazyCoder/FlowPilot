@@ -1,4 +1,4 @@
-// phone-sms/providers/five-sim.js — 5sim 接码平台适配层
+// phone-sms/providers/five-sim.js — 5sim SMS verification provider adapter
 (function attachFiveSimSmsProvider(root, factory) {
   root.PhoneSmsFiveSimProvider = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createFiveSimSmsProviderModule() {
@@ -764,8 +764,9 @@
     if (!phoneDigits) {
       throw new Error('可复用的 5sim 手机号无效。');
     }
-    // 5sim 的 /user/reuse 会按手机号重新创建付费订单，并不是保留原订单继续收短信。
-    // 真正的复用应继续轮询原 activationId，避免产生新的订单。
+    // 5sim's /user/reuse creates a new paid order for the same phone number;
+    // it does not keep the existing order receiving SMS.
+    // Real reuse must keep polling the original activationId to avoid creating new orders.
     const config = resolveConfig(state, deps);
     const payload = await fetchJson(config, `/v1/user/check/${encodeURIComponent(normalizedActivation.activationId)}`, {
       actionLabel: '5sim 复用手机号基线检查',

@@ -33,11 +33,11 @@
   const PAYPAL_HOSTED_STEP_CREATE_ACCOUNT = 'paypal-hosted-create-account';
   const PAYPAL_HOSTED_STEP_REVIEW = 'paypal-hosted-review';
   const PAYPAL_HOSTED_STEP_META = Object.freeze({
-    [PAYPAL_HOSTED_STEP_OPENAI_CHECKOUT]: { step: 6, label: '创建 PayPal 无卡直绑 Checkout' },
-    [PAYPAL_HOSTED_STEP_EMAIL]: { step: 7, label: '无卡直绑 PayPal 邮箱页' },
-    [PAYPAL_HOSTED_STEP_CARD]: { step: 8, label: '无卡直绑 PayPal 资料页' },
-    [PAYPAL_HOSTED_STEP_CREATE_ACCOUNT]: { step: 9, label: '无卡直绑 PayPal 创建确认页' },
-    [PAYPAL_HOSTED_STEP_REVIEW]: { step: 10, label: '无卡直绑 PayPal 授权复核页' },
+    [PAYPAL_HOSTED_STEP_OPENAI_CHECKOUT]: { step: 6, label: 'Create PayPal cardless direct binding Checkout' },
+    [PAYPAL_HOSTED_STEP_EMAIL]: { step: 7, label: 'Cardless direct binding PayPal email page' },
+    [PAYPAL_HOSTED_STEP_CARD]: { step: 8, label: 'Cardless direct binding PayPal profile page' },
+    [PAYPAL_HOSTED_STEP_CREATE_ACCOUNT]: { step: 9, label: 'Cardless direct binding PayPal create confirmation page' },
+    [PAYPAL_HOSTED_STEP_REVIEW]: { step: 10, label: 'Cardless direct binding PayPal authorization review page' },
   });
 
   function createPlusCheckoutCreateExecutor(deps = {}) {
@@ -96,12 +96,12 @@
     function getCheckoutModeLabel(state = {}) {
       const paymentMethod = normalizePlusPaymentMethod(state?.plusPaymentMethod);
       if (paymentMethod === PLUS_PAYMENT_METHOD_GPC_HELPER) {
-        return 'GPC 订阅页';
+        return 'GPC subscription page';
       }
       if (paymentMethod === PLUS_PAYMENT_METHOD_PAYPAL_HOSTED) {
-        return 'PayPal 无卡直绑';
+        return 'PayPal cardless direct binding';
       }
-      return paymentMethod === PLUS_PAYMENT_METHOD_GOPAY ? 'GoPay 订阅页' : 'Plus Checkout';
+      return paymentMethod === PLUS_PAYMENT_METHOD_GOPAY ? 'GoPay subscription page' : 'Plus Checkout';
     }
 
     function getPlusPaymentMethodLabel(method = PLUS_PAYMENT_METHOD_PAYPAL) {
@@ -110,7 +110,7 @@
         return 'GPC';
       }
       if (paymentMethod === PLUS_PAYMENT_METHOD_PAYPAL_HOSTED) {
-        return 'PayPal 无卡直绑';
+        return 'PayPal cardless direct binding';
       }
       return paymentMethod === PLUS_PAYMENT_METHOD_GOPAY ? 'GoPay' : 'PayPal';
     }
@@ -121,7 +121,7 @@
         : await chrome.tabs.create({ url: PLUS_CHECKOUT_ENTRY_URL, active: true });
       const tabId = Number(tab?.id);
       if (!Number.isInteger(tabId)) {
-        throw new Error('步骤 6：打开 ChatGPT 页面失败，无法创建订阅页。');
+        throw new Error('Step 6: failed to open ChatGPT page, unable to create subscription page.');
       }
       if (typeof registerTab === 'function') {
         await registerTab(PLUS_CHECKOUT_SOURCE, tabId);
@@ -264,11 +264,11 @@
 
       const discoveredTabId = await findOpenHostedCheckoutTabId();
       if (discoveredTabId) {
-        await addHostedStepLog(stepKey, `步骤 ${getHostedStepNumber(stepKey)}：已从当前浏览器标签中发现 PayPal 无卡直绑页面，正在接管继续执行。`, 'info');
+        await addHostedStepLog(stepKey, `Step ${getHostedStepNumber(stepKey)}: discovered PayPal cardless direct binding page from current browser tabs, taking over to continue.`, 'info');
         return discoveredTabId;
       }
 
-      throw new Error(`步骤 ${getHostedStepNumber(stepKey)}：未找到 PayPal 无卡直绑标签页，请先完成创建 checkout 节点。`);
+      throw new Error(`Step ${getHostedStepNumber(stepKey)}: PayPal cardless direct binding tab not found, please complete the create checkout node first.`);
     }
 
     async function getHostedCurrentUrl(tabId) {
@@ -302,7 +302,7 @@
       const config = await getHostedCheckoutRuntimeConfig(state);
       const shouldWait = Boolean(options.waitBeforeComplete);
       if (shouldWait && config.oauthDelaySeconds > 0) {
-        await addHostedStepLog(stepKey, `步骤 ${getHostedStepNumber(stepKey)}：支付成功后等待 ${config.oauthDelaySeconds} 秒，再继续账号接入。`, 'info');
+        await addHostedStepLog(stepKey, `Step ${getHostedStepNumber(stepKey)}: wait ${config.oauthDelaySeconds} seconds after payment success before continuing with account integration.`, 'info');
         await sleepWithStop(config.oauthDelaySeconds * 1000);
       }
       await completeHostedStep(stepKey, tabId, {
@@ -367,7 +367,7 @@
         body: JSON.stringify({ path: '/', method: 'address' }),
       }, 30000);
       if (!response?.ok) {
-        throw new Error(`获取无卡直绑地址失败（HTTP ${response?.status || 0}）。`);
+        throw new Error(`Failed to get cardless direct binding address (HTTP ${response?.status || 0}).`);
       }
       const address = data?.address || data || {};
       return {
@@ -451,13 +451,13 @@
     async function fetchHostedVerificationCode(verificationUrl = '') {
       const url = String(verificationUrl || '').trim();
       if (!url) {
-        throw new Error('未配置 OpenAI Checkout 验证码接口。');
+        throw new Error('OpenAI Checkout verification code endpoint not configured.');
       }
       const fetcher = typeof fetchImpl === 'function'
         ? fetchImpl
         : (typeof fetch === 'function' ? fetch.bind(globalThis) : null);
       if (typeof fetcher !== 'function') {
-        throw new Error('当前运行环境不支持 fetch，无法获取 OpenAI Checkout 验证码。');
+        throw new Error('Current runtime environment does not support fetch, unable to retrieve OpenAI Checkout verification code.');
       }
       const separator = url.includes('?') ? '&' : '?';
       const response = await fetcher(`${url}${separator}t=${Date.now()}`, {
@@ -473,7 +473,7 @@
       }
       const code = extractHostedVerificationCode(payload);
       if (!code) {
-        throw new Error('验证码接口暂未返回有效 6 位验证码。');
+        throw new Error('Verification code endpoint did not return a valid 6-digit verification code.');
       }
       return code;
     }
@@ -484,24 +484,24 @@
         throwIfStopped();
         try {
           const code = await fetchHostedVerificationCode(verificationUrl);
-          await addLog(`步骤 6：已获取 OpenAI Checkout 验证码（${attempt}/${HOSTED_CHECKOUT_VERIFICATION_POLL_ATTEMPTS}）。`, 'info');
+          await addLog(`Step 6: retrieved OpenAI Checkout verification code (${attempt}/${HOSTED_CHECKOUT_VERIFICATION_POLL_ATTEMPTS}).`, 'info');
           return code;
         } catch (error) {
           lastError = error;
-          await addLog(`步骤 6：OpenAI Checkout 验证码暂不可用（${attempt}/${HOSTED_CHECKOUT_VERIFICATION_POLL_ATTEMPTS}）：${error?.message || error}`, 'warn');
+          await addLog(`Step 6: OpenAI Checkout verification code temporarily unavailable (${attempt}/${HOSTED_CHECKOUT_VERIFICATION_POLL_ATTEMPTS}): ${error?.message || error}`, 'warn');
           if (attempt < HOSTED_CHECKOUT_VERIFICATION_POLL_ATTEMPTS) {
             await sleepWithStop(HOSTED_CHECKOUT_VERIFICATION_POLL_INTERVAL_MS);
           }
         }
       }
-      throw lastError || new Error('OpenAI Checkout 验证码轮询失败。');
+      throw lastError || new Error('OpenAI Checkout verification code polling failed.');
     }
 
     async function runHostedOpenAiCheckout(tabId, profile, config) {
       await ensureContentScriptReadyOnTabUntilStopped(PLUS_CHECKOUT_SOURCE, tabId, {
         inject: PLUS_CHECKOUT_INJECT_FILES,
         injectSource: PLUS_CHECKOUT_SOURCE,
-        logMessage: '步骤 6：正在等待 OpenAI hosted checkout 脚本就绪...',
+        logMessage: 'Step 6: waiting for OpenAI hosted checkout script to be ready...',
       });
       const firstResult = await sendTabMessageUntilStopped(tabId, PLUS_CHECKOUT_SOURCE, {
         type: 'RUN_PAYPAL_HOSTED_OPENAI_CHECKOUT_STEP',
@@ -518,7 +518,7 @@
         throwIfStopped();
         const tab = await chrome?.tabs?.get?.(tabId).catch(() => null);
         if (!tab) {
-          throw new Error('步骤 6：无卡直绑 checkout 标签页已关闭。');
+          throw new Error('Step 6: cardless direct binding checkout tab has been closed.');
         }
         const currentUrl = String(tab.url || '').trim();
         if (isPayPalUrl(currentUrl) || isHostedCheckoutSuccessUrl(currentUrl)) {
@@ -550,7 +550,7 @@
         }
         await sleepWithStop(500);
       }
-      throw new Error('步骤 6：OpenAI hosted checkout 长时间未跳转到 PayPal 或支付成功页。');
+      throw new Error('Step 6: OpenAI hosted checkout did not redirect to PayPal or payment success page for an extended period.');
     }
 
     async function getHostedPayPalState(tabId) {
@@ -558,7 +558,7 @@
       await ensureContentScriptReadyOnTabUntilStopped(PAYPAL_SOURCE, tabId, {
         inject: PAYPAL_INJECT_FILES,
         injectSource: PAYPAL_SOURCE,
-        logMessage: '步骤 6：正在等待 PayPal 无卡直绑页面脚本就绪...',
+        logMessage: 'Step 6: waiting for PayPal cardless direct binding page script to be ready...',
       });
       const result = await sendTabMessageUntilStopped(tabId, PAYPAL_SOURCE, {
         type: 'PAYPAL_HOSTED_GET_STATE',
@@ -576,7 +576,7 @@
       await ensureContentScriptReadyOnTabUntilStopped(PAYPAL_SOURCE, tabId, {
         inject: PAYPAL_INJECT_FILES,
         injectSource: PAYPAL_SOURCE,
-        logMessage: '步骤 6：正在等待 PayPal 无卡直绑页面脚本就绪...',
+        logMessage: 'Step 6: waiting for PayPal cardless direct binding page script to be ready...',
       });
       const result = await sendTabMessageUntilStopped(tabId, PAYPAL_SOURCE, {
         type: 'PAYPAL_RUN_HOSTED_CHECKOUT_STEP',
@@ -615,7 +615,7 @@
     async function waitForHostedPayPalStage(tabId, predicate, options = {}) {
       const timeoutMs = Math.max(1000, Number(options.timeoutMs) || HOSTED_CHECKOUT_TRANSITION_TIMEOUT_MS);
       const intervalMs = Math.max(100, Number(options.intervalMs) || 500);
-      const label = String(options.label || 'PayPal 无卡直绑页面').trim();
+      const label = String(options.label || 'PayPal cardless direct binding page').trim();
       const deadline = Date.now() + timeoutMs;
       let lastStage = '';
       while (Date.now() < deadline) {
@@ -642,13 +642,13 @@
         }
         await sleepWithStop(intervalMs);
       }
-      throw new Error(`${label}等待超时${lastStage ? `（最后状态：${lastStage}）` : ''}。`);
+      throw new Error(`${label} wait timed out${lastStage ? ` (last state: ${lastStage})` : ''}.`);
     }
 
     async function waitForHostedUrlAfterAction(tabId, matcher, options = {}) {
       const timeoutMs = Math.max(1000, Number(options.timeoutMs) || HOSTED_CHECKOUT_TRANSITION_TIMEOUT_MS);
       const intervalMs = Math.max(100, Number(options.intervalMs) || 500);
-      const label = String(options.label || 'PayPal 无卡直绑跳转').trim();
+      const label = String(options.label || 'PayPal cardless direct binding redirect').trim();
       const deadline = Date.now() + timeoutMs;
       while (Date.now() < deadline) {
         throwIfStopped();
@@ -660,12 +660,12 @@
         }
         await sleepWithStop(intervalMs);
       }
-      throw new Error(`${label}等待超时。`);
+      throw new Error(`${label} wait timed out.`);
     }
 
     async function runHostedPayPalStepAndWaitForStageChange(tabId, payload = {}, previousStage = '', options = {}) {
       const normalizedPreviousStage = String(previousStage || payload.expectedStage || '').trim();
-      const label = String(options.label || 'PayPal 无卡直绑页面跳转').trim();
+      const label = String(options.label || 'PayPal cardless direct binding page redirect').trim();
       const predicate = typeof options.predicate === 'function'
         ? options.predicate
         : (stateInfo) => stateInfo?.hostedStage && stateInfo.hostedStage !== normalizedPreviousStage;
@@ -723,10 +723,10 @@
     async function executeHostedCheckoutCreate(tabId, state = {}, result = {}) {
       const targetCheckoutUrl = resolveCheckoutTargetUrl(result, PLUS_PAYMENT_METHOD_PAYPAL_HOSTED);
       if (!targetCheckoutUrl) {
-        throw new Error('步骤 6：PayPal 无卡直绑未返回可用的订阅链接。');
+        throw new Error('Step 6: PayPal cardless direct binding did not return a usable subscription link.');
       }
 
-      await addLog('步骤 6：PayPal 无卡直绑链接已创建，正在打开并提交 OpenAI Checkout 页面...', 'ok');
+      await addLog('Step 6: PayPal cardless direct binding link created, opening and submitting OpenAI Checkout page...', 'ok');
       await chrome.tabs.update(tabId, { url: targetCheckoutUrl, active: true });
       await waitForTabCompleteUntilStopped(tabId);
 
@@ -741,7 +741,7 @@
 
       if (isHostedOpenAiCheckoutUrl(completedUrl)) {
         const { profile, config } = await ensureHostedGuestProfile(state);
-        await addLog(`步骤 6：正在提交 OpenAI Checkout，等待跳转到 PayPal 邮箱页（电话使用本地号码 ${profile.phone}）。`, 'info');
+        await addLog(`Step 6: submitting OpenAI Checkout, waiting for redirect to PayPal email page (phone uses local number ${profile.phone}).`, 'info');
         completedUrl = String(await runHostedOpenAiCheckout(tabId, profile, config) || await getHostedCurrentUrl(tabId) || '').trim();
       }
 
@@ -760,7 +760,7 @@
         plusHostedCheckoutCompleted: isAlreadySuccessful,
       });
 
-      await addLog(`步骤 6：PayPal 无卡直绑已提交 OpenAI Checkout（${result.country || 'US'} ${result.currency || 'USD'}），准备进入 PayPal 邮箱页。`, 'info');
+      await addLog(`Step 6: PayPal cardless direct binding submitted OpenAI Checkout (${result.country || 'US'} ${result.currency || 'USD'}), preparing to enter PayPal email page.`, 'info');
 
       await completeNodeFromBackground('plus-checkout-create', {
         plusCheckoutCountry: result.country || 'US',
@@ -782,7 +782,7 @@
 
       let currentUrl = await getHostedCurrentUrl(tabId);
       if (isPayPalUrl(currentUrl)) {
-        await addHostedStepLog(stepKey, `步骤 ${stepNumber}：当前已在 PayPal 页面，OpenAI Checkout 节点直接完成。`, 'info');
+        await addHostedStepLog(stepKey, `Step ${stepNumber}: currently on PayPal page, OpenAI Checkout node completing directly.`, 'info');
         await completeHostedStep(stepKey, tabId, {
           plusCheckoutSource: PLUS_PAYMENT_METHOD_PAYPAL_HOSTED,
         });
@@ -792,7 +792,7 @@
         currentUrl = await waitForHostedUrlAfterAction(
           tabId,
           (url) => isHostedOpenAiCheckoutUrl(url) || isPayPalUrl(url) || isHostedCheckoutSuccessUrl(url),
-          { label: `步骤 ${stepNumber}：等待 OpenAI hosted checkout 页面` }
+          { label: `Step ${stepNumber}: waiting for OpenAI hosted checkout page` }
         );
       }
       if (isHostedCheckoutSuccessUrl(currentUrl)) {
@@ -810,7 +810,7 @@
       }
 
       const { profile, config } = await ensureHostedGuestProfile(state);
-      await addHostedStepLog(stepKey, `步骤 ${stepNumber}：正在选择 PayPal 并提交 OpenAI hosted checkout（电话使用本地号码 ${profile.phone}）。`, 'info');
+      await addHostedStepLog(stepKey, `Step ${stepNumber}: selecting PayPal and submitting OpenAI hosted checkout (phone uses local number ${profile.phone}).`, 'info');
       const transitionUrl = await runHostedOpenAiCheckout(tabId, profile, config);
       const completedUrl = String(transitionUrl || await getHostedCurrentUrl(tabId) || '').trim();
       await completeHostedStep(stepKey, tabId, {
@@ -832,7 +832,7 @@
       await waitForHostedUrlAfterAction(
         tabId,
         (url) => isPayPalUrl(url) || isHostedCheckoutSuccessUrl(url),
-        { label: `步骤 ${stepNumber}：等待 PayPal 邮箱页` }
+        { label: `Step ${stepNumber}: waiting for PayPal email page` }
       );
       if (await completeHostedStepIfSuccessful(stepKey, tabId, state)) {
         return;
@@ -841,23 +841,23 @@
       const pageState = await getHostedPayPalState(tabId);
       if (isHostedStageAtOrAfter(pageState.hostedStage, PAYPAL_HOSTED_STAGE_GUEST_CHECKOUT)
         && pageState.hostedStage !== PAYPAL_HOSTED_STAGE_LOGIN) {
-        await addHostedStepLog(stepKey, `步骤 ${stepNumber}：当前 PayPal 已进入后续页面（${pageState.hostedStage}），邮箱节点直接完成。`, 'info');
+        await addHostedStepLog(stepKey, `Step ${stepNumber}: current PayPal already advanced to subsequent page (${pageState.hostedStage}), email node completing directly.`, 'info');
         await completeHostedStep(stepKey, tabId, {
           plusHostedCheckoutLastStage: pageState.hostedStage,
         });
         return;
       }
       if (pageState.hostedStage !== PAYPAL_HOSTED_STAGE_LOGIN) {
-        throw new Error(`步骤 ${stepNumber}：当前不是 PayPal 邮箱页（当前状态：${pageState.hostedStage || PAYPAL_HOSTED_STAGE_UNKNOWN}）。`);
+        throw new Error(`Step ${stepNumber}: current page is not the PayPal email page (current state: ${pageState.hostedStage || PAYPAL_HOSTED_STAGE_UNKNOWN}).`);
       }
 
-      await addHostedStepLog(stepKey, `步骤 ${stepNumber}：正在填写 PayPal 无卡直绑邮箱。`, 'info');
+      await addHostedStepLog(stepKey, `Step ${stepNumber}: filling in PayPal cardless direct binding email.`, 'info');
       const { nextState, completedByStageChange } = await runHostedPayPalStepAndWaitForStageChange(tabId, {
         expectedStage: PAYPAL_HOSTED_STAGE_LOGIN,
         email: profile.email,
-      }, PAYPAL_HOSTED_STAGE_LOGIN, { label: `步骤 ${stepNumber}：等待 PayPal 邮箱页跳转` });
+      }, PAYPAL_HOSTED_STAGE_LOGIN, { label: `Step ${stepNumber}: waiting for PayPal email page redirect` });
       if (completedByStageChange) {
-        await addHostedStepLog(stepKey, `步骤 ${stepNumber}：已检测到 PayPal 进入后续页面（${nextState.hostedStage || PAYPAL_HOSTED_STAGE_UNKNOWN}），邮箱节点直接完成。`, 'info');
+        await addHostedStepLog(stepKey, `Step ${stepNumber}: detected PayPal advanced to subsequent page (${nextState.hostedStage || PAYPAL_HOSTED_STAGE_UNKNOWN}), email node completing directly.`, 'info');
       }
       await completeHostedStep(stepKey, tabId, {
         plusHostedCheckoutLastStage: nextState.hostedStage || '',
@@ -874,7 +874,7 @@
       await waitForHostedUrlAfterAction(
         tabId,
         (url) => isPayPalUrl(url) || isHostedCheckoutSuccessUrl(url),
-        { label: `步骤 ${stepNumber}：等待 PayPal 资料页` }
+        { label: `Step ${stepNumber}: waiting for PayPal profile page` }
       );
       if (await completeHostedStepIfSuccessful(stepKey, tabId, state)) {
         return;
@@ -883,18 +883,18 @@
       const pageState = await getHostedPayPalState(tabId);
       if (isHostedStageAtOrAfter(pageState.hostedStage, PAYPAL_HOSTED_STAGE_CREATE_ACCOUNT)
         && pageState.hostedStage !== PAYPAL_HOSTED_STAGE_GUEST_CHECKOUT) {
-        await addHostedStepLog(stepKey, `步骤 ${stepNumber}：当前 PayPal 已进入后续页面（${pageState.hostedStage}），资料节点直接完成。`, 'info');
+        await addHostedStepLog(stepKey, `Step ${stepNumber}: current PayPal already advanced to subsequent page (${pageState.hostedStage}), profile node completing directly.`, 'info');
         await completeHostedStep(stepKey, tabId, {
           plusHostedCheckoutLastStage: pageState.hostedStage,
         });
         return;
       }
       if (pageState.hostedStage !== PAYPAL_HOSTED_STAGE_GUEST_CHECKOUT) {
-        throw new Error(`步骤 ${stepNumber}：当前不是 PayPal 资料页（当前状态：${pageState.hostedStage || PAYPAL_HOSTED_STAGE_UNKNOWN}）。`);
+        throw new Error(`Step ${stepNumber}: current page is not the PayPal profile page (current state: ${pageState.hostedStage || PAYPAL_HOSTED_STAGE_UNKNOWN}).`);
       }
 
       const { profile } = await ensureHostedGuestProfile(state);
-      await addHostedStepLog(stepKey, `步骤 ${stepNumber}：正在填写 PayPal 无卡直绑资料，提交前会复查电话是否为 ${profile.phone}。`, 'info');
+      await addHostedStepLog(stepKey, `Step ${stepNumber}: filling in PayPal cardless direct binding profile, will verify phone matches ${profile.phone} before submitting.`, 'info');
       const cardResult = await runHostedPayPalStep(tabId, {
         ...profile,
         expectedStage: PAYPAL_HOSTED_STAGE_GUEST_CHECKOUT,
@@ -903,14 +903,14 @@
       if (cardResult?.phoneMatched) {
         await addHostedStepLog(
           stepKey,
-          `步骤 ${stepNumber}：PayPal 页面电话复查通过（配置 ${cardResult.payloadPhoneDigits}，页面 ${cardResult.renderedPhoneDigits}）。`,
+          `Step ${stepNumber}: PayPal page phone verification passed (configured ${cardResult.payloadPhoneDigits}, page ${cardResult.renderedPhoneDigits}).`,
           'info'
         );
       }
       const nextState = await waitForHostedPayPalStage(
         tabId,
         (stateInfo) => stateInfo?.hostedStage && stateInfo.hostedStage !== PAYPAL_HOSTED_STAGE_GUEST_CHECKOUT,
-        { label: `步骤 ${stepNumber}：等待 PayPal 资料页跳转` }
+        { label: `Step ${stepNumber}: waiting for PayPal profile page redirect` }
       );
       await completeHostedStep(stepKey, tabId, {
         plusHostedCheckoutLastStage: nextState.hostedStage || '',
@@ -927,7 +927,7 @@
       await waitForHostedUrlAfterAction(
         tabId,
         (url) => isPayPalUrl(url) || isHostedCheckoutSuccessUrl(url),
-        { label: `步骤 ${stepNumber}：等待 PayPal 创建确认页` }
+        { label: `Step ${stepNumber}: waiting for PayPal create confirmation page` }
       );
       if (await completeHostedStepIfSuccessful(stepKey, tabId, state)) {
         return;
@@ -936,24 +936,24 @@
       const pageState = await getHostedPayPalState(tabId);
       if (isHostedStageAtOrAfter(pageState.hostedStage, PAYPAL_HOSTED_STAGE_REVIEW)
         && pageState.hostedStage !== PAYPAL_HOSTED_STAGE_CREATE_ACCOUNT) {
-        await addHostedStepLog(stepKey, `步骤 ${stepNumber}：当前 PayPal 已进入后续页面（${pageState.hostedStage}），创建确认节点直接完成。`, 'info');
+        await addHostedStepLog(stepKey, `Step ${stepNumber}: current PayPal already advanced to subsequent page (${pageState.hostedStage}), create confirmation node completing directly.`, 'info');
         await completeHostedStep(stepKey, tabId, {
           plusHostedCheckoutLastStage: pageState.hostedStage,
         });
         return;
       }
       if (pageState.hostedStage !== PAYPAL_HOSTED_STAGE_CREATE_ACCOUNT) {
-        throw new Error(`步骤 ${stepNumber}：当前不是 PayPal 创建确认页（当前状态：${pageState.hostedStage || PAYPAL_HOSTED_STAGE_UNKNOWN}）。`);
+        throw new Error(`Step ${stepNumber}: current page is not the PayPal create confirmation page (current state: ${pageState.hostedStage || PAYPAL_HOSTED_STAGE_UNKNOWN}).`);
       }
 
-      await addHostedStepLog(stepKey, `步骤 ${stepNumber}：正在确认创建 PayPal 账号。`, 'info');
+      await addHostedStepLog(stepKey, `Step ${stepNumber}: confirming PayPal account creation.`, 'info');
       await runHostedPayPalStep(tabId, {
         expectedStage: PAYPAL_HOSTED_STAGE_CREATE_ACCOUNT,
       });
       const nextState = await waitForHostedPayPalStage(
         tabId,
         (stateInfo) => stateInfo?.hostedStage && stateInfo.hostedStage !== PAYPAL_HOSTED_STAGE_CREATE_ACCOUNT,
-        { label: `步骤 ${stepNumber}：等待 PayPal 创建确认页跳转` }
+        { label: `Step ${stepNumber}: waiting for PayPal create confirmation page redirect` }
       );
       await completeHostedStep(stepKey, tabId, {
         plusHostedCheckoutLastStage: nextState.hostedStage || '',
@@ -970,7 +970,7 @@
       await waitForHostedUrlAfterAction(
         tabId,
         (url) => isPayPalUrl(url) || isHostedCheckoutSuccessUrl(url),
-        { label: `步骤 ${stepNumber}：等待 PayPal 授权复核页` }
+        { label: `Step ${stepNumber}: waiting for PayPal authorization review page` }
       );
       if (await completeHostedStepIfSuccessful(stepKey, tabId, state, { waitBeforeComplete: true })) {
         return;
@@ -978,20 +978,20 @@
 
       const pageState = await getHostedPayPalState(tabId);
       if (pageState.hostedStage !== PAYPAL_HOSTED_STAGE_REVIEW) {
-        throw new Error(`步骤 ${stepNumber}：当前不是 PayPal 授权复核页（当前状态：${pageState.hostedStage || PAYPAL_HOSTED_STAGE_UNKNOWN}）。`);
+        throw new Error(`Step ${stepNumber}: current page is not the PayPal authorization review page (current state: ${pageState.hostedStage || PAYPAL_HOSTED_STAGE_UNKNOWN}).`);
       }
 
-      await addHostedStepLog(stepKey, `步骤 ${stepNumber}：正在确认 PayPal 授权复核页。`, 'info');
+      await addHostedStepLog(stepKey, `Step ${stepNumber}: confirming PayPal authorization review page.`, 'info');
       await runHostedPayPalStep(tabId, {
         expectedStage: PAYPAL_HOSTED_STAGE_REVIEW,
       });
       await waitForHostedUrlAfterAction(
         tabId,
         (url) => isHostedCheckoutSuccessUrl(url),
-        { label: `步骤 ${stepNumber}：等待 PayPal 回到 ChatGPT 支付成功页`, timeoutMs: HOSTED_CHECKOUT_PAYPAL_TIMEOUT_MS }
+        { label: `Step ${stepNumber}: waiting for PayPal to return to ChatGPT payment success page`, timeoutMs: HOSTED_CHECKOUT_PAYPAL_TIMEOUT_MS }
       );
       if (!await completeHostedStepIfSuccessful(stepKey, tabId, state, { waitBeforeComplete: true })) {
-        throw new Error(`步骤 ${stepNumber}：PayPal 授权后未检测到 ChatGPT 支付成功页。`);
+        throw new Error(`Step ${stepNumber}: did not detect ChatGPT payment success page after PayPal authorization.`);
       }
     }
 
@@ -1036,7 +1036,7 @@
         || ''
       ).trim();
       if (!apiKey) {
-        throw new Error('创建 GPC 订单失败：缺少 API Key。');
+        throw new Error('Failed to create GPC order: missing API Key.');
       }
       return apiKey;
     }
@@ -1172,7 +1172,7 @@
     async function assertGpcApiKeyReadyForCreate(state = {}, phoneMode = GPC_HELPER_PHONE_MODE_MANUAL, apiKey = '') {
       const apiUrl = buildGpcBalanceUrl(state?.gopayHelperApiUrl);
       if (!apiUrl) {
-        throw new Error('创建 GPC 订单失败：缺少 API 地址。');
+        throw new Error('Failed to create GPC order: missing API URL.');
       }
       const { response, data } = await fetchJsonWithTimeout(apiUrl, {
         method: 'GET',
@@ -1183,19 +1183,19 @@
       }, 30000);
       if (!response?.ok || !isGpcUnifiedResponseOk(data)) {
         const detail = getGpcResponseErrorDetail(data, response?.status || 0);
-        throw new Error(`创建 GPC 订单失败：API Key 校验失败：${detail}`);
+        throw new Error(`Failed to create GPC order: API Key verification failed: ${detail}`);
       }
       const balanceData = unwrapGpcResponse(data);
       const remainingUses = getGpcRemainingUses(balanceData);
       const status = String(balanceData?.status || balanceData?.card_status || balanceData?.cardStatus || '').trim().toLowerCase();
       if (status && status !== 'active') {
-        throw new Error(`创建 GPC 订单失败：API Key 状态不可用（${status}）。`);
+        throw new Error(`Failed to create GPC order: API Key status unavailable (${status}).`);
       }
       if (remainingUses !== null && remainingUses <= 0) {
-        throw new Error('创建 GPC 订单失败：API Key 剩余次数不足。');
+        throw new Error('Failed to create GPC order: API Key has insufficient remaining uses.');
       }
       if (phoneMode === GPC_HELPER_PHONE_MODE_AUTO && isGpcAutoModePermissionDenied(balanceData)) {
-        throw new Error('创建 GPC 订单失败：当前 GPC API Key 未开通自动模式。');
+        throw new Error('Failed to create GPC order: current GPC API Key does not have auto mode enabled.');
       }
     }
 
@@ -1204,13 +1204,13 @@
         ? fetchImpl
         : (typeof fetch === 'function' ? fetch.bind(globalThis) : null);
       if (typeof fetcher !== 'function') {
-        throw new Error('当前运行环境不支持 fetch，无法调用 GPC API。');
+        throw new Error('Current runtime environment does not support fetch, unable to call GPC API.');
       }
       const controller = typeof AbortController === 'function' ? new AbortController() : null;
       const effectiveTimeoutMs = Math.max(1000, Number(timeoutMs) || 30000);
       let didTimeout = false;
       let timer = null;
-      const buildTimeoutError = () => new Error(`GPC API 请求超时（>${Math.round(effectiveTimeoutMs / 1000)} 秒）：${url}`);
+      const buildTimeoutError = () => new Error(`GPC API request timed out (>${Math.round(effectiveTimeoutMs / 1000)} seconds): ${url}`);
       const timeoutPromise = new Promise((_, reject) => {
         timer = setTimeout(() => {
           didTimeout = true;
@@ -1246,7 +1246,7 @@
       await ensureContentScriptReadyOnTabUntilStopped(PLUS_CHECKOUT_SOURCE, tabId, {
         inject: PLUS_CHECKOUT_INJECT_FILES,
         injectSource: PLUS_CHECKOUT_SOURCE,
-        logMessage: '步骤 6：正在等待 ChatGPT 页面完成加载，再继续获取 accessToken...',
+        logMessage: 'Step 6: waiting for ChatGPT page to finish loading, then continuing to retrieve accessToken...',
       });
 
       const sessionResult = await sendTabMessageUntilStopped(tabId, PLUS_CHECKOUT_SOURCE, {
@@ -1266,11 +1266,11 @@
     async function generateGpcCheckoutFromApi(accessToken = '', state = {}) {
       const token = String(accessToken || '').trim();
       if (!token) {
-        throw new Error('创建 GPC 订单失败：缺少 accessToken。');
+        throw new Error('Failed to create GPC order: missing accessToken.');
       }
       const apiUrl = buildGpcTaskCreateUrl(state?.gopayHelperApiUrl);
       if (!apiUrl) {
-        throw new Error('创建 GPC 订单失败：缺少 API 地址。');
+        throw new Error('Failed to create GPC order: missing API URL.');
       }
       const phoneMode = normalizeGpcHelperPhoneMode(state?.gopayHelperPhoneMode || state?.phoneMode);
       const isAutoMode = phoneMode === GPC_HELPER_PHONE_MODE_AUTO;
@@ -1279,10 +1279,10 @@
       const pin = String(state?.gopayHelperPin || '').trim();
       const apiKey = resolveGpcHelperApiKey(state);
       if (!isAutoMode && !phoneNumber) {
-        throw new Error('创建 GPC 订单失败：手动模式缺少手机号。');
+        throw new Error('Failed to create GPC order: manual mode missing phone number.');
       }
       if (!isAutoMode && !pin) {
-        throw new Error('创建 GPC 订单失败：手动模式缺少 PIN。');
+        throw new Error('Failed to create GPC order: manual mode missing PIN.');
       }
 
       throwIfStopped();
@@ -1315,7 +1315,7 @@
 
       if (!response?.ok || !isGpcUnifiedResponseOk(data) || !taskId) {
         const detail = getGpcResponseErrorDetail(data, response?.status || 0);
-        throw new Error(`创建 GPC 订单失败：${detail}`);
+        throw new Error(`Failed to create GPC order: ${detail}`);
       }
 
       return {
@@ -1335,7 +1335,7 @@
     async function executeGpcCheckoutCreate(state = {}) {
       let accessToken = String(state?.contributionAccessToken || state?.accessToken || state?.chatgptAccessToken || '').trim();
       if (!accessToken) {
-        await addLog('步骤 6：正在获取 accessToken...', 'info');
+        await addLog('Step 6: retrieving accessToken...', 'info');
         const tokenTabId = await openFreshChatGptTabForCheckoutCreate();
         try {
           accessToken = await readAccessTokenFromChatGptSessionTab(tokenTabId);
@@ -1346,10 +1346,10 @@
         }
       }
       if (!accessToken) {
-        throw new Error('步骤 6：GPC 模式获取 accessToken 失败。');
+        throw new Error('Step 6: GPC mode failed to retrieve accessToken.');
       }
 
-      await addLog('步骤 6：正在调用 GPC 接口创建订单...', 'info');
+      await addLog('Step 6: calling GPC API to create order...', 'info');
       const result = await generateGpcCheckoutFromApi(accessToken, state);
       await setState({
         plusCheckoutTabId: null,
@@ -1374,7 +1374,7 @@
         gopayHelperStartPayload: null,
         gopayHelperOrderCreatedAt: result.orderCreatedAt || Date.now(),
       });
-      await addLog(`步骤 6：GPC ${result.phoneMode === GPC_HELPER_PHONE_MODE_AUTO ? '自动' : '手动'}模式任务已创建（task_id: ${result.taskId}），准备继续下一步。`, 'info');
+      await addLog(`Step 6: GPC ${result.phoneMode === GPC_HELPER_PHONE_MODE_AUTO ? 'auto' : 'manual'} mode task created (task_id: ${result.taskId}), preparing to continue to next step.`, 'info');
       await completeNodeFromBackground('plus-checkout-create', {
         plusCheckoutCountry: result.country || 'ID',
         plusCheckoutCurrency: result.currency || 'IDR',
@@ -1391,7 +1391,7 @@
 
       const paymentMethodLabel = getPlusPaymentMethodLabel(paymentMethod);
       const checkoutModeLabel = getCheckoutModeLabel(state);
-      await addLog(`步骤 6：正在打开新的 ChatGPT 会话，准备创建${checkoutModeLabel}...`, 'info');
+      await addLog(`Step 6: opening new ChatGPT session, preparing to create ${checkoutModeLabel}...`, 'info');
       const tabId = await openFreshChatGptTabForCheckoutCreate();
 
       await waitForTabCompleteUntilStopped(tabId);
@@ -1399,7 +1399,7 @@
       await ensureContentScriptReadyOnTabUntilStopped(PLUS_CHECKOUT_SOURCE, tabId, {
         inject: PLUS_CHECKOUT_INJECT_FILES,
         injectSource: PLUS_CHECKOUT_SOURCE,
-        logMessage: '步骤 6：正在等待 ChatGPT 页面完成加载，再继续创建订阅页...',
+        logMessage: 'Step 6: waiting for ChatGPT page to finish loading, then continuing to create subscription page...',
       });
 
       const result = await sendTabMessageUntilStopped(tabId, PLUS_CHECKOUT_SOURCE, {
@@ -1413,7 +1413,7 @@
       }
       const targetCheckoutUrl = resolveCheckoutTargetUrl(result, paymentMethod);
       if (!targetCheckoutUrl) {
-        throw new Error(`步骤 6：${checkoutModeLabel}未返回可用的订阅链接。`);
+        throw new Error(`Step 6: ${checkoutModeLabel} did not return a usable subscription link.`);
       }
 
       if (paymentMethod === PLUS_PAYMENT_METHOD_PAYPAL_HOSTED) {
@@ -1421,14 +1421,14 @@
         return;
       }
 
-      await addLog(`步骤 6：${checkoutModeLabel}已创建，正在打开订阅页面...`, 'ok');
+      await addLog(`Step 6: ${checkoutModeLabel} created, opening subscription page...`, 'ok');
       await chrome.tabs.update(tabId, { url: targetCheckoutUrl, active: true });
       await waitForTabCompleteUntilStopped(tabId);
       await sleepWithStop(1000);
       await ensureContentScriptReadyOnTabUntilStopped(PLUS_CHECKOUT_SOURCE, tabId, {
         inject: PLUS_CHECKOUT_INJECT_FILES,
         injectSource: PLUS_CHECKOUT_SOURCE,
-        logMessage: '步骤 6：正在等待订阅页面完成加载...',
+        logMessage: 'Step 6: waiting for subscription page to finish loading...',
       });
 
       await setState({
@@ -1439,7 +1439,7 @@
         plusCheckoutSource: '',
       });
 
-      await addLog(`步骤 6：Plus Checkout 页面已就绪（${paymentMethodLabel} / ${result.country || 'DE'} ${result.currency || 'EUR'}），准备继续下一步。`, 'info');
+      await addLog(`Step 6: Plus Checkout page ready (${paymentMethodLabel} / ${result.country || 'DE'} ${result.currency || 'EUR'}), preparing to continue to next step.`, 'info');
 
       await completeNodeFromBackground('plus-checkout-create', {
         plusCheckoutCountry: result.country || 'DE',

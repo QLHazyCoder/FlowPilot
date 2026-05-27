@@ -309,12 +309,12 @@
       });
 
       if (!response.ok) {
-        throw new Error(`GitHub Releases 请求失败（${response.status}）`);
+        throw new Error(`GitHub Releases request failed (${response.status})`);
       }
 
       const payload = await response.json();
       if (!Array.isArray(payload)) {
-        throw new Error('GitHub Releases 返回格式异常');
+        throw new Error('GitHub Releases response format error');
       }
 
       const releases = payload
@@ -328,7 +328,7 @@
       return sortedReleases;
     } catch (error) {
       if (error?.name === 'AbortError') {
-        throw new Error('GitHub Releases 请求超时');
+        throw new Error('GitHub Releases request timed out');
       }
       throw error;
     } finally {
@@ -422,7 +422,7 @@
         logUrl: RELEASES_PAGE_URL,
         releasesPageUrl: RELEASES_PAGE_URL,
         checkedAt: Date.now(),
-        errorMessage: error?.message || '更新检查失败',
+        errorMessage: error?.message || 'Update check failed',
       };
     }
   }

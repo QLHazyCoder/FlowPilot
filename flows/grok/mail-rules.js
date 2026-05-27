@@ -118,7 +118,7 @@
     function getRuleDefinitionForNode(nodeId, state = {}) {
       const normalizedNodeId = cleanString(nodeId);
       if (normalizedNodeId && normalizedNodeId !== SUBMIT_VERIFICATION_CODE_NODE_ID) {
-        throw new Error(`Grok 邮件规则不支持节点：${normalizedNodeId}`);
+        throw new Error(`Grok mail rules do not support node: ${normalizedNodeId}`);
       }
       return getRuleDefinition({ nodeId: SUBMIT_VERIFICATION_CODE_NODE_ID }, state);
     }

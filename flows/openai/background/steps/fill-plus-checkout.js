@@ -16,20 +16,20 @@
   const GPC_TASK_POLL_INTERVAL_MS = 3000;
   const GPC_TASK_STALE_STATUS_TIMEOUT_MS = 60000;
   const GPC_REMOTE_STAGE_LABELS = {
-    auto_otp_wait: '等待自动 OTP',
-    checkout_order_start: '创建订单',
-    checkout_start: '创建订单',
-    completed: '充值完成',
-    gopay_validate_pin: '校验 PIN',
-    otp_ready: '等待 PIN',
-    otp_submitted_local: 'OTP 已提交',
-    payment_processing: '支付处理中',
-    pin_submitted_local: 'PIN 已提交',
-    sms_otp_wait: '等待短信 OTP',
-    whatsapp_otp_wait: '等待 WhatsApp OTP',
+    auto_otp_wait: 'Waiting for auto OTP',
+    checkout_order_start: 'Create order',
+    checkout_start: 'Create order',
+    completed: 'Top-up complete',
+    gopay_validate_pin: 'Validate PIN',
+    otp_ready: 'Waiting for PIN',
+    otp_submitted_local: 'OTP submitted',
+    payment_processing: 'Payment processing',
+    pin_submitted_local: 'PIN submitted',
+    sms_otp_wait: 'Waiting for SMS OTP',
+    whatsapp_otp_wait: 'Waiting for WhatsApp OTP',
   };
   const GPC_WAITING_FOR_LABELS = {
-    auto_otp: '自动 OTP',
+    auto_otp: 'Auto OTP',
     otp: 'OTP',
     pin: 'PIN',
   };
@@ -167,10 +167,10 @@
       const remoteStage = String(task?.remote_stage || task?.remoteStage || '').trim();
       const stageText = formatGpcRemoteStageLabel(remoteStage);
       const waitingForText = formatGpcWaitingForLabel(task?.api_waiting_for || task?.apiWaitingFor || '');
-      const mainText = stageText || statusText || status || '处理中';
-      const parts = [`步骤 7：GPC 任务状态：${mainText}`];
+      const mainText = stageText || statusText || status || 'Processing';
+      const parts = [`Step 7: GPC task status: ${mainText}`];
       if (waitingForText && !mainText.includes(waitingForText)) {
-        parts.push(`，等待 ${waitingForText}`);
+        parts.push(`, waiting for ${waitingForText}`);
       }
       return parts.join('');
     }
@@ -208,13 +208,13 @@
         ? fetchImpl
         : (typeof fetch === 'function' ? fetch.bind(globalThis) : null);
       if (typeof fetcher !== 'function') {
-        throw new Error('当前运行环境不支持 fetch，无法调用 GPC API。');
+        throw new Error('Current runtime does not support fetch, cannot call GPC API.');
       }
       const controller = typeof AbortController === 'function' ? new AbortController() : null;
       const effectiveTimeoutMs = Math.max(1000, Number(timeoutMs) || 30000);
       let didTimeout = false;
       let timer = null;
-      const buildTimeoutError = () => new Error(`GPC API 请求超时（>${Math.round(effectiveTimeoutMs / 1000)} 秒）：${url}`);
+      const buildTimeoutError = () => new Error(`GPC API request timed out (>${Math.round(effectiveTimeoutMs / 1000)} s): ${url}`);
       const timeoutPromise = new Promise((_, reject) => {
         timer = setTimeout(() => {
           didTimeout = true;
@@ -474,7 +474,7 @@
         return { ...firstResponse, retried: false, payload: primaryPayload };
       }
       const firstDetail = getGpcResponseErrorDetail(firstResponse?.data, status);
-      await addLog(`步骤 7：GPC 接口返回 ${status}（${firstDetail}），使用兼容字段重试。`, 'warn');
+      await addLog(`Step 7: GPC endpoint returned ${status} (${firstDetail}), retrying with compatible fields.`, 'warn');
       const secondResponse = await send(fallbackPayload);
       return {
         ...secondResponse,
@@ -653,18 +653,18 @@
           }
           lastMessage = String(data?.message || data?.status || '').trim();
         } catch (error) {
-          lastMessage = error?.message || String(error || '未知错误');
+          lastMessage = error?.message || String(error || 'Unknown error');
         }
         if (singleAttempt) {
           break;
         }
         await sleepWithStop(pollIntervalSeconds * 1000);
       }
-      throw new Error(lastMessage || '本地 SMS Helper 等待 OTP 超时。');
+      throw new Error(lastMessage || 'Local SMS Helper timed out waiting for OTP.');
     }
 
     function buildGpcTaskEndedError(task = {}, fallbackMessage = '') {
-      const detail = buildGpcTaskTerminalError(task) || fallbackMessage || 'GPC 任务已结束，请重新创建任务。';
+      const detail = buildGpcTaskTerminalError(task) || fallbackMessage || 'GPC task ended, please recreate the task.';
       return new Error(`GPC_TASK_ENDED::${detail}`);
     }
 
@@ -673,10 +673,10 @@
       return deadlineMs > 0 && Date.now() > deadlineMs;
     }
 
-    function buildGpcInputDeadlineError(task = {}, label = '输入') {
+    function buildGpcInputDeadlineError(task = {}, label = 'input') {
       const stage = String(task?.remote_stage || '').trim();
-      const detail = `${label}提交已超时，请重新创建任务。`;
-      return new Error(`GPC_TASK_ENDED::${detail}${stage ? `（${stage}）` : ''}`);
+      const detail = `${label} submission timed out, please recreate the task.`;
+      return new Error(`GPC_TASK_ENDED::${detail}${stage ? ` (${stage})` : ''}`);
     }
 
     function normalizeSixDigitOtp(value = '') {
@@ -690,7 +690,7 @@
     }
 
     function isGpcOtpFormatConflict(error) {
-      return /OTP\s*必须是\s*6\s*位数字|OTP.*6.*digit|task_conflict/i.test(error?.message || String(error || ''));
+      return /OTP must be 6 digits|OTP必须是\s*6\s*位数字|OTP.*6.*digit|task_conflict/i.test(error?.message || String(error || ''));
     }
 
     async function requestGpcOtpInput({ title = '', message = '', taskId = '', lastInputError = '', inputDeadlineAt = '' }) {
@@ -711,8 +711,8 @@
         plusManualConfirmationRequestId: requestId,
         plusManualConfirmationStep: 7,
         plusManualConfirmationMethod: 'gopay-otp',
-        plusManualConfirmationTitle: title || 'GPC OTP 验证',
-        plusManualConfirmationMessage: message || '请输入 OTP 验证码',
+        plusManualConfirmationTitle: title || 'GPC OTP verification',
+        plusManualConfirmationMessage: message || 'Please enter the OTP verification code',
         gopayHelperLastInputError: String(lastInputError || '').trim(),
         gopayHelperApiInputDeadlineAt: String(inputDeadlineAt || '').trim(),
         gopayHelperResolvedOtp: '',
@@ -749,7 +749,7 @@
               if (typeof broadcastDataUpdate === 'function') {
                 broadcastDataUpdate(clearPayload);
               }
-              reject(new Error('OTP 输入超时'));
+              reject(new Error('OTP input timed out'));
               return;
             }
             const currentState = await getStateInternal();
@@ -759,7 +759,7 @@
               if (resolvedOtp) {
                 resolve(resolvedOtp);
               } else {
-                reject(new Error('OTP 输入已取消'));
+                reject(new Error('OTP input cancelled'));
               }
             }
           } catch (error) {
@@ -824,8 +824,8 @@
       const label = formatGpcRemoteStageLabel(task?.remote_stage)
         || task?.status_text
         || task?.status
-        || '未知状态';
-      return new Error(`GPC_TASK_ENDED::GPC 任务状态超过 ${seconds} 秒无进展（${label}），请重新创建任务。`);
+        || 'unknown state';
+      return new Error(`GPC_TASK_ENDED::GPC task made no progress for ${seconds} seconds (${label}), please recreate the task.`);
     }
 
     function buildGpcTaskTerminalError(task = {}) {
@@ -848,19 +848,19 @@
       ).trim();
       if (detail) {
         return failureStage && !detail.includes(failureStage)
-          ? `${detail}（${failureStage}）`
+          ? `${detail} (${failureStage})`
           : detail;
       }
       if (/api_otp_timeout/i.test(remoteStage)) {
-        return 'GPC OTP 超时，请重新创建任务';
+        return 'GPC OTP timed out, please recreate the task';
       }
       if (/api_pin_timeout/i.test(remoteStage)) {
-        return 'GPC PIN 超时，请重新创建任务';
+        return 'GPC PIN timed out, please recreate the task';
       }
       if (failureStage) {
-        return `GPC 任务失败：${failureStage}`;
+        return `GPC task failed: ${failureStage}`;
       }
-      return `任务状态 ${status || '未知'}`;
+      return `Task status ${status || 'unknown'}`;
     }
 
     async function stopGpcTaskBestEffort(apiUrl, taskId, apiKey, reason = '') {
@@ -869,10 +869,10 @@
       }
       try {
         const task = await postGpcTaskAction(apiUrl, taskId, 'stop', {}, apiKey, 15000);
-        const statusText = task?.status_text || task?.status || '已停止';
-        await addLog(`步骤 7：已请求停止 GPC 任务（${statusText}）。`, 'warn');
+        const statusText = task?.status_text || task?.status || 'stopped';
+        await addLog(`Step 7: requested to stop GPC task (${statusText}).`, 'warn');
       } catch (error) {
-        await addLog(`步骤 7：停止 GPC 任务失败${reason ? `（${reason}）` : ''}：${error?.message || String(error || '未知错误')}`, 'warn');
+        await addLog(`Step 7: failed to stop GPC task${reason ? ` (${reason})` : ''}: ${error?.message || String(error || 'Unknown error')}`, 'warn');
       }
     }
 
@@ -924,8 +924,8 @@
         try {
           await addLog(
             retryCount > 0 || lastInputError
-              ? `步骤 7：${lastInputError || 'OTP 校验未通过'}，正在从本地 OTP Helper 等待新的 GPC OTP...`
-              : '步骤 7：正在从本地 OTP Helper 等待 GPC OTP...',
+              ? `Step 7: ${lastInputError || 'OTP validation failed'}, waiting for new GPC OTP from local OTP Helper...`
+              : 'Step 7: waiting for GPC OTP from local OTP Helper...',
             'info'
           );
           otp = await pollLocalSmsHelperOtp(state, taskId, {
@@ -934,9 +934,9 @@
             requestTimeoutMs: 2000,
             timeoutSeconds: 2,
           });
-          await addLog('步骤 7：本地 OTP Helper 已读取到 GPC OTP，准备提交验证。', 'ok');
+          await addLog('Step 7: local OTP Helper has read the GPC OTP, preparing to submit for verification.', 'ok');
         } catch (error) {
-          await addLog(`步骤 7：本地 OTP Helper 暂未读取到新 OTP：${error?.message || String(error || '未知错误')}，继续等待远端任务状态更新。`, 'warn');
+          await addLog(`Step 7: local OTP Helper has not yet read a new OTP: ${error?.message || String(error || 'Unknown error')}, continuing to wait for remote task status update.`, 'warn');
         }
       }
       if (otp) {
@@ -945,12 +945,12 @@
       if (useLocalSmsHelper) {
         return '';
       }
-      await addLog('步骤 7：等待用户输入 OTP...', 'info');
+      await addLog('Step 7: waiting for user to enter OTP...', 'info');
       return requestGpcOtpInput({
-        title: 'GPC OTP 验证',
+        title: 'GPC OTP verification',
         message: retryCount > 0 || lastInputError
-          ? `${lastInputError || '上一次 OTP 校验未通过'}，请重新输入正确的 OTP 验证码（task_id: ${taskId}）`
-          : `请输入收到的 OTP 验证码（task_id: ${taskId}）`,
+          ? `${lastInputError || 'Previous OTP validation failed'}. Please re-enter the correct OTP (task_id: ${taskId})`
+          : `Please enter the received OTP (task_id: ${taskId})`,
         lastInputError,
         inputDeadlineAt: options?.inputDeadlineAt || options?.input_deadline_at || '',
         taskId,
@@ -983,13 +983,13 @@
       const staleStatusTimeoutMs = getGpcTaskStaleStatusTimeoutMs(state);
 
       if (!taskId) {
-        throw new Error('步骤 7：GPC 模式缺少 task_id，请先执行步骤 6。');
+        throw new Error('Step 7: GPC mode is missing task_id, please run step 6 first.');
       }
       if (!apiUrl) {
-        throw new Error('步骤 7：GPC 模式缺少 API 地址。');
+        throw new Error('Step 7: GPC mode is missing API URL.');
       }
       if (!apiKey) {
-        throw new Error('步骤 7：GPC 模式缺少 API Key。');
+        throw new Error('Step 7: GPC mode is missing API key.');
       }
 
       const configuredPhoneMode = normalizeGpcHelperPhoneMode(state?.gopayHelperPhoneMode || state?.phoneMode || GPC_HELPER_PHONE_MODE_MANUAL);
@@ -998,14 +998,14 @@
       const pin = normalizeSixDigitPin(rawPin);
       if (configuredPhoneMode === GPC_HELPER_PHONE_MODE_MANUAL && !pin) {
         if (taskId && apiUrl && apiKey) {
-          await stopGpcTaskBestEffort(apiUrl, taskId, apiKey, 'PIN 配置错误');
+          await stopGpcTaskBestEffort(apiUrl, taskId, apiKey, 'PIN config error');
         }
         throw new Error(pinDigits
-          ? '步骤 7：GPC PIN 必须是 6 位数字，请检查侧边栏配置。'
-          : '步骤 7：GPC 手动模式缺少 PIN 配置。');
+          ? 'Step 7: GPC PIN must be 6 digits, please check the side-panel config.'
+          : 'Step 7: GPC manual mode is missing PIN config.');
       }
 
-      await addLog(`步骤 7：GPC ${configuredPhoneMode === GPC_HELPER_PHONE_MODE_AUTO ? '自动' : '手动'}模式开始轮询任务（task_id: ${taskId}）...`, 'info');
+      await addLog(`Step 7: GPC ${configuredPhoneMode === GPC_HELPER_PHONE_MODE_AUTO ? 'auto' : 'manual'} mode started polling task (task_id: ${taskId})...`, 'info');
       try {
         while (Date.now() <= deadline) {
           throwIfStopped();
@@ -1017,7 +1017,7 @@
             await setState({
               plusCheckoutSource: PLUS_PAYMENT_METHOD_GPC_HELPER,
             });
-            await addLog('步骤 7：GPC 任务已完成，准备继续下一步。', 'ok');
+            await addLog('Step 7: GPC task completed, preparing to continue with the next step.', 'ok');
             await completeNodeFromBackground('plus-checkout-billing', {
               plusCheckoutSource: PLUS_PAYMENT_METHOD_GPC_HELPER,
             });
@@ -1026,7 +1026,7 @@
 
           if (['failed', 'expired', 'discarded'].includes(task.status)) {
             terminalReached = true;
-            throw buildGpcTaskEndedError(task, 'GPC 任务已结束，请重新创建任务。');
+            throw buildGpcTaskEndedError(task, 'GPC task ended, please recreate the task.');
           }
 
           if (shouldWatchGpcTaskProgress(task, state)) {
@@ -1061,7 +1061,7 @@
             }
             if (task.last_input_error) {
               await addLog(
-                `步骤 7：${task.last_input_error}${task.otp_invalid_count ? `（OTP 错误 ${task.otp_invalid_count} 次）` : ''}`,
+                `Step 7: ${task.last_input_error}${task.otp_invalid_count ? ` (OTP errors ${task.otp_invalid_count})` : ''}`,
                 'warn'
               );
             }
@@ -1074,8 +1074,8 @@
                 inputDeadlineAt: task.api_input_deadline_at,
               });
             } catch (error) {
-              if (/OTP\s*输入(?:已取消|超时)/i.test(error?.message || String(error || ''))) {
-                throw new Error(`GPC_TASK_ENDED::${error?.message || 'OTP 输入已取消'}，已结束当前 GPC 任务。`);
+              if (/OTP input (?:cancelled|timed out)|OTP\s*输入(?:已取消|超时)/i.test(error?.message || String(error || ''))) {
+                throw new Error(`GPC_TASK_ENDED::${error?.message || 'OTP input cancelled'}, current GPC task ended.`);
               }
               throw error;
             }
@@ -1085,16 +1085,16 @@
             }
             const normalizedOtp = normalizeSixDigitOtp(otp);
             if (!normalizedOtp) {
-              await addLog('步骤 7：OTP 必须是 6 位数字，等待重新输入。', 'warn');
+              await addLog('Step 7: OTP must be 6 digits, waiting for a new input.', 'warn');
               await sleepWithStop(GPC_TASK_POLL_INTERVAL_MS);
               continue;
             }
             if (task.last_input_error && lastSubmittedOtp && normalizedOtp === lastSubmittedOtp) {
-              await addLog('步骤 7：本地 OTP Helper 返回的仍是上次已失败 OTP，等待新的验证码。', 'warn');
+              await addLog('Step 7: local OTP Helper still returned the previously failed OTP, waiting for a new code.', 'warn');
               await sleepWithStop(GPC_TASK_POLL_INTERVAL_MS);
               continue;
             }
-            await addLog('步骤 7：正在提交 OTP...', 'info');
+            await addLog('Step 7: submitting OTP...', 'info');
             try {
               await postGpcTaskAction(
                 apiUrl,
@@ -1106,7 +1106,7 @@
               );
             } catch (error) {
               if (isGpcOtpFormatConflict(error)) {
-                await addLog(`步骤 7：OTP 提交被拒绝：${error?.message || String(error || 'OTP 格式错误')}，等待重新输入。`, 'warn');
+                await addLog(`Step 7: OTP submission was rejected: ${error?.message || String(error || 'OTP format error')}. Waiting for re-entry.`, 'warn');
                 await sleepWithStop(GPC_TASK_POLL_INTERVAL_MS);
                 continue;
               }
@@ -1115,12 +1115,12 @@
             otpSubmitCount += 1;
             otpLastSubmittedAt = Date.now();
             lastSubmittedOtp = normalizedOtp;
-            await addLog('步骤 7：OTP 已提交，继续等待 GPC 任务状态更新。', 'ok');
+            await addLog('Step 7: OTP submitted, continuing to wait for GPC task status updates.', 'ok');
           } else if (isGpcTaskPinWait(task, state) && !pinSubmitted) {
             if (isGpcTaskInputDeadlineExpired(task)) {
               throw buildGpcInputDeadlineError(task, 'PIN');
             }
-            await addLog('步骤 7：正在提交 PIN...', 'info');
+            await addLog('Step 7: Submitting PIN...', 'info');
             let pinTask = null;
             try {
               pinTask = await postGpcTaskAction(
@@ -1132,21 +1132,21 @@
                 30000
               );
             } catch (error) {
-              throw new Error(`GPC_TASK_ENDED::${error?.message || String(error || 'PIN 提交失败，请重新创建任务。')}`);
+              throw new Error(`GPC_TASK_ENDED::${error?.message || String(error || 'PIN submission failed. Please recreate the task.')}`);
             }
             pinSubmitted = true;
             await setState({
               gopayHelperPinPayload: pinTask,
             });
-            await addLog('步骤 7：PIN 已提交，继续轮询直到任务完成。', 'ok');
+            await addLog('Step 7: PIN submitted, continuing to poll until the task completes.', 'ok');
           }
 
           await sleepWithStop(GPC_TASK_POLL_INTERVAL_MS);
         }
-        throw new Error('步骤 7：GPC 任务轮询超时。');
+        throw new Error('Step 7: GPC task polling timed out.');
       } catch (error) {
         if (!terminalReached) {
-          await stopGpcTaskBestEffort(apiUrl, taskId, apiKey, error?.message || '流程中断');
+          await stopGpcTaskBestEffort(apiUrl, taskId, apiKey, error?.message || 'flow interrupted');
         }
         if (isGpcTaskEndedError(error)) {
           await clearGpcTaskRuntimeState();
@@ -1251,7 +1251,7 @@
       }
       const data = await response.json();
       if (data?.status !== 'ok') {
-        throw new Error(data?.message || data?.status || '未知响应');
+        throw new Error(data?.message || data?.status || 'Unknown response');
       }
       return buildDirectAddressSeed(countryCode, data.address || {}, fallbackSeed);
     }
@@ -1322,31 +1322,31 @@
       const countryCode = countryResolution.countryCode;
       const requestedCountry = countryResolution.requestedCountry;
       if (paymentMethod === PLUS_PAYMENT_METHOD_GOPAY && countryResolution.source === 'proxy_exit') {
-        await addLog(`步骤 7：GoPay 账单地址将按当前代理出口地区 ${countryCode} 填写。`, 'info');
+        await addLog(`Step 7: The GoPay billing address will be filled based on the current proxy exit region ${countryCode}.`, 'info');
       }
       const localSeed = getLocalAddressSeed(countryCode);
       const lookupSeed = localSeed || buildMeiguodizhiLookupSeed(countryCode);
       if (!lookupSeed) {
-        throw new Error(`步骤 7：无法识别账单国家或地区：${requestedCountry || '空'}`);
+        throw new Error(`Step 7: Unable to identify the billing country/region: ${requestedCountry || 'empty'}`);
       }
       try {
         const remoteSeed = await fetchMeiguodizhiAddressSeed(countryCode, lookupSeed);
         if (hasCompleteAddressFallback(remoteSeed)) {
           await addLog(
-            `步骤 7：已从 meiguodizhi 接口获取账单地址（${remoteSeed.fallback.city} / ${remoteSeed.fallback.postalCode}），将跳过 Google 地址推荐。`,
+            `Step 7: Fetched the billing address from the meiguodizhi API (${remoteSeed.fallback.city} / ${remoteSeed.fallback.postalCode}); skipping Google address suggestions.`,
             'info'
           );
           return remoteSeed;
         }
-        await addLog('步骤 7：meiguodizhi 接口返回的地址字段不完整，回退到本地地址种子。', 'warn');
+        await addLog('Step 7: The meiguodizhi API returned incomplete address fields; falling back to the local address seed.', 'warn');
       } catch (error) {
-        await addLog(`步骤 7：meiguodizhi 地址接口不可用，回退到本地地址种子：${error?.message || String(error || '')}`, 'warn');
+        await addLog(`Step 7: The meiguodizhi address API is unavailable; falling back to the local address seed: ${error?.message || String(error || '')}`, 'warn');
       }
 
       if (hasCompleteAddressFallback(localSeed)) {
         return localSeed;
       }
-      throw new Error(`步骤 7：${requestedCountry} 的 meiguodizhi 地址不可用，且没有本地兜底地址。`);
+      throw new Error(`Step 7: The meiguodizhi address for ${requestedCountry} is unavailable, and no local fallback address exists.`);
     }
 
     async function getAlivePlusCheckoutTabId(tabId) {
@@ -1456,7 +1456,7 @@
       while (Date.now() - startedAt < PLUS_CHECKOUT_PAYPAL_REDIRECT_TIMEOUT_MS) {
         const tab = await chrome.tabs.get(tabId).catch(() => null);
         if (!tab) {
-          throw new Error(`步骤 7：checkout 标签页已关闭，无法继续等待 ${paymentConfig.label} 跳转。`);
+          throw new Error(`Step 7: The checkout tab has been closed. Cannot continue waiting for the ${paymentConfig.label} redirect.`);
         }
         const url = String(tab.url || '');
         if (paymentConfig.redirectPattern.test(url) && !isPlusCheckoutUrl(url)) {
@@ -1465,7 +1465,7 @@
           return true;
         }
         if (url && !isPlusCheckoutUrl(url)) {
-          await addLog(`步骤 7：点击订阅后页面跳转到非 ${paymentConfig.label} 识别地址：${url}`, 'warn');
+          await addLog(`Step 7: After clicking Subscribe, the page redirected to a non-${paymentConfig.label} recognized URL: ${url}`, 'warn');
           return false;
         }
         await sleepWithStop(500);
@@ -1569,29 +1569,29 @@
     }
 
     async function ensureFreeTrialAmount(tabId, state = {}, options = {}) {
-      const phaseLabel = String(options.phaseLabel || '').trim() || '提交前';
+      const phaseLabel = String(options.phaseLabel || '').trim() || 'Before submission';
       const amountSummary = await inspectCheckoutAmountSummary(tabId);
       if (!amountSummary?.hasTodayDue) {
-        await addLog(`步骤 7：${phaseLabel}未能识别 checkout 的“今日应付金额”，为避免误判将继续执行。`, 'warn');
+        await addLog(`Step 7: ${phaseLabel} could not identify checkout's "today due" amount; continuing to avoid a false positive.`, 'warn');
         return;
       }
 
       if (amountSummary.isZero) {
-        await addLog(`步骤 7：${phaseLabel}已确认今日应付金额为 ${amountSummary.rawAmount || '0'}，继续执行。`, 'ok');
+        await addLog(`Step 7: ${phaseLabel} confirmed today's due amount is ${amountSummary.rawAmount || '0'}; continuing.`, 'ok');
         return;
       }
 
       const amountLabel = amountSummary.rawAmount || (
-        Number.isFinite(Number(amountSummary.amount)) ? String(amountSummary.amount) : '未知金额'
+        Number.isFinite(Number(amountSummary.amount)) ? String(amountSummary.amount) : 'unknown amount'
       );
-      await addLog(`步骤 7：${phaseLabel}检测到今日应付金额不是 0（${amountLabel}），说明当前账号没有免费试用资格，将跳过支付提交。`, 'warn');
+      await addLog(`Step 7: ${phaseLabel} detected that today's due amount is not 0 (${amountLabel}), which means the current account is not eligible for a free trial; skipping payment submission.`, 'warn');
       if (typeof markCurrentRegistrationAccountUsed === 'function') {
         await markCurrentRegistrationAccountUsed(state, {
           reason: 'plus-checkout-non-free-trial',
-          logPrefix: 'Plus Checkout：当前账号没有免费试用资格',
+          logPrefix: 'Plus Checkout: current account is not eligible for a free trial',
         });
       }
-      throw new Error(`PLUS_CHECKOUT_NON_FREE_TRIAL::步骤 7：今日应付金额不是 0（${amountLabel}），当前账号没有免费试用资格，已跳过支付提交。`);
+      throw new Error(`PLUS_CHECKOUT_NON_FREE_TRIAL::Step 7: today's due amount is not 0 (${amountLabel}); the current account is not eligible for a free trial, so payment submission has been skipped.`);
     }
 
     async function getReadyCheckoutFrames(tabId) {
@@ -1678,10 +1678,10 @@
       }
       const currentCheckoutTabId = await getCurrentPlusCheckoutTabId();
       if (currentCheckoutTabId) {
-        await addLog('步骤 7：检测到当前已在 Plus Checkout 页面，直接接管当前标签页。', 'info');
+        await addLog('Step 7: Detected that we are already on the Plus Checkout page and are taking over the current tab.', 'info');
         return currentCheckoutTabId;
       }
-      throw new Error('步骤 7：未找到 Plus Checkout 标签页。请先打开 Plus Checkout 页面，或完成步骤 6。');
+      throw new Error('Step 7: Plus Checkout tab not found. Open the Plus Checkout page first, or complete Step 6.');
     }
 
     async function executePlusCheckoutBilling(state = {}) {
@@ -1692,36 +1692,36 @@
       const paymentMethod = normalizePlusPaymentMethod(state?.plusPaymentMethod);
       const paymentConfig = getPaymentMethodConfig(paymentMethod);
       const tabId = await getCheckoutTabId(state);
-      await addLog('步骤 7：正在等待 Plus Checkout 页面加载完成...', 'info');
+      await addLog('Step 7: Waiting for the Plus Checkout page to finish loading...', 'info');
       await waitForTabCompleteUntilStopped(tabId);
       await sleepWithStop(1000);
 
       await ensureContentScriptReadyOnTabUntilStopped(PLUS_CHECKOUT_SOURCE, tabId, {
         inject: PLUS_CHECKOUT_INJECT_FILES,
         injectSource: PLUS_CHECKOUT_SOURCE,
-        logMessage: '步骤 7：Checkout 页面仍在加载，等待账单填写脚本就绪...',
+        logMessage: 'Step 7: Checkout page is still loading; waiting for the billing-fill script to be ready...',
       });
       const readyFrames = await getReadyCheckoutFrames(tabId);
       await ensureFreeTrialAmount(tabId, state, {
-        phaseLabel: 'Checkout 页面加载后',
+        phaseLabel: 'After checkout page load',
       });
       const paymentFrame = await resolvePaymentFrame(tabId, readyFrames, paymentMethod);
       if (paymentFrame.frameId === null) {
         const frameSummary = buildFrameSummary(paymentFrame.inspections);
-        throw new Error(`步骤 7：未在主页面或 iframe 中发现 ${paymentConfig.label} DOM，无法自动切换付款方式。frame 摘要：${frameSummary}`);
+        throw new Error(`Step 7: Could not find ${paymentConfig.label} DOM in the main page or any iframe; cannot switch payment method automatically. Frame summary: ${frameSummary}`);
       }
       if (!paymentFrame.ready) {
-        throw new Error(`步骤 7：已定位到 ${paymentConfig.label} 所在 iframe（frameId=${paymentFrame.frameId}），但账单脚本无法注入该 iframe。请提供该 iframe 的控制台结构或截图。`);
+        throw new Error(`Step 7: Located the iframe containing ${paymentConfig.label} (frameId=${paymentFrame.frameId}), but the billing script cannot be injected into that iframe. Please provide the iframe's console structure or a screenshot.`);
       }
 
       if (paymentFrame.frameId !== 0) {
-        await addLog(`步骤 7：${paymentConfig.label} 位于 checkout iframe（frameId=${paymentFrame.frameId}），将改为在该 frame 内操作。`, 'info');
+        await addLog(`Step 7: ${paymentConfig.label} is in the checkout iframe (frameId=${paymentFrame.frameId}); switching to operate inside that frame.`, 'info');
       }
 
       const randomName = generateRandomName();
       const fullName = [randomName.firstName, randomName.lastName].filter(Boolean).join(' ');
 
-      await addLog(`步骤 7：正在切换 ${paymentConfig.label} 付款方式...`, 'info');
+      await addLog(`Step 7: Switching the ${paymentConfig.label} payment method...`, 'info');
       const paymentResult = await sendFrameMessage(tabId, paymentFrame.frameId, {
         type: paymentConfig.selectMessageType,
         source: 'background',
@@ -1733,10 +1733,10 @@
 
       const billingFrame = await waitForBillingFrame(tabId);
       if (!billingFrame.ready) {
-        throw new Error(`步骤 7：已定位到账单地址 iframe（frameId=${billingFrame.frameId}），但账单脚本无法注入该 iframe。请提供该 iframe 的控制台结构或截图。`);
+        throw new Error(`Step 7: Located the billing-address iframe (frameId=${billingFrame.frameId}), but the billing script cannot be injected into that iframe. Please provide the iframe's console structure or a screenshot.`);
       }
       if (billingFrame.frameId !== paymentFrame.frameId) {
-        await addLog(`步骤 7：账单地址位于 checkout iframe（frameId=${billingFrame.frameId}），将改为在该 frame 内填写。`, 'info');
+        await addLog(`Step 7: The billing address is in the checkout iframe (frameId=${billingFrame.frameId}); switching to fill it inside that frame.`, 'info');
       }
 
       let billingState = state;
@@ -1747,7 +1747,7 @@
           || ''
         );
         try {
-          await addLog('步骤 7：GoPay 账单地址准备按代理出口填写，正在重新检测当前出口地区...', 'info');
+          await addLog('Step 7: Preparing to fill the GoPay billing address based on the proxy exit; rechecking the current exit region...', 'info');
           const probeResult = await probeIpProxyExit({
             state,
             timeoutMs: 12000,
@@ -1769,9 +1769,9 @@
               ipProxyAppliedExitIp: probedExitIp,
               ipProxyAppliedExitSource: probedExitSource,
             };
-            const sourceSuffix = probedExitSource ? `，来源 ${probedExitSource}` : '';
-            const endpointSuffix = probeEndpoint ? `，检测地址 ${probeEndpoint}` : '';
-            await addLog(`步骤 7：当前代理出口复测结果：${probedExitRegion}${probedExitIp ? ` / ${probedExitIp}` : ''}${sourceSuffix}${endpointSuffix}。`, 'info');
+            const sourceSuffix = probedExitSource ? `, source ${probedExitSource}` : '';
+            const endpointSuffix = probeEndpoint ? `, endpoint ${probeEndpoint}` : '';
+            await addLog(`Step 7: Current proxy exit recheck result: ${probedExitRegion}${probedExitIp ? ` / ${probedExitIp}` : ''}${sourceSuffix}${endpointSuffix}.`, 'info');
           } else {
             billingState = {
               ...(state || {}),
@@ -1781,7 +1781,7 @@
               ipProxyAppliedExitSource: probedExitSource,
             };
             await addLog(
-              `步骤 7：代理出口复测没有返回国家/地区代码，已清空旧出口地区${staleExitRegion ? ` ${staleExitRegion}` : ''}，不会继续沿用旧地区。${probeReason ? `状态：${probeReason}。` : ''}${probeError ? `诊断：${probeError}` : ''}`,
+              `Step 7: The proxy exit recheck did not return a country/region code; the old exit region${staleExitRegion ? ` ${staleExitRegion}` : ''} has been cleared and will not be reused.${probeReason ? ` Status: ${probeReason}.` : ''}${probeError ? ` Diagnosis: ${probeError}` : ''}`,
               'warn'
             );
           }
@@ -1791,27 +1791,27 @@
             ipProxyAppliedExitRegion: '',
             ipProxyExitRegion: '',
           };
-          await addLog(`步骤 7：代理出口复测失败，已清空旧出口地区${staleExitRegion ? ` ${staleExitRegion}` : ''}，不会继续沿用旧地区：${error?.message || String(error || '未知错误')}`, 'warn');
+          await addLog(`Step 7: Proxy exit recheck failed; the old exit region${staleExitRegion ? ` ${staleExitRegion}` : ''} has been cleared and will not be reused: ${error?.message || String(error || 'unknown error')}`, 'warn');
         }
       }
       if (paymentMethod === PLUS_PAYMENT_METHOD_GOPAY
         && typeof probeIpProxyExit === 'function'
         && !resolveMeiguodizhiCountryCode(billingState?.ipProxyAppliedExitRegion || billingState?.ipProxyExitRegion || '')) {
-        throw new Error('步骤 7：GoPay 账单地址需要当前代理出口国家/地区，但本次复测没有拿到国家码；已停止填写，避免误用旧的 KR/ID 地区。请先点 IP 代理“检测出口”，确认显示 JP 后再继续。');
+        throw new Error('Step 7: The GoPay billing address requires the current proxy exit country/region, but this recheck did not return a country code. Filling has been stopped to avoid reusing the old KR/ID region. Please click IP Proxy "Detect Exit", confirm that JP is shown, and then continue.');
       }
       const addressSeed = await resolveBillingAddressSeed(billingState, billingFrame.countryText, { paymentMethod });
       if (!addressSeed) {
-        throw new Error('步骤 7：未找到可用的本地账单地址种子。');
+        throw new Error('Step 7: No usable local billing address seed found.');
       }
 
-      await addLog(`步骤 7：正在填写账单地址（${addressSeed.countryCode} / ${addressSeed.query}）...`, 'info');
+      await addLog(`Step 7: Filling the billing address (${addressSeed.countryCode} / ${addressSeed.query})...`, 'info');
       const autocompleteFrame = await resolveOptionalFrameByUrl(tabId, isAutocompleteFrameUrl);
       let result = null;
       if (!addressSeed.skipAutocomplete && autocompleteFrame?.frame && autocompleteFrame.frame.frameId !== billingFrame.frameId) {
         if (!autocompleteFrame.ready) {
-          throw new Error('步骤 7：发现 Google 地址推荐 iframe，但无法注入账单脚本。请提供该 iframe 的控制台结构。');
+          throw new Error('Step 7: Found the Google address suggestions iframe, but cannot inject the billing script. Please provide the iframe console structure.');
         }
-        await addLog(`步骤 7：Google 地址推荐位于独立 iframe（frameId=${autocompleteFrame.frame.frameId}），将拆分输入与选择动作。`, 'info');
+        await addLog(`Step 7: Google address suggestions are in a separate iframe (frameId=${autocompleteFrame.frame.frameId}); splitting input and selection actions.`, 'info');
 
         const queryResult = await sendFrameMessage(tabId, billingFrame.frameId, {
           type: 'PLUS_CHECKOUT_FILL_ADDRESS_QUERY',
@@ -1834,7 +1834,7 @@
         });
         const suggestionError = suggestionResult?.error || '';
         if (suggestionError) {
-          await addLog(`步骤 7：Google 地址推荐不可用，将改用本地地址字段兜底：${suggestionError}`, 'warn');
+          await addLog(`Step 7: Google address suggestions are unavailable; falling back to local address fields: ${suggestionError}`, 'warn');
         }
 
         const structuredResult = await sendFrameMessage(tabId, billingFrame.frameId, {
@@ -1874,7 +1874,7 @@
         plusBillingAddress: result?.structuredAddress || null,
       });
       await ensureFreeTrialAmount(tabId, state, {
-        phaseLabel: '提交订阅前',
+        phaseLabel: 'Before subscription submission',
       });
 
       let redirectedToPayment = false;
@@ -1882,12 +1882,12 @@
       for (let attempt = 1; attempt <= PLUS_CHECKOUT_SUBMIT_MAX_ATTEMPTS; attempt += 1) {
         await addLog(
           attempt === 1
-            ? '步骤 7：账单地址已填写完成，等待 3 秒让 checkout 完成校验...'
-            : `步骤 7：准备第 ${attempt}/${PLUS_CHECKOUT_SUBMIT_MAX_ATTEMPTS} 次重新检测订阅按钮...`,
+            ? 'Step 7: Billing address has been filled. Waiting 3 seconds for checkout validation...'
+            : `Step 7: Preparing to re-check the Subscribe button, attempt ${attempt}/${PLUS_CHECKOUT_SUBMIT_MAX_ATTEMPTS}...`,
           attempt === 1 ? 'info' : 'warn'
         );
         await sleepWithStop(3000);
-        await addLog('步骤 7：正在定位订阅按钮...', 'info');
+        await addLog('Step 7: Locating the Subscribe button...', 'info');
         const subscribeFrame = await waitForSubscribeFrame(tabId, [
           { frameId: 0, url: '' },
           { frameId: paymentFrame.frameId, url: paymentFrame.frameUrl || '' },
@@ -1903,7 +1903,7 @@
         });
         if (subscribeResult?.error) {
           lastSubmitError = subscribeResult.error;
-          await addLog(`步骤 7：点击订阅失败（${attempt}/${PLUS_CHECKOUT_SUBMIT_MAX_ATTEMPTS}）：${lastSubmitError}`, 'warn');
+          await addLog(`Step 7: Subscribe click failed (${attempt}/${PLUS_CHECKOUT_SUBMIT_MAX_ATTEMPTS}): ${lastSubmitError}`, 'warn');
           continue;
         }
 
@@ -1911,23 +1911,23 @@
         const subscribeButtonText = String(subscribeResult?.subscribeButtonText || '').trim();
         const subscribeButtonStatus = String(subscribeResult?.subscribeButtonStatus || '').trim();
         if (subscribeClicked) {
-          await addLog(`步骤 7：已点击订阅按钮，正在等待跳转到 ${paymentConfig.label}（${attempt}/${PLUS_CHECKOUT_SUBMIT_MAX_ATTEMPTS}）...`, 'info');
+          await addLog(`Step 7: Clicked the Subscribe button; waiting to redirect to ${paymentConfig.label} (${attempt}/${PLUS_CHECKOUT_SUBMIT_MAX_ATTEMPTS})...`, 'info');
         } else {
           const buttonStateLabel = subscribeButtonText || subscribeButtonStatus || 'unknown';
-          await addLog(`步骤 7：订阅按钮当前为「${buttonStateLabel}」，本轮未点击，正在等待页面是否跳转到 ${paymentConfig.label}（${attempt}/${PLUS_CHECKOUT_SUBMIT_MAX_ATTEMPTS}）...`, 'warn');
+          await addLog(`Step 7: The Subscribe button is currently "${buttonStateLabel}"; no click this round, waiting to see whether the page redirects to ${paymentConfig.label} (${attempt}/${PLUS_CHECKOUT_SUBMIT_MAX_ATTEMPTS})...`, 'warn');
         }
         redirectedToPayment = await waitForPaymentRedirectAfterSubmit(tabId, paymentMethod);
         if (redirectedToPayment) {
           break;
         }
         lastSubmitError = subscribeClicked
-          ? `点击订阅后 ${Math.round(PLUS_CHECKOUT_PAYPAL_REDIRECT_TIMEOUT_MS / 1000)} 秒内未跳转到 ${paymentConfig.label}`
-          : `订阅按钮当前为「${subscribeButtonText || subscribeButtonStatus || 'unknown'}」，${Math.round(PLUS_CHECKOUT_PAYPAL_REDIRECT_TIMEOUT_MS / 1000)} 秒内未跳转到 ${paymentConfig.label}`;
-        await addLog(`步骤 7：${lastSubmitError}，将重新检测订阅按钮。`, 'warn');
+          ? `Did not redirect to ${paymentConfig.label} within ${Math.round(PLUS_CHECKOUT_PAYPAL_REDIRECT_TIMEOUT_MS / 1000)} seconds after clicking Subscribe`
+          : `The Subscribe button is currently "${subscribeButtonText || subscribeButtonStatus || 'unknown'}"; did not redirect to ${paymentConfig.label} within ${Math.round(PLUS_CHECKOUT_PAYPAL_REDIRECT_TIMEOUT_MS / 1000)} seconds`;
+        await addLog(`Step 7: ${lastSubmitError}; rechecking the Subscribe button.`, 'warn');
       }
 
       if (!redirectedToPayment) {
-        throw new Error(`步骤 7：多次检测订阅按钮后仍未跳转到 ${paymentConfig.label}。${lastSubmitError}`);
+        throw new Error(`Step 7: After multiple checks, the page still did not redirect to ${paymentConfig.label}. ${lastSubmitError}`);
       }
 
       await completeNodeFromBackground('plus-checkout-billing', {

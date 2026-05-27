@@ -19,27 +19,27 @@
         return sourceRegistry.getSourceLabel(source);
       }
       const labels = {
-        'openai-auth': '认证页',
-        'gmail-mail': 'Gmail 邮箱',
-        'sidepanel': '侧边栏',
-        'vps-panel': 'CPA 面板',
-        'sub2api-panel': 'SUB2API 后台',
-        'codex2api-panel': 'Codex2API 后台',
-        'qq-mail': 'QQ 邮箱',
-        'mail-163': '163 邮箱',
-        'mail-2925': '2925 邮箱',
-        'inbucket-mail': 'Inbucket 邮箱',
-        'duck-mail': 'Duck 邮箱',
-        'hotmail-api': 'Hotmail（API对接/本地助手）',
-        'luckmail-api': 'LuckMail（API 购邮）',
+        'openai-auth': 'Auth page',
+        'gmail-mail': 'Gmail',
+        'sidepanel': 'Side panel',
+        'vps-panel': 'CPA panel',
+        'sub2api-panel': 'SUB2API panel',
+        'codex2api-panel': 'Codex2API panel',
+        'qq-mail': 'QQ Mail',
+        'mail-163': '163 Mail',
+        'mail-2925': '2925 Mail',
+        'inbucket-mail': 'Inbucket Mail',
+        'duck-mail': 'Duck Mail',
+        'hotmail-api': 'Hotmail (API/local helper)',
+        'luckmail-api': 'LuckMail (API purchase)',
         'cloudflare-temp-email': 'Cloudflare Temp Email',
         'cloudmail': 'Cloud Mail',
         'plus-checkout': 'Plus Checkout',
-        'paypal-flow': 'PayPal 授权页',
-        'gopay-flow': 'GoPay 授权页',
-        'unknown-source': '未知来源',
+        'paypal-flow': 'PayPal authorization page',
+        'gopay-flow': 'GoPay authorization page',
+        'unknown-source': 'Unknown source',
       };
-      return labels[source] || source || '未知来源';
+      return labels[source] || source || 'Unknown source';
     }
 
     function normalizeLogStep(value) {
@@ -75,7 +75,7 @@
     async function setNodeStatus(nodeId, status) {
       const normalizedNodeId = String(nodeId || '').trim();
       if (!normalizedNodeId) {
-        throw new Error('setNodeStatus 缺少 nodeId。');
+        throw new Error('setNodeStatus missing nodeId.');
       }
       const state = await getState();
       const nodeStatuses = { ...(state.nodeStatuses || {}) };
@@ -112,23 +112,23 @@
     function getLoginAuthStateLabel(state) {
       switch (state) {
         case 'verification_page':
-          return '登录验证码页';
+          return 'Login verification code page';
         case 'password_page':
-          return '密码页';
+          return 'Password page';
         case 'email_page':
-          return '邮箱输入页';
+          return 'Email entry page';
         case 'login_timeout_error_page':
-          return '登录超时报错页';
+          return 'Login timeout error page';
         case 'oauth_consent_page':
-          return 'OAuth 授权页';
+          return 'OAuth consent page';
         case 'add_phone_page':
-          return '手机号页';
+          return 'Phone number page';
         case 'add_email_page':
-          return '添加邮箱页';
+          return 'Add email page';
         case 'phone_verification_page':
-          return '手机验证码页';
+          return 'Phone verification code page';
         default:
-          return '未知页面';
+          return 'Unknown page';
       }
     }
 

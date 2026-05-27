@@ -1,4 +1,4 @@
-// background/ip-proxy-core.js — IP代理核心（解析/应用/切换/探测）
+// background/ip-proxy-core.js — IP proxy core (parse/apply/switch/probe)
 let ipProxyAuthListenerInstalled = false;
 let ipProxyErrorListenerInstalled = false;
 let currentIpProxyAuthEntry = null;
@@ -40,8 +40,8 @@ function normalizeAutomationWindowId(value) {
 }
 
 function buildAutomationWindowUnavailableError(error) {
-  const suffix = error?.message ? ` 原因：${error.message}` : '';
-  return new Error(`自动任务窗口已不可用，请在目标 Chrome 窗口重新打开侧边栏并启动任务。${suffix}`);
+  const suffix = error?.message ? ` Reason: ${error.message}` : '';
+  return new Error(`Automation window is no longer available. Please reopen the side panel in the target Chrome window and restart the task.${suffix}`);
 }
 
 async function createAutomationScopedTab(createProperties = {}, options = {}) {
@@ -104,11 +104,11 @@ const IP_PROXY_EXIT_PROBE_ENDPOINTS = [
   'https://ident.me',
 ];
 const IP_PROXY_EXIT_PROBE_ENDPOINTS_711_STICKY = [
-  // 与 curl 口径对齐，保持单端点，避免多站点探测引入额外波动与耗时。
+  // Align with curl semantics — keep a single endpoint to avoid extra variance/latency from multi-site probing.
   'https://ipinfo.io/json',
 ];
 const IP_PROXY_TARGET_REACHABILITY_ENDPOINTS = [
-  // Step 1 的真实目标站点；出口 IP 可用不代表该站点的 CONNECT/TLS 链路可用。
+  // Step 1 real target site — a usable exit IP doesn't guarantee its CONNECT/TLS link works.
   'https://chatgpt.com/',
 ];
 const IP_PROXY_TARGET_REACHABILITY_TIMEOUT_MS = 8000;
@@ -278,8 +278,8 @@ async function maybeResolveProxyHostVariantForAuthSwitch(entry = {}, options = {
   }
   const provider = normalizeIpProxyProviderValue(entry?.provider || DEFAULT_IP_PROXY_SERVICE);
   const allow711ResolvedIp = Boolean(options?.allow711ResolvedIp);
-  // 711 默认仍保持域名路由；仅在“多账号列表切换”场景下允许解析 IP 变体，
-  // 用于强制打断同 host:port 连接复用，提升触发 407 挑战的概率。
+  // 711 keeps domain routing by default; only allow IP variant resolution in "multi-account list switch"
+  // scenarios to force breaking same host:port connection reuse and improve odds of triggering 407 challenge.
   if (provider === '711proxy' && !allow711ResolvedIp) {
     return entry;
   }
@@ -350,7 +350,7 @@ function buildEffectiveProxyEntryForApply(entry = {}, options = {}) {
       next.host = buildHostVariantForProxy(originalHost, ipProxyAuthHostVariantToggle);
       return next;
     }
-    // 单账号场景下保持 host 稳定，避免不必要的链路扰动。
+    // Keep host stable in single-account scenarios to avoid unnecessary link disturbance.
     next.host = stripProxyHostTrailingDot(originalHost);
     return next;
   }
@@ -557,7 +557,7 @@ function normalizeIpProxyAccountList(value = '') {
       if (!line) {
         return false;
       }
-      // 允许用注释快速停用账号列表行，避免“看似注释、实际仍生效”。
+      // Allow comments to quickly disable account list rows, avoiding "looks like comment, actually still active".
       if (/^(?:#|\/\/|;)/.test(line)) {
         return false;
       }
@@ -616,7 +616,7 @@ function shouldApplyConfiguredRegionFallbackToEntry(entry = {}, context = {}) {
   if (hostRegion) {
     return true;
   }
-  // 711 固定账号在 zone-custom 混播场景下，不使用旧的配置地区兜底，避免误报“卡在 AF”。
+  // 711 fixed account in zone-custom mixed-broadcast scenarios: do not use legacy configured region fallback to avoid false "stuck at AF" reports.
   return false;
 }
 
@@ -981,7 +981,7 @@ function normalizeProxyPoolEntries(value = [], provider = DEFAULT_IP_PROXY_SERVI
       contiguousEntries.forEach((entry) => append(entry));
     }
     if (!result.length) {
-      // Lumi API 在 lb 参数异常时，可能返回无分隔的 host:port 串，这里做兜底拆分。
+      // Lumi API may return host:port stream without separators when lb param is invalid — fallback split here.
       const contiguousMatches = rawText.match(/\d{1,3}(?:\.\d{1,3}){3}:\d{2,5}/g) || [];
       contiguousMatches.forEach((token) => {
         append(parseIpProxyLine(token, provider));
@@ -1140,15 +1140,15 @@ function getAccountListParseFailureHint(state = {}, provider = DEFAULT_IP_PROXY_
     return '';
   }
   if (normalizedProvider === '711proxy') {
-    return '账号列表已填写，但未解析出有效条目。请按每行 host:port:username:password 填写。';
+    return 'Account list filled but no valid entries parsed. Please fill in host:port:username:password per line.';
   }
-  return '账号列表已填写，但未解析出有效条目。请检查列表格式。';
+  return 'Account list filled but no valid entries parsed. Please check list format.';
 }
 
 function resolveIpProxyPoolTargetCountForMode(state = {}, mode = normalizeIpProxyMode(state?.ipProxyMode)) {
   const normalizedMode = normalizeIpProxyMode(mode);
-  // `ipProxyPoolTargetCount` 语义是“任务成功轮次阈值”，
-  // 拉取/切换代理池条数不再复用该字段，避免语义混淆。
+  // `ipProxyPoolTargetCount` semantics is "task success round threshold";
+  // proxy pool fetch/switch count no longer reuses this field to avoid semantic confusion.
   if (normalizedMode === 'account') {
     return 500;
   }
@@ -1169,7 +1169,7 @@ function buildProxyPoolSummary(pool = [], preferredIndex = 0) {
       count: 0,
       index: 0,
       current: null,
-      display: '暂无可用代理',
+      display: 'No available proxy',
     };
   }
   const index = normalizeIpProxyCurrentIndex(preferredIndex, 0) % normalizedPool.length;
@@ -1250,7 +1250,7 @@ function buildIpProxyRuntimeStatePatch(mode = DEFAULT_IP_PROXY_MODE, runtime = {
     [fields.poolKey]: pool,
     [fields.indexKey]: summary.index,
     [fields.currentKey]: current,
-    // 兼容旧状态字段，保持当前激活模式的摘要可见。
+    // Compatibility with legacy state fields — keep the current active mode's summary visible.
     ipProxyPool: pool,
     ipProxyCurrentIndex: summary.index,
     ipProxyCurrent: current,
@@ -1391,8 +1391,8 @@ function shouldEnableIpProxyLeakGuardForStatus(status = {}) {
     return false;
   }
   const reason = String(status?.reason || '').trim().toLowerCase();
-  // connectivity_failed 表示 PAC/代理接管已经下发，只是探测或目标站点失败。
-  // 此时继续启用 DNR 会把 chatgpt.com 变成 ERR_BLOCKED_BY_CLIENT，掩盖真实代理链路结果。
+  // connectivity_failed means PAC/proxy takeover was already applied, just the probe or target site failed.
+  // Continuing to enable DNR here would turn chatgpt.com into ERR_BLOCKED_BY_CLIENT, hiding the real proxy link result.
   return reason !== 'connectivity_failed';
 }
 
@@ -1604,34 +1604,34 @@ function applyExitRegionExpectation(status = {}, expectedRegion = '') {
     const hasErrorPageFailure = /Frame with ID 0 is showing error page|Cannot access contents of the page/i.test(exitError);
     const netErrorCode = exitError.match(/net::ERR_[A-Z_]+/i)?.[0] || '';
     const navigationHint = netErrorCode
-      ? `导航错误：${netErrorCode}。`
+      ? `Navigation error: ${netErrorCode}.`
       : '';
     const tunnelFailedWithoutChallenge = missingProxyChallenge
       && /ERR_TUNNEL_CONNECTION_FAILED/i.test(netErrorCode || exitError);
     const humanizedError = hasErrorPageFailure
       ? (
           hasAuth
-            ? '探测页已进入浏览器错误页（常见于代理鉴权失败、代理节点不可用或网络被拦截）。请先检查代理账号/密码与节点可用性，再重试检测。'
-            : '探测页已进入浏览器错误页（常见于代理节点不可用、代理协议不匹配或网络被拦截）。请先检查代理节点、端口与协议配置，再重试检测。'
+            ? 'Probe page entered browser error page (common with proxy auth failures, unavailable proxy nodes, or blocked networks). Please check proxy username/password and node availability, then retry.'
+            : 'Probe page entered browser error page (common with unavailable proxy nodes, mismatched protocols, or blocked networks). Please check proxy node, port, and protocol settings, then retry.'
         )
       : '';
     const authDiagnostics = exitError.match(/probe:auth\([^)]+\)/i)?.[0] || '';
     const challengeHint = missingProxyChallenge
-      ? '当前链路未收到 407 代理鉴权挑战（可能是代理端返回非标准拒绝，例如 630 no Proxy-Authorization），浏览器无法触发扩展鉴权回填。建议切换 API 模式，或更换会返回标准 407 的账号节点。'
+      ? 'Current link did not receive 407 proxy auth challenge (proxy may have returned non-standard rejection like 630 no Proxy-Authorization), browser cannot trigger extension auth fill-back. Suggestion: switch to API mode or use an account node that returns standard 407.'
       : '';
     const compatibilityHint = tunnelFailedWithoutChallenge
-      ? '当前账号模式节点可能采用非标准代理鉴权链路（未发起 407 挑战），该链路在 Chrome 扩展代理 API 下无法自动回填凭据。'
+      ? 'Current account-mode node may use non-standard proxy auth link (no 407 challenge issued) — Chrome extension proxy API cannot auto-fill credentials on this link.'
       : '';
     const mergedErrorParts = [
       hasBackgroundAbortStorm
         ? (
             hasBackgroundAbortFallback
-              ? '后台探测请求连续超时中断（代理隧道未在时限内建立），且已自动回退页面探测但仍未拿到可用出口。'
-              : '后台探测请求连续超时中断（代理隧道未在时限内建立）。这通常是代理节点链路不可用或被上游丢弃，并非探测页面本身异常。'
+              ? 'Background probe requests aborted consecutively (proxy tunnel not established in time), and page probe fallback also failed to get a usable exit.'
+              : 'Background probe requests aborted consecutively (proxy tunnel not established in time). Usually means proxy node link is unavailable or dropped upstream, not a probe page issue.'
           )
         : '',
       hasProxyRuntimeError
-        ? '已捕获浏览器代理栈错误事件（chrome.proxy.onProxyError），请优先依据诊断中的 proxy_error 字段排查节点/协议兼容性。'
+        ? 'Captured browser proxy stack error event (chrome.proxy.onProxyError). Please troubleshoot node/protocol compatibility using proxy_error field in diagnostics.'
         : '',
       humanizedError,
       navigationHint,
@@ -1639,13 +1639,13 @@ function applyExitRegionExpectation(status = {}, expectedRegion = '') {
       challengeHint,
     ].filter(Boolean);
     const mergedError = mergedErrorParts.length
-      ? `${mergedErrorParts.join(' ')}${authDiagnostics ? ` 诊断：${authDiagnostics}` : ''}`
+      ? `${mergedErrorParts.join(' ')}${authDiagnostics ? ` Diagnostics: ${authDiagnostics}` : ''}`
       : '';
     const mergedWithDiagnostics = mergedError
       ? (
           exitError
           && !mergedError.includes(exitError)
-            ? `${mergedError} 诊断：${exitError}`
+            ? `${mergedError} Diagnostics: ${exitError}`
             : mergedError
         )
       : '';
@@ -1653,7 +1653,7 @@ function applyExitRegionExpectation(status = {}, expectedRegion = '') {
       ...status,
       applied: false,
       reason: 'connectivity_failed',
-      error: mergedWithDiagnostics || exitError || '未检测到代理出口 IP，无法确认代理已生效。',
+      error: mergedWithDiagnostics || exitError || 'No proxy exit IP detected. Cannot confirm proxy is in effect.',
     };
   }
 
@@ -1676,7 +1676,7 @@ function applyExitRegionExpectation(status = {}, expectedRegion = '') {
       ...status,
       applied: false,
       reason: 'connectivity_failed',
-      error: `已检测到出口 IP ${exitIp}，但地区探测未返回国家/地区代码，暂无法校验期望地区 ${expected}。`,
+      error: `Detected exit IP ${exitIp}, but region probe did not return a country/region code. Cannot verify expected region ${expected}.`,
     };
   }
 
@@ -1684,28 +1684,28 @@ function applyExitRegionExpectation(status = {}, expectedRegion = '') {
     return status;
   }
   const sourceHint = entrySource === 'account_list'
-    ? '（来源：账号列表）'
-    : (entrySource === 'fixed_account' ? '（来源：固定账号）' : '');
+    ? ' (source: account list)'
+    : (entrySource === 'fixed_account' ? ' (source: fixed account)' : '');
   const usernameRegion = inferRegionFromProxyUsername(status?.username || '');
   const usernameHint = usernameRegion
     ? (
       hasProxyExitRegionMismatch(expected, usernameRegion)
-        ? ` 当前账号用户名地区标记为 ${usernameRegion}，与期望不一致。`
-        : ` 当前账号用户名地区标记为 ${usernameRegion}。`
+        ? ` Current account username region marker is ${usernameRegion}, inconsistent with expected.`
+        : ` Current account username region marker is ${usernameRegion}.`
     )
     : '';
   const missingAuthChallengeHint = Boolean(status?.hasAuth)
     && parsedAuthSummary
     && parsedAuthSummary.challenge <= 0
     && parsedAuthSummary.provided <= 0
-    ? ' 当前链路未触发代理鉴权挑战（407），可能复用了历史代理连接/鉴权缓存，或代理端未返回标准 407 导致账号参数未被浏览器回填（可能走匿名链路）。可先关闭再开启代理，或切换到下一条节点后重试。'
+    ? ' Current link did not trigger proxy auth challenge (407). May be reusing historical proxy connection/auth cache, or proxy did not return standard 407 causing account params not filled back by browser (may use anonymous link). Try toggling proxy off and on, or switch to next node and retry.'
     : '';
-  const authHint = authSummary ? ` 诊断：probe:${authSummary}` : '';
-  const mismatchMessage = `代理出口地区与预期不一致：期望 ${expected}，实际 ${detected || 'unknown'}${sourceHint}。${usernameHint}${missingAuthChallengeHint}${authHint}`.trim();
+  const authHint = authSummary ? ` Diagnostics: probe:${authSummary}` : '';
+  const mismatchMessage = `Proxy exit region inconsistent with expectation: expected ${expected}, actual ${detected || 'unknown'}${sourceHint}.${usernameHint}${missingAuthChallengeHint}${authHint}`.trim();
   if (normalizedProvider === '711proxy') {
     const warningPrefix = missingAuthChallenge
-      ? '地区校验未通过且未触发代理鉴权挑战，疑似匿名链路；先保留代理接管并给出强告警：'
-      : '地区校验未通过，但已保留代理接管：';
+      ? 'Region check failed and no proxy auth challenge triggered, suspected anonymous link; keeping proxy takeover with strong warning: '
+      : 'Region check failed, but proxy takeover preserved: ';
     return {
       ...status,
       applied: true,
@@ -1731,7 +1731,7 @@ function applyExitBaselineExpectation(status = {}) {
       ...status,
       applied: false,
       reason: 'connectivity_failed',
-      error: `已检测到出口 IP ${exitIp}，但系统基线网络探测失败，无法确认是否经过插件代理链路。`,
+      error: `Detected exit IP ${exitIp}, but system baseline network probe failed. Cannot confirm whether traffic went through plugin proxy link.`,
     };
   }
   if (!exitIp || !baselineIp) {
@@ -1744,7 +1744,7 @@ function applyExitBaselineExpectation(status = {}) {
     ...status,
     applied: false,
     reason: 'connectivity_failed',
-    error: `检测到出口 IP ${exitIp} 与系统基线网络一致，疑似未经过插件代理链路。`,
+    error: `Detected exit IP ${exitIp} matches system baseline network — suspect not going through plugin proxy link.`,
   };
 }
 
@@ -1764,10 +1764,10 @@ function buildTargetReachabilityFailureMessage(status = {}, reachability = {}) {
   const endpoint = String(reachability?.endpoint || reachability?.url || IP_PROXY_TARGET_REACHABILITY_ENDPOINTS[0] || '').trim();
   const targetHost = extractProbeHostFromTabUrl(endpoint) || endpoint || 'chatgpt.com';
   const diagnostic = String(reachability?.error || reachability?.diagnostics || '').trim();
-  const diagnosticSuffix = diagnostic ? ` 诊断：${diagnostic}` : '';
+  const diagnosticSuffix = diagnostic ? ` Diagnostics: ${diagnostic}` : '';
   const exitRegionSuffix = exitRegion ? ` [${exitRegion}]` : '';
-  return `已检测到出口 IP ${exitIp}${exitRegionSuffix}，但真实目标 ${targetHost} 不可达。`
-    + `这说明代理只通过了 IP 探测，无法打开步骤 1 的 ChatGPT 页面；请更换支持 chatgpt.com CONNECT/TLS 的节点。`
+  return `Detected exit IP ${exitIp}${exitRegionSuffix}, but real target ${targetHost} unreachable.`
+    + ` This means proxy only passed IP probe — cannot open Step 1 ChatGPT page. Please switch to a node supporting chatgpt.com CONNECT/TLS.`
     + diagnosticSuffix;
 }
 
@@ -2746,16 +2746,16 @@ async function detectProxyExitInfo(options = {}) {
 async function pullIpProxyPoolFromApi(state = {}, options = {}) {
   const apiUrl = String(state?.ipProxyApiUrl || '').trim();
   if (!apiUrl) {
-    throw new Error('代理 API 不能为空。');
+    throw new Error('Proxy API cannot be empty.');
   }
   let parsedUrl;
   try {
     parsedUrl = new URL(apiUrl);
   } catch {
-    throw new Error('代理 API 不是有效 URL。');
+    throw new Error('Proxy API is not a valid URL.');
   }
   if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-    throw new Error('代理 API 仅支持 http/https。');
+    throw new Error('Proxy API only supports http/https.');
   }
 
   const provider = normalizeIpProxyProviderValue(state?.ipProxyService);
@@ -2766,7 +2766,7 @@ async function pullIpProxyPoolFromApi(state = {}, options = {}) {
     headers: { Accept: 'application/json, text/plain, */*' },
   }, timeoutMs);
   if (!response.ok) {
-    throw new Error(`代理 API 请求失败（HTTP ${response.status}）。`);
+    throw new Error(`Proxy API request failed (HTTP ${response.status}).`);
   }
 
   const rawText = await response.text();
@@ -2859,7 +2859,7 @@ function installIpProxyErrorListener() {
 function callChromeProxySettings(method, details) {
   const proxySettings = chrome.proxy?.settings;
   if (!proxySettings || typeof proxySettings[method] !== 'function') {
-    return Promise.reject(new Error('当前浏览器不支持扩展代理 API'));
+    return Promise.reject(new Error('Current browser does not support extension proxy API'));
   }
   return new Promise((resolve, reject) => {
     proxySettings[method](details, () => {
@@ -2876,7 +2876,7 @@ function callChromeProxySettings(method, details) {
 function getChromeProxySettings(details = { incognito: false }) {
   const proxySettings = chrome.proxy?.settings;
   if (!proxySettings || typeof proxySettings.get !== 'function') {
-    return Promise.reject(new Error('当前浏览器不支持扩展代理 API'));
+    return Promise.reject(new Error('Current browser does not support extension proxy API'));
   }
   return new Promise((resolve, reject) => {
     proxySettings.get(details, (value) => {
@@ -2895,7 +2895,7 @@ function validateProxyControlAfterApply(details, entry) {
   if (level && level !== 'controlled_by_this_extension') {
     return {
       ok: false,
-      message: `代理控制权不在当前扩展（levelOfControl=${level || 'unknown'}）`,
+      message: `Proxy control not held by current extension (levelOfControl=${level || 'unknown'})`,
     };
   }
 
@@ -2903,7 +2903,7 @@ function validateProxyControlAfterApply(details, entry) {
   if (mode !== 'pac_script') {
     return {
       ok: false,
-      message: `代理模式不是 pac_script（当前为 ${mode || 'unknown'}）`,
+      message: `Proxy mode is not pac_script (current: ${mode || 'unknown'})`,
     };
   }
 
@@ -2912,7 +2912,7 @@ function validateProxyControlAfterApply(details, entry) {
   if (pacData && !pacData.includes(endpoint)) {
     return {
       ok: false,
-      message: `PAC 未包含当前代理节点 ${endpoint}，疑似被其他代理配置覆盖`,
+      message: `PAC does not contain current proxy node ${endpoint}, suspected override by other proxy configuration`,
     };
   }
 
@@ -3118,7 +3118,7 @@ async function applyIpProxySettingsFromState(state = {}, options = {}) {
       applied: false,
       reason: 'proxy_api_unavailable',
       provider: normalizeIpProxyProviderValue(resolvedState?.ipProxyService),
-      error: '当前浏览器不支持扩展代理 API。',
+      error: 'Current browser does not support extension proxy API.',
       exitDetecting: false,
       exitIp: '',
       exitRegion: '',
@@ -3149,7 +3149,7 @@ async function applyIpProxySettingsFromState(state = {}, options = {}) {
       applied: false,
       reason: 'missing_proxy_entry',
       provider,
-      error: 'API 模式已启用，但代理 API 为空。',
+      error: 'API mode is enabled but proxy API is empty.',
       exitDetecting: false,
       exitIp: '',
       exitRegion: '',
@@ -3208,8 +3208,8 @@ async function applyIpProxySettingsFromState(state = {}, options = {}) {
     effectiveEntry = await maybeResolveProxyHostVariantForAuthSwitch(effectiveEntry, {
       force: true,
       timeoutMs: 3500,
-      // 仅多节点账号列表场景允许解析 IP 变体；
-      // 单账号显式重绑仅使用 host 字面量变体，避免解析 IP 后链路不稳定。
+      // Only allow IP variant resolution in multi-node account list scenarios;
+      // single-account explicit rebind uses host literal variants only to avoid link instability after IP resolution.
       allow711ResolvedIp: hasMultipleAccountEntries,
     }).catch(() => effectiveEntry);
   }
@@ -3226,7 +3226,7 @@ async function applyIpProxySettingsFromState(state = {}, options = {}) {
       region: entry.region,
       hasAuth: Boolean(entry.username || entry.password),
       provider: normalizeIpProxyProviderValue(entry.provider || resolvedState?.ipProxyService),
-      error: '代理配置不完整，无法生成 PAC 规则。',
+      error: 'Proxy configuration is incomplete — cannot generate PAC rules.',
       exitDetecting: false,
       exitIp: '',
       exitRegion: '',
@@ -3252,12 +3252,12 @@ async function applyIpProxySettingsFromState(state = {}, options = {}) {
       if (typeof addLog === 'function') {
         await addLog(
           explicitForceAuthRebind
-            ? '正在执行代理鉴权重绑：重置代理连接并切换主机变体，避免复用旧鉴权缓存。'
-            : '检测到同节点切换代理账号，正在重置代理连接并切换主机变体，避免复用旧鉴权缓存。',
+            ? 'Performing proxy auth rebind: resetting proxy connection and switching host variant to avoid reusing old auth cache.'
+            : 'Detected same-node proxy account switch — resetting proxy connection and switching host variant to avoid reusing old auth cache.',
           'info'
         ).catch(() => {});
         if (String(effectiveEntry?.host || '').trim() !== String(entry?.host || '').trim()) {
-          await addLog(`代理账号切换：已启用主机缓存隔离（${entry.host} -> ${effectiveEntry.host}）。`, 'info').catch(() => {});
+          await addLog(`Proxy account switch: enabled host cache isolation (${entry.host} -> ${effectiveEntry.host}).`, 'info').catch(() => {});
         }
       }
       await setIpProxyLeakGuardEnabled(true);
@@ -3291,7 +3291,7 @@ async function applyIpProxySettingsFromState(state = {}, options = {}) {
         mode: 'pac_script',
         pacScript: {
           data: pacScript,
-          // 官方文档建议启用 mandatory，避免 PAC 失效时静默回落到 DIRECT。
+          // Chrome docs recommend enabling mandatory to avoid silent fallback to DIRECT when PAC fails.
           mandatory: true,
         },
       },
@@ -3300,7 +3300,7 @@ async function applyIpProxySettingsFromState(state = {}, options = {}) {
     const proxySettings = await getChromeProxySettings({ incognito: false }).catch(() => null);
     const takeoverCheck = validateProxyControlAfterApply(proxySettings || {}, effectiveEntry);
     if (!takeoverCheck.ok) {
-      throw new Error(takeoverCheck.message || '代理接管校验失败。');
+      throw new Error(takeoverCheck.message || 'Proxy takeover validation failed.');
     }
     await setIpProxyLeakGuardEnabled(false);
     lastAppliedIpProxyEntrySignature = entrySignature;
@@ -3322,7 +3322,7 @@ async function applyIpProxySettingsFromState(state = {}, options = {}) {
       region: entry.region,
       hasAuth: Boolean(entry.username || entry.password),
       provider: normalizeIpProxyProviderValue(entry.provider || resolvedState?.ipProxyService),
-      error: error?.message || String(error || '代理设置失败'),
+      error: error?.message || String(error || 'Proxy settings failed'),
       exitDetecting: false,
       exitIp: '',
       exitRegion: '',
@@ -3353,7 +3353,8 @@ async function applyIpProxySettingsFromState(state = {}, options = {}) {
   await updateIpProxyRuntimeStatus(status);
 
   if (shouldForceDrain) {
-    // 同节点切换账号后给网络栈一点时间建立新隧道，避免立即探测命中旧连接。
+    // After switching accounts on the same node, give the network stack a moment to establish a new tunnel,
+    // avoiding immediate probes that may hit the old connection.
     await new Promise((resolve) => setTimeout(resolve, 900));
   }
 
@@ -3369,8 +3370,8 @@ async function applyIpProxySettingsFromState(state = {}, options = {}) {
     errors: diagnostics,
     provider: status?.provider || provider,
     username: status?.username || entry?.username || '',
-    // 优先使用页面上下文探测，确保探测链路与真实浏览器页面一致；
-    // 后台探测仅作为补充兜底，避免单一路径误判。
+    // Prefer page-context probe to ensure probe link is consistent with real browser pages;
+    // background probe is only a supplementary fallback to avoid single-path misjudgment.
     preferPageContext: true,
     allowBackgroundFallback: true,
     state,
@@ -3451,7 +3452,7 @@ async function refreshIpProxyPool(options = {}) {
       if (parseFailureHint) {
         throw new Error(parseFailureHint);
       }
-      throw new Error('账号密码模式没有可用代理，请先填写代理列表，或填写 Host/Port。');
+      throw new Error('Username/password mode has no usable proxies. Please fill in the proxy list or Host/Port.');
     }
   } else {
     pool = await pullIpProxyPoolFromApi(state, {
@@ -3459,7 +3460,7 @@ async function refreshIpProxyPool(options = {}) {
       timeoutMs: options.timeoutMs,
     });
     if (!pool.length) {
-      throw new Error('代理列表为空，请检查 API 返回。');
+      throw new Error('Proxy list is empty. Please check the API response.');
     }
   }
 
@@ -3514,7 +3515,7 @@ async function switchIpProxy(direction = 'next', options = {}) {
   const state = options.state || await getState();
   const mode = normalizeIpProxyMode(options.mode || state?.ipProxyMode);
   if (mode === 'api' && !isApiModeProxyConfigAvailable(state)) {
-    throw new Error('API 模式代理 URL 为空，请先填写代理 API 地址。');
+    throw new Error('API mode proxy URL is empty. Please fill in the proxy API address first.');
   }
   const maxItems = Math.max(
     1,
@@ -3538,8 +3539,8 @@ async function switchIpProxy(direction = 'next', options = {}) {
       });
     }
     throw new Error(mode === 'account'
-      ? '账号密码模式没有可切换的代理，请先填写代理列表或 Host/Port。'
-      : '当前没有可切换代理，请先点击“拉取”获取 IP 列表。');
+      ? 'Username/password mode has no proxies to switch. Please fill in the proxy list or Host/Port.'
+      : 'No switchable proxy available. Please click "Pull" to fetch the IP list.');
   }
 
   const nextIndex = getNextIpProxyPoolIndex(runtime.index, pool.length, direction);
@@ -3592,29 +3593,29 @@ async function switchIpProxy(direction = 'next', options = {}) {
 async function changeIpProxyExit(options = {}) {
   const state = options.state || await getState();
   if (!state?.ipProxyEnabled) {
-    throw new Error('请先启用 IP 代理。');
+    throw new Error('Please enable IP proxy first.');
   }
 
   const mode = normalizeIpProxyMode(options.mode || state?.ipProxyMode);
   const provider = normalizeIpProxyProviderValue(state?.ipProxyService);
   if (mode !== 'account') {
-    throw new Error('Change 仅支持账号密码模式。');
+    throw new Error('Change only supports username/password mode.');
   }
   if (provider !== '711proxy') {
-    throw new Error('Change 当前仅支持 711Proxy。');
+    throw new Error('Change currently only supports 711Proxy.');
   }
 
   const entry = getIpProxyCurrentEntryFromState(state);
   if (!entry || !entry.host || !entry.port) {
-    throw new Error('当前没有可用代理条目，无法执行 Change。');
+    throw new Error('No available proxy entry — cannot execute Change.');
   }
   const username = String(entry?.username || '').trim();
   if (!has711SessionToken(username)) {
-    throw new Error('当前账号未配置 session，无法执行 Change。请先在账号中追加 session 参数。');
+    throw new Error('Current account has no session configured — cannot execute Change. Please add session parameter to the account first.');
   }
 
   if (typeof addLog === 'function') {
-    await addLog('正在执行 Change：保持当前 session，重绑代理链路并刷新出口。', 'info').catch(() => {});
+    await addLog('Executing Change: keeping current session, rebinding proxy link and refreshing exit.', 'info').catch(() => {});
   }
 
   const proxyRouting = await applyIpProxySettingsFromState(state, {
@@ -3678,10 +3679,10 @@ async function tryRecoverApiProxyByRotation(options = {}) {
           const nodeText = Number.isInteger(switched?.index)
             && Number.isInteger(switched?.count)
             && switched.count > 0
-            ? `（第 ${switched.index + 1}/${switched.count} 个节点）`
+            ? `(node ${switched.index + 1}/${switched.count})`
             : '';
-          const refreshText = refreshedPool ? '（已自动刷新 IP 池）' : '';
-          await addLog(`IP 代理自动恢复成功：API 模式已切换到可用节点${nodeText}${refreshText}。`, 'ok').catch(() => {});
+          const refreshText = refreshedPool ? ' (auto-refreshed IP pool)' : '';
+          await addLog(`IP proxy auto-recovery succeeded: API mode switched to available node ${nodeText}${refreshText}.`, 'ok').catch(() => {});
         }
         return true;
       }
@@ -3712,8 +3713,8 @@ async function tryRecoverApiProxyByRotation(options = {}) {
 
   if (latestStatus && attempts > 0) {
     const suffix = refreshedPool
-      ? `已自动轮换 ${attempts} 个 API 节点，并刷新 IP 池后重试，仍不可用。`
-      : `已自动轮换 ${attempts} 个 API 节点但仍不可用。`;
+      ? `Auto-rotated ${attempts} API nodes and refreshed IP pool, still unavailable.`
+      : `Auto-rotated ${attempts} API nodes but still unavailable.`;
     const currentError = String(latestStatus.error || '').trim();
     latestStatus = {
       ...latestStatus,
@@ -3827,7 +3828,7 @@ async function probeIpProxyExit(options = {}) {
     exitError: '',
     exitSource: '',
   };
-  // 上一轮连通性失败会启用 fail-close 规则，手动检测前先解除，避免自阻断影响探测。
+  // The previous round's connectivity failure may have enabled the fail-close rule; clear it before manual probe to avoid self-blocking.
   await setIpProxyLeakGuardEnabled(false);
   await updateIpProxyRuntimeStatus(probingStatus);
 
@@ -3839,7 +3840,7 @@ async function probeIpProxyExit(options = {}) {
       errors: diagnostics,
       provider: statusSeed?.provider || probingStatus?.provider || provider,
       username: statusSeed?.username || probingStatus?.username || '',
-      // 手动探测与自动应用保持一致：先页面上下文，再后台补充。
+      // Manual probe stays consistent with auto-apply: page context first, then background as backup.
       preferPageContext: true,
       allowBackgroundFallback: true,
       state,
@@ -3847,7 +3848,7 @@ async function probeIpProxyExit(options = {}) {
     if (!exit?.ip && Boolean(statusSeed?.hasAuth)) {
       appendIpProxyAuthDiagnosticsToErrors(diagnostics);
       if (typeof addLog === 'function') {
-        await addLog(`代理出口探测失败：${buildProbeDiagnosticsSummary(diagnostics, IP_PROXY_DIAGNOSTICS_SUMMARY_MAX_ITEMS)}`, 'warn').catch(() => {});
+        await addLog(`Proxy exit probe failed: ${buildProbeDiagnosticsSummary(diagnostics, IP_PROXY_DIAGNOSTICS_SUMMARY_MAX_ITEMS)}`, 'warn').catch(() => {});
       }
     }
     const finalStatus = {
@@ -3902,8 +3903,8 @@ async function probeIpProxyExit(options = {}) {
     const maxRebindAttempts = Math.max(1, Math.min(3, Number(options?.authRebindMaxAttempts) || 2));
     for (let attempt = 0; attempt < maxRebindAttempts; attempt += 1) {
       if (typeof addLog === 'function') {
-        const hint = attempt === 0 ? '首次重绑复测' : `第 ${attempt + 1} 次重绑复测`;
-        await addLog(`检测到代理链路未触发 407 挑战，正在执行${hint}。`, 'info').catch(() => {});
+        const hint = attempt === 0 ? 'initial rebind retest' : `rebind retest #${attempt + 1}`;
+        await addLog(`Detected proxy link did not trigger 407 challenge — performing ${hint}.`, 'info').catch(() => {});
       }
       const latestBeforeRebind = await getState();
       const reboundStatus = await applyIpProxySettingsFromState(latestBeforeRebind, {

@@ -63,7 +63,7 @@
       const latestState = state || await getState();
       const domain = normalizeCloudflareDomain(latestState.cloudflareDomain);
       if (!domain) {
-        throw new Error('Cloudflare 域名为空或格式无效。');
+        throw new Error('Cloudflare domain is empty or invalid.');
       }
 
       const localPart = String(options.localPart || '').trim().toLowerCase() || generateCloudflareAliasLocalPart();
@@ -73,7 +73,7 @@
         source: 'generated:cloudflare',
         preserveAccountIdentity: Boolean(options?.preserveAccountIdentity),
       });
-      await addLog(`Cloudflare 邮箱：已生成 ${aliasEmail}`, 'ok');
+      await addLog(`Cloudflare email: Generated ${aliasEmail}`, 'ok');
       return aliasEmail;
     }
 
@@ -84,13 +84,13 @@
       } = options;
       const config = getCloudflareTempEmailConfig(state);
       if (!config.baseUrl) {
-        throw new Error('Cloudflare Temp Email 服务地址为空或格式无效。');
+        throw new Error('Cloudflare Temp Email service URL is empty or invalid.');
       }
       if (requireAdminAuth && !config.adminAuth) {
-        throw new Error('Cloudflare Temp Email 缺少 Admin Auth。');
+        throw new Error('Cloudflare Temp Email missing Admin Auth.');
       }
       if (requireDomain && !config.domain) {
-        throw new Error('Cloudflare Temp Email 域名为空或格式无效。');
+        throw new Error('Cloudflare Temp Email domain is empty or invalid.');
       }
       return config;
     }
@@ -126,8 +126,8 @@
         });
       } catch (err) {
         const errorMessage = err?.name === 'AbortError'
-          ? `Cloudflare Temp Email 请求超时（>${Math.round(timeoutMs / 1000)} 秒）`
-          : `Cloudflare Temp Email 请求失败：${err.message}`;
+          ? `Cloudflare Temp Email request timed out (>${Math.round(timeoutMs / 1000)} seconds)`
+          : `Cloudflare Temp Email request failed: ${err.message}`;
         throw new Error(errorMessage);
       } finally {
         clearTimeout(timeoutId);
@@ -145,7 +145,7 @@
         const payloadError = typeof parsed === 'object' && parsed
           ? (parsed.message || parsed.error || parsed.msg)
           : '';
-        throw new Error(`Cloudflare Temp Email 请求失败：${payloadError || text || `HTTP ${response.status}`}`);
+        throw new Error(`Cloudflare Temp Email request failed: ${payloadError || text || `HTTP ${response.status}`}`);
       }
 
       return parsed;
@@ -171,14 +171,14 @@
       });
       const address = normalizeCloudflareTempEmailAddress(getCloudflareTempEmailAddressFromResponse(result));
       if (!address) {
-        throw new Error('Cloudflare Temp Email 未返回可用邮箱地址。');
+        throw new Error('Cloudflare Temp Email did not return a usable email address.');
       }
 
       await persistResolvedEmailState(latestState, address, {
         source: 'generated:cloudflare-temp-email',
         preserveAccountIdentity: Boolean(options?.preserveAccountIdentity),
       });
-      await addLog(`Cloudflare Temp Email：已生成 ${address}`, 'ok');
+      await addLog(`Cloudflare Temp Email: Generated ${address}`, 'ok');
       return address;
     }
 
@@ -194,7 +194,7 @@
         state = null,
       } = options;
 
-      await addLog(`Duck 邮箱：正在打开自动填充设置（${generateNew ? '生成新地址' : '复用当前地址'}）...`);
+      await addLog(`Duck Mail: Opening autofill settings (${generateNew ? 'generate new address' : 'reuse current address'})...`);
       await reuseOrCreateTab('duck-mail', DUCK_AUTOFILL_URL);
 
       const result = await sendToContentScript('duck-mail', {
@@ -210,14 +210,14 @@
         throw new Error(result.error);
       }
       if (!result?.email) {
-        throw new Error('未返回 Duck 邮箱地址。');
+        throw new Error('No Duck Mail address returned.');
       }
 
       await persistResolvedEmailState(state, result.email, {
         source: 'generated:duck',
         preserveAccountIdentity: Boolean(options?.preserveAccountIdentity),
       });
-      await addLog(`Duck 邮箱：${result.generated ? '已生成' : '已读取'} ${result.email}`, 'ok');
+      await addLog(`Duck Mail: ${result.generated ? 'Generated' : 'Read'} ${result.email}`, 'ok');
       return result.email;
     }
 
@@ -229,8 +229,8 @@
       if (!email) {
         throw new Error(
           requestedIndex > 0
-            ? `自定义邮箱池第 ${requestedIndex + 1} 个邮箱不存在，请检查邮箱池配置。`
-            : '自定义邮箱池为空，请先至少填写 1 个邮箱。'
+            ? `Email pool entry ${requestedIndex + 1} does not exist. Please check the email pool configuration.`
+            : 'Custom email pool is empty. Please fill in at least 1 email.'
         );
       }
 
@@ -238,7 +238,7 @@
         source: 'generated:custom-pool',
         preserveAccountIdentity: Boolean(options?.preserveAccountIdentity),
       });
-      await addLog(`自定义邮箱池：已取用 ${email}`, 'ok');
+      await addLog(`Custom email pool: Using ${email}`, 'ok');
       return email;
     }
 
@@ -280,7 +280,7 @@
         source: `generated:${provider || 'alias'}`,
         preserveAccountIdentity: Boolean(options?.preserveAccountIdentity),
       });
-      await addLog(`${provider === 'gmail' ? 'Gmail +tag' : '2925'}：已生成 ${email}`, 'ok');
+      await addLog(`${provider === 'gmail' ? 'Gmail +tag' : '2925'}: Generated ${email}`, 'ok');
       return email;
     }
 
@@ -307,7 +307,7 @@
         mergedState.customEmailPool = options.customEmailPool;
       }
       if (generator === 'custom') {
-        throw new Error('当前邮箱生成方式为自定义邮箱，请直接填写注册邮箱。');
+        throw new Error('Current email generation mode is custom email — please fill in the registration email directly.');
       }
       if (generator === CUSTOM_EMAIL_POOL_GENERATOR) {
         return fetchCustomEmailPoolEmail(mergedState, options);

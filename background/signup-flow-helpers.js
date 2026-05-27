@@ -42,7 +42,7 @@
 
       if (typeof addLog === 'function') {
         await addLog(
-          `步骤 ${step}：注册页已打开，正在等待页面加载完成并额外稳定 3 秒...`,
+          `Step ${step}: Signup page opened, waiting for it to finish loading and remain stable for 3 more seconds...`,
           'info',
           { step, stepKey: 'signup-entry' }
         );
@@ -69,7 +69,7 @@
         injectSource: 'openai-auth',
         timeoutMs: 45000,
         retryDelayMs: 900,
-        logMessage: `步骤 ${step}：ChatGPT 官网仍在加载，正在重试连接内容脚本...`,
+        logMessage: `Step ${step}: ChatGPT site is still loading, retrying content-script connection...`,
       });
 
       return tabId;
@@ -85,7 +85,7 @@
       }, {
         timeoutMs: 20000,
         retryDelayMs: 700,
-        logMessage: `步骤 ${step}：官网注册入口正在切换，等待页面恢复...`,
+        logMessage: `Step ${step}: Signup entry is switching, waiting for the page to recover...`,
       });
 
       if (result?.error) {
@@ -149,7 +149,7 @@
           retryDelayMs: 300,
         });
         if (!matchedTab) {
-          throw new Error('等待注册身份提交后的页面跳转超时，请检查页面是否仍停留在输入页。');
+          throw new Error('Timed out waiting for page navigation after signup identity submission. Check whether the page is still stuck on the input page.');
         }
 
         landingUrl = matchedTab.url || '';
@@ -167,7 +167,7 @@
       }
 
       if (!landingState) {
-        throw new Error(`注册身份提交后未能识别当前页面，既不是密码页、验证码页，也不是资料页。URL: ${landingUrl || 'unknown'}`);
+        throw new Error(`Could not identify the current page after signup identity submission — it is not the password page, verification page, or profile page. URL: ${landingUrl || 'unknown'}`);
       }
 
       if (landingState !== 'password_page' && typeof waitForTabStableComplete === 'function') {
@@ -192,8 +192,8 @@
         timeoutMs: 45000,
         retryDelayMs: 900,
         logMessage: landingState === 'password_page'
-          ? `步骤 ${step}：密码页仍在加载，正在重试连接内容脚本...`
-          : `步骤 ${step}：注册后续页面仍在加载，正在等待页面恢复...`,
+          ? `Step ${step}: Password page is still loading, retrying content-script connection...`
+          : `Step ${step}: Signup follow-up page is still loading, waiting for it to recover...`,
       });
 
       if (landingState !== 'password_page') {
@@ -212,7 +212,7 @@
       }, {
         timeoutMs: 20000,
         retryDelayMs: 700,
-        logMessage: `步骤 ${step}：认证页正在切换，等待密码页重新就绪...`,
+        logMessage: `Step ${step}: Auth page is switching, waiting for the password page to become ready again...`,
       });
 
       if (result?.error) {
@@ -234,14 +234,14 @@
     async function ensureSignupPasswordPageReadyInTab(tabId, step = 2, options = {}) {
       const result = await ensureSignupPostEmailPageReadyInTab(tabId, step, options);
       if (result.state !== 'password_page') {
-        throw new Error(`当前页面不是密码页，实际落地为 ${result.state || 'unknown'}。URL: ${result.url || 'unknown'}`);
+        throw new Error(`Current page is not the password page; it actually landed on ${result.state || 'unknown'}. URL: ${result.url || 'unknown'}`);
       }
       return result;
     }
 
     async function finalizeSignupPasswordSubmitInTab(tabId, password = '', step = 3) {
       if (!Number.isInteger(tabId)) {
-        throw new Error(`认证页面标签页已关闭，无法完成步骤 ${step} 的提交后确认。`);
+        throw new Error(`Auth page tab was closed; cannot complete the post-submit confirmation for step ${step}.`);
       }
 
       await ensureContentScriptReadyOnTab('openai-auth', tabId, {
@@ -249,7 +249,7 @@
         injectSource: 'openai-auth',
         timeoutMs: 45000,
         retryDelayMs: 900,
-        logMessage: `步骤 ${step}：认证页仍在切换，正在等待页面恢复后继续确认提交流程...`,
+        logMessage: `Step ${step}: Auth page is still switching, waiting for the page to recover before confirming the submission flow...`,
       });
 
       let result;
@@ -261,16 +261,16 @@
           payload: {
             password: password || '',
             prepareSource: 'step3_finalize',
-            prepareLogLabel: '步骤 3 收尾',
+            prepareLogLabel: 'Step 3 finalize',
           },
         }, {
           timeoutMs: 30000,
           retryDelayMs: 700,
-          logMessage: `步骤 ${step}：密码已提交，正在确认是否进入下一页面，必要时自动恢复重试页...`,
+          logMessage: `Step ${step}: Password submitted, confirming whether the page advanced to the next page; will auto-recover the retry page if necessary...`,
         });
       } catch (error) {
         if (isRetryableContentScriptTransportError(error)) {
-          const message = `步骤 ${step}：认证页在提交后切换过程中页面通信超时，未能重新就绪，暂时无法确认是否进入下一页面。请重试当前轮。`;
+          const message = `Step ${step}: Page communication timed out while the auth page was switching after submission; could not become ready in time, so it cannot confirm whether the page advanced to the next page. Please retry the current round.`;
           if (typeof addLog === 'function') {
             await addLog(message, 'warn');
           }
@@ -371,7 +371,7 @@
       }
 
       if (!resolvedEmail) {
-        throw new Error('缺少邮箱地址，请先在侧边栏粘贴邮箱。');
+        throw new Error('Missing email address. Please paste an email in the side panel first.');
       }
 
       if (!generatedEmailAlreadyPersisted || options?.preserveAccountIdentity) {

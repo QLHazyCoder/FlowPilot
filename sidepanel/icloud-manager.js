@@ -36,9 +36,9 @@
           alias.email,
           alias.label,
           alias.note,
-          alias.used ? '已用 used' : '未用 unused',
-          alias.active ? '可用 active' : '不可用 inactive',
-          alias.preserved ? '保留 preserved' : '',
+          alias.used ? 'used' : 'unused',
+          alias.active ? 'active' : 'inactive',
+          alias.preserved ? 'preserved' : '',
         ].join(' ').toLowerCase();
 
         return haystack.includes(normalizedSearchTerm);
@@ -62,7 +62,7 @@
       dom.checkboxIcloudSelectAll.checked = hasVisible && selectedVisibleCount === visibleEmails.length;
       dom.checkboxIcloudSelectAll.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleEmails.length;
       dom.checkboxIcloudSelectAll.disabled = !hasVisible;
-      dom.icloudSelectionSummary.textContent = `已选 ${selectedEmails.size} 个（当前显示 ${visibleEmails.length} 个）`;
+      dom.icloudSelectionSummary.textContent = `Selected ${selectedEmails.size} (currently showing ${visibleEmails.length})`;
 
       const hasSelection = selectedEmails.size > 0;
       if (dom.btnIcloudBulkUsed) dom.btnIcloudBulkUsed.disabled = !hasSelection;
@@ -98,8 +98,8 @@
           host = loginUrl;
         }
       }
-      if (dom.icloudLoginHelpTitle) dom.icloudLoginHelpTitle.textContent = '需要登录 iCloud';
-      if (dom.icloudLoginHelpText) dom.icloudLoginHelpText.textContent = `我已经为你打开 ${host}。请在那个页面完成登录，然后回到这里点击“我已登录”。`;
+      if (dom.icloudLoginHelpTitle) dom.icloudLoginHelpTitle.textContent = 'iCloud login required';
+      if (dom.icloudLoginHelpText) dom.icloudLoginHelpText.textContent = `I have already opened ${host} for you. Please complete the login there, then return here and click "I have logged in".`;
       dom.icloudLoginHelp.style.display = 'flex';
     }
 
@@ -118,8 +118,8 @@
 
       if (!aliases.length) {
         selectedEmails.clear();
-        dom.icloudList.innerHTML = '<div class="icloud-empty">未找到 iCloud Hide My Email 别名。</div>';
-        dom.icloudSummary.textContent = '加载你的 iCloud Hide My Email 别名以便在这里管理。';
+        dom.icloudList.innerHTML = '<div class="icloud-empty">No iCloud Hide My Email aliases found.</div>';
+        dom.icloudSummary.textContent = 'Load your iCloud Hide My Email aliases to manage them here.';
         if (dom.btnIcloudDeleteUsed) dom.btnIcloudDeleteUsed.disabled = true;
         updateIcloudBulkUI([]);
         return;
@@ -127,12 +127,12 @@
 
       const usedCount = aliases.filter((alias) => alias.used).length;
       const deletableUsedCount = aliases.filter((alias) => alias.used && !alias.preserved).length;
-      dom.icloudSummary.textContent = `已加载 ${aliases.length} 个别名，其中 ${usedCount} 个已标记为已用。`;
+      dom.icloudSummary.textContent = `Loaded ${aliases.length} aliases, of which ${usedCount} are marked as used.`;
       if (dom.btnIcloudDeleteUsed) dom.btnIcloudDeleteUsed.disabled = deletableUsedCount === 0;
 
       const visibleAliases = getFilteredIcloudAliases(aliases);
       if (!visibleAliases.length) {
-        dom.icloudList.innerHTML = '<div class="icloud-empty">没有匹配当前筛选条件的别名。</div>';
+        dom.icloudList.innerHTML = '<div class="icloud-empty">No aliases match the current filter.</div>';
         updateIcloudBulkUI([]);
         return;
       }
@@ -145,17 +145,17 @@
           <div class="icloud-item-main">
             <div class="icloud-item-email">${helpers.escapeHtml(alias.email)}</div>
             <div class="icloud-item-meta">
-              ${alias.used ? '<span class="icloud-tag used">已用</span>' : ''}
-              ${!alias.used && alias.active ? '<span class="icloud-tag active">可用</span>' : ''}
-              ${alias.preserved ? '<span class="icloud-tag">保留</span>' : ''}
+              ${alias.used ? '<span class="icloud-tag used">Used</span>' : ''}
+              ${!alias.used && alias.active ? '<span class="icloud-tag active">Available</span>' : ''}
+              ${alias.preserved ? '<span class="icloud-tag">Preserved</span>' : ''}
               ${alias.label ? `<span class="icloud-tag">${helpers.escapeHtml(alias.label)}</span>` : ''}
               ${alias.note ? `<span class="icloud-tag">${helpers.escapeHtml(alias.note)}</span>` : ''}
             </div>
           </div>
           <div class="icloud-item-actions">
-            <button class="btn btn-outline btn-xs" type="button" data-action="toggle-used">${helpers.escapeHtml(alias.used ? '标记未用' : '标记已用')}</button>
-            <button class="btn btn-outline btn-xs" type="button" data-action="toggle-preserved">${helpers.escapeHtml(alias.preserved ? '取消保留' : '保留')}</button>
-            <button class="btn btn-outline btn-xs" type="button" data-action="delete">删除</button>
+            <button class="btn btn-outline btn-xs" type="button" data-action="toggle-used">${helpers.escapeHtml(alias.used ? 'Mark Unused' : 'Mark Used')}</button>
+            <button class="btn btn-outline btn-xs" type="button" data-action="toggle-preserved">${helpers.escapeHtml(alias.preserved ? 'Unpreserve' : 'Preserve')}</button>
+            <button class="btn btn-outline btn-xs" type="button" data-action="delete">Delete</button>
           </div>
         `;
 
@@ -188,7 +188,7 @@
         return;
       }
 
-      if (!silent) setIcloudLoadingState(true, '正在加载 iCloud 别名...');
+      if (!silent) setIcloudLoadingState(true, 'Loading iCloud aliases...');
       try {
         const response = await runtime.sendMessage({
           type: 'LIST_ICLOUD_ALIASES',
@@ -201,13 +201,13 @@
       } catch (err) {
         selectedEmails.clear();
         if (dom.icloudList) {
-          dom.icloudList.innerHTML = '<div class="icloud-empty">无法加载 iCloud 别名。</div>';
+          dom.icloudList.innerHTML = '<div class="icloud-empty">Failed to load iCloud aliases.</div>';
         }
         if (dom.icloudSummary) {
           dom.icloudSummary.textContent = err.message;
         }
         updateIcloudBulkUI([]);
-        if (!silent) helpers.showToast(`iCloud 别名加载失败：${err.message}`, 'error');
+        if (!silent) helpers.showToast(`Failed to load iCloud aliases: ${err.message}`, 'error');
       } finally {
         setIcloudLoadingState(false);
       }
@@ -224,16 +224,16 @@
 
     async function deleteSingleIcloudAlias(alias) {
       const confirmed = await helpers.openConfirmModal({
-        title: '删除 iCloud 别名',
-        message: `确认删除 ${alias.email} 吗？此操作不可撤销。`,
-        confirmLabel: '确认删除',
+        title: 'Delete iCloud Alias',
+        message: `Are you sure you want to delete ${alias.email}? This cannot be undone.`,
+        confirmLabel: 'Confirm Delete',
         confirmVariant: 'btn-danger',
       });
       if (!confirmed) {
         return;
       }
 
-      setIcloudLoadingState(true, `正在删除 ${alias.email} ...`);
+      setIcloudLoadingState(true, `Deleting ${alias.email} ...`);
       try {
         const response = await runtime.sendMessage({
           type: 'DELETE_ICLOUD_ALIAS',
@@ -241,18 +241,18 @@
           payload: { email: alias.email, anonymousId: alias.anonymousId },
         });
         if (response?.error) throw new Error(response.error);
-        helpers.showToast(`已删除 ${alias.email}`, 'success', 2200);
+        helpers.showToast(`Deleted ${alias.email}`, 'success', 2200);
         await refreshIcloudAliases({ silent: true });
       } catch (err) {
         if (dom.icloudSummary) dom.icloudSummary.textContent = err.message;
-        helpers.showToast(`删除 iCloud 别名失败：${err.message}`, 'error');
+        helpers.showToast(`Failed to delete iCloud alias: ${err.message}`, 'error');
       } finally {
         setIcloudLoadingState(false);
       }
     }
 
     async function setSingleIcloudAliasUsedState(alias, used) {
-      setIcloudLoadingState(true, `正在更新 ${alias.email} 的使用状态...`);
+      setIcloudLoadingState(true, `Updating used state of ${alias.email}...`);
       try {
         const response = await runtime.sendMessage({
           type: 'SET_ICLOUD_ALIAS_USED_STATE',
@@ -260,18 +260,18 @@
           payload: { email: alias.email, used },
         });
         if (response?.error) throw new Error(response.error);
-        helpers.showToast(`${alias.email} 已${used ? '标记为已用' : '恢复为未用'}`, 'success', 2200);
+        helpers.showToast(`${alias.email} ${used ? 'marked as used' : 'restored as unused'}`, 'success', 2200);
         await refreshIcloudAliases({ silent: true });
       } catch (err) {
         if (dom.icloudSummary) dom.icloudSummary.textContent = err.message;
-        helpers.showToast(`更新 iCloud 使用状态失败：${err.message}`, 'error');
+        helpers.showToast(`Failed to update iCloud used state: ${err.message}`, 'error');
       } finally {
         setIcloudLoadingState(false);
       }
     }
 
     async function setSingleIcloudAliasPreservedState(alias, preserved) {
-      setIcloudLoadingState(true, `正在更新 ${alias.email} 的保留状态...`);
+      setIcloudLoadingState(true, `Updating preserved state of ${alias.email}...`);
       try {
         const response = await runtime.sendMessage({
           type: 'SET_ICLOUD_ALIAS_PRESERVED_STATE',
@@ -279,11 +279,11 @@
           payload: { email: alias.email, preserved },
         });
         if (response?.error) throw new Error(response.error);
-        helpers.showToast(`${alias.email} 已${preserved ? '设为保留' : '取消保留'}`, 'success', 2200);
+        helpers.showToast(`${alias.email} ${preserved ? 'set as preserved' : 'unpreserved'}`, 'success', 2200);
         await refreshIcloudAliases({ silent: true });
       } catch (err) {
         if (dom.icloudSummary) dom.icloudSummary.textContent = err.message;
-        helpers.showToast(`更新 iCloud 保留状态失败：${err.message}`, 'error');
+        helpers.showToast(`Failed to update iCloud preserved state: ${err.message}`, 'error');
       } finally {
         setIcloudLoadingState(false);
       }
@@ -298,9 +298,9 @@
 
       if (action === 'delete') {
         const confirmed = await helpers.openConfirmModal({
-          title: '批量删除 iCloud 别名',
-          message: `确认删除选中的 ${selectedAliases.length} 个 iCloud 别名吗？此操作不可撤销。`,
-          confirmLabel: '确认删除',
+          title: 'Bulk Delete iCloud Aliases',
+          message: `Are you sure you want to delete the ${selectedAliases.length} selected iCloud aliases? This cannot be undone.`,
+          confirmLabel: 'Confirm Delete',
           confirmVariant: 'btn-danger',
         });
         if (!confirmed) {
@@ -309,13 +309,13 @@
       }
 
       const actionLabelMap = {
-        used: '标记已用',
-        unused: '标记未用',
-        preserve: '保留',
-        unpreserve: '取消保留',
-        delete: '删除',
+        used: 'Mark Used',
+        unused: 'Mark Unused',
+        preserve: 'Preserve',
+        unpreserve: 'Unpreserve',
+        delete: 'Delete',
       };
-      setIcloudLoadingState(true, `正在批量${actionLabelMap[action] || '处理'} iCloud 别名...`);
+      setIcloudLoadingState(true, `Bulk ${actionLabelMap[action] || 'processing'} iCloud aliases...`);
 
       try {
         for (const alias of selectedAliases) {
@@ -346,11 +346,11 @@
           }
         }
 
-        helpers.showToast(`已批量${actionLabelMap[action] || '处理'} ${selectedAliases.length} 个 iCloud 别名`, 'success', 2400);
+        helpers.showToast(`Bulk ${actionLabelMap[action] || 'processed'} ${selectedAliases.length} iCloud aliases`, 'success', 2400);
         await refreshIcloudAliases({ silent: true });
       } catch (err) {
         if (dom.icloudSummary) dom.icloudSummary.textContent = err.message;
-        helpers.showToast(`批量处理 iCloud 别名失败：${err.message}`, 'error');
+        helpers.showToast(`Bulk processing iCloud aliases failed: ${err.message}`, 'error');
       } finally {
         setIcloudLoadingState(false);
         updateIcloudBulkUI();
@@ -359,16 +359,16 @@
 
     async function deleteUsedIcloudAliases() {
       const confirmed = await helpers.openConfirmModal({
-        title: '删除已用 iCloud 别名',
-        message: '确认删除所有未保留的已用 iCloud 别名吗？此操作不可撤销。',
-        confirmLabel: '确认删除',
+        title: 'Delete Used iCloud Aliases',
+        message: 'Are you sure you want to delete all unpreserved used iCloud aliases? This cannot be undone.',
+        confirmLabel: 'Confirm Delete',
         confirmVariant: 'btn-danger',
       });
       if (!confirmed) {
         return;
       }
 
-      setIcloudLoadingState(true, '正在删除已用 iCloud 别名...');
+      setIcloudLoadingState(true, 'Deleting used iCloud aliases...');
       try {
         const response = await runtime.sendMessage({
           type: 'DELETE_USED_ICLOUD_ALIASES',
@@ -378,11 +378,11 @@
         if (response?.error) throw new Error(response.error);
         const deleted = response?.deleted || [];
         const skipped = response?.skipped || [];
-        helpers.showToast(`已删除 ${deleted.length} 个已用别名，跳过 ${skipped.length} 个`, skipped.length ? 'warn' : 'success', 2800);
+        helpers.showToast(`Deleted ${deleted.length} used aliases, skipped ${skipped.length}`, skipped.length ? 'warn' : 'success', 2800);
         await refreshIcloudAliases({ silent: true });
       } catch (err) {
         if (dom.icloudSummary) dom.icloudSummary.textContent = err.message;
-        helpers.showToast(`删除已用 iCloud 别名失败：${err.message}`, 'error');
+        helpers.showToast(`Failed to delete used iCloud aliases: ${err.message}`, 'error');
       } finally {
         setIcloudLoadingState(false);
       }
@@ -415,17 +415,17 @@
           throw new Error(response.error);
         }
         hideIcloudLoginHelp();
-        helpers.showToast('iCloud 会话已恢复，别名列表已刷新。', 'success', 2600);
+        helpers.showToast('iCloud session restored, alias list refreshed.', 'success', 2600);
         await refreshIcloudAliases({ silent: true });
       } catch (err) {
-        const errorMessage = String(err?.message || '未知错误');
+        const errorMessage = String(err?.message || 'Unknown error');
         if (isLikelyIcloudLoginRequiredMessage(errorMessage)) {
-          helpers.showToast(`看起来还没有登录完成：${errorMessage}`, 'warn', 4200);
+          helpers.showToast(`Looks like login is not complete yet: ${errorMessage}`, 'warn', 4200);
           return;
         }
 
         await refreshIcloudAliases({ silent: true }).catch(() => { });
-        helpers.showToast(`iCloud 会话校验失败（非登录态）：${errorMessage}`, 'warn', 4200);
+        helpers.showToast(`iCloud session check failed (not logged in): ${errorMessage}`, 'warn', 4200);
       } finally {
         if (dom.btnIcloudLoginDone) {
           dom.btnIcloudLoginDone.disabled = false;
@@ -442,7 +442,7 @@
       if (dom.inputIcloudSearch) dom.inputIcloudSearch.value = '';
       if (dom.selectIcloudFilter) dom.selectIcloudFilter.value = 'all';
       if (dom.icloudList) dom.icloudList.innerHTML = '';
-      if (dom.icloudSummary) dom.icloudSummary.textContent = '加载你的 iCloud Hide My Email 别名以便在这里管理。';
+      if (dom.icloudSummary) dom.icloudSummary.textContent = 'Load your iCloud Hide My Email aliases to manage them here.';
       updateIcloudBulkUI([]);
       hideIcloudLoginHelp();
     }

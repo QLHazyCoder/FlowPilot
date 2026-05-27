@@ -6,9 +6,9 @@ const STATUS_ICONS = {
   completed: '\u2713',  // ✓
   failed: '\u2717',     // ✗
   stopped: '\u25A0',    // ■
-  manual_completed: '跳',
-  skipped: '跳',
-  disabled: '禁',
+  manual_completed: 'Skip',
+  skipped: 'Skip',
+  disabled: 'Off',
 };
 
 const logArea = document.getElementById('log-area');
@@ -582,7 +582,7 @@ const SIGNUP_METHOD_PHONE = 'phone';
 const DEFAULT_SIGNUP_METHOD = SIGNUP_METHOD_EMAIL;
 const DEFAULT_ACTIVE_FLOW_ID = 'openai';
 const DEFAULT_PHONE_SIGNUP_RELOGIN_AFTER_BIND_EMAIL_ENABLED = false;
-const PHONE_SIGNUP_REUSE_LOCK_TITLE = '手机号注册流程不使用号码复用，切回邮箱注册后会恢复原设置';
+const PHONE_SIGNUP_REUSE_LOCK_TITLE = 'Phone signup flow does not use number reuse; switching back to email signup will restore original settings';
 let latestState = null;
 let currentPlusModeEnabled = false;
 let currentPlusPaymentMethod = DEFAULT_PLUS_PAYMENT_METHOD;
@@ -592,7 +592,7 @@ let currentPhoneVerificationEnabled = false;
 let currentPhoneSignupReloginAfterBindEmailEnabled = DEFAULT_PHONE_SIGNUP_RELOGIN_AFTER_BIND_EMAIL_ENABLED;
 let currentStepDefinitionFlowId = DEFAULT_ACTIVE_FLOW_ID;
 let phoneSignupReuseUiWasLocked = false;
-let kiroRsConnectionTestStatusText = '未测试';
+let kiroRsConnectionTestStatusText = 'Not tested';
 let heroSmsCountrySelectionOrder = [];
 let phoneSmsProviderOrderSelection = [];
 let heroSmsCountryMenuSearchKeyword = '';
@@ -674,111 +674,18 @@ const HERO_SMS_ACQUIRE_PRIORITY_PRICE = 'price';
 const HERO_SMS_ACQUIRE_PRIORITY_PRICE_HIGH = 'price_high';
 const DEFAULT_HERO_SMS_ACQUIRE_PRIORITY = HERO_SMS_ACQUIRE_PRIORITY_COUNTRY;
 const HERO_SMS_SUPPORTED_COUNTRY_ITEMS = Object.freeze([
-  { id: 6, chn: '印度尼西亚', eng: 'Indonesia' },
-  { id: 52, chn: '泰国', eng: 'Thailand' },
-  { id: 187, chn: '美国（物理)', eng: 'USA' },
-  { id: 16, chn: '英国', eng: 'United Kingdom' },
-  { id: 151, chn: '日本', eng: 'Japan' },
-  { id: 43, chn: '德国', eng: 'Germany' },
-  { id: 73, chn: '法国', eng: 'France' },
-  { id: 10, chn: '越南', eng: 'Vietnam' },
+  { id: 6, chn: '', eng: 'Indonesia' },
+  { id: 52, chn: '', eng: 'Thailand' },
+  { id: 187, chn: '', eng: 'USA (physical)' },
+  { id: 16, chn: '', eng: 'United Kingdom' },
+  { id: 151, chn: '', eng: 'Japan' },
+  { id: 43, chn: '', eng: 'Germany' },
+  { id: 73, chn: '', eng: 'France' },
+  { id: 10, chn: '', eng: 'Vietnam' },
 ]);
 const HERO_SMS_SUPPORTED_COUNTRY_ID_SET = new Set(HERO_SMS_SUPPORTED_COUNTRY_ITEMS.map((item) => String(item.id)));
 const HERO_SMS_FALLBACK_COUNTRY_ITEMS = HERO_SMS_SUPPORTED_COUNTRY_ITEMS;
-const FIVE_SIM_COUNTRY_CN_BY_ID = Object.freeze({
-  afghanistan: '阿富汗',
-  albania: '阿尔巴尼亚',
-  algeria: '阿尔及利亚',
-  angola: '安哥拉',
-  argentina: '阿根廷',
-  armenia: '亚美尼亚',
-  australia: '澳大利亚',
-  austria: '奥地利',
-  azerbaijan: '阿塞拜疆',
-  bahamas: '巴哈马',
-  bahrain: '巴林',
-  bangladesh: '孟加拉国',
-  belarus: '白俄罗斯',
-  belgium: '比利时',
-  bolivia: '玻利维亚',
-  bosnia: '波黑',
-  brazil: '巴西',
-  bulgaria: '保加利亚',
-  cambodia: '柬埔寨',
-  cameroon: '喀麦隆',
-  canada: '加拿大',
-  chile: '智利',
-  china: '中国',
-  colombia: '哥伦比亚',
-  croatia: '克罗地亚',
-  cyprus: '塞浦路斯',
-  czech: '捷克',
-  denmark: '丹麦',
-  egypt: '埃及',
-  england: '英国',
-  estonia: '爱沙尼亚',
-  ethiopia: '埃塞俄比亚',
-  finland: '芬兰',
-  france: '法国',
-  georgia: '格鲁吉亚',
-  germany: '德国',
-  ghana: '加纳',
-  greece: '希腊',
-  hongkong: '中国香港',
-  hungary: '匈牙利',
-  india: '印度',
-  indonesia: '印度尼西亚',
-  ireland: '爱尔兰',
-  israel: '以色列',
-  italy: '意大利',
-  japan: '日本',
-  jordan: '约旦',
-  kazakhstan: '哈萨克斯坦',
-  kenya: '肯尼亚',
-  kyrgyzstan: '吉尔吉斯斯坦',
-  laos: '老挝',
-  latvia: '拉脱维亚',
-  lithuania: '立陶宛',
-  malaysia: '马来西亚',
-  mexico: '墨西哥',
-  moldova: '摩尔多瓦',
-  morocco: '摩洛哥',
-  myanmar: '缅甸',
-  nepal: '尼泊尔',
-  netherlands: '荷兰',
-  newzealand: '新西兰',
-  nigeria: '尼日利亚',
-  norway: '挪威',
-  pakistan: '巴基斯坦',
-  paraguay: '巴拉圭',
-  peru: '秘鲁',
-  philippines: '菲律宾',
-  poland: '波兰',
-  portugal: '葡萄牙',
-  romania: '罗马尼亚',
-  russia: '俄罗斯',
-  saudiarabia: '沙特阿拉伯',
-  serbia: '塞尔维亚',
-  singapore: '新加坡',
-  slovakia: '斯洛伐克',
-  slovenia: '斯洛文尼亚',
-  southafrica: '南非',
-  spain: '西班牙',
-  srilanka: '斯里兰卡',
-  sweden: '瑞典',
-  switzerland: '瑞士',
-  taiwan: '中国台湾',
-  tajikistan: '塔吉克斯坦',
-  tanzania: '坦桑尼亚',
-  thailand: '泰国',
-  turkey: '土耳其',
-  ukraine: '乌克兰',
-  uruguay: '乌拉圭',
-  usa: '美国',
-  uzbekistan: '乌兹别克斯坦',
-  venezuela: '委内瑞拉',
-  vietnam: '越南',
-});
+const FIVE_SIM_COUNTRY_CN_BY_ID = Object.freeze({});
 const HERO_SMS_COUNTRY_CODE_ALIAS_OVERRIDES = Object.freeze({
   'bahamas': ['BS'],
   'bolivia': ['BO'],
@@ -830,7 +737,7 @@ const AUTO_SKIP_FAILURES_PROMPT_DISMISSED_STORAGE_KEY = 'multipage-auto-skip-fai
 const AUTO_RUN_FALLBACK_RISK_PROMPT_DISMISSED_STORAGE_KEY = 'multipage-auto-run-fallback-risk-prompt-dismissed';
 const CPA_PHONE_SIGNUP_PROMPT_DISMISSED_STORAGE_KEY = 'multipage-cpa-phone-signup-prompt-dismissed';
 const CLOUDFLARE_TEMP_EMAIL_REGISTRATION_LOOKUP_PROMPT_DISMISSED_STORAGE_KEY = 'multipage-cloudflare-temp-email-registration-lookup-prompt-dismissed';
-const CPA_PHONE_SIGNUP_WARNING_MESSAGE = '请确保打开手机接码设置中的“绑定后重登”开关，不然可能无法使用（有些版本无需开启）';
+const CPA_PHONE_SIGNUP_WARNING_MESSAGE = 'Please enable the "Re-login After Bind" toggle in phone SMS settings, otherwise it may not work (some versions don\'t require it)';
 const PHONE_VERIFICATION_SECTION_EXPANDED_STORAGE_KEY = 'multipage-phone-verification-section-expanded';
 let phoneVerificationSectionExpanded = false;
 
@@ -1109,15 +1016,15 @@ const DEFAULT_PHONE_VERIFICATION_ENABLED = false;
 const DEFAULT_HERO_SMS_COUNTRY_ID = 52;
 const DEFAULT_HERO_SMS_COUNTRY_LABEL = 'Thailand';
 const DEFAULT_FIVE_SIM_COUNTRY_ID = 'vietnam';
-const DEFAULT_FIVE_SIM_COUNTRY_LABEL = '越南 (Vietnam)';
+const DEFAULT_FIVE_SIM_COUNTRY_LABEL = 'Vietnam';
 const FIVE_SIM_SUPPORTED_COUNTRY_ITEMS = Object.freeze([
-  { id: 'indonesia', chn: '印度尼西亚', eng: 'Indonesia', searchText: 'indonesia 印度尼西亚 印尼 Indonesia ID +62' },
-  { id: 'thailand', chn: '泰国', eng: 'Thailand', searchText: 'thailand 泰国 Thailand TH +66' },
-  { id: 'england', chn: '英国', eng: 'England', searchText: 'england 英国 England UK GB United Kingdom +44' },
-  { id: 'usa', chn: '美国', eng: 'United States', searchText: 'usa 美国 United States US +1' },
-  { id: 'japan', chn: '日本', eng: 'Japan', searchText: 'japan 日本 Japan JP +81' },
-  { id: 'germany', chn: '德国', eng: 'Germany', searchText: 'germany 德国 Germany DE +49' },
-  { id: 'vietnam', chn: '越南', eng: 'Vietnam', searchText: 'vietnam 越南 Vietnam VN +84' },
+  { id: 'indonesia', chn: '', eng: 'Indonesia', searchText: 'indonesia Indonesia ID +62' },
+  { id: 'thailand', chn: '', eng: 'Thailand', searchText: 'thailand Thailand TH +66' },
+  { id: 'england', chn: '', eng: 'England', searchText: 'england England UK GB United Kingdom +44' },
+  { id: 'usa', chn: '', eng: 'United States', searchText: 'usa United States US +1' },
+  { id: 'japan', chn: '', eng: 'Japan', searchText: 'japan Japan JP +81' },
+  { id: 'germany', chn: '', eng: 'Germany', searchText: 'germany Germany DE +49' },
+  { id: 'vietnam', chn: '', eng: 'Vietnam', searchText: 'vietnam Vietnam VN +84' },
 ]);
 const FIVE_SIM_SUPPORTED_COUNTRY_ID_SET = new Set(FIVE_SIM_SUPPORTED_COUNTRY_ITEMS.map((item) => item.id));
 const NEX_SMS_FALLBACK_COUNTRY_ITEMS = Object.freeze([
@@ -1185,24 +1092,24 @@ function getManagedAliasProviderUiCopy(provider = selectMailProvider.value, mail
   }
   if (String(provider || '').trim().toLowerCase() === GMAIL_PROVIDER) {
     return {
-      baseLabel: '基邮箱',
-      basePlaceholder: '例如 yourname@gmail.com',
-      buttonLabel: '生成',
-      successVerb: '生成',
-      label: 'Gmail +tag 邮箱',
-      placeholder: '点击生成 Gmail +tag 邮箱，或手动填写完整邮箱',
-      hint: '先填写基邮箱后点“生成”，也可以直接手动填写完整的 Gmail 邮箱。',
+      baseLabel: 'Base Email',
+      basePlaceholder: 'e.g. yourname@gmail.com',
+      buttonLabel: 'Generate',
+      successVerb: 'Generated',
+      label: 'Gmail +tag Email',
+      placeholder: 'Click to generate Gmail +tag email, or fill in a complete email manually',
+      hint: 'Fill in the base email and click "Generate", or fill in a complete Gmail email manually.',
     };
   }
   if (String(provider || '').trim().toLowerCase() === '2925') {
     return {
-      baseLabel: '基邮箱',
-      basePlaceholder: '例如 yourname@2925.com',
-      buttonLabel: '生成',
-      successVerb: '生成',
-      label: '2925 邮箱',
-      placeholder: '点击生成 2925 邮箱，或手动填写完整邮箱',
-      hint: '先填写基邮箱后点“生成”，也可以直接手动填写完整的 2925 邮箱。',
+      baseLabel: 'Base Email',
+      basePlaceholder: 'e.g. yourname@2925.com',
+      buttonLabel: 'Generate',
+      successVerb: 'Generated',
+      label: '2925 Email',
+      placeholder: 'Click to generate 2925 email, or fill in a complete email manually',
+      hint: 'Fill in the base email and click "Generate", or fill in a complete 2925 email manually.',
     };
   }
   return null;
@@ -1238,8 +1145,8 @@ function syncMail2925PoolAccountOptions(state = latestState) {
 
   const accounts = getMail2925Accounts(state);
   const selectedId = getPreferredMail2925PoolAccountId(state);
-  const options = ['<option value="">请选择号池邮箱</option>'].concat(
-    accounts.map((account) => `<option value="${escapeHtml(account.id)}">${escapeHtml(account.email || '(未命名账号)')}</option>`)
+  const options = ['<option value="">Please select a pool email</option>'].concat(
+    accounts.map((account) => `<option value="${escapeHtml(account.id)}">${escapeHtml(account.email || '(Unnamed account)')}</option>`)
   );
   selectMail2925PoolAccount.innerHTML = options.join('');
   selectMail2925PoolAccount.value = selectedId;
@@ -1273,7 +1180,7 @@ async function syncSelectedMail2925PoolAccount(options = {}) {
   });
   setManagedAliasBaseEmailInputForProvider('2925', latestState);
   if (!silent) {
-    showToast(`已切换当前 2925 号池邮箱为 ${response.account?.email || accountId}`, 'success', 1800);
+    showToast(`Switched current 2925 pool email to ${response.account?.email || accountId}`, 'success', 1800);
   }
   return response.account || null;
 }
@@ -1343,9 +1250,9 @@ function getCurrentRegistrationEmailUiCopy() {
     : String(selectMailProvider.value || '').trim().toLowerCase() === 'yyds-mail';
   if (useYydsMail) {
     return {
-      buttonLabel: '获取',
-      placeholder: '点击获取 YYDS Mail 邮箱，或手动粘贴邮箱',
-      successVerb: '获取',
+      buttonLabel: 'Fetch',
+      placeholder: 'Click to fetch YYDS Mail email, or paste email manually',
+      successVerb: 'Fetched',
       label: 'YYDS Mail',
     };
   }
@@ -1374,8 +1281,8 @@ function validateCurrentRegistrationEmail(email = inputEmail.value.trim(), optio
     const baseEmail = getManagedAliasBaseEmailForProvider();
     showToast(
       baseEmail
-        ? `当前邮箱服务为“${uiCopy?.label || '别名邮箱'}”，注册邮箱需与 ${uiCopy?.baseLabel || '基邮箱'} 对应。`
-        : `当前邮箱服务为“${uiCopy?.label || '别名邮箱'}”，请直接填写完整邮箱，或先填写基邮箱后点击“生成”。`,
+        ? `Current mail service is "${uiCopy?.label || 'Alias mail'}". Registration email must match the ${uiCopy?.baseLabel || 'base email'}.`
+        : `Current mail service is "${uiCopy?.label || 'Alias mail'}". Please fill in a complete email directly, or fill in the base email and click "Generate".`,
       'warn'
     );
   }
@@ -1541,9 +1448,9 @@ const sub2ApiGroupPicker = createEditableListPicker({
   menu: sub2ApiGroupMenu,
   fallbackItems: DEFAULT_SUB2API_GROUP_OPTIONS,
   minItems: 1,
-  itemLabel: '分组',
+  itemLabel: 'group',
   onDelete: handleDeleteSub2ApiGroup,
-  onDeleteError: (error) => showToast(error?.message || '删除 SUB2API 分组失败。', 'error'),
+  onDeleteError: (error) => showToast(error?.message || 'Failed to delete SUB2API group.', 'error'),
 });
 
 const cfDomainPicker = createEditableListPicker({
@@ -1552,12 +1459,12 @@ const cfDomainPicker = createEditableListPicker({
   trigger: btnCfDomainMenu,
   current: cfDomainCurrent,
   menu: cfDomainMenu,
-  emptyLabel: '请先添加域名',
-  itemLabel: '域名',
+  emptyLabel: 'Please add a domain first',
+  itemLabel: 'domain',
   normalizeItems: normalizeCloudflareDomains,
   normalizeValue: normalizeCloudflareDomainValue,
   onDelete: handleDeleteCloudflareDomain,
-  onDeleteError: (error) => showToast(error?.message || '删除 Cloudflare 域名失败。', 'error'),
+  onDeleteError: (error) => showToast(error?.message || 'Failed to delete Cloudflare domain.', 'error'),
 });
 
 const tempEmailDomainPicker = createEditableListPicker({
@@ -1566,12 +1473,12 @@ const tempEmailDomainPicker = createEditableListPicker({
   trigger: btnTempEmailDomainMenu,
   current: tempEmailDomainCurrent,
   menu: tempEmailDomainMenu,
-  emptyLabel: '请先更新域名',
-  itemLabel: '域名',
+  emptyLabel: 'Please update domain first',
+  itemLabel: 'domain',
   normalizeItems: normalizeCloudflareTempEmailDomains,
   normalizeValue: normalizeCloudflareTempEmailDomainValue,
   onDelete: handleDeleteCloudflareTempEmailDomain,
-  onDeleteError: (error) => showToast(error?.message || '删除 Cloudflare Temp Email 域名失败。', 'error'),
+  onDeleteError: (error) => showToast(error?.message || 'Failed to delete Cloudflare Temp Email domain.', 'error'),
 });
 
 function renderSub2ApiGroupOptions(state = latestState, selectedValue = '') {
@@ -1665,7 +1572,7 @@ const sharedFormDialog = window.SidepanelFormDialog?.createFormDialog?.({
   cancelButton: btnSharedFormModalCancel,
   confirmButton: btnSharedFormModalConfirm,
 });
-const DEFAULT_LUCKMAIL_PRESERVE_TAG_NAME = window.LuckMailUtils?.DEFAULT_LUCKMAIL_PRESERVE_TAG_NAME || '保留';
+const DEFAULT_LUCKMAIL_PRESERVE_TAG_NAME = window.LuckMailUtils?.DEFAULT_LUCKMAIL_PRESERVE_TAG_NAME || 'Preserved';
 const normalizeIcloudHost = window.IcloudUtils?.normalizeIcloudHost
   || ((value) => {
     const normalized = String(value || '').trim().toLowerCase();
@@ -1702,46 +1609,46 @@ const getIcloudLoginUrlForHost = window.IcloudUtils?.getIcloudLoginUrlForHost
 
 const MAIL_PROVIDER_LOGIN_CONFIGS = {
   [ICLOUD_PROVIDER]: {
-    label: 'iCloud 邮箱',
-    buttonLabel: '登录',
+    label: 'iCloud Mail',
+    buttonLabel: 'Login',
   },
   [GMAIL_PROVIDER]: {
-    label: 'Gmail 邮箱',
+    label: 'Gmail',
     url: 'https://mail.google.com/mail/u/0/#inbox',
-    buttonLabel: '登录',
+    buttonLabel: 'Login',
   },
   '163': {
-    label: '163 邮箱',
+    label: '163 Mail',
     url: 'https://mail.163.com/',
-    buttonLabel: '登录',
+    buttonLabel: 'Login',
   },
   '163-vip': {
-    label: '163 VIP 邮箱',
+    label: '163 VIP Mail',
     url: 'https://webmail.vip.163.com/',
-    buttonLabel: '登录',
+    buttonLabel: 'Login',
   },
   '126': {
-    label: '126 邮箱',
+    label: '126 Mail',
     url: 'https://mail.126.com/',
-    buttonLabel: '登录',
+    buttonLabel: 'Login',
   },
   qq: {
-    label: 'QQ 邮箱',
+    label: 'QQ Mail',
     url: 'https://wx.mail.qq.com/',
-    buttonLabel: '登录',
+    buttonLabel: 'Login',
   },
   'cloudflare-temp-email': {
-    label: 'Cloudflare Temp Email 部署',
+    label: 'Cloudflare Temp Email Deploy',
     url: 'https://github.com/QLHazyCoder/cloudflare_temp_email',
-    buttonLabel: '部署',
+    buttonLabel: 'Deploy',
   },
   [YYDS_MAIL_PROVIDER]: {
     label: 'YYDS Mail',
     url: 'https://vip.215.im/docs',
-    buttonLabel: '文档',
+    buttonLabel: 'Docs',
   },
   '2925': {
-    label: '2925 邮箱',
+    label: '2925 Mail',
     url: 'https://2925.com/#/mailList',
   },
 };
@@ -1749,7 +1656,7 @@ const IP_PROXY_SERVICE_LOGIN_CONFIGS = {
   '711proxy': {
     label: '711Proxy',
     url: 'https://www.711proxy.com/signup?code=AD2497',
-    buttonLabel: '注册',
+    buttonLabel: 'Sign Up',
   },
 };
 
@@ -1767,10 +1674,10 @@ const TOAST_ICONS = {
 };
 
 const LOG_LEVEL_LABELS = {
-  info: '信息',
-  ok: '成功',
-  warn: '警告',
-  error: '错误',
+  info: 'Info',
+  ok: 'Success',
+  warn: 'Warning',
+  error: 'Error',
 };
 
 const CLOUDFLARE_TEMP_EMAIL_REPOSITORY_URL = 'https://github.com/QLHazyCoder/cloudflare_temp_email';
@@ -1838,7 +1745,7 @@ function resetActionModalOption() {
   modalOptionRow.hidden = true;
   modalOptionInput.checked = false;
   modalOptionInput.disabled = false;
-  modalOptionText.textContent = '不再提示';
+  modalOptionText.textContent = 'Don\'t show again';
 }
 
 function resetActionModalAlert() {
@@ -1903,7 +1810,7 @@ function configureActionModalOption(option) {
   modalOptionRow.hidden = false;
   modalOptionInput.checked = Boolean(option.checked);
   modalOptionInput.disabled = Boolean(option.disabled);
-  modalOptionText.textContent = option.label || '不再提示';
+  modalOptionText.textContent = option.label || 'Don\'t show again';
 }
 
 function configureActionModalAlert(alert) {
@@ -1971,26 +1878,26 @@ function openActionModal({ title, message, messageHtml, actions, option, alert, 
 function openAutoStartChoiceDialog(startStep, options = {}) {
   const runningStep = Number.isInteger(options.runningStep) ? options.runningStep : null;
   const continueMessage = runningStep
-    ? `继续当前会先等待步骤 ${runningStep} 完成，再按最新进度自动执行。`
-    : `继续当前会从步骤 ${startStep} 开始自动执行。`;
+    ? `Continue will first wait for step ${runningStep} to complete, then auto-execute based on the latest progress.`
+    : `Continue will start auto-execution from step ${startStep}.`;
   return openActionModal({
-    title: '启动自动',
-    message: `检测到当前已有流程进度。${continueMessage}重新开始会清空当前流程进度并从步骤 1 新开一轮。`,
+    title: 'Start Auto',
+    message: `Existing flow progress detected. ${continueMessage} Restart will clear current flow progress and start a new round from step 1.`,
     actions: [
-      { id: null, label: '取消', variant: 'btn-ghost' },
-      { id: 'restart', label: '重新开始', variant: 'btn-outline' },
-      { id: 'continue', label: '继续当前', variant: 'btn-primary' },
+      { id: null, label: 'Cancel', variant: 'btn-ghost' },
+      { id: 'restart', label: 'Restart', variant: 'btn-outline' },
+      { id: 'continue', label: 'Continue', variant: 'btn-primary' },
     ],
   });
 }
 
-async function openConfirmModal({ title, message, confirmLabel = '确认', confirmVariant = 'btn-primary', alert = null }) {
+async function openConfirmModal({ title, message, confirmLabel = 'Confirm', confirmVariant = 'btn-primary', alert = null }) {
   const choice = await openActionModal({
     title,
     message,
     alert,
     actions: [
-      { id: null, label: '取消', variant: 'btn-ghost' },
+      { id: null, label: 'Cancel', variant: 'btn-ghost' },
       { id: 'confirm', label: confirmLabel, variant: confirmVariant },
     ],
   });
@@ -2001,10 +1908,10 @@ async function openConfirmModalWithOption({
   title,
   message,
   messageHtml = '',
-  confirmLabel = '确认',
+  confirmLabel = 'Confirm',
   confirmVariant = 'btn-primary',
   alert = null,
-  optionLabel = '不再提示',
+  optionLabel = 'Don\'t show again',
   optionChecked = false,
   optionDisabled = false,
 }) {
@@ -2014,7 +1921,7 @@ async function openConfirmModalWithOption({
     messageHtml,
     alert,
     actions: [
-      { id: null, label: '取消', variant: 'btn-ghost' },
+      { id: null, label: 'Cancel', variant: 'btn-ghost' },
       { id: 'confirm', label: confirmLabel, variant: confirmVariant },
     ],
     option: {
@@ -2078,22 +1985,22 @@ async function openPlusManualConfirmationDialog(options = {}) {
     && signupMethod === 'email'
     && plusAccountAccessStrategy === 'sub2api_codex_session';
   const continuationActionLabel = useSub2ApiSessionImport
-    ? '导入当前 ChatGPT 会话到 SUB2API'
-    : 'OAuth 登录';
-  const title = String(options.title || '').trim() || (method === 'gopay' ? 'GoPay 订阅确认' : '手动确认');
+    ? 'Import current ChatGPT session to SUB2API'
+    : 'OAuth login';
+  const title = String(options.title || '').trim() || (method === 'gopay' ? 'GoPay Subscription Confirm' : 'Manual Confirmation');
   const message = String(options.message || '').trim()
     || (method === 'gopay'
-      ? '请在当前订阅页中手动完成 GoPay 订阅，完成后点击“我已完成订阅”继续。'
-      : '请先在页面中完成当前手动操作，完成后点击确认继续。');
+      ? 'Please manually complete the GoPay subscription on the current page, then click "I\'ve completed subscription" to continue.'
+      : 'Please complete the current manual operation on the page first, then click Confirm to continue.');
   return openActionModal({
     title,
     message,
     actions: [
-      { id: 'cancel', label: '取消等待', variant: 'btn-ghost' },
-      { id: 'confirm', label: '我已完成订阅', variant: 'btn-primary' },
+      { id: 'cancel', label: 'Cancel Wait', variant: 'btn-ghost' },
+      { id: 'confirm', label: 'I\'ve completed subscription', variant: 'btn-primary' },
     ],
     alert: method === 'gopay'
-      ? { text: `确认后流程会直接继续到 Plus 模式后续的${continuationActionLabel}。`, tone: 'info' }
+      ? { text: `After confirmation, the flow will continue directly to the Plus mode ${continuationActionLabel}.`, tone: 'info' }
       : null,
   });
 }
@@ -2149,8 +2056,8 @@ async function syncPlusManualConfirmationDialog() {
     && signupMethod === 'email'
     && plusAccountAccessStrategy === 'sub2api_codex_session';
   const continuationActionLabel = useSub2ApiSessionImport
-    ? '导入当前 ChatGPT 会话到 SUB2API'
-    : 'OAuth 登录';
+    ? 'Import current ChatGPT session to SUB2API'
+    : 'OAuth login';
   const title = latestState?.plusManualConfirmationTitle;
   const message = latestState?.plusManualConfirmationMessage;
   activePlusManualConfirmationRequestId = requestId;
@@ -2170,7 +2077,7 @@ async function syncPlusManualConfirmationDialog() {
     }
     if (choice == null) {
       shouldReopenDialog = true;
-      showToast('当前订阅确认仍在等待中，将重新弹出确认窗口。', 'info', 1800);
+      showToast('Current subscription confirmation is still pending; the confirmation window will be reopened.', 'info', 1800);
       return;
     }
 
@@ -2188,12 +2095,12 @@ async function syncPlusManualConfirmationDialog() {
       throw new Error(response.error);
     }
     if (confirmed) {
-      showToast(method === 'gopay' ? `GoPay 订阅已确认，正在继续${continuationActionLabel}...` : '已确认，流程继续执行中...', 'info', 2200);
+      showToast(method === 'gopay' ? `GoPay subscription confirmed, continuing ${continuationActionLabel}...` : 'Confirmed, flow continuing...', 'info', 2200);
     } else {
-      showToast(method === 'gopay' ? '已取消 GoPay 订阅等待。' : '已取消当前手动确认。', 'warn', 2200);
+      showToast(method === 'gopay' ? 'Canceled GoPay subscription wait.' : 'Canceled current manual confirmation.', 'warn', 2200);
     }
   } catch (error) {
-    showToast(error?.message || String(error || '未知错误'), 'error');
+    showToast(error?.message || String(error || 'Unknown error'), 'error');
   } finally {
     if (activePlusManualConfirmationRequestId === requestId) {
       activePlusManualConfirmationRequestId = '';
@@ -2264,14 +2171,14 @@ function getContributionContentTargetId(state = latestState) {
 
 function openNewUserGuidePrompt() {
   return openActionModal({
-    title: '新手引导',
-    message: '如果你是第一次使用，可以先查看贡献页里的公告和使用教程。点击“查看引导”会自动打开贡献页面。',
+    title: 'New User Guide',
+    message: 'If this is your first time, you can check the announcements and tutorials on the contribution page. Clicking "View Guide" will automatically open the contribution page.',
     alert: {
-      text: '本提示仅出现一次。',
+      text: 'This prompt only shows once.',
     },
     actions: [
-      { id: null, label: '取消', variant: 'btn-ghost' },
-      { id: 'confirm', label: '查看引导', variant: 'btn-primary' },
+      { id: null, label: 'Cancel', variant: 'btn-ghost' },
+      { id: 'confirm', label: 'View Guide', variant: 'btn-primary' },
     ],
   });
 }
@@ -2435,10 +2342,10 @@ function shouldWarnCpaPhoneSignup(signupMethod = null, targetId = null) {
 
 async function openCpaPhoneSignupWarningModal() {
   const result = await openConfirmModalWithOption({
-    title: 'CPA 手机号注册提醒',
+    title: 'CPA Phone Signup Reminder',
     message: CPA_PHONE_SIGNUP_WARNING_MESSAGE,
-    confirmLabel: '继续',
-    optionLabel: '不再提醒',
+    confirmLabel: 'Continue',
+    optionLabel: 'Don\'t remind again',
   });
 
   return {
@@ -2469,7 +2376,7 @@ async function confirmCpaPhoneSignupIfNeeded(options = {}) {
 
 function buildCloudflareTempEmailRegistrationLookupPromptHtml() {
   const repositoryUrl = escapeHtml(CLOUDFLARE_TEMP_EMAIL_REPOSITORY_URL);
-  return `需要部署本扩展作者修改后的 <a href="${repositoryUrl}" target="_blank" rel="noopener noreferrer" data-external-url="${repositoryUrl}">Cloudflare Temp Email</a>；部署后可支持多线程收码。`;
+  return `Requires deploying the author's modified <a href="${repositoryUrl}" target="_blank" rel="noopener noreferrer" data-external-url="${repositoryUrl}">Cloudflare Temp Email</a>; after deployment, multi-threaded code reception is supported.`;
 }
 
 async function confirmCloudflareTempEmailRegistrationLookupIfNeeded() {
@@ -2478,10 +2385,10 @@ async function confirmCloudflareTempEmailRegistrationLookupIfNeeded() {
   }
 
   const result = await openConfirmModalWithOption({
-    title: '注册邮箱查信',
+    title: 'Registration Email Lookup',
     messageHtml: buildCloudflareTempEmailRegistrationLookupPromptHtml(),
-    confirmLabel: '我已知晓',
-    optionLabel: '不再提醒',
+    confirmLabel: 'Understood',
+    optionLabel: 'Don\'t remind again',
   });
 
   if (result.confirmed && result.optionChecked) {
@@ -2493,9 +2400,9 @@ async function confirmCloudflareTempEmailRegistrationLookupIfNeeded() {
 
 async function openAutoSkipFailuresConfirmModal() {
   const result = await openConfirmModalWithOption({
-    title: '自动重试说明',
-    message: `开启后，自动模式在某一轮失败时，会先在当前轮自动重试；单轮最多重试 ${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次，仍失败则放弃当前轮并继续下一轮。线程间隔只在开启自动重试且总轮数大于 1 时生效。`,
-    confirmLabel: '确认开启',
+    title: 'Auto Retry Description',
+    message: `When enabled, in auto mode, if a round fails, it will first auto-retry in the current round; max ${AUTO_RUN_MAX_RETRIES_PER_ROUND} retries per round. If it still fails, abandon the current round and continue to the next. Thread interval only takes effect when auto retry is enabled and total rounds is greater than 1.`,
+    confirmLabel: 'Confirm Enable',
   });
 
   return {
@@ -2506,9 +2413,9 @@ async function openAutoSkipFailuresConfirmModal() {
 
 async function openAutoRunFallbackRiskConfirmModal(totalRuns) {
   const result = await openConfirmModalWithOption({
-    title: '自动运行风险提醒',
-    message: `当前轮数已经不适合单节点情况，请确保已经配置并打开节点轮询功能（若没有配置，请点击贡献/使用按钮，根据网页中使用教程进行配置），避免连续使用一个节点注册，导致出现手机号验证。`,
-    confirmLabel: '继续',
+    title: 'Auto Run Risk Reminder',
+    message: `The current round count is not suitable for single-node use. Please make sure you've configured and enabled the node rotation feature (if not configured, click the Contribute/Tutorial button and follow the tutorial), to avoid continuously using one node for registration, which may trigger phone verification.`,
+    confirmLabel: 'Continue',
   });
 
   return {
@@ -2656,28 +2563,28 @@ function normalizeStepExecutionRangeEntry(value = {}) {
 function getKiroUploadStatusLabel(value = '') {
   const rawValue = String(value || '').trim();
   if (!rawValue) {
-    return '未开始';
+    return 'Not started';
   }
 
   const normalizedValue = rawValue.toLowerCase();
   switch (normalizedValue) {
     case 'waiting_login':
-      return '等待登录授权';
+      return 'Waiting for login authorization';
     case 'ready_to_upload':
-      return '等待上传';
+      return 'Waiting to upload';
     case 'uploading':
-      return '上传中';
+      return 'Uploading';
     case 'uploaded':
     case 'credential uploaded.':
-      return '上传成功';
+      return 'Upload successful';
     case 'error':
-      return '上传失败';
+      return 'Upload failed';
     case 'waiting_user':
-      return '等待用户确认';
+      return 'Waiting for user confirmation';
     case 'authorized':
-      return '已授权';
+      return 'Authorized';
     case 'expired':
-      return '已过期';
+      return 'Expired';
     default:
       return rawValue;
   }
@@ -2723,23 +2630,23 @@ function getGrokRegisterStatusLabel(value = '') {
   const normalized = String(value || '').trim().toLowerCase();
   switch (normalized) {
     case 'signup_page_opened':
-      return '注册页已打开';
+      return 'Signup page opened';
     case 'email_submitting':
-      return '正在提交邮箱';
+      return 'Submitting email';
     case 'verification_requested':
-      return '等待验证码';
+      return 'Waiting for verification code';
     case 'verified':
-      return '验证码已提交';
+      return 'Verification code submitted';
     case 'profile_submitting':
-      return '正在提交资料';
+      return 'Submitting profile';
     case 'profile_submitted':
-      return '资料已提交';
+      return 'Profile submitted';
     case 'completed':
-      return '已完成';
+      return 'Completed';
     case 'error':
-      return '失败';
+      return 'Failed';
     default:
-      return String(value || '').trim() || '未开始';
+      return String(value || '').trim() || 'Not started';
   }
 }
 
@@ -2747,13 +2654,13 @@ function getGrokWebchat2ApiUploadStatusLabel(value = '') {
   const normalized = String(value || '').trim().toLowerCase();
   switch (normalized) {
     case 'uploading':
-      return '正在上传';
+      return 'Uploading';
     case 'uploaded':
-      return '已上传';
+      return 'Uploaded';
     case 'error':
-      return '上传失败';
+      return 'Upload failed';
     default:
-      return String(value || '').trim() || '未开始';
+      return String(value || '').trim() || 'Not started';
   }
 }
 
@@ -2803,19 +2710,19 @@ function renderGrokRuntimeState(state = latestState) {
   }
   if (displayGrokSsoStatus) {
     displayGrokSsoStatus.textContent = currentCookie
-      ? `已提取 ${cookies.length || 1} 条${extractedAt ? `，${new Date(extractedAt).toLocaleString()}` : ''}`
-      : '未提取';
+      ? `Extracted ${cookies.length || 1}${extractedAt ? `, ${new Date(extractedAt).toLocaleString()}` : ''}`
+      : 'Not extracted';
   }
   if (displayGrokSsoCookie) {
     displayGrokSsoCookie.textContent = currentCookie
       ? `${currentCookie.slice(0, 8)}...${currentCookie.slice(-6)}`
-      : '未提取';
-    displayGrokSsoCookie.title = currentCookie ? '已隐藏完整 SSO Cookie，可使用复制' : '';
+      : 'Not extracted';
+    displayGrokSsoCookie.title = currentCookie ? 'Full SSO Cookie hidden, use copy button' : '';
   }
   if (displayGrokWebchat2ApiUploadStatus) {
     const label = getGrokWebchat2ApiUploadStatusLabel(uploadStatus);
-    const suffix = uploadedAt ? `，${new Date(uploadedAt).toLocaleString()}` : '';
-    displayGrokWebchat2ApiUploadStatus.textContent = `${label}${uploadMessage ? `：${uploadMessage}` : ''}${suffix}`;
+    const suffix = uploadedAt ? `, ${new Date(uploadedAt).toLocaleString()}` : '';
+    displayGrokWebchat2ApiUploadStatus.textContent = `${label}${uploadMessage ? `: ${uploadMessage}` : ''}${suffix}`;
     displayGrokWebchat2ApiUploadStatus.title = uploadTargetUrl || '';
   }
   [btnCopyGrokSso, btnClearGrokSso].forEach((button) => {
@@ -2826,7 +2733,7 @@ function renderGrokRuntimeState(state = latestState) {
 }
 
 function setKiroRsConnectionTestStatus(message = '') {
-  const nextText = String(message || '').trim() || '未测试';
+  const nextText = String(message || '').trim() || 'Not tested';
   kiroRsConnectionTestStatusText = nextText;
   if (typeof displayKiroRsTestStatus !== 'undefined' && displayKiroRsTestStatus) {
     displayKiroRsTestStatus.textContent = nextText;
@@ -2877,7 +2784,7 @@ function getStepExecutionRangeNodeLabel(node = {}) {
   const displayOrder = Number(node?.displayOrder);
   const title = String(node?.title || nodeId).trim();
   const orderLabel = Number.isInteger(displayOrder) && displayOrder > 0
-    ? `步骤 ${displayOrder}`
+    ? `Step ${displayOrder}`
     : nodeId;
   return title ? `${orderLabel} · ${title}` : orderLabel;
 }
@@ -3193,8 +3100,8 @@ function appendOperationDelayLog(enabled, level = 'info', message = '') {
     timestamp: Date.now(),
     level,
     message: message || (enabled
-      ? '操作间延迟已固定开启。'
-      : '操作间延迟保持固定开启。'),
+      ? 'Inter-operation delay is locked on.'
+      : 'Inter-operation delay remains locked on.'),
   });
 }
 
@@ -3204,7 +3111,7 @@ function applyOperationDelayState(state = latestState, options = {}) {
     syncLatestState({ operationDelayEnabled: enabled });
   }
   if (options.restoreFailed) {
-    appendOperationDelayLog(true, 'warn', '操作间延迟设置读取失败，已回退为默认开启。');
+    appendOperationDelayLog(true, 'warn', 'Failed to read inter-operation delay setting, reverted to default on.');
   }
 }
 
@@ -3226,7 +3133,7 @@ async function persistOperationDelayToggle() {
     appendOperationDelayLog(confirmed);
   } catch (error) {
     if (inputOperationDelayEnabled) inputOperationDelayEnabled.checked = lastConfirmedOperationDelayEnabled;
-    appendOperationDelayLog(lastConfirmedOperationDelayEnabled, 'error', `操作间延迟设置保存失败，已恢复为上一次确认的状态：${error.message}`);
+    appendOperationDelayLog(lastConfirmedOperationDelayEnabled, 'error', `Failed to save inter-operation delay setting, restored to last confirmed state: ${error.message}`);
     throw error;
   }
 }
@@ -3393,30 +3300,30 @@ function normalizePlusStrategyTargetId(value = '') {
 function getPlusAccountAccessStrategyContinuationLabel(strategy = '', targetId = '') {
   const normalizedStrategy = normalizePlusAccountAccessStrategy(strategy);
   if (normalizedStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
-    return '导入当前 ChatGPT 会话到 SUB2API';
+    return 'Import current ChatGPT session to SUB2API';
   }
   if (normalizedStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION) {
-    return '导入当前 ChatGPT 会话到 CPA';
+    return 'Import current ChatGPT session to CPA';
   }
-  return 'OAuth 登录';
+  return 'OAuth login';
 }
 
 function getPlusAccountAccessStrategyDescription(strategy = '', targetId = '') {
   const normalizedStrategy = normalizePlusAccountAccessStrategy(strategy);
   const normalizedTargetId = normalizePlusStrategyTargetId(targetId);
   if (normalizedStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
-    return '复用当前 Plus 已登录会话，直接导入到 SUB2API';
+    return 'Reuse current Plus session, import directly to SUB2API';
   }
   if (normalizedStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION) {
-    return '复用当前 Plus 已登录会话，直接导入到 CPA';
+    return 'Reuse current Plus session, import directly to CPA';
   }
   if (normalizedTargetId === 'sub2api') {
-    return '通过 OAuth 回调创建 SUB2API 账号';
+    return 'Create SUB2API account via OAuth callback';
   }
   if (normalizedTargetId === 'codex2api') {
-    return '通过 OAuth 回调创建 Codex2API 账号';
+    return 'Create Codex2API account via OAuth callback';
   }
-  return '通过 OAuth 回调创建 CPA 账号';
+  return 'Create CPA account via OAuth callback';
 }
 
 function resolvePlusManualContinuationActionLabelFromState(state = latestState) {
@@ -3721,9 +3628,9 @@ function shouldSyncRunCountFromAutoRunSource(source = {}) {
 
 function getAutoRunLabel(payload = currentAutoRun) {
   if ((payload.phase ?? currentAutoRun.phase) === 'scheduled') {
-    return (payload.totalRuns || 1) > 1 ? ` (${payload.totalRuns}轮)` : '';
+    return (payload.totalRuns || 1) > 1 ? ` (${payload.totalRuns} rounds)` : '';
   }
-  const attemptLabel = payload.attemptRun ? ` · 尝试${payload.attemptRun}` : '';
+  const attemptLabel = payload.attemptRun ? ` · Attempt ${payload.attemptRun}` : '';
   if ((payload.totalRuns || 1) > 1) {
     return ` (${payload.currentRun}/${payload.totalRuns}${attemptLabel})`;
   }
@@ -3989,7 +3896,7 @@ function getActiveAutoRunCountdown() {
 
   return {
     at: currentAutoRun.countdownAt,
-    title: currentAutoRun.countdownTitle || '等待中',
+    title: currentAutoRun.countdownTitle || 'Waiting',
     note: currentAutoRun.countdownNote || '',
     tone: 'running',
   };
@@ -4010,12 +3917,12 @@ function renderAutoRunCountdownInfo() {
   autoCountdownBar.style.display = 'flex';
   if (btnAutoRunNow) {
     btnAutoRunNow.hidden = false;
-    btnAutoRunNow.textContent = '立即继续';
+    btnAutoRunNow.textContent = 'Continue Now';
   }
   autoCountdownTitle.textContent = countdown.title;
   autoCountdownMeta.textContent = remainingMs > 0
-    ? `${countdown.note ? `${countdown.note}，` : ''}剩余 ${formatCountdown(remainingMs)}`
-    : '倒计时即将结束，正在准备继续...';
+    ? `${countdown.note ? `${countdown.note}, ` : ''}${formatCountdown(remainingMs)} remaining`
+    : 'Countdown ending soon, preparing to continue...';
   return;
 }
 
@@ -4040,7 +3947,7 @@ function syncAutoRunCountdownTicker() {
 function setDefaultAutoRunButton() {
   btnAutoRun.disabled = false;
   inputRunCount.disabled = shouldLockRunCountToEmailPool();
-  btnAutoRun.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> 自动';
+  btnAutoRun.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> Auto';
 }
 
 function normalizeCloudflareDomainValue(value = '') {
@@ -4153,7 +4060,7 @@ function setCloudflareDomainEditMode(editing, options = {}) {
   cloudflareDomainEditMode = Boolean(editing);
   cfDomainPicker.setVisible(!cloudflareDomainEditMode);
   inputCfDomain.style.display = cloudflareDomainEditMode ? '' : 'none';
-  btnCfDomainMode.textContent = cloudflareDomainEditMode ? '保存' : '添加';
+  btnCfDomainMode.textContent = cloudflareDomainEditMode ? 'Save' : 'Add';
   if (cloudflareDomainEditMode) {
     if (clearInput) {
       inputCfDomain.value = '';
@@ -4169,7 +4076,7 @@ function setCloudflareTempEmailDomainEditMode(editing, options = {}) {
   cloudflareTempEmailDomainEditMode = false;
   tempEmailDomainPicker.setVisible(true);
   inputTempEmailDomain.style.display = 'none';
-  btnTempEmailDomainMode.textContent = '更新';
+  btnTempEmailDomainMode.textContent = 'Update';
   if (clearInput) {
     inputTempEmailDomain.value = '';
   }
@@ -5499,7 +5406,7 @@ function normalizePhoneSmsProviderOrderValue(value = [], fallbackOrder = []) {
 function formatPhoneSmsProviderOrderSummary(order = []) {
   const normalized = normalizePhoneSmsProviderOrderValue(order, []);
   if (!normalized.length) {
-    return '未设置';
+    return 'Not set';
   }
   return normalized
     .map((provider, index) => `${index + 1}. ${getPhoneSmsProviderLabel(provider)}`)
@@ -5514,7 +5421,7 @@ function updatePhoneSmsProviderOrderSummary(order = []) {
   if (btnPhoneSmsProviderOrderMenu) {
     btnPhoneSmsProviderOrderMenu.textContent = normalized.length
       ? `${normalized.map((provider) => getPhoneSmsProviderLabel(provider)).join(' / ')} (${normalized.length}/3)`
-      : `未选择 (0/3)`;
+      : `None selected (0/3)`;
   }
 }
 
@@ -5619,7 +5526,7 @@ function syncPhoneSmsProviderOrderFromSelect(options = {}) {
     const droppedCount = nextOrder.length - selectionLimit;
     nextOrder = nextOrder.slice(0, selectionLimit);
     if (showLimitToast && droppedCount > 0 && typeof showToast === 'function') {
-      showToast(`服务商顺序最多 ${selectionLimit} 个，已保留前 ${selectionLimit} 个。`, 'warn', 2200);
+      showToast(`Provider order is limited to ${selectionLimit}; kept the first ${selectionLimit}.`, 'warn', 2200);
     }
   }
 
@@ -6153,13 +6060,13 @@ function buildHeroSmsCountryDisplayLabel(country = {}) {
 function normalizeHeroSmsFetchErrorMessage(error) {
   const message = String(error?.message || error || '').trim();
   if (!message) {
-    return '未知网络错误';
+    return 'Unknown network error';
   }
   if (/aborted|abort|timed out|timeout/i.test(message)) {
-    return '请求超时，请稍后重试';
+    return 'Request timed out, please retry later';
   }
   if (/failed to fetch|networkerror|network request failed/i.test(message)) {
-    return '网络不可用或被拦截';
+    return 'Network unavailable or blocked';
   }
   return message;
 }
@@ -6460,37 +6367,37 @@ function describeHeroSmsPreviewPayload(payload) {
 
 function summarizeHeroSmsPreviewError(payload, responseStatus = 0) {
   if (isHeroSmsPreviewEmptyPayload(payload)) {
-    return '未返回有效价格';
+    return 'No valid price returned';
   }
   const text = describeHeroSmsPreviewPayload(payload);
   if (text === '{}' || text === '[]') {
-    return '未返回有效价格';
+    return 'No valid price returned';
   }
   if (/UNPROCESSABLE_ENTITY/i.test(text) && /api_key/i.test(text) && /REQUIRED/i.test(text)) {
-    return '请先填写接码 API Key';
+    return 'Please fill in SMS API Key first';
   }
   if (/BAD_KEY|WRONG_KEY|INVALID_KEY/i.test(text)) {
-    return 'API Key 无效';
+    return 'Invalid API Key';
   }
   if (/NO_BALANCE|NOT_ENOUGH_BALANCE/i.test(text)) {
-    return '余额不足';
+    return 'Insufficient balance';
   }
   if (/BANNED|ACCOUNT_BANNED/i.test(text)) {
-    return '账号已被封禁';
+    return 'Account banned';
   }
   if (/WRONG_SERVICE|SERVICE_NOT_FOUND/i.test(text)) {
-    return '服务代码无效';
+    return 'Invalid service code';
   }
   if (/WRONG_COUNTRY|COUNTRY_NOT_FOUND/i.test(text)) {
-    return '国家参数无效';
+    return 'Invalid country parameter';
   }
   if (/NO_NUMBERS/i.test(text)) {
-    return '暂无可用号源';
+    return 'No available numbers';
   }
   if (responseStatus && responseStatus >= 400) {
     return `HTTP ${responseStatus}`;
   }
-  return text || '未知错误';
+  return text || 'Unknown error';
 }
 
 function resolvePhoneSmsPricePreviewRange(provider = '') {
@@ -6579,9 +6486,9 @@ function formatPhoneSmsPriceRangePreviewText(range = {}) {
 function buildPhoneSmsPriceRangePreviewMessage(range = {}) {
   const rangeText = formatPhoneSmsPriceRangePreviewText(range);
   if (range?.invalid) {
-    return `价格区间无效：最低购买价 ${formatHeroSmsPriceForPreview(range.minPrice) || range.minPrice} 高于价格上限 ${formatHeroSmsPriceForPreview(range.maxPrice) || range.maxPrice}`;
+    return `Invalid price range: min buy price ${formatHeroSmsPriceForPreview(range.minPrice) || range.minPrice} is higher than price cap ${formatHeroSmsPriceForPreview(range.maxPrice) || range.maxPrice}`;
   }
-  return rangeText ? `区间内无可用号源（当前 ${rangeText}）` : '暂无可用号源';
+  return rangeText ? `No available numbers within range (current ${rangeText})` : 'No available numbers';
 }
 
 function formatPriceTiersForPreview(entries = [], options = {}) {
@@ -6611,7 +6518,7 @@ function formatPriceTiersForPreview(entries = [], options = {}) {
 
   const limit = 16;
   const displayed = normalized.slice(0, limit);
-  const suffix = normalized.length > limit ? ` ... +${normalized.length - limit} 档` : '';
+  const suffix = normalized.length > limit ? ` ... +${normalized.length - limit} tiers` : '';
   return displayed.map((entry) => {
     const priceText = formatHeroSmsPriceForPreview(entry.price) || String(entry.price);
     const countText = entry.count === null ? '' : `x${entry.count}`;
@@ -6647,7 +6554,7 @@ function formatPriceTiersWithZeroStockForPreview(entries = [], options = {}) {
 
   const limit = 16;
   const displayed = normalized.slice(0, limit);
-  const suffix = normalized.length > limit ? ` ... +${normalized.length - limit} 档` : '';
+  const suffix = normalized.length > limit ? ` ... +${normalized.length - limit} tiers` : '';
   return displayed.map((entry) => {
     const priceText = formatHeroSmsPriceForPreview(entry.price) || String(entry.price);
     const countText = entry.count === null ? '' : `x${entry.count}`;
@@ -6757,8 +6664,8 @@ function updateHeroSmsPlatformDisplay() {
   displayHeroSmsPlatform.textContent = `${getPhoneSmsProviderLabel(provider)} / OpenAI${countryText}`;
   if (inputHeroSmsApiKey) {
     inputHeroSmsApiKey.placeholder = provider === PHONE_SMS_PROVIDER_FIVE_SIM
-      ? '请输入 5sim API Key'
-      : (provider === PHONE_SMS_PROVIDER_NEXSMS ? '请输入 NexSMS API Key' : '请输入 HeroSMS API Key');
+      ? 'Enter 5sim API Key'
+      : (provider === PHONE_SMS_PROVIDER_NEXSMS ? 'Enter NexSMS API Key' : 'Enter HeroSMS API Key');
   }
 }
 
@@ -6780,7 +6687,7 @@ function renderHeroSmsCountryFallbackOrder(countries = []) {
   displayHeroSmsCountryFallbackOrder.textContent = '';
   const normalized = isFiveSimProviderSelected() ? normalizeFiveSimCountryFallbackList(countries) : normalizeHeroSmsCountryFallbackList(countries);
   if (!normalized.length) {
-    displayHeroSmsCountryFallbackOrder.textContent = '未设置';
+    displayHeroSmsCountryFallbackOrder.textContent = 'Not set';
     return;
   }
   normalized.forEach((country, index) => {
@@ -6792,8 +6699,8 @@ function renderHeroSmsCountryFallbackOrder(countries = []) {
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'country-order-remove';
-    removeBtn.title = `移除 ${country.label}`;
-    removeBtn.setAttribute('aria-label', `移除 ${country.label}`);
+    removeBtn.title = `Remove ${country.label}`;
+    removeBtn.setAttribute('aria-label', `Remove ${country.label}`);
     removeBtn.textContent = '×';
     removeBtn.addEventListener('click', (event) => {
       event.preventDefault();
@@ -6856,7 +6763,7 @@ function applyHeroSmsCountryMenuFilter(keyword = '') {
     if (!empty) {
       empty = document.createElement('span');
       empty.className = 'data-value hero-sms-country-menu-empty';
-      empty.textContent = '没有匹配国家';
+      empty.textContent = 'No matching countries';
       heroSmsCountryMenu.appendChild(empty);
     }
   } else if (empty) {
@@ -6891,7 +6798,7 @@ function renderHeroSmsCountryChoiceButtons() {
   const searchInput = document.createElement('input');
   searchInput.type = 'search';
   searchInput.className = 'data-input mono hero-sms-country-menu-search-input';
-  searchInput.placeholder = '搜索国家（中/英/代码/ID）';
+  searchInput.placeholder = 'Search countries (name/code/ID)';
   searchInput.value = heroSmsCountryMenuSearchKeyword;
   searchInput.addEventListener('input', () => {
     heroSmsCountryMenuSearchKeyword = String(searchInput.value || '').trim();
@@ -6903,7 +6810,7 @@ function renderHeroSmsCountryChoiceButtons() {
   if (!options.length) {
     const empty = document.createElement('span');
     empty.className = 'data-value hero-sms-country-menu-empty';
-    empty.textContent = '暂无国家选项';
+    empty.textContent = 'No country options';
     heroSmsCountryMenu.appendChild(empty);
     updateHeroSmsCountryMenuSummary([]);
     return;
@@ -7000,7 +6907,7 @@ function syncHeroSmsFallbackSelectionOrderFromSelect(options = {}) {
     const droppedCount = nextOrder.length - selectionLimit;
     nextOrder = nextOrder.slice(0, selectionLimit);
     if (showLimitToast && droppedCount > 0 && typeof showToast === 'function') {
-      showToast(`接码国家最多选择 ${selectionLimit} 个，已保留前 ${selectionLimit} 个。`, 'warn', 2200);
+      showToast(`SMS countries are limited to ${selectionLimit}; kept the first ${selectionLimit}.`, 'warn', 2200);
     }
   }
 
@@ -7193,7 +7100,7 @@ function renderPhoneRuntimeCountdown() {
   const endsAt = Number(phoneRuntimeCountdownEndsAt) || 0;
   const now = Date.now();
   if (!hasActivation || !Number.isFinite(endsAt) || endsAt <= 0) {
-    displayHeroSmsCurrentCountdown.textContent = hasActivation ? '等待中' : '未启动';
+    displayHeroSmsCurrentCountdown.textContent = hasActivation ? 'Waiting' : 'Not started';
     stopPhoneRuntimeCountdownTicker();
     return;
   }
@@ -7256,16 +7163,16 @@ function renderPhonePreferredActivationOptions(state = {}) {
       label: buildPhoneActivationOptionLabel(normalized, sourceLabel),
     });
   };
-  pushActivationOption(state?.currentPhoneActivation || latestState?.currentPhoneActivation, '当前');
-  pushActivationOption(state?.reusablePhoneActivation || latestState?.reusablePhoneActivation, '复用');
-  reusablePool.forEach((activation) => pushActivationOption(activation, '池'));
-  pushActivationOption(selectedPreferred, '已选');
+  pushActivationOption(state?.currentPhoneActivation || latestState?.currentPhoneActivation, 'Current');
+  pushActivationOption(state?.reusablePhoneActivation || latestState?.reusablePhoneActivation, 'Reuse');
+  reusablePool.forEach((activation) => pushActivationOption(activation, 'Pool'));
+  pushActivationOption(selectedPreferred, 'Selected');
 
   phonePreferredActivationOptionMap.clear();
   selectHeroSmsPreferredActivation.innerHTML = '';
   const autoOption = document.createElement('option');
   autoOption.value = '';
-  autoOption.textContent = '自动（先复用已有可用号，再创建新号）';
+  autoOption.textContent = 'Auto (reuse existing available number first, then create new)';
   selectHeroSmsPreferredActivation.appendChild(autoOption);
   optionEntries.forEach((entry) => {
     phonePreferredActivationOptionMap.set(entry.key, entry.activation);
@@ -7306,11 +7213,11 @@ function updateHeroSmsRuntimeDisplay(state = {}) {
     );
     displayHeroSmsCurrentNumber.textContent = phoneNumber
       ? `${phoneNumber}${activationId ? ` (#${activationId})` : ''}${countryLabel ? ` / ${countryLabel}` : ''}`
-      : '未分配';
+      : 'Unallocated';
   }
   if (displayHeroSmsCurrentCode) {
     const code = String(state?.currentPhoneVerificationCode ?? latestState?.currentPhoneVerificationCode ?? '').trim();
-    displayHeroSmsCurrentCode.textContent = code || '未获取';
+    displayHeroSmsCurrentCode.textContent = code || 'Not received';
   }
   if (displayFreeReusablePhone || displayFreeReusablePhoneCountry || inputFreeReusablePhone) {
     const activation = state?.freeReusablePhoneActivation ?? latestState?.freeReusablePhoneActivation ?? null;
@@ -7336,12 +7243,12 @@ function updateHeroSmsRuntimeDisplay(state = {}) {
     if (displayFreeReusablePhone) {
       displayFreeReusablePhone.textContent = phoneNumber
         ? `${phoneNumber}${activationId ? ` (#${activationId})` : ''}${usesText}`
-        : '未保存';
+        : 'Not saved';
     }
     if (displayFreeReusablePhoneCountry) {
       displayFreeReusablePhoneCountry.textContent = phoneNumber
-        ? `地区：${countryLabel || '未保存'}`
-        : '地区：未保存';
+        ? `Region: ${countryLabel || 'not saved'}`
+        : 'Region: not saved';
     }
     if (inputFreeReusablePhone) {
       inputFreeReusablePhone.value = phoneNumber;
@@ -7489,7 +7396,7 @@ async function loadHeroSmsCountries(options = {}) {
         .filter((entry) => entry.id)
         .sort((left, right) => String(left.label || '').localeCompare(String(right.label || '')));
       if (!optionItems.length) {
-        throw new Error('国家列表为空');
+        throw new Error('Country list is empty');
       }
       heroSmsCountrySearchTextById.clear();
       optionItems.forEach((entry) => heroSmsCountrySearchTextById.set(String(entry.id), entry.searchText));
@@ -7498,7 +7405,7 @@ async function loadHeroSmsCountries(options = {}) {
     } catch (error) {
       applyFiveSimFallbackOptions();
       if (!silent && typeof showToast === 'function') {
-        showToast(`5sim 国家列表加载失败：${normalizeHeroSmsFetchErrorMessage(error)}（已切换为内置国家列表）`, 'warn', 2800);
+        showToast(`5sim country list load failed: ${normalizeHeroSmsFetchErrorMessage(error)} (switched to built-in country list)`, 'warn', 2800);
       }
     }
   } else if (preferFallbackOnly) {
@@ -7514,7 +7421,7 @@ async function loadHeroSmsCountries(options = {}) {
     const payload = await response.json();
     const countries = parseHeroSmsCountryPayload(payload);
     if (!countries.length) {
-      throw new Error('国家列表为空');
+      throw new Error('Country list is empty');
     }
     const optionItems = countries
       .filter((item) => Number(item?.id) > 0 && (String(item?.eng || '').trim() || String(item?.chn || '').trim()))
@@ -7530,7 +7437,7 @@ async function loadHeroSmsCountries(options = {}) {
       });
 
     if (!optionItems.length) {
-      throw new Error('国家列表为空');
+      throw new Error('Country list is empty');
     }
 
     heroSmsCountrySearchTextById.clear();
@@ -7543,7 +7450,7 @@ async function loadHeroSmsCountries(options = {}) {
   } catch (error) {
     applyHeroSmsFallbackOptions();
     if (!silent && typeof showToast === 'function') {
-      showToast(`国家列表加载失败：${normalizeHeroSmsFetchErrorMessage(error)}（已切换为内置国家列表）`, 'warn', 2800);
+      showToast(`Country list load failed: ${normalizeHeroSmsFetchErrorMessage(error)} (switched to built-in country list)`, 'warn', 2800);
     }
   }
   const availableIds = new Set(Array.from(countrySelect.options).map((option) => String(option.value)));
@@ -7581,7 +7488,7 @@ function renderFiveSimCountryFallbackOrder(countries = []) {
   const normalized = normalizeFiveSimCountryFallbackList(countries);
   displayFiveSimCountryFallbackOrder.textContent = '';
   if (!normalized.length) {
-    displayFiveSimCountryFallbackOrder.textContent = '未设置';
+    displayFiveSimCountryFallbackOrder.textContent = 'Not set';
     return;
   }
   normalized.forEach((country, index) => {
@@ -7593,8 +7500,8 @@ function renderFiveSimCountryFallbackOrder(countries = []) {
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'country-order-remove';
-    removeBtn.title = `移除 ${country.label}`;
-    removeBtn.setAttribute('aria-label', `移除 ${country.label}`);
+    removeBtn.title = `Remove ${country.label}`;
+    removeBtn.setAttribute('aria-label', `Remove ${country.label}`);
     removeBtn.textContent = '×';
     removeBtn.addEventListener('click', (event) => {
       event.preventDefault();
@@ -7656,7 +7563,7 @@ function applyFiveSimCountryMenuFilter(keyword = '') {
     if (!empty) {
       empty = document.createElement('span');
       empty.className = 'data-value hero-sms-country-menu-empty';
-      empty.textContent = '没有匹配国家';
+      empty.textContent = 'No matching countries';
       fiveSimCountryMenu.appendChild(empty);
     }
   } else if (empty) {
@@ -7670,7 +7577,7 @@ function updateFiveSimCountryMenuSummary(selectedCountries = []) {
   }
   const normalized = normalizeFiveSimCountryFallbackList(selectedCountries);
   if (!normalized.length) {
-    btnFiveSimCountryMenu.textContent = `未选择 (0/${HERO_SMS_COUNTRY_SELECTION_MAX})`;
+    btnFiveSimCountryMenu.textContent = `None selected (0/${HERO_SMS_COUNTRY_SELECTION_MAX})`;
     return;
   }
   const labels = normalized.map((country) => country.label);
@@ -7691,7 +7598,7 @@ function renderFiveSimCountryChoiceButtons() {
   const searchInput = document.createElement('input');
   searchInput.type = 'search';
   searchInput.className = 'data-input mono hero-sms-country-menu-search-input';
-  searchInput.placeholder = '搜索国家（中/英/代码）';
+  searchInput.placeholder = 'Search countries (name/code)';
   searchInput.value = fiveSimCountryMenuSearchKeyword;
   searchInput.addEventListener('input', () => {
     fiveSimCountryMenuSearchKeyword = String(searchInput.value || '').trim();
@@ -7703,7 +7610,7 @@ function renderFiveSimCountryChoiceButtons() {
   if (!options.length) {
     const empty = document.createElement('span');
     empty.className = 'data-value hero-sms-country-menu-empty';
-    empty.textContent = '暂无国家选项';
+    empty.textContent = 'No country options';
     fiveSimCountryMenu.appendChild(empty);
     updateFiveSimCountryMenuSummary([]);
     return;
@@ -7764,7 +7671,7 @@ function syncFiveSimCountrySelectionOrderFromSelect(options = {}) {
     const droppedCount = nextOrder.length - selectionLimit;
     nextOrder = nextOrder.slice(0, selectionLimit);
     if (showLimitToast && droppedCount > 0 && typeof showToast === 'function') {
-      showToast(`5sim 国家最多选择 ${selectionLimit} 个，已保留前 ${selectionLimit} 个。`, 'warn', 2200);
+      showToast(`5sim countries are limited to ${selectionLimit}; kept the first ${selectionLimit}.`, 'warn', 2200);
     }
   }
 
@@ -7892,7 +7799,7 @@ async function loadFiveSimCountries(options = {}) {
   } catch (error) {
     applyOptions(fallbackItems);
     if (!silent && typeof showToast === 'function') {
-      showToast(`5sim 国家列表加载失败：${normalizeHeroSmsFetchErrorMessage(error)}（已切换为内置国家列表）`, 'warn', 2800);
+      showToast(`5sim country list failed to load: ${normalizeHeroSmsFetchErrorMessage(error)} (switched to the built-in country list)`, 'warn', 2800);
     }
   }
 
@@ -7908,7 +7815,7 @@ function renderNexSmsCountryFallbackOrder(countries = []) {
   const normalized = normalizeNexSmsCountryFallbackList(countries);
   displayNexSmsCountryFallbackOrder.textContent = '';
   if (!normalized.length) {
-    displayNexSmsCountryFallbackOrder.textContent = '未设置';
+    displayNexSmsCountryFallbackOrder.textContent = 'Not set';
     return;
   }
   normalized.forEach((country, index) => {
@@ -7920,8 +7827,8 @@ function renderNexSmsCountryFallbackOrder(countries = []) {
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'country-order-remove';
-    removeBtn.title = `移除 ${country.label}`;
-    removeBtn.setAttribute('aria-label', `移除 ${country.label}`);
+    removeBtn.title = `Remove ${country.label}`;
+    removeBtn.setAttribute('aria-label', `Remove ${country.label}`);
     removeBtn.textContent = '×';
     removeBtn.addEventListener('click', (event) => {
       event.preventDefault();
@@ -7982,7 +7889,7 @@ function applyNexSmsCountryMenuFilter(keyword = '') {
     if (!empty) {
       empty = document.createElement('span');
       empty.className = 'data-value hero-sms-country-menu-empty';
-      empty.textContent = '没有匹配国家';
+      empty.textContent = 'No matching countries';
       nexSmsCountryMenu.appendChild(empty);
     }
   } else if (empty) {
@@ -7997,7 +7904,7 @@ function updateNexSmsCountryMenuSummary(selectedCountries = []) {
   const normalized = normalizeNexSmsCountryFallbackList(selectedCountries);
   btnNexSmsCountryMenu.textContent = normalized.length
     ? `${normalized.map((country) => country.label).join(' / ')} (${normalized.length}/${HERO_SMS_COUNTRY_SELECTION_MAX})`
-    : `未选择 (0/${HERO_SMS_COUNTRY_SELECTION_MAX})`;
+    : `None selected (0/${HERO_SMS_COUNTRY_SELECTION_MAX})`;
 }
 
 function renderNexSmsCountryChoiceButtons() {
@@ -8013,7 +7920,7 @@ function renderNexSmsCountryChoiceButtons() {
   const searchInput = document.createElement('input');
   searchInput.type = 'search';
   searchInput.className = 'data-input mono hero-sms-country-menu-search-input';
-  searchInput.placeholder = '搜索国家 ID';
+  searchInput.placeholder = 'Search country ID';
   searchInput.value = nexSmsCountryMenuSearchKeyword;
   searchInput.addEventListener('input', () => {
     nexSmsCountryMenuSearchKeyword = String(searchInput.value || '').trim();
@@ -8025,7 +7932,7 @@ function renderNexSmsCountryChoiceButtons() {
   if (!options.length) {
     const empty = document.createElement('span');
     empty.className = 'data-value hero-sms-country-menu-empty';
-    empty.textContent = '暂无国家选项';
+    empty.textContent = 'No country options';
     nexSmsCountryMenu.appendChild(empty);
     updateNexSmsCountryMenuSummary([]);
     return;
@@ -8086,7 +7993,7 @@ function syncNexSmsCountrySelectionOrderFromSelect(options = {}) {
     const droppedCount = nextOrder.length - selectionLimit;
     nextOrder = nextOrder.slice(0, selectionLimit);
     if (showLimitToast && droppedCount > 0 && typeof showToast === 'function') {
-      showToast(`NexSMS 国家最多选择 ${selectionLimit} 个，已保留前 ${selectionLimit} 个。`, 'warn', 2200);
+      showToast(`NexSMS countries are limited to ${selectionLimit}; kept the first ${selectionLimit}.`, 'warn', 2200);
     }
   }
 
@@ -8208,13 +8115,13 @@ async function buildNexSmsPricePreviewLines(options = {}) {
   const providerLabel = String(options?.providerLabel || 'NexSMS').trim();
 
   if (!apiKey) {
-    return [`${providerLabel}: 请先填写 NexSMS API Key`];
+    return [`${providerLabel}: Please fill in NexSMS API Key first`];
   }
   if (priceRange.invalid) {
     return [`${providerLabel}: ${buildPhoneSmsPriceRangePreviewMessage(priceRange)}`];
   }
   if (!countryIds.length) {
-    return [`${providerLabel}: 请先选择至少 1 个国家`];
+    return [`${providerLabel}: Please select at least 1 country`];
   }
 
   const previews = [];
@@ -8266,15 +8173,15 @@ async function buildNexSmsPricePreviewLines(options = {}) {
         continue;
       }
       const tierText = formatPriceTiersForPreview(filteredTierEntries, { maxPrice });
-      const lowestLabel = priceRange.hasMinPrice || priceRange.hasMaxPrice ? '区间内最低' : '最低';
-      previews.push(`${countryLabel}: ${lowestLabel} ${lowest}${tierText ? `；档位：${tierText}` : ''}`);
+      const lowestLabel = priceRange.hasMinPrice || priceRange.hasMaxPrice ? 'In-range lowest' : 'Lowest';
+      previews.push(`${countryLabel}: ${lowestLabel} ${lowest}${tierText ? `; tiers: ${tierText}` : ''}`);
     } catch (error) {
-      previews.push(`${countryLabel}: 查询失败（${normalizeHeroSmsFetchErrorMessage(error)}）`);
+      previews.push(`${countryLabel}: Query failed (${normalizeHeroSmsFetchErrorMessage(error)})`);
     }
   }
 
   if (!previews.length) {
-    previews.push('未获取');
+    previews.push('Not retrieved');
   }
   return [`${providerLabel}:`, ...previews];
 }
@@ -8300,7 +8207,7 @@ async function previewFiveSimPriceTiers() {
   );
   const maxPrice = priceRange.maxPrice;
 
-  displayHeroSmsPriceTiers.textContent = '查询中...';
+  displayHeroSmsPriceTiers.textContent = 'Querying...';
   if (rowHeroSmsPriceTiers) {
     rowHeroSmsPriceTiers.style.display = '';
   }
@@ -8309,7 +8216,7 @@ async function previewFiveSimPriceTiers() {
     return;
   }
   if (!countryCodes.length) {
-    displayHeroSmsPriceTiers.textContent = '请先选择至少 1 个国家，再查询价格';
+    displayHeroSmsPriceTiers.textContent = 'Please select at least 1 country, then query price';
     return;
   }
 
@@ -8385,13 +8292,13 @@ async function previewFiveSimPriceTiers() {
       }
       const lowest = rangePrices[0];
       const tierText = formatPriceTiersForPreview(filteredTierEntries, { maxPrice });
-      const lowestLabel = priceRange.hasMinPrice || priceRange.hasMaxPrice ? '区间内最低' : '最低';
-      previews.push(`${countryLabel}: ${lowestLabel} ${lowest}${tierText ? `；档位：${tierText}` : ''}`);
+      const lowestLabel = priceRange.hasMinPrice || priceRange.hasMaxPrice ? 'In-range lowest' : 'Lowest';
+      previews.push(`${countryLabel}: ${lowestLabel} ${lowest}${tierText ? `; tiers: ${tierText}` : ''}`);
     } catch (error) {
-      previews.push(`${countryLabel}: 查询失败（${normalizeHeroSmsFetchErrorMessage(error)}）`);
+      previews.push(`${countryLabel}: Query failed (${normalizeHeroSmsFetchErrorMessage(error)})`);
     }
   }
-  displayHeroSmsPriceTiers.textContent = previews.join('\n') || '未获取';
+  displayHeroSmsPriceTiers.textContent = previews.join('\n') || 'Not retrieved';
 }
 
 async function buildFiveSimPricePreviewLines(options = {}) {
@@ -8414,7 +8321,7 @@ async function buildFiveSimPricePreviewLines(options = {}) {
   const providerLabel = String(options?.providerLabel || '5sim').trim();
 
   if (!countryCodes.length) {
-    return [`${providerLabel}: 请先选择至少 1 个国家`];
+    return [`${providerLabel}: Please select at least 1 country`];
   }
   if (priceRange.invalid) {
     return [`${providerLabel}: ${buildPhoneSmsPriceRangePreviewMessage(priceRange)}`];
@@ -8492,15 +8399,15 @@ async function buildFiveSimPricePreviewLines(options = {}) {
       }
       const lowest = rangePrices[0];
       const tierText = formatPriceTiersForPreview(filteredTierEntries, { maxPrice });
-      const lowestLabel = priceRange.hasMinPrice || priceRange.hasMaxPrice ? '区间内最低' : '最低';
-      previews.push(`${countryLabel}: ${lowestLabel} ${lowest}${tierText ? `；档位：${tierText}` : ''}`);
+      const lowestLabel = priceRange.hasMinPrice || priceRange.hasMaxPrice ? 'In-range lowest' : 'Lowest';
+      previews.push(`${countryLabel}: ${lowestLabel} ${lowest}${tierText ? `; tiers: ${tierText}` : ''}`);
     } catch (error) {
-      previews.push(`${countryLabel}: 查询失败（${normalizeHeroSmsFetchErrorMessage(error)}）`);
+      previews.push(`${countryLabel}: Query failed (${normalizeHeroSmsFetchErrorMessage(error)})`);
     }
   }
 
   if (!previews.length) {
-    previews.push('未获取');
+    previews.push('Not retrieved');
   }
   return [`${providerLabel}:`, ...previews];
 }
@@ -8521,7 +8428,7 @@ async function previewHeroSmsPriceTiers() {
   const activeProvider = typeof getSelectedPhoneSmsProvider === 'function'
     ? getSelectedPhoneSmsProvider()
     : normalizeProvider(selectPhoneSmsProvider?.value || defaultProviderValue);
-  displayHeroSmsPriceTiers.textContent = '查询中...';
+  displayHeroSmsPriceTiers.textContent = 'Querying...';
   if (rowHeroSmsPriceTiers) {
     rowHeroSmsPriceTiers.style.display = '';
   }
@@ -8571,7 +8478,7 @@ async function previewHeroSmsPriceTiers() {
 
     const heroLines = ['HeroSMS:'];
     if (!apiKey) {
-      heroLines.push('请先填写接码 API Key');
+      heroLines.push('Please fill in SMS API Key first');
       previews.push(...heroLines, '');
       continue;
     }
@@ -8581,7 +8488,7 @@ async function previewHeroSmsPriceTiers() {
       continue;
     }
     if (!candidates.length) {
-      heroLines.push('请先选择至少 1 个国家');
+      heroLines.push('Please select at least 1 country');
       previews.push(...heroLines, '');
       continue;
     }
@@ -8716,26 +8623,26 @@ async function previewHeroSmsPriceTiers() {
           if (rangeAllPrices.length || allPrices.length) {
             const lowestKnownPrice = rangeAllPrices.length ? rangeAllPrices[0] : allPrices[0];
             const lowestKnown = formatHeroSmsPriceForPreview(lowestKnownPrice) || String(lowestKnownPrice);
-            heroLines.push(`${countryLabel}: 全档位均无库存（最低标价 ${lowestKnown}）${tierPreviewText ? `；档位：${tierPreviewText}` : ''}`);
+            heroLines.push(`${countryLabel}: All tiers out of stock (lowest listed ${lowestKnown})${tierPreviewText ? `; tiers: ${tierPreviewText}` : ''}`);
             continue;
           }
           if (failedPriceActions.length) {
             heroLines.push(`${countryLabel}: ${failedPriceActions.join(' | ')}`);
             continue;
           }
-          heroLines.push(`${countryLabel}: 无可用价格`);
+          heroLines.push(`${countryLabel}: No available prices`);
           continue;
         }
         const lowestWithinRange = rangeInStockPrices[0];
         const lowestText = formatHeroSmsPriceForPreview(lowestWithinRange) || String(lowestWithinRange);
-        const lowestLabel = priceRange.hasMinPrice || priceRange.hasMaxPrice ? '区间内最低' : '最低';
-        heroLines.push(`${countryLabel}: ${lowestLabel} ${lowestText}${tierPreviewText ? `；档位：${tierPreviewText}` : ''}`);
+        const lowestLabel = priceRange.hasMinPrice || priceRange.hasMaxPrice ? 'In-range lowest' : 'Lowest';
+        heroLines.push(`${countryLabel}: ${lowestLabel} ${lowestText}${tierPreviewText ? `; tiers: ${tierPreviewText}` : ''}`);
       } catch (error) {
-        heroLines.push(`${countryLabel}: 查询失败（${normalizeHeroSmsFetchErrorMessage(error)}）`);
+        heroLines.push(`${countryLabel}: Query failed (${normalizeHeroSmsFetchErrorMessage(error)})`);
       }
     }
     if (heroLines.length === 1) {
-      heroLines.push('未获取');
+      heroLines.push('Not retrieved');
     }
     previews.push(...heroLines, '');
   }
@@ -8743,7 +8650,7 @@ async function previewHeroSmsPriceTiers() {
   while (previews.length && previews[previews.length - 1] === '') {
     previews.pop();
   }
-  displayHeroSmsPriceTiers.textContent = previews.join('\n') || '未获取';
+  displayHeroSmsPriceTiers.textContent = previews.join('\n') || 'Not retrieved';
 }
 
 async function previewPhoneSmsBalance() {
@@ -8753,11 +8660,11 @@ async function previewPhoneSmsBalance() {
   const provider = getSelectedPhoneSmsProvider();
   const apiKey = String(inputHeroSmsApiKey?.value || '').trim();
   if (!apiKey) {
-    displayPhoneSmsBalance.textContent = '请先填写接码 API Key';
+    displayPhoneSmsBalance.textContent = 'Please fill in SMS API Key first';
     if (rowHeroSmsPriceTiers) rowHeroSmsPriceTiers.style.display = '';
     return;
   }
-  displayPhoneSmsBalance.textContent = '余额查询中...';
+  displayPhoneSmsBalance.textContent = 'Querying balance...';
   if (rowHeroSmsPriceTiers) rowHeroSmsPriceTiers.style.display = '';
   try {
     const url = provider === PHONE_SMS_PROVIDER_FIVE_SIM
@@ -8782,21 +8689,21 @@ async function previewPhoneSmsBalance() {
       payload = rawText;
     }
     if (!response.ok) {
-      displayPhoneSmsBalance.textContent = `余额查询失败：${summarizeHeroSmsPreviewError(payload, response.status)}`;
+      displayPhoneSmsBalance.textContent = `Balance query failed: ${summarizeHeroSmsPreviewError(payload, response.status)}`;
       return;
     }
     if (provider === PHONE_SMS_PROVIDER_FIVE_SIM) {
       const balance = Number(payload?.balance);
       const frozen = Number(payload?.frozen_balance);
       displayPhoneSmsBalance.textContent = Number.isFinite(balance)
-        ? `5sim 余额 ${formatHeroSmsPriceForPreview(balance) || balance}${Number.isFinite(frozen) ? `，冻结 ${formatHeroSmsPriceForPreview(frozen) || frozen}` : ''}`
-        : `5sim 余额：${describeHeroSmsPreviewPayload(payload) || '未知'}`;
+        ? `5sim balance ${formatHeroSmsPriceForPreview(balance) || balance}${Number.isFinite(frozen) ? `, frozen ${formatHeroSmsPriceForPreview(frozen) || frozen}` : ''}`
+        : `5sim balance: ${describeHeroSmsPreviewPayload(payload) || 'unknown'}`;
     } else {
       const text = describeHeroSmsPreviewPayload(payload).replace(/^ACCESS_BALANCE:/i, '').trim();
-      displayPhoneSmsBalance.textContent = `HeroSMS 余额 ${text || '未知'}`;
+      displayPhoneSmsBalance.textContent = `HeroSMS balance ${text || 'unknown'}`;
     }
   } catch (error) {
-    displayPhoneSmsBalance.textContent = `余额查询失败：${normalizeHeroSmsFetchErrorMessage(error)}`;
+    displayPhoneSmsBalance.textContent = `Balance query failed: ${normalizeHeroSmsFetchErrorMessage(error)}`;
   }
 }
 
@@ -9081,7 +8988,7 @@ function renderTargetSelectorOptions(flowId = getSelectedFlowId(), selectedTarge
     selectPanelMode.appendChild(option);
   });
   if (labelSourceSelector) {
-    labelSourceSelector.textContent = '来源';
+    labelSourceSelector.textContent = 'Source';
   }
   selectPanelMode.disabled = targetOptions.length <= 1;
   if (targetOptions.length > 0) {
@@ -9346,7 +9253,7 @@ function updateSignupMethodUI(options = {}) {
   if (!phoneSelectable && selectedMethod === SIGNUP_METHOD_PHONE) {
     selectedMethod = setSignupMethod(SIGNUP_METHOD_EMAIL);
     if (options.notify && typeof showToast === 'function') {
-      showToast('已切回邮箱注册', 'info', 1600);
+      showToast('Switched back to email signup', 'info', 1600);
     }
   } else {
     setSignupMethod(selectedMethod);
@@ -9360,13 +9267,13 @@ function updateSignupMethodUI(options = {}) {
     button.setAttribute('aria-disabled', String(disabled));
     if (method === SIGNUP_METHOD_PHONE) {
       if (!Boolean(inputPhoneVerificationEnabled?.checked)) {
-        button.title = '开启接码后可选择手机号注册';
+        button.title = 'Enable SMS verification to select phone signup';
       } else if (typeof inputPlusModeEnabled !== 'undefined' && inputPlusModeEnabled?.checked) {
-        button.title = 'Plus 模式暂不支持手机号注册';
+        button.title = 'Plus mode does not support phone signup';
       } else if (accountContributionEnabled) {
-        button.title = '账号贡献开启时不能使用手机号注册';
+        button.title = 'Phone signup is not allowed when account contribution is enabled';
       } else if (locked) {
-        button.title = '自动流程运行中不能切换注册方式';
+        button.title = 'Cannot switch signup method while auto flow is running';
       } else {
         button.title = '';
       }
@@ -9476,10 +9383,10 @@ function updatePhoneVerificationSettingsUI() {
   updateSignupMethodUI();
   if (btnTogglePhoneVerificationSection) {
     btnTogglePhoneVerificationSection.disabled = !enabled;
-    btnTogglePhoneVerificationSection.textContent = showSettings ? '收起设置' : '展开设置';
+    btnTogglePhoneVerificationSection.textContent = showSettings ? 'Collapse Settings' : 'Expand Settings';
     btnTogglePhoneVerificationSection.title = enabled
-      ? (showSettings ? '收起接码设置' : '展开接码设置')
-      : '开启接码后可展开设置';
+      ? (showSettings ? 'Collapse SMS settings' : 'Expand SMS settings')
+      : 'Enable SMS verification to expand settings';
     btnTogglePhoneVerificationSection.setAttribute('aria-expanded', String(showSettings));
   }
   if (rowPhoneVerificationFold) {
@@ -9683,18 +9590,18 @@ function updatePlusModeUI() {
       const normalizedStrategy = normalizePlusAccountAccessStrategy(strategy);
       const normalizedTargetId = resolveStrategyTargetId(targetId);
       if (normalizedStrategy === sub2apiSessionStrategyValue) {
-        return '复用当前 Plus 已登录会话，直接导入到 SUB2API';
+        return 'Reuse current Plus session, import directly to SUB2API';
       }
       if (normalizedStrategy === cpaSessionStrategyValue) {
-        return '复用当前 Plus 已登录会话，直接导入到 CPA';
+        return 'Reuse current Plus session, import directly to CPA';
       }
       if (normalizedTargetId === 'sub2api') {
-        return '通过 OAuth 回调创建 SUB2API 账号';
+        return 'Create SUB2API account via OAuth callback';
       }
       if (normalizedTargetId === 'codex2api') {
-        return '通过 OAuth 回调创建 Codex2API 账号';
+        return 'Create Codex2API account via OAuth callback';
       }
-      return '通过 OAuth 回调创建 CPA 账号';
+      return 'Create CPA account via OAuth callback';
     });
   const normalizeStrategyUiValue = typeof normalizePlusAccountAccessStrategyUiValue === 'function'
     ? normalizePlusAccountAccessStrategyUiValue
@@ -9800,17 +9707,17 @@ function updatePlusModeUI() {
   }
   if (typeof plusPaymentMethodCaption !== 'undefined' && plusPaymentMethodCaption) {
     plusPaymentMethodCaption.textContent = method === gpcValue
-      ? `GPC ${isGpcAutoMode ? '自动' : '手动'}订阅链路`
+      ? `GPC ${isGpcAutoMode ? 'auto' : 'manual'} subscription path`
       : method === gopayValue
-      ? 'GoPay 印尼订阅链路'
+      ? 'GoPay Indonesia subscription path'
       : method === noneValue
-      ? '已有 Plus，无需配置支付链路'
+      ? 'Already has Plus, no payment path needed'
       : method === paypalHostedValue
-      ? 'PayPal 无卡直绑链路'
-      : 'PayPal 订阅链路';
+      ? 'PayPal cardless direct bind path'
+      : 'PayPal subscription path';
   }
   if (typeof plusPaymentMethodCaption !== 'undefined' && plusPaymentMethodCaption && method === gpcValue && gpcAutoModeBlocked) {
-    plusPaymentMethodCaption.textContent = 'GPC 自动订阅链路（需手动切换）';
+    plusPaymentMethodCaption.textContent = 'GPC auto subscription path (manual switch required)';
   }
   [
     typeof rowPlusPaymentMethod !== 'undefined' ? rowPlusPaymentMethod : null,
@@ -9845,20 +9752,20 @@ function updatePlusModeUI() {
   }
   if (typeof plusAccountAccessStrategyCaption !== 'undefined' && plusAccountAccessStrategyCaption) {
     if (!enabled) {
-      plusAccountAccessStrategyCaption.textContent = '当前来源仅支持 OAuth';
+      plusAccountAccessStrategyCaption.textContent = 'Current source only supports OAuth';
     } else if (!canEditPlusAccountAccessStrategy) {
-      plusAccountAccessStrategyCaption.textContent = '当前来源仅支持 OAuth';
+      plusAccountAccessStrategyCaption.textContent = 'Current source only supports OAuth';
     } else if (effectivePlusAccountAccessStrategy === sub2apiSessionStrategyValue) {
-      plusAccountAccessStrategyCaption.textContent = '复用当前 Plus 已登录会话，直接导入到 SUB2API';
+      plusAccountAccessStrategyCaption.textContent = 'Reuse current Plus session, import directly to SUB2API';
     } else if (effectivePlusAccountAccessStrategy === oauthStrategyValue) {
-      plusAccountAccessStrategyCaption.textContent = '通过 OAuth 回调创建 SUB2API 账号';
+      plusAccountAccessStrategyCaption.textContent = 'Create SUB2API account via OAuth callback';
     } else {
-      plusAccountAccessStrategyCaption.textContent = '当前来源仅支持 OAuth';
+      plusAccountAccessStrategyCaption.textContent = 'Current source only supports OAuth';
     }
   }
   if (typeof plusAccountAccessStrategyCaption !== 'undefined' && plusAccountAccessStrategyCaption) {
     if (!enabled || !canEditPlusAccountAccessStrategy) {
-      plusAccountAccessStrategyCaption.textContent = '当前来源仅支持 OAuth';
+      plusAccountAccessStrategyCaption.textContent = 'Current source only supports OAuth';
     } else {
       plusAccountAccessStrategyCaption.textContent = describePlusAccountAccessStrategy(
         effectivePlusAccountAccessStrategy,
@@ -9868,13 +9775,13 @@ function updatePlusModeUI() {
   }
   if (typeof plusAccountAccessStrategyCaption !== 'undefined' && plusAccountAccessStrategyCaption) {
     plusAccountAccessStrategyCaption.textContent = !enabled
-      ? '当前来源仅支持 OAuth'
+      ? 'Current source only supports OAuth'
       : ((effectivePlusAccountAccessStrategy !== oauthStrategyValue || canEditPlusAccountAccessStrategy)
         ? describePlusAccountAccessStrategy(
         effectivePlusAccountAccessStrategy,
         effectiveTargetId
         )
-        : '当前来源仅支持 OAuth');
+        : 'Current source only supports OAuth');
   }
   if (enabled && effectivePlusAccountAccessStrategy === sub2apiSessionStrategyValue) {
     [
@@ -10173,7 +10080,7 @@ async function persistSignupPhoneInputValue(options = {}) {
     });
     syncSignupPhoneInputFromState(latestState);
     if (!silent) {
-      showToast(normalizedPhone ? '注册手机号已保存。' : '注册手机号已清空。', 'success', 1600);
+      showToast(normalizedPhone ? 'Signup phone saved.' : 'Signup phone cleared.', 'success', 1600);
     }
     return normalizedPhone;
   })();
@@ -10215,9 +10122,9 @@ function getSelectedGpcHelperPhoneMode() {
 
 async function showGpcStartBlockedDialog(message) {
   await openConfirmModal({
-    title: 'GPC 任务无法开启',
+    title: 'Cannot start GPC task',
     message,
-    confirmLabel: '知道了',
+    confirmLabel: 'OK',
   });
 }
 
@@ -10260,28 +10167,28 @@ async function ensureGpcApiKeyReadyForStart(options = {}) {
   try {
     balanceState = await refreshGpcBalanceForStart();
   } catch (error) {
-    await showGpcStartBlockedDialog(`API Key 余额校验失败：${error?.message || '未知错误'}。请先确认 API Key 是否正确。`);
+    await showGpcStartBlockedDialog(`API Key balance check failed: ${error?.message || 'Unknown error'}. Please verify the API Key is correct.`);
     return false;
   }
 
   const remainingUses = normalizeGpcRemainingUsesValue(balanceState.gopayHelperRemainingUses);
   const apiKeyStatus = String(balanceState.gopayHelperApiKeyStatus || '').trim().toLowerCase();
   if (apiKeyStatus && apiKeyStatus !== 'active') {
-    await showGpcStartBlockedDialog(`当前 GPC API Key 状态为 ${balanceState.gopayHelperApiKeyStatus}，不能开启任务。`);
+    await showGpcStartBlockedDialog(`Current GPC API Key status is ${balanceState.gopayHelperApiKeyStatus}, cannot start task.`);
     return false;
   }
   if (remainingUses !== null && remainingUses <= 0) {
-    await showGpcStartBlockedDialog('当前 GPC API Key 剩余次数不足，不能开启任务。');
+    await showGpcStartBlockedDialog('Current GPC API Key has insufficient remaining uses, cannot start task.');
     return false;
   }
 
   if (selectedMode === GPC_HELPER_PHONE_MODE_AUTO && isGpcAutoModePermissionDenied(balanceState)) {
-    await showGpcStartBlockedDialog('当前 GPC API Key 未开通自动模式，已保留你的当前选择。如需继续，请由你手动切换到手动模式后再开启任务。');
+    await showGpcStartBlockedDialog('Current GPC API Key does not have auto mode enabled; your current selection has been kept. To continue, please manually switch to manual mode before starting the task.');
     return false;
   }
 
   if (options?.notify) {
-    showToast('GPC API Key 余额和权限校验通过。', 'success', 1800);
+    showToast('GPC API Key balance and permission check passed.', 'success', 1800);
   }
   return true;
 }
@@ -10331,52 +10238,52 @@ async function openPlusManualConfirmationDialog(options = {}) {
     && signupMethod === 'email'
     && plusAccountAccessStrategy === 'sub2api_codex_session';
   const continuationActionLabel = useSub2ApiSessionImport
-    ? '导入当前 ChatGPT 会话到 SUB2API'
-    : 'OAuth 登录';
+    ? 'Import current ChatGPT session to SUB2API'
+    : 'OAuth login';
   if (method === 'gopay-otp') {
     if (!sharedFormDialog?.open) {
       return null;
     }
     const result = await sharedFormDialog.open({
-      title: String(options.title || '').trim() || 'GPC OTP 验证',
-      message: String(options.message || '').trim() || '请在WhatsApp里面获取验证码（耐心等待三十秒左右）',
+      title: String(options.title || '').trim() || 'GPC OTP Verification',
+      message: String(options.message || '').trim() || 'Please get the verification code from WhatsApp (wait about thirty seconds)',
       fields: [
         {
           key: 'otp',
           label: 'OTP',
           type: 'text',
-          placeholder: '请输入 OTP 验证码',
+          placeholder: 'Enter OTP code',
           inputMode: 'numeric',
           autocomplete: 'one-time-code',
           required: true,
-          requiredMessage: '请输入 OTP 验证码。',
+          requiredMessage: 'Please enter OTP code.',
           normalize: (value) => String(value || '').trim().replace(/[^\d]/g, ''),
           validate: (value) => {
             const normalized = String(value || '').trim().replace(/[^\d]/g, '');
-            if (!normalized) return '请输入 OTP 验证码。';
-            if (!/^\d{6}$/.test(normalized)) return 'OTP 必须是 6 位数字，请检查。';
+            if (!normalized) return 'Please enter OTP code.';
+            if (!/^\d{6}$/.test(normalized)) return 'OTP must be 6 digits, please check.';
             return '';
           },
         },
       ],
-      confirmLabel: '提交 OTP',
+      confirmLabel: 'Submit OTP',
     });
     return result ? { action: 'confirm', otp: String(result.otp || '').trim().replace(/[^\d]/g, '') } : { action: 'cancel' };
   }
-  const title = String(options.title || '').trim() || (method === gopayValue ? 'GoPay 订阅确认' : '手动确认');
+  const title = String(options.title || '').trim() || (method === gopayValue ? 'GoPay Subscription Confirm' : 'Manual Confirmation');
   const message = String(options.message || '').trim()
     || (method === gopayValue
-      ? '请在当前订阅页中手动完成 GoPay 订阅，完成后点击“我已完成订阅”继续。'
-      : '请先在页面中完成当前手动操作，完成后点击确认继续。');
+      ? 'Please manually complete the GoPay subscription on the current page, then click "I\'ve completed subscription" to continue.'
+      : 'Please complete the current manual operation on the page first, then click Confirm to continue.');
   return openActionModal({
     title,
     message,
     actions: [
-      { id: 'cancel', label: '取消等待', variant: 'btn-ghost' },
-      { id: 'confirm', label: '我已完成订阅', variant: 'btn-primary' },
+      { id: 'cancel', label: 'Cancel Wait', variant: 'btn-ghost' },
+      { id: 'confirm', label: 'I\'ve completed subscription', variant: 'btn-primary' },
     ],
     alert: method === gopayValue
-      ? { text: `确认后流程会直接继续到 Plus 模式后续的${continuationActionLabel}。`, tone: 'info' }
+      ? { text: `After confirmation, the flow will continue directly to the Plus mode ${continuationActionLabel}.`, tone: 'info' }
       : null,
   });
 }
@@ -10433,8 +10340,8 @@ async function syncPlusManualConfirmationDialog() {
     && signupMethod === 'email'
     && plusAccountAccessStrategy === 'sub2api_codex_session';
   const continuationActionLabel = useSub2ApiSessionImport
-    ? '导入当前 ChatGPT 会话到 SUB2API'
-    : 'OAuth 登录';
+    ? 'Import current ChatGPT session to SUB2API'
+    : 'OAuth login';
   const title = latestState?.plusManualConfirmationTitle;
   const message = latestState?.plusManualConfirmationMessage;
   activePlusManualConfirmationRequestId = requestId;
@@ -10454,7 +10361,7 @@ async function syncPlusManualConfirmationDialog() {
     }
     if (choice == null) {
       shouldReopenDialog = true;
-      showToast('当前订阅确认仍在等待中，将重新弹出确认窗口。', 'info', 1800);
+      showToast('Current subscription confirmation is still pending; the confirmation window will be reopened.', 'info', 1800);
       return;
     }
 
@@ -10475,22 +10382,22 @@ async function syncPlusManualConfirmationDialog() {
     if (confirmed) {
       showToast(
         method === 'gopay-otp'
-          ? 'GPC OTP 已提交，正在继续验证...'
-          : (method === gopayValue ? `GoPay 订阅已确认，正在继续${continuationActionLabel}...` : '已确认，流程继续执行中...'),
+          ? 'GPC OTP submitted, continuing verification...'
+          : (method === gopayValue ? `GoPay subscription confirmed, continuing ${continuationActionLabel}...` : 'Confirmed, flow continuing...'),
         'info',
         2200
       );
     } else {
       showToast(
         method === 'gopay-otp'
-          ? '已取消 GPC OTP 输入。'
-          : (method === gopayValue ? '已取消 GoPay 订阅等待。' : '已取消当前手动确认。'),
+          ? 'Canceled GPC OTP input.'
+          : (method === gopayValue ? 'Canceled GoPay subscription wait.' : 'Canceled current manual confirmation.'),
         'warn',
         2200
       );
     }
   } catch (error) {
-    showToast(error?.message || String(error || '未知错误'), 'error');
+    showToast(error?.message || String(error || 'Unknown error'), 'error');
   } finally {
     if (activePlusManualConfirmationRequestId === requestId) {
       activePlusManualConfirmationRequestId = '';
@@ -10516,28 +10423,28 @@ async function openPlusManualConfirmationDialog(options = {}) {
       return null;
     }
     const result = await sharedFormDialog.open({
-      title: String(options.title || '').trim() || 'GPC OTP 验证',
-      message: String(options.message || '').trim() || '请在WhatsApp里面获取验证码（耐心等待三十秒左右）',
+      title: String(options.title || '').trim() || 'GPC OTP Verification',
+      message: String(options.message || '').trim() || 'Please get the verification code from WhatsApp (wait about thirty seconds)',
       fields: [
         {
           key: 'otp',
           label: 'OTP',
           type: 'text',
-          placeholder: '请输入 OTP 验证码',
+          placeholder: 'Enter OTP code',
           inputMode: 'numeric',
           autocomplete: 'one-time-code',
           required: true,
-          requiredMessage: '请输入 OTP 验证码。',
+          requiredMessage: 'Please enter OTP code.',
           normalize: (value) => String(value || '').trim().replace(/[^\d]/g, ''),
           validate: (value) => {
             const normalized = String(value || '').trim().replace(/[^\d]/g, '');
-            if (!normalized) return '请输入 OTP 验证码。';
-            if (!/^\d{6}$/.test(normalized)) return 'OTP 必须是 6 位数字，请检查。';
+            if (!normalized) return 'Please enter OTP code.';
+            if (!/^\d{6}$/.test(normalized)) return 'OTP must be 6 digits, please check.';
             return '';
           },
         },
       ],
-      confirmLabel: '提交 OTP',
+      confirmLabel: 'Submit OTP',
     });
     return result
       ? { action: 'confirm', otp: String(result.otp || '').trim().replace(/[^\d]/g, '') }
@@ -10575,7 +10482,7 @@ async function clearRegistrationEmail(options = {}) {
     await setRuntimeEmailState(null);
   } catch (err) {
     if (!silent) {
-      showToast(`清空邮箱失败：${err.message}`, 'error');
+      showToast(`Failed to clear email: ${err.message}`, 'error');
     }
     throw err;
   }
@@ -10611,7 +10518,7 @@ async function clearRegistrationSignupPhone(options = {}) {
     await setRuntimeSignupPhoneState(null);
   } catch (err) {
     if (!silent) {
-      showToast(`清空注册手机号失败：${err.message}`, 'error');
+      showToast(`Failed to clear signup phone: ${err.message}`, 'error');
     }
     throw err;
   }
@@ -10628,7 +10535,7 @@ function markSettingsDirty(isDirty = true) {
 function updateSaveButtonState() {
   btnSaveSettings.disabled = settingsSaveInFlight || !settingsDirty;
   updateConfigMenuControls();
-  btnSaveSettings.textContent = settingsSaveInFlight ? '保存中' : '保存';
+  btnSaveSettings.textContent = settingsSaveInFlight ? 'Saving' : 'Save';
 }
 
 function isEditableElementInSettingsCard(element) {
@@ -10703,12 +10610,12 @@ async function saveSettings(options = {}) {
       updateButtonStates();
     }
     if (!silent) {
-      showToast('配置已保存', 'success', 1800);
+      showToast('Config saved', 'success', 1800);
     }
   } catch (err) {
     markSettingsDirty(true);
     if (!silent) {
-      showToast(`保存失败：${err.message}`, 'error');
+      showToast(`Save failed: ${err.message}`, 'error');
     }
     throw err;
   } finally {
@@ -10770,23 +10677,23 @@ function applyAutoRunStatus(payload = currentAutoRun) {
   switch (currentAutoRun.phase) {
     case 'waiting_step':
       autoContinueBar.style.display = 'none';
-      btnAutoRun.innerHTML = `等待中${runLabel}`;
+      btnAutoRun.innerHTML = `Waiting${runLabel}`;
       break;
     case 'waiting_email':
       autoContinueBar.style.display = 'flex';
-      btnAutoRun.innerHTML = `已暂停${runLabel}`;
+      btnAutoRun.innerHTML = `Paused${runLabel}`;
       break;
     case 'running':
       autoContinueBar.style.display = 'none';
-      btnAutoRun.innerHTML = `运行中${runLabel}`;
+      btnAutoRun.innerHTML = `Running${runLabel}`;
       break;
     case 'retrying':
       autoContinueBar.style.display = 'none';
-      btnAutoRun.innerHTML = `重试中${runLabel}`;
+      btnAutoRun.innerHTML = `Retrying${runLabel}`;
       break;
     case 'waiting_interval':
       autoContinueBar.style.display = 'none';
-      btnAutoRun.innerHTML = `等待中${runLabel}`;
+      btnAutoRun.innerHTML = `Waiting${runLabel}`;
       break;
     default:
       autoContinueBar.style.display = 'none';
@@ -10823,8 +10730,8 @@ function initializeManualStepActions() {
     manualBtn.className = 'step-manual-btn';
     manualBtn.dataset.step = String(step);
     manualBtn.dataset.nodeId = nodeId;
-    manualBtn.title = '跳过此节点';
-    manualBtn.setAttribute('aria-label', `跳过节点 ${nodeId || step}`);
+    manualBtn.title = 'Skip this node';
+    manualBtn.setAttribute('aria-label', `Skip node ${nodeId || step}`);
     manualBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>';
     manualBtn.addEventListener('click', async (event) => {
       event.stopPropagation();
@@ -11095,7 +11002,7 @@ function applySettingsState(state) {
     if (!hasOption && normalizedCountryCode) {
       const option = document.createElement('option');
       option.value = normalizedCountryCode;
-      option.textContent = `自定义 ${normalizedCountryCode}`;
+      option.textContent = `Custom ${normalizedCountryCode}`;
       selectGpcHelperCountryCode.appendChild(option);
     }
     selectGpcHelperCountryCode.value = normalizedCountryCode || '+86';
@@ -11120,8 +11027,8 @@ function applySettingsState(state) {
     const balanceError = String(state?.gopayHelperBalanceError || '').trim();
     const balanceAt = Number(state?.gopayHelperBalanceUpdatedAt) || 0;
     displayGpcHelperBalance.textContent = balanceError
-      ? `余额查询失败：${balanceError}`
-      : (balanceText || (balanceAt ? '余额已更新' : '余额未获取'));
+      ? `Balance query failed: ${balanceError}`
+      : (balanceText || (balanceAt ? 'Balance updated' : 'Balance not retrieved'));
   }
   if (typeof selectGoPayCountryCode !== 'undefined' && selectGoPayCountryCode) {
     const normalizedGoPayCountryCode = window.GoPayUtils?.normalizeGoPayCountryCode
@@ -11132,7 +11039,7 @@ function applySettingsState(state) {
     if (!hasOption && normalizedGoPayCountryCode) {
       const option = document.createElement('option');
       option.value = normalizedGoPayCountryCode;
-      option.textContent = `自定义 ${normalizedGoPayCountryCode}`;
+      option.textContent = `Custom ${normalizedGoPayCountryCode}`;
       selectGoPayCountryCode.appendChild(option);
     }
     selectGoPayCountryCode.value = normalizedGoPayCountryCode || '+86';
@@ -11203,14 +11110,14 @@ function applySettingsState(state) {
       || kiroRuntimeState?.register?.status
       || ''
     ).trim();
-    displayKiroWebStatus.textContent = kiroWebStatus || '未开始';
+    displayKiroWebStatus.textContent = kiroWebStatus || 'Not started';
   }
   if (typeof displayKiroLoginUrl !== 'undefined' && displayKiroLoginUrl) {
     const kiroLoginUrl = String(
       kiroRuntimeState?.register?.loginUrl
       || ''
     ).trim();
-    displayKiroLoginUrl.textContent = kiroLoginUrl || '未打开';
+    displayKiroLoginUrl.textContent = kiroLoginUrl || 'Not opened';
   }
   if (typeof displayKiroUploadStatus !== 'undefined' && displayKiroUploadStatus) {
     const kiroUploadStatus = String(
@@ -11719,7 +11626,7 @@ function ignoreCurrentReleaseUpdate() {
     status: 'ignored',
     ignoredVersion,
   });
-  showToast(`已忽略 ${ignoredVersion} 更新，有新版本时会再次提醒。`, 'info', 2200);
+  showToast(`Ignored ${ignoredVersion} update. You'll be reminded again when a new version is available.`, 'info', 2200);
 }
 
 function openCloudflareTempEmailUsageGuidePage() {
@@ -11738,7 +11645,7 @@ function createUpdateNoteList(notes = []) {
   if (!Array.isArray(notes) || notes.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'update-release-empty';
-    empty.textContent = '该版本未提供可解析的更新说明，请查看完整更新日志。';
+    empty.textContent = 'No parseable release notes for this version. Please check the full release log.';
     return empty;
   }
 
@@ -11843,7 +11750,7 @@ function renderReleaseSnapshot(snapshot) {
 
   switch (snapshot?.status) {
     case 'update-available': {
-      extensionUpdateStatus.textContent = '有更新';
+      extensionUpdateStatus.textContent = 'Update available';
       extensionUpdateStatus.classList.add('is-update-available');
       if (btnReleaseLog) {
         btnReleaseLog.hidden = false;
@@ -11853,18 +11760,18 @@ function renderReleaseSnapshot(snapshot) {
         updateSection.hidden = false;
       }
       if (updateCardVersion) {
-        updateCardVersion.textContent = `最新版本 ${snapshot.latestVersion}`;
+        updateCardVersion.textContent = `Latest version ${snapshot.latestVersion}`;
       }
       if (updateCardSummary) {
         const updateCount = Array.isArray(snapshot.newerReleases) ? snapshot.newerReleases.length : 0;
         updateCardSummary.textContent = updateCount > 1
-          ? `当前 ${localVersionText}，共有 ${updateCount} 个新版本可更新。`
-          : `当前 ${localVersionText}，可更新到 ${snapshot.latestVersion}。`;
+          ? `Current ${localVersionText}; ${updateCount} new versions available.`
+          : `Current ${localVersionText}; update available to ${snapshot.latestVersion}.`;
       }
       renderUpdateReleaseList(snapshot.newerReleases || []);
       if (btnOpenRelease) {
         btnOpenRelease.hidden = false;
-        btnOpenRelease.textContent = '前往更新';
+        btnOpenRelease.textContent = 'Go to Update';
         btnOpenRelease.onclick = () => openExternalUrl(logUrl);
       }
       if (btnIgnoreRelease) {
@@ -11899,7 +11806,7 @@ function renderReleaseSnapshot(snapshot) {
     default: {
       extensionUpdateStatus.textContent = localVersionText || 'FlowPilot0.0';
       extensionUpdateStatus.classList.add('is-version-label', 'is-check-failed');
-      extensionVersionMeta.textContent = snapshot?.errorMessage || 'GitHub Releases 检查失败';
+      extensionVersionMeta.textContent = snapshot?.errorMessage || 'GitHub Releases check failed';
       extensionVersionMeta.hidden = false;
       resetUpdateCard();
       break;
@@ -11932,7 +11839,7 @@ async function initializeReleaseInfo() {
   resetUpdateCard();
 
   if (!sidepanelUpdateService) {
-    extensionVersionMeta.textContent = '更新检查服务不可用';
+    extensionVersionMeta.textContent = 'Update check service unavailable';
     extensionVersionMeta.hidden = false;
     return;
   }
@@ -11980,10 +11887,10 @@ function getContributionUpdatePromptLines(snapshot = currentContributionContentS
 
   const lines = [];
   if (hasAnnouncementOrTutorial) {
-    lines.push('公告 / 使用教程有更新了，可点上方“贡献/使用”查看。');
+    lines.push('Announcements / Tutorials have been updated. Click "Contribute/Tutorial" above to view.');
   }
   if (hasQuestionnaire) {
-    lines.push('有新的征求意见，请佬友共同参与选择。');
+    lines.push('New survey available, please participate.');
   }
   return lines;
 }
@@ -12435,92 +12342,92 @@ function getEmailGeneratorUiCopy() {
   }
   if (getSelectedEmailGenerator() === GMAIL_ALIAS_GENERATOR) {
     return {
-      buttonLabel: '生成',
-      placeholder: '步骤 3 自动生成 Gmail +tag 邮箱并回填',
-      successVerb: '生成',
-      label: 'Gmail +tag 邮箱',
+      buttonLabel: 'Generate',
+      placeholder: 'Step 3 will auto-generate Gmail +tag email and fill it back',
+      successVerb: 'Generated',
+      label: 'Gmail +tag Email',
     };
   }
   if (getSelectedEmailGenerator() === CUSTOM_EMAIL_POOL_GENERATOR) {
     return {
-      buttonLabel: '取下一个',
-      placeholder: '按邮箱池顺序自动回填，也可以手动粘贴当前轮邮箱',
-      successVerb: '取用',
-      label: '自定义邮箱池',
+      buttonLabel: 'Take Next',
+      placeholder: 'Auto-fills from email pool in order; can also paste current round email manually',
+      successVerb: 'Picked',
+      label: 'Custom Email Pool',
     };
   }
   if (getSelectedEmailGenerator() === 'icloud') {
     return {
-      buttonLabel: '获取',
-      placeholder: '点击获取 iCloud 隐私邮箱，或手动粘贴邮箱',
-      successVerb: '获取',
-      label: 'iCloud 隐私邮箱',
+      buttonLabel: 'Fetch',
+      placeholder: 'Click to fetch iCloud Hide My Email, or paste email manually',
+      successVerb: 'Fetched',
+      label: 'iCloud Hide My Email',
     };
   }
   if (getSelectedEmailGenerator() === 'cloudflare') {
     return {
-      buttonLabel: '生成',
-      placeholder: '点击生成 Cloudflare 邮箱，或手动粘贴邮箱',
-      successVerb: '生成',
-      label: 'Cloudflare 邮箱',
+      buttonLabel: 'Generate',
+      placeholder: 'Click to generate Cloudflare email, or paste email manually',
+      successVerb: 'Generated',
+      label: 'Cloudflare Email',
     };
   }
   if (getSelectedEmailGenerator() === 'cloudflare-temp-email') {
     return {
-      buttonLabel: '生成 Temp',
-      placeholder: '点击生成 Cloudflare Temp Email，或手动粘贴邮箱',
-      successVerb: '生成',
+      buttonLabel: 'Generate Temp',
+      placeholder: 'Click to generate Cloudflare Temp Email, or paste email manually',
+      successVerb: 'Generated',
       label: 'Cloudflare Temp Email',
     };
   }
   if (getSelectedEmailGenerator() === 'cloudmail') {
     return {
-      buttonLabel: '生成',
-      placeholder: '点击生成 Cloud Mail 邮箱，或手动粘贴邮箱',
-      successVerb: '生成',
+      buttonLabel: 'Generate',
+      placeholder: 'Click to generate Cloud Mail email, or paste email manually',
+      successVerb: 'Generated',
       label: 'Cloud Mail',
     };
   }
 
   return {
-    buttonLabel: '获取',
-    placeholder: '点击获取 DuckDuckGo 邮箱，或手动粘贴邮箱',
-    successVerb: '获取',
-    label: 'Duck 邮箱',
+    buttonLabel: 'Fetch',
+    placeholder: 'Click to fetch DuckDuckGo email, or paste email manually',
+    successVerb: 'Fetched',
+    label: 'Duck Email',
   };
 }
 
 function getCustomMailProviderUiCopy() {
   if (usesCustomMailProviderPool()) {
     return {
-      buttonLabel: '自定义邮箱',
-      placeholder: '号池会按顺序自动回填，也可以手动覆盖当前轮邮箱',
-      successVerb: '使用',
-      label: '自定义邮箱',
+      buttonLabel: 'Custom Email',
+      placeholder: 'Pool auto-fills in order; can also manually override current round email',
+      successVerb: 'Used',
+      label: 'Custom Email',
     };
   }
   return {
-    buttonLabel: '自定义邮箱',
-    placeholder: '请填写本轮要使用的注册邮箱',
-    successVerb: '使用',
-    label: '自定义邮箱',
+    buttonLabel: 'Custom Email',
+    placeholder: 'Fill in the registration email for this round',
+    successVerb: 'Used',
+    label: 'Custom Email',
   };
 }
 
 function getCustomVerificationPromptCopy(step) {
-  const verificationLabel = step === 4 ? '注册验证码' : '登录验证码';
+  const verificationLabel = step === 4 ? 'registration code' : 'login code';
   const isLoginVerificationStep = step === 8 || step === 11;
   return {
-    title: `手动处理${verificationLabel}`,
-    message: `当前邮箱服务为“自定义邮箱”。请先在页面中手动输入${verificationLabel}，并确认已经进入下一页面后，再点击确认。`,
+    title: `Manual ${verificationLabel} handling`,
+    message: `Current email service is "Custom Email". Please manually enter the ${verificationLabel} on the page and confirm you've reached the next page, then click Confirm.`,
     alert: {
-      text: `点击确认后会跳过步骤 ${step}。`,
+      text: `After clicking Confirm, step ${step} will be skipped.`,
       tone: 'danger',
     },
     ...(isLoginVerificationStep ? {
-      phoneActionLabel: '出现手机号验证',
+      phoneActionLabel: 'Phone verification appeared',
       phoneActionAlert: {
-        text: '如果当前页面已经进入手机号验证，可直接标记为失败并继续下一个邮箱。',
+        text: 'If the current page has shown phone verification, you can mark it failed directly and continue to the next email.',
         tone: 'danger',
       },
     } : {}),
@@ -12535,30 +12442,30 @@ function normalizeGoPayOtpInputValue(value = '') {
 
 async function openGoPayOtpInputDialog(payload = {}) {
   if (!sharedFormDialog?.open) {
-    throw new Error('验证码输入弹窗未加载，请刷新扩展后重试。');
+    throw new Error('Verification code input dialog not loaded. Please refresh the extension and retry.');
   }
 
   const initialCode = normalizeGoPayOtpInputValue(payload.code || inputGoPayOtp?.value || latestState?.gopayOtp || '');
   const result = await sharedFormDialog.open({
-    title: '输入 GoPay 验证码',
-    message: '请把当前 GoPay 页面收到的验证码填到这里，确认后插件会继续填写验证码并进入 PIN 步骤。',
-    confirmLabel: '提交验证码',
+    title: 'Enter GoPay verification code',
+    message: 'Paste the verification code received on the current GoPay page here; after confirming, the extension will fill it in and continue to the PIN step.',
+    confirmLabel: 'Submit Code',
     confirmVariant: 'btn-primary',
     fields: [
       {
         key: 'code',
-        label: '验证码',
+        label: 'Code',
         type: 'text',
         required: true,
-        requiredMessage: '请输入 GoPay 验证码。',
-        placeholder: '请输入数字验证码',
+        requiredMessage: 'Please enter GoPay verification code.',
+        placeholder: 'Enter numeric verification code',
         inputMode: 'numeric',
         autocomplete: 'one-time-code',
         value: initialCode,
         validate: (value) => {
           const normalized = normalizeGoPayOtpInputValue(value);
-          if (!normalized) return '请输入 GoPay 验证码。';
-          if (normalized.length < 4) return 'GoPay 验证码长度过短，请检查。';
+          if (!normalized) return 'Please enter GoPay verification code.';
+          if (normalized.length < 4) return 'GoPay verification code is too short, please check.';
           return '';
         },
       },
@@ -12585,9 +12492,9 @@ async function openCustomVerificationConfirmDialog(step) {
       message: promptCopy.message,
       alert: promptCopy.alert,
       actions: [
-        { id: null, label: '取消', variant: 'btn-ghost' },
-        { id: 'add_phone', label: promptCopy.phoneActionLabel || '出现手机号验证', variant: 'btn-outline' },
-        { id: 'confirm', label: '确认跳过', variant: 'btn-danger' },
+        { id: null, label: 'Cancel', variant: 'btn-ghost' },
+        { id: 'add_phone', label: promptCopy.phoneActionLabel || 'Phone verification appeared', variant: 'btn-outline' },
+        { id: 'confirm', label: 'Confirm Skip', variant: 'btn-danger' },
       ],
       buildResult: (choice) => ({
         confirmed: choice === 'confirm',
@@ -12599,7 +12506,7 @@ async function openCustomVerificationConfirmDialog(step) {
   const confirmed = await openConfirmModal({
     title: promptCopy.title,
     message: promptCopy.message,
-    confirmLabel: '确认跳过',
+    confirmLabel: 'Confirm Skip',
     confirmVariant: 'btn-danger',
     alert: promptCopy.alert,
   });
@@ -12694,7 +12601,7 @@ function getLuckmailPreserveTagName(state = latestState) {
 function formatLuckmailDateTime(value) {
   const timestamp = normalizeLuckmailTimestampValue(value);
   if (!timestamp) {
-    return String(value || '').trim() || '未知';
+    return String(value || '').trim() || 'Unknown';
   }
   return new Date(timestamp).toLocaleString('zh-CN', {
     hour12: false,
@@ -12801,8 +12708,8 @@ function updateMailLoginButtonState() {
   const config = getMailProviderLoginConfig();
   const loginUrl = getMailProviderLoginUrl();
   btnMailLogin.disabled = !loginUrl;
-  btnMailLogin.textContent = config?.buttonLabel || '登录';
-  btnMailLogin.title = loginUrl ? `打开 ${config.label} 登录页` : '当前邮箱服务没有可跳转的登录页';
+  btnMailLogin.textContent = config?.buttonLabel || 'Login';
+  btnMailLogin.title = loginUrl ? `Open ${config.label} login page` : 'Current mail service has no login page';
 }
 
 function updateIpProxyServiceLoginButtonState(options = {}) {
@@ -12821,11 +12728,11 @@ function updateIpProxyServiceLoginButtonState(options = {}) {
     ? Boolean(options.enabled)
     : Boolean(getSelectedIpProxyEnabled());
   btnIpProxyServiceLogin.disabled = !enabled || !loginUrl;
-  const buttonLabel = loginConfig?.buttonLabel || '登录';
+  const buttonLabel = loginConfig?.buttonLabel || 'Login';
   btnIpProxyServiceLogin.textContent = buttonLabel;
   btnIpProxyServiceLogin.title = loginUrl
-    ? `打开 ${loginConfig?.label || service} ${buttonLabel}页`
-    : '当前代理服务没有可跳转的登录页';
+    ? `Open ${loginConfig?.label || service} ${buttonLabel} page`
+    : 'Current proxy service has no login page';
 }
 
 function updateMailProviderUI() {
@@ -13035,8 +12942,8 @@ function updateMailProviderUI() {
   if (luckmailSection) {
     luckmailSection.style.display = useLuckmail ? '' : 'none';
   }
-  labelEmailPrefix.textContent = '邮箱前缀';
-  inputEmailPrefix.placeholder = '例如 abc';
+  labelEmailPrefix.textContent = 'Email Prefix';
+  inputEmailPrefix.placeholder = 'e.g. abc';
   if (labelMail2925UseAccountPool) {
     labelMail2925UseAccountPool.style.display = useMail2925 ? '' : 'none';
   }
@@ -13049,8 +12956,8 @@ function updateMailProviderUI() {
   inputEmailPrefix.readOnly = false;
   selectEmailGenerator.disabled = useHotmail || useLuckmail || useYydsMail || useCustomEmail || (useGeneratedAlias && !useGmail);
   if (useGmail) {
-    labelEmailPrefix.textContent = 'Gmail 原邮箱';
-    inputEmailPrefix.placeholder = '例如 yourname@gmail.com';
+    labelEmailPrefix.textContent = 'Gmail Base Email';
+    inputEmailPrefix.placeholder = 'e.g. yourname@gmail.com';
   }
   labelEmailPrefix.textContent = aliasUiCopy?.baseLabel || labelEmailPrefix.textContent;
   inputEmailPrefix.placeholder = aliasUiCopy?.basePlaceholder || inputEmailPrefix.placeholder;
@@ -13066,18 +12973,18 @@ function updateMailProviderUI() {
   btnFetchEmail.hidden = useHotmail || useLuckmail || useCustomEmail || useCustomEmailPool;
   inputEmail.readOnly = useHotmail || useLuckmail;
   inputEmail.placeholder = useHotmail
-    ? '由 Hotmail 账号池自动分配'
+    ? 'Auto-assigned by Hotmail account pool'
     : (useLuckmail
-      ? '步骤 3 自动购买 LuckMail 邮箱并回填'
-      : (useGeneratedAlias ? '步骤 3 自动生成 2925 邮箱并回填' : uiCopy.placeholder));
+      ? 'Step 3 will auto-purchase LuckMail email and fill it back'
+      : (useGeneratedAlias ? 'Step 3 will auto-generate 2925 email and fill it back' : uiCopy.placeholder));
   if (useGmail && useGeneratedAlias) {
-    inputEmail.placeholder = '步骤 3 自动生成 Gmail +tag 邮箱并回填';
+    inputEmail.placeholder = 'Step 3 will auto-generate Gmail +tag email and fill it back';
   }
   if (!useHotmail && !useLuckmail) {
     inputEmail.placeholder = uiCopy.placeholder;
   }
   if (useCustomEmail && useCustomMailProviderPool) {
-    inputEmail.placeholder = '号池会按顺序自动回填当前轮邮箱，也可以手动覆盖';
+    inputEmail.placeholder = 'Pool auto-fills current round email in order; can also be manually overridden';
   }
   btnFetchEmail.disabled = useLuckmail || useCustomEmail || useCustomEmailPool || isAutoRunLockedPhase();
   if (!btnFetchEmail.disabled) {
@@ -13085,23 +12992,23 @@ function updateMailProviderUI() {
   }
   if (autoHintText) {
     autoHintText.textContent = useHotmail
-      ? '请先校验并选择一个 Hotmail 账号'
+      ? 'Please verify and select a Hotmail account first'
       : (useLuckmail
-        ? '步骤 3 会自动购买 LuckMail 邮箱并用于收码'
+        ? 'Step 3 will auto-purchase LuckMail email and use it for code reception'
         : (useGeneratedAlias
-          ? '步骤 3 会自动生成邮箱，无需手动获取'
-          : (useCustomEmail ? '请先填写自定义注册邮箱，成功一轮后会自动清空' : `先自动获取${uiCopy.label}，或手动粘贴邮箱后再继续`)));
+          ? 'Step 3 will auto-generate email, no manual fetch needed'
+          : (useCustomEmail ? 'Please fill in custom registration email; will auto-clear after one successful round' : `Auto-fetch ${uiCopy.label} first, or paste email manually before continuing`)));
   }
   if (autoHintText && useCustomEmailPool) {
     autoHintText.textContent = getCustomEmailPoolSize() > 0
-      ? `当前邮箱池共 ${getCustomEmailPoolSize()} 个邮箱，自动轮数会跟随数量；实际收码仍走当前邮箱服务`
-      : '请先在邮箱池里每行填写一个邮箱，自动轮数会跟随数量';
+      ? `Current email pool has ${getCustomEmailPoolSize()} emails; auto rounds will match this count; actual code reception still uses current mail service`
+      : 'Please fill in one email per line in the email pool first; auto rounds will match the count';
   }
   if (autoHintText && useCustomEmail && useCustomMailProviderPool) {
-    autoHintText.textContent = `当前自定义号池共 ${getCustomMailProviderPoolSize()} 个邮箱，自动轮数会跟随数量；第 4/8 步仍需手动输入验证码`;
+    autoHintText.textContent = `Current custom pool has ${getCustomMailProviderPoolSize()} emails; auto rounds will match this count; steps 4/8 still require manual verification code entry`;
   }
   if (autoHintText && useGmail && useGeneratedAlias) {
-    autoHintText.textContent = '请先填写 Gmail 原邮箱，步骤 3 会自动生成 Gmail +tag 地址';
+    autoHintText.textContent = 'Please fill in your Gmail base email first; step 3 will auto-generate Gmail +tag addresses';
   }
   if (autoHintText && useGeneratedAlias && aliasUiCopy?.hint) {
     autoHintText.textContent = aliasUiCopy.hint;
@@ -13109,22 +13016,22 @@ function updateMailProviderUI() {
   if (autoHintText && useMail2925AccountPool && !useCustomEmailPool) {
     autoHintText.textContent = getMail2925Accounts().length
       ? (useGeneratedAlias
-        ? '当前已启用 2925 号池模式，步骤 3 会基于下拉框选中的号池邮箱生成别名地址'
-        : '当前已启用 2925 号池模式，步骤 4 / 8 遇到登录页时会优先使用下拉框选中的账号自动登录')
-      : '当前已启用 2925 号池模式，请先在下方 2925 账号池中添加账号并选择邮箱';
+        ? '2925 pool mode enabled; step 3 will generate alias addresses based on the pool email selected in the dropdown'
+        : '2925 pool mode enabled; steps 4/8 will preferentially use the account selected in the dropdown for auto-login when login page appears')
+      : '2925 pool mode enabled; please add accounts and select an email in the 2925 account pool below first';
   }
   if (autoHintText && showCloudflareTempEmailReceiveMailbox && !useCustomEmailPool) {
-    autoHintText.textContent = '若注册邮箱会转发到 Cloudflare Temp Email，请在“邮件接收”中填写实际接收转发邮件的邮箱。';
+    autoHintText.textContent = 'If the registration email forwards to Cloudflare Temp Email, fill in the actual receiving mailbox in "Receive Mailbox".';
   }
   if (autoHintText && showCloudflareTempEmailRandomSubdomainToggle && inputTempEmailUseRandomSubdomain?.checked) {
-    autoHintText.textContent = '已启用随机子域名：扩展会按当前选中的 Temp 域名提交，并额外携带 enableRandomSubdomain；是否生效取决于后端 RANDOM_SUBDOMAIN_DOMAINS 配置。';
+    autoHintText.textContent = 'Random subdomain enabled: the extension will submit using the currently selected Temp domain with enableRandomSubdomain; whether it takes effect depends on backend RANDOM_SUBDOMAIN_DOMAINS config.';
   }
   if (autoHintText && useIcloudProvider && showIcloudForwardMailProvider) {
     const forwardProvider = normalizeIcloudForwardMailProvider(icloudForwardMailProviderValue);
     const forwardProviderLabel = ICLOUD_FORWARD_MAIL_PROVIDER_LABELS[forwardProvider]
       || MAIL_PROVIDER_LOGIN_CONFIGS[forwardProvider]?.label
-      || '目标邮箱';
-    autoHintText.textContent = `iCloud ${isIcloudComCnHost ? 'com.cn' : ''} 当前使用转发收码：第 4/8 步会从 ${forwardProviderLabel} 轮询验证码。`;
+      || 'target mailbox';
+    autoHintText.textContent = `iCloud ${isIcloudComCnHost ? 'com.cn' : ''} currently uses forward code reception: steps 4/8 will poll verification code from ${forwardProviderLabel}.`;
   }
   if (useHotmail) {
     inputEmail.value = getCurrentHotmailEmail();
@@ -13180,7 +13087,7 @@ async function saveCloudflareDomainSettings(domains, activeDomain, options = {})
   updateMailProviderUI();
 
   if (!silent) {
-    showToast('Cloudflare 域名已保存', 'success', 1800);
+    showToast('Cloudflare domain saved', 'success', 1800);
   }
 }
 
@@ -13212,7 +13119,7 @@ async function saveCloudflareTempEmailDomainSettings(domains, activeDomain, opti
   updateMailProviderUI();
 
   if (!silent) {
-    showToast('Cloudflare Temp Email 域名已保存', 'success', 1800);
+    showToast('Cloudflare Temp Email domain saved', 'success', 1800);
   }
 }
 
@@ -13246,7 +13153,7 @@ function buildCloudflareTempEmailSyncHeaders(options = {}) {
 async function requestCloudflareTempEmailSyncPayload(baseUrl, path, options = {}) {
   const url = joinCloudflareTempEmailSettingsUrl(baseUrl, path);
   if (!url) {
-    throw new Error('Cloudflare Temp Email 服务地址为空或格式无效。');
+    throw new Error('Cloudflare Temp Email service URL is empty or invalid.');
   }
 
   const response = await fetch(url, {
@@ -13298,14 +13205,14 @@ async function fetchCloudflareTempEmailAvailableDomains(baseUrl) {
         source: 'open_api/settings',
       };
     }
-    openSettingsError = new Error('公开设置未返回可用域名。');
+    openSettingsError = new Error('Open settings did not return available domains.');
   } catch (error) {
     openSettingsError = error;
   }
 
   const adminAuth = String(inputTempEmailAdminAuth?.value || '').trim();
   if (!adminAuth) {
-    throw openSettingsError || new Error('未获取到可用域名。');
+    throw openSettingsError || new Error('No available domains retrieved.');
   }
 
   const payload = await requestCloudflareTempEmailSyncPayload(baseUrl, '/admin/worker/configs', {
@@ -13313,7 +13220,7 @@ async function fetchCloudflareTempEmailAvailableDomains(baseUrl) {
   });
   const domains = normalizeCloudflareTempEmailDomains(payload?.DOMAINS || []);
   if (!domains.length) {
-    throw openSettingsError || new Error('管理配置未返回可用域名。');
+    throw openSettingsError || new Error('Admin config did not return available domains.');
   }
   return {
     domains,
@@ -13324,12 +13231,12 @@ async function fetchCloudflareTempEmailAvailableDomains(baseUrl) {
 async function syncCloudflareTempEmailDomainsFromService() {
   const normalizedBaseUrl = normalizeCloudflareTempEmailBaseUrlValue(inputTempEmailBaseUrl?.value || '');
   if (!normalizedBaseUrl) {
-    throw new Error('请先填写有效的 Cloudflare Temp Email 服务地址。');
+    throw new Error('Please fill in a valid Cloudflare Temp Email service URL.');
   }
 
   const previousButtonText = btnTempEmailDomainMode.textContent;
   btnTempEmailDomainMode.disabled = true;
-  btnTempEmailDomainMode.textContent = '更新中...';
+  btnTempEmailDomainMode.textContent = 'Updating...';
 
   try {
     const { domains: fetchedDomains, source } = await fetchCloudflareTempEmailAvailableDomains(normalizedBaseUrl);
@@ -13344,9 +13251,9 @@ async function syncCloudflareTempEmailDomainsFromService() {
 
     await saveCloudflareTempEmailDomainSettings(mergedDomains, nextActiveDomain, { silent: true });
     if (addedCount > 0) {
-      showToast(`已更新 Cloudflare Temp Email 域名，新增 ${addedCount} 个。`, 'success', 2200);
+      showToast(`Updated Cloudflare Temp Email domains, added ${addedCount}.`, 'success', 2200);
     } else {
-      showToast('已同步 Cloudflare Temp Email 域名，暂无新增项。', 'info', 2200);
+      showToast('Synced Cloudflare Temp Email domains, no new entries.', 'info', 2200);
     }
     return {
       domains: mergedDomains,
@@ -13354,11 +13261,11 @@ async function syncCloudflareTempEmailDomainsFromService() {
       source,
     };
   } catch (error) {
-    const message = error?.message || String(error || '未知错误');
-    throw new Error(`更新 Cloudflare Temp Email 域名失败：${message}`);
+    const message = error?.message || String(error || 'Unknown error');
+    throw new Error(`Failed to update Cloudflare Temp Email domains: ${message}`);
   } finally {
     btnTempEmailDomainMode.disabled = false;
-    btnTempEmailDomainMode.textContent = previousButtonText || '更新';
+    btnTempEmailDomainMode.textContent = previousButtonText || 'Update';
   }
 }
 
@@ -13379,7 +13286,7 @@ async function handleDeleteCloudflareDomain(domain) {
     ? (nextDomains[0] || '')
     : (nextDomains.includes(currentDomain) ? currentDomain : nextDomains[0] || '');
   await saveCloudflareDomainSettings(nextDomains, nextActiveDomain, { silent: true });
-  showToast(`已删除 Cloudflare 域名：${targetDomain}`, 'success', 1600);
+  showToast(`Deleted Cloudflare domain: ${targetDomain}`, 'success', 1600);
 }
 
 async function handleDeleteCloudflareTempEmailDomain(domain) {
@@ -13399,31 +13306,31 @@ async function handleDeleteCloudflareTempEmailDomain(domain) {
     ? (nextDomains[0] || '')
     : (nextDomains.includes(currentDomain) ? currentDomain : nextDomains[0] || '');
   await saveCloudflareTempEmailDomainSettings(nextDomains, nextActiveDomain, { silent: true });
-  showToast(`已删除 Cloudflare Temp Email 域名：${targetDomain}`, 'success', 1600);
+  showToast(`Deleted Cloudflare Temp Email domain: ${targetDomain}`, 'success', 1600);
 }
 
 async function handleAddSub2ApiGroup() {
   if (!sharedFormDialog?.open) {
-    showToast('表单弹窗未加载，请刷新扩展后重试。', 'error');
+    showToast('Form dialog not loaded. Please refresh the extension and retry.', 'error');
     return;
   }
 
   const result = await sharedFormDialog.open({
-    title: '添加 SUB2API 分组',
-    confirmLabel: '添加',
+    title: 'Add SUB2API Group',
+    confirmLabel: 'Add',
     confirmVariant: 'btn-primary',
     fields: [
       {
         key: 'groupName',
-        label: '分组',
+        label: 'Group',
         type: 'text',
-        placeholder: '例如 openai-plus',
+        placeholder: 'e.g. openai-plus',
         autocomplete: 'off',
         required: true,
-        requiredMessage: '请先填写 SUB2API 分组名称。',
+        requiredMessage: 'Please fill in SUB2API group name.',
         validate: (value) => {
           const names = normalizeSub2ApiGroupOptions(value);
-          return names.length ? '' : '请先填写 SUB2API 分组名称。';
+          return names.length ? '' : 'Please fill in SUB2API group name.';
         },
       },
     ],
@@ -13449,7 +13356,7 @@ async function handleAddSub2ApiGroup() {
   renderSub2ApiGroupOptions(latestState, selectedGroup);
   markSettingsDirty(true);
   await saveSettings({ silent: true }).catch(() => { });
-  showToast(`已添加并切换到 SUB2API 分组：${selectedGroup}`, 'success', 1800);
+  showToast(`Added and switched to SUB2API group: ${selectedGroup}`, 'success', 1800);
 }
 
 async function handleDeleteSub2ApiGroup(groupName) {
@@ -13460,7 +13367,7 @@ async function handleDeleteSub2ApiGroup(groupName) {
 
   const currentGroups = getSub2ApiGroupOptionsState(latestState);
   if (currentGroups.length <= 1) {
-    showToast('至少保留一个 SUB2API 分组。', 'warn', 1800);
+    showToast('At least one SUB2API group must be kept.', 'warn', 1800);
     return;
   }
 
@@ -13483,7 +13390,7 @@ async function handleDeleteSub2ApiGroup(groupName) {
   sub2ApiGroupPicker.setOpen(true);
   markSettingsDirty(true);
   await saveSettings({ silent: true }).catch(() => { });
-  showToast(`已删除 SUB2API 分组：${targetName}`, 'success', 1600);
+  showToast(`Deleted SUB2API group: ${targetName}`, 'success', 1600);
 }
 
 function updatePanelModeUI() {
@@ -13536,8 +13443,8 @@ function updatePanelModeUI() {
   const step9Btn = document.querySelector('.step-btn[data-step-key="platform-verify"]');
   if (step9Btn && activeFlowId === DEFAULT_ACTIVE_FLOW_ID) {
     step9Btn.textContent = displayTargetId === 'sub2api'
-      ? 'SUB2API 回调验证'
-      : (useCodex2Api ? 'Codex2API 回调验证' : 'CPA 回调验证');
+      ? 'SUB2API callback verification'
+      : (useCodex2Api ? 'Codex2API callback verification' : 'CPA callback verification');
   }
 }
 
@@ -13672,20 +13579,20 @@ function updateButtonStates() {
     if (!SKIPPABLE_NODES.has(nodeId) || currentStatus === 'disabled' || anyRunning || autoLocked || currentStatus === 'running' || isDoneStatus(currentStatus)) {
       btn.style.display = 'none';
       btn.disabled = true;
-      btn.title = '当前不可跳过';
+      btn.title = 'Cannot skip right now';
       return;
     }
 
     if (prevNodeId !== null && !isDoneStatus(prevStatus)) {
       btn.style.display = 'none';
       btn.disabled = true;
-      btn.title = `请先完成节点 ${prevNodeId}`;
+      btn.title = `Complete node ${prevNodeId}`;
       return;
     }
 
     btn.style.display = '';
     btn.disabled = false;
-    btn.title = `跳过节点 ${nodeId}`;
+    btn.title = `Skip node ${nodeId}`;
   });
 
   btnReset.disabled = anyRunning || isAutoRunPausedPhase() || autoLocked;
@@ -13729,14 +13636,14 @@ function updateStatusDisplay(state) {
   if (countdown) {
     const remainingMs = countdown.at - Date.now();
     displayStatus.textContent = remainingMs > 0
-      ? `${countdown.title}，剩余 ${formatCountdown(remainingMs)}`
-      : `${countdown.title}，即将结束...`;
+      ? `${countdown.title}, remaining ${formatCountdown(remainingMs)}`
+      : `${countdown.title}, ending soon...`;
     statusBar.classList.add('running');
     return;
   }
 
   if (isAutoRunPausedPhase()) {
-    displayStatus.textContent = `自动已暂停${getAutoRunLabel()}，等待邮箱后继续`;
+    displayStatus.textContent = `Auto paused${getAutoRunLabel()}, waiting for email to continue`;
     statusBar.classList.add('paused');
     return;
   }
@@ -13744,35 +13651,35 @@ function updateStatusDisplay(state) {
   if (isAutoRunWaitingStepPhase()) {
     const runningNodes = getRunningNodes(state);
     displayStatus.textContent = runningNodes.length
-      ? `自动等待节点 ${runningNodes.join(', ')} 完成后继续${getAutoRunLabel()}`
-      : `自动正在按最新进度准备继续${getAutoRunLabel()}`;
+      ? `Auto waiting for nodes ${runningNodes.join(', ')} to finish before continuing${getAutoRunLabel()}`
+      : `Auto preparing to continue with the latest progress${getAutoRunLabel()}`;
     statusBar.classList.add('running');
     return;
   }
 
   const running = Object.entries(nodeStatuses).find(([, s]) => s === 'running');
   if (running) {
-    displayStatus.textContent = `节点 ${running[0]} 运行中...`;
+    displayStatus.textContent = `Node ${running[0]} running...`;
     statusBar.classList.add('running');
     return;
   }
 
   if (isAutoRunLockedPhase()) {
-    displayStatus.textContent = `${currentAutoRun.phase === 'retrying' ? '自动重试中' : '自动运行中'}${getAutoRunLabel()}`;
+    displayStatus.textContent = `${currentAutoRun.phase === 'retrying' ? 'Auto retrying' : 'Auto running'}${getAutoRunLabel()}`;
     statusBar.classList.add('running');
     return;
   }
 
   const failed = Object.entries(nodeStatuses).find(([, s]) => s === 'failed');
   if (failed) {
-    displayStatus.textContent = `节点 ${failed[0]} 失败`;
+    displayStatus.textContent = `Node ${failed[0]} failed`;
     statusBar.classList.add('failed');
     return;
   }
 
   const stopped = Object.entries(nodeStatuses).find(([, s]) => s === 'stopped');
   if (stopped) {
-    displayStatus.textContent = `节点 ${stopped[0]} 已停止`;
+    displayStatus.textContent = `Node ${stopped[0]} stopped`;
     statusBar.classList.add('stopped');
     return;
   }
@@ -13786,15 +13693,15 @@ function updateStatusDisplay(state) {
 
   if (lastCompleted === lastEnabledNodeId) {
     const range = getStepExecutionRangeForCurrentFlow(state);
-    const doneText = range.enabled ? '执行范围已完成' : '全部节点已完成';
-    displayStatus.textContent = (nodeStatuses[lastCompleted] === 'manual_completed' || nodeStatuses[lastCompleted] === 'skipped') ? `${doneText}/跳过` : doneText;
+    const doneText = range.enabled ? 'Selected range completed' : 'All nodes completed';
+    displayStatus.textContent = (nodeStatuses[lastCompleted] === 'manual_completed' || nodeStatuses[lastCompleted] === 'skipped') ? `${doneText}/skipped` : doneText;
     statusBar.classList.add('completed');
   } else if (lastCompleted) {
     displayStatus.textContent = (nodeStatuses[lastCompleted] === 'manual_completed' || nodeStatuses[lastCompleted] === 'skipped')
-      ? `节点 ${lastCompleted} 已跳过`
-      : `节点 ${lastCompleted} 已完成`;
+      ? `Node ${lastCompleted} skipped`
+      : `Node ${lastCompleted} completed`;
   } else {
-    displayStatus.textContent = '就绪';
+    displayStatus.textContent = 'Ready';
   }
 }
 
@@ -13813,7 +13720,7 @@ function appendLog(entry) {
   let html = `<span class="log-time">${time}</span> `;
   html += `<span class="log-level log-level-${entry.level}">${levelLabel}</span> `;
   if (stepNum) {
-    html += `<span class="log-step-tag step-${stepNum}">步${stepNum}</span>`;
+    html += `<span class="log-step-tag step-${stepNum}">Step ${stepNum}</span>`;
   }
   html += `<span class="log-msg">${escapeHtml(entry.message)}</span>`;
 
@@ -13832,7 +13739,7 @@ async function fetchGeneratedEmail(options = {}) {
   const { showFailureToast = true } = options;
   const uiCopy = getCurrentRegistrationEmailUiCopy();
   if (isCustomMailProvider()) {
-    throw new Error('当前邮箱服务为自定义邮箱，请直接填写注册邮箱。');
+    throw new Error('The current email service is custom email. Please enter the signup email directly.');
   }
   const defaultLabel = uiCopy.buttonLabel;
   btnFetchEmail.disabled = true;
@@ -13861,18 +13768,18 @@ async function fetchGeneratedEmail(options = {}) {
       throw new Error(response.error);
     }
     if (!response?.email) {
-      throw new Error('未返回可用邮箱。');
+      throw new Error('No available email was returned.');
     }
 
     inputEmail.value = response.email;
     if (getSelectedEmailGenerator() === 'icloud') {
       queueIcloudAliasRefresh();
     }
-    showToast(`已${uiCopy.successVerb} ${uiCopy.label}：${response.email}`, 'success', 2500);
+    showToast(`${uiCopy.successVerb} ${uiCopy.label}: ${response.email}`, 'success', 2500);
     return response.email;
   } catch (err) {
     if (showFailureToast) {
-      showToast(`${uiCopy.label}${uiCopy.successVerb}失败：${err.message}`, 'error');
+      showToast(`Failed to ${String(uiCopy.successVerb || 'process').toLowerCase()} ${uiCopy.label}: ${err.message}`, 'error');
     }
     throw err;
   } finally {
@@ -14067,10 +13974,10 @@ bindPasswordVisibilityToggles();
 async function copyTextToClipboard(text) {
   const value = String(text || '').trim();
   if (!value) {
-    throw new Error('没有可复制的内容。');
+    throw new Error('There is no content to copy.');
   }
   if (!navigator.clipboard?.writeText) {
-    throw new Error('当前环境不支持剪贴板复制。');
+    throw new Error('The current environment does not support clipboard copy.');
   }
   await navigator.clipboard.writeText(value);
 }
@@ -14079,9 +13986,9 @@ btnCopyGrokSso?.addEventListener('click', async () => {
   try {
     const cookies = normalizeGrokSsoCookies(latestState);
     await copyTextToClipboard(cookies.join('\n'));
-    showToast('Grok SSO Cookie 已复制。', 'success');
+    showToast('Grok SSO Cookie copied.', 'success');
   } catch (error) {
-    showToast(error?.message || '复制 Grok SSO Cookie 失败。', 'error');
+    showToast(error?.message || 'Failed to copy Grok SSO Cookie.', 'error');
   }
 });
 
@@ -14089,7 +13996,7 @@ btnClearGrokSso?.addEventListener('click', async () => {
   try {
     const cookies = normalizeGrokSsoCookies(latestState);
     if (!cookies.length) {
-      showToast('当前没有 Grok SSO Cookie。', 'info');
+      showToast('There is currently no Grok SSO Cookie.', 'info');
       return;
     }
     const response = await chrome.runtime.sendMessage({
@@ -14110,9 +14017,9 @@ btnClearGrokSso?.addEventListener('click', async () => {
       });
     }
     renderGrokRuntimeState(latestState);
-    showToast('Grok SSO Cookie 已清空。', 'success');
+    showToast('Grok SSO Cookie cleared.', 'success');
   } catch (error) {
-    showToast(error?.message || '清空 Grok SSO Cookie 失败。', 'error');
+    showToast(error?.message || 'Failed to clear Grok SSO Cookie.', 'error');
   }
 });
 
@@ -14194,7 +14101,7 @@ const payPalManager = window.SidepanelPayPalManager?.createPayPalManager({
     getPayPalAccounts,
     openFormDialog: (options) => {
       if (!sharedFormDialog?.open) {
-        throw new Error('表单弹窗能力未加载，请刷新扩展后重试。');
+        throw new Error('Form modal support is not loaded. Refresh the extension and try again.');
       }
       return sharedFormDialog.open(options);
     },
@@ -14634,50 +14541,50 @@ async function importSettingsFromFile(file) {
 
 function syncPasswordToggleLabel() {
   syncToggleButtonLabel(btnTogglePassword, inputPassword, {
-    show: '显示密码',
-    hide: '隐藏密码',
+    show: 'Show password',
+    hide: 'Hide password',
   });
 }
 
 function syncVpsUrlToggleLabel() {
   syncToggleButtonLabel(btnToggleVpsUrl, inputVpsUrl, {
-    show: '显示 CPA 地址',
-    hide: '隐藏 CPA 地址',
+    show: 'Show CPA URL',
+    hide: 'Hide CPA URL',
   });
 }
 
 function syncVpsPasswordToggleLabel() {
   syncToggleButtonLabel(btnToggleVpsPassword, inputVpsPassword, {
-    show: '显示管理密钥',
-    hide: '隐藏管理密钥',
+    show: 'Show admin key',
+    hide: 'Hide admin key',
   });
 }
 
 function syncIpProxyApiUrlToggleLabel() {
   syncToggleButtonLabel(btnToggleIpProxyApiUrl, inputIpProxyApiUrl, {
-    show: '显示代理 API',
-    hide: '隐藏代理 API',
+    show: 'Show proxy API',
+    hide: 'Hide proxy API',
   });
 }
 
 function syncIpProxyUsernameToggleLabel() {
   syncToggleButtonLabel(btnToggleIpProxyUsername, inputIpProxyUsername, {
-    show: '显示代理账号',
-    hide: '隐藏代理账号',
+    show: 'Show proxy account',
+    hide: 'Hide proxy account',
   });
 }
 
 function syncIpProxyPasswordToggleLabel() {
   syncToggleButtonLabel(btnToggleIpProxyPassword, inputIpProxyPassword, {
-    show: '显示代理密码',
-    hide: '隐藏代理密码',
+    show: 'Show proxy password',
+    hide: 'Hide proxy password',
   });
 }
 
 function syncHeroSmsApiKeyToggleLabel() {
   syncToggleButtonLabel(btnToggleHeroSmsApiKey, inputHeroSmsApiKey, {
-    show: '显示接码 API Key',
-    hide: '隐藏接码 API Key',
+    show: 'Show SMS verification API key',
+    hide: 'Hide SMS verification API key',
   });
 }
 
@@ -14687,9 +14594,9 @@ async function maybeTakeoverAutoRun(actionLabel) {
   }
 
   const confirmed = await openConfirmModal({
-    title: '接管自动',
-    message: `当前自动流程已暂停。若继续${actionLabel}，将停止自动流程并切换为手动控制。是否继续？`,
-    confirmLabel: '确认接管',
+    title: 'Take over auto',
+    message: `The auto flow is currently paused. If you continue with ${actionLabel}, the auto flow will stop and switch to manual control. Continue?`,
+    confirmLabel: 'Confirm takeover',
     confirmVariant: 'btn-primary',
   });
   if (!confirmed) {
@@ -14703,7 +14610,7 @@ async function maybeTakeoverAutoRun(actionLabel) {
 async function handleSkipNode(nodeId) {
   const normalizedNodeId = String(nodeId || '').trim();
   if (!normalizedNodeId) {
-    throw new Error('缺少要跳过的节点。');
+    throw new Error('Missing node to skip.');
   }
   if (isAutoRunPausedPhase()) {
     const takeoverResponse = await chrome.runtime.sendMessage({
@@ -14731,13 +14638,13 @@ async function handleSkipNode(nodeId) {
     throw new Error(response.error);
   }
 
-  showToast(`节点 ${normalizedNodeId} 已跳过`, 'success', 2200);
+  showToast(`Node ${normalizedNodeId} skipped`, 'success', 2200);
 }
 
 async function handleSkipStep(step) {
   const nodeId = getNodeIdByStepForCurrentMode(step);
   if (!nodeId) {
-    throw new Error(`无效步骤：${step}`);
+    throw new Error(`Invalid step: ${step}`);
   }
   return handleSkipNode(nodeId);
 }
@@ -14754,7 +14661,7 @@ stepsList?.addEventListener('click', async (event) => {
   try {
     const step = Number(btn.dataset.step);
     const nodeId = String(btn.dataset.nodeId || getNodeIdByStepForCurrentMode(step) || '').trim();
-    if (!(await maybeTakeoverAutoRun(`执行节点 ${nodeId || step}`))) {
+    if (!(await maybeTakeoverAutoRun(`run node ${nodeId || step}`))) {
       return;
     }
     await persistCurrentSettingsForAction();
@@ -14787,7 +14694,7 @@ stepsList?.addEventListener('click', async (event) => {
       } else if (false && usesGeneratedAliasMailProvider(selectMailProvider.value)) {
         const emailPrefix = inputEmailPrefix.value.trim();
         if (!emailPrefix) {
-          showToast(selectMailProvider.value === GMAIL_PROVIDER ? '请先填写 Gmail 原邮箱。' : '请先填写 2925 邮箱前缀。', 'warn');
+          showToast(selectMailProvider.value === GMAIL_PROVIDER ? 'Please enter the original Gmail address first.' : 'Please enter the 2925 email prefix first.', 'warn');
           return;
         }
         const response = await sendSidepanelMessage({ type: 'EXECUTE_NODE', source: 'sidepanel', payload: { nodeId, emailPrefix } });
@@ -14798,13 +14705,13 @@ stepsList?.addEventListener('click', async (event) => {
         let email = inputEmail.value.trim();
         if (!email) {
           if (isCustomMailProvider()) {
-            showToast('当前邮箱服务为自定义邮箱，请先填写注册邮箱后再执行第 3 步。', 'warn');
+            showToast('The current email service is custom email. Enter the signup email before running Step 3.', 'warn');
             return;
           }
           try {
             email = await fetchGeneratedEmail({ showFailureToast: false });
           } catch (err) {
-            showToast(`自动获取失败：${err.message}，请手动粘贴邮箱后重试。`, 'warn');
+            showToast(`Auto-fetch failed: ${err.message}. Paste the email manually and try again.`, 'warn');
             return;
           }
         }
@@ -14884,7 +14791,7 @@ btnMailLogin?.addEventListener('click', async () => {
   try {
     await chrome.tabs.create({ url: loginUrl, active: true });
   } catch (err) {
-    showToast(`打开${config.label}失败：${err.message}`, 'error');
+    showToast(`Failed to open ${config.label}: ${err.message}`, 'error');
   }
 });
 
@@ -14895,7 +14802,7 @@ btnIpProxyServiceLogin?.addEventListener('click', () => {
   const config = getIpProxyServiceLoginConfig(service);
   const loginUrl = getIpProxyServiceLoginUrl(service);
   if (!config || !loginUrl) {
-    showToast('当前代理服务没有可跳转的登录页。', 'warn', 1800);
+    showToast('The current proxy service has no login page to open.', 'warn', 1800);
     return;
   }
   openExternalUrl(loginUrl);
@@ -14931,7 +14838,7 @@ hotmailServiceModeButtons.forEach((button) => {
 
 btnSaveSettings.addEventListener('click', async () => {
   if (!settingsDirty) {
-    showToast('配置已是最新', 'info', 1400);
+    showToast('Config is already up to date', 'info', 1400);
     return;
   }
   await saveSettings({ silent: false }).catch(() => { });
@@ -14940,7 +14847,7 @@ btnSaveSettings.addEventListener('click', async () => {
 btnStop.addEventListener('click', async () => {
   btnStop.disabled = true;
   await chrome.runtime.sendMessage({ type: 'STOP_FLOW', source: 'sidepanel', payload: {} });
-  showToast(currentAutoRun.phase === 'waiting_interval' ? '正在取消等待中的倒计时...' : '正在停止当前流程...', 'warn', 2000);
+  showToast(currentAutoRun.phase === 'waiting_interval' ? 'Canceling the waiting countdown...' : 'Stopping the current flow...', 'warn', 2000);
 });
 
 btnConfigMenu?.addEventListener('click', (event) => {
@@ -15024,7 +14931,7 @@ async function startAutoRunFromCurrentSettings() {
     : getRunCountValue();
   registerPendingAutoRunStartRunCount(requestedTotalRuns);
 
-  // 站点内容刷新只影响提示/广告展示，不应阻塞自动流程启动。
+  // Content refresh only affects notices and ads. It should not block auto-flow startup.
   refreshContributionContentHint().catch((error) => {
     console.warn('Failed to refresh contribution content hint before auto run:', error);
   });
@@ -15063,7 +14970,7 @@ async function startAutoRunFromCurrentSettings() {
   })();
   if (autoRunStartValidation?.ok === false) {
     clearPendingAutoRunStartRunCount();
-    throw new Error(autoRunStartValidation.errors?.[0]?.message || '当前设置不支持启动自动流程。');
+    throw new Error(autoRunStartValidation.errors?.[0]?.message || 'The current settings do not support starting the auto flow.');
   }
   if (!(await ensureGpcApiKeyReadyForStart())) {
     clearPendingAutoRunStartRunCount();
@@ -15076,7 +14983,7 @@ async function startAutoRunFromCurrentSettings() {
     ? getLockedRunCountFromEmailPool()
     : 0;
   if (customEmailPoolEnabled && lockedRunCount <= 0) {
-    throw new Error('请先在邮箱池里至少填写 1 个邮箱。');
+    throw new Error('Please add at least 1 email to the email pool first.');
   }
   const totalRuns = lockedRunCount > 0 ? lockedRunCount : requestedTotalRuns;
   registerPendingAutoRunStartRunCount(totalRuns);
@@ -15123,7 +15030,7 @@ async function startAutoRunFromCurrentSettings() {
   const targetId = typeof getSelectedTargetId === 'function'
     ? getSelectedTargetId(activeFlowId)
     : normalizeTargetIdForFlow(activeFlowId, latestState?.targetId || '', getDefaultTargetIdForFlow(activeFlowId));
-  btnAutoRun.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> 运行中...';
+  btnAutoRun.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Running...';
   const response = await sendSidepanelMessage({
     type: 'AUTO_RUN',
     source: 'sidepanel',
@@ -15162,7 +15069,7 @@ btnAutoContinue.addEventListener('click', async () => {
   const email = inputEmail.value.trim();
   if (!email) {
     showToast(
-      isCustomMailProvider() ? '请先填写自定义注册邮箱。' : '请先获取或粘贴邮箱。',
+      isCustomMailProvider() ? 'Please enter the custom signup email first.' : 'Please fetch or paste an email first.',
       'warn'
     );
     return;
@@ -15179,7 +15086,7 @@ btnAutoRunNow?.addEventListener('click', async () => {
       source: 'sidepanel',
       payload: {},
     });
-    showToast('已跳过当前倒计时，自动流程将立即继续。', 'info', 1800);
+    showToast('Skipped the current countdown. The auto flow will continue immediately.', 'info', 1800);
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
@@ -15190,9 +15097,9 @@ btnAutoRunNow?.addEventListener('click', async () => {
 // Reset
 btnReset.addEventListener('click', async () => {
   const confirmed = await openConfirmModal({
-    title: '重置流程',
-    message: '确认重置全部步骤和数据吗？',
-    confirmLabel: '确认重置',
+    title: 'Reset flow',
+    message: 'Reset all steps and data?',
+    confirmLabel: 'Confirm reset',
     confirmVariant: 'btn-danger',
   });
   if (!confirmed) {
@@ -15220,11 +15127,11 @@ btnReset.addEventListener('click', async () => {
     autoRunCountdownTitle: '',
     autoRunCountdownNote: '',
   });
-  displayOauthUrl.textContent = '等待中...';
+  displayOauthUrl.textContent = 'Waiting...';
   displayOauthUrl.classList.remove('has-value');
-  displayLocalhostUrl.textContent = '等待中...';
+  displayLocalhostUrl.textContent = 'Waiting...';
   displayLocalhostUrl.classList.remove('has-value');
-  setKiroRsConnectionTestStatus('未测试');
+  setKiroRsConnectionTestStatus('Not tested');
   inputEmail.value = '';
   if (typeof inputSignupPhone !== 'undefined' && inputSignupPhone) {
     inputSignupPhone.value = '';
@@ -15232,7 +15139,7 @@ btnReset.addEventListener('click', async () => {
   if (typeof syncSignupPhoneInputFromState === 'function') {
     syncSignupPhoneInputFromState(latestState);
   }
-  displayStatus.textContent = '就绪';
+  displayStatus.textContent = 'Ready';
   statusBar.className = 'status-bar';
   logArea.innerHTML = '';
   resetIcloudManager();
@@ -15425,7 +15332,7 @@ btnGpcHelperBalance?.addEventListener('click', async () => {
       throw new Error(response.error);
     }
     if (displayGpcHelperBalance) {
-      displayGpcHelperBalance.textContent = response?.balance || '余额已更新';
+      displayGpcHelperBalance.textContent = response?.balance || 'Balance updated';
     }
     const nextState = {
       gopayHelperBalance: response?.balance || latestState?.gopayHelperBalance || '',
@@ -15442,25 +15349,25 @@ btnGpcHelperBalance?.addEventListener('click', async () => {
     const selectedModeBeforeBalanceState = getSelectedGpcHelperPhoneMode();
     syncLatestState(nextState);
     if (nextAutoModeDenied && selectedModeBeforeBalanceState === GPC_HELPER_PHONE_MODE_AUTO) {
-      showToast('当前 API Key 未开通自动模式，已保留当前选择；如需继续请手动切换到手动模式。', 'warn');
+      showToast('The current API key does not have Auto mode enabled. Your current selection was kept. Switch to Manual mode to continue.', 'warn');
     } else if (nextAutoModeDenied) {
-      showToast('GPC 余额已更新，当前 API Key 只能使用手动模式。', 'success');
+      showToast('GPC balance updated. The current API key supports Manual mode only.', 'success');
     } else if (nextAutoModeConfirmed) {
-      showToast('GPC 余额已更新，自动模式可用。', 'success');
+      showToast('GPC balance updated. Auto mode is available.', 'success');
     } else {
-      showToast('GPC 余额已更新，当前接口未返回自动模式权限，已保留所选模式。', 'success');
+      showToast('GPC balance updated. The current API did not return Auto mode permission, so the selected mode was kept.', 'success');
     }
     updatePlusModeUI();
   } catch (error) {
-    showToast(error?.message || '查询 GPC 余额失败。', 'error');
+    showToast(error?.message || 'Failed to query GPC balance.', 'error');
   }
 });
 
 btnTestKiroRs?.addEventListener('click', async () => {
-  const defaultLabel = btnTestKiroRs.textContent || '测试';
+  const defaultLabel = btnTestKiroRs.textContent || 'Test';
   btnTestKiroRs.disabled = true;
-  btnTestKiroRs.textContent = '测试中';
-  setKiroRsConnectionTestStatus('测试中...');
+  btnTestKiroRs.textContent = 'Testing';
+  setKiroRsConnectionTestStatus('Testing...');
   try {
     await persistCurrentSettingsForAction();
     const activeFlowId = typeof getSelectedFlowId === 'function'
@@ -15481,11 +15388,11 @@ btnTestKiroRs?.addEventListener('click', async () => {
     if (response?.error) {
       throw new Error(response.error);
     }
-    const message = String(response?.message || '').trim() || 'kiro.rs 测试完成。';
+    const message = String(response?.message || '').trim() || 'kiro.rs test completed.';
     setKiroRsConnectionTestStatus(message);
     showToast(message, response?.ok ? 'success' : 'error', response?.ok ? 2200 : 4200);
   } catch (error) {
-    const message = error?.message || 'kiro.rs 测试失败。';
+    const message = error?.message || 'kiro.rs test failed.';
     setKiroRsConnectionTestStatus(message);
     showToast(message, 'error', 4200);
   } finally {
@@ -15765,7 +15672,7 @@ selectPlusAccountAccessStrategy?.addEventListener('change', () => {
 [inputKiroRsUrl, inputKiroRsKey].forEach((input) => {
   input?.addEventListener('input', () => {
     markSettingsDirty(true);
-    setKiroRsConnectionTestStatus('未测试');
+    setKiroRsConnectionTestStatus('Not tested');
     scheduleSettingsAutoSave();
   });
   input?.addEventListener('blur', () => {
@@ -15911,7 +15818,7 @@ ipProxyModeButtons.forEach((button) => {
     if (!apiModeAvailable && nextMode === 'api') {
       setIpProxyMode('account');
       updateIpProxyUI(latestState);
-      showToast('API 模式暂未开放，请先使用账号密码模式。', 'info', 1800);
+      showToast('API mode is not available yet. Use account/password mode first.', 'info', 1800);
       return;
     }
     if (getSelectedIpProxyMode() === nextMode) {
@@ -15948,7 +15855,7 @@ btnIpProxyRefresh?.addEventListener('click', async () => {
       return;
     }
   } catch (err) {
-    showToast(err?.message || String(err || '未知错误'), 'error');
+    showToast(err?.message || String(err || 'Unknown error'), 'error');
   }
 });
 
@@ -15968,7 +15875,7 @@ btnIpProxyNext?.addEventListener('click', async () => {
       return;
     }
   } catch (err) {
-    showToast(err?.message || String(err || '未知错误'), 'error');
+    showToast(err?.message || String(err || 'Unknown error'), 'error');
   }
 });
 
@@ -15988,7 +15895,7 @@ btnIpProxyChange?.addEventListener('click', async () => {
       return;
     }
   } catch (err) {
-    showToast(err?.message || String(err || '未知错误'), 'error');
+    showToast(err?.message || String(err || 'Unknown error'), 'error');
   }
 });
 
@@ -16008,7 +15915,7 @@ btnIpProxyProbe?.addEventListener('click', async () => {
       return;
     }
   } catch (err) {
-    showToast(err?.message || String(err || '未知错误'), 'error');
+    showToast(err?.message || String(err || 'Unknown error'), 'error');
   }
 });
 
@@ -16016,7 +15923,7 @@ btnIpProxyCheckIp?.addEventListener('click', async () => {
   try {
     await chrome.tabs.create({ url: 'https://ipinfo.io/what-is-my-ip' });
   } catch (err) {
-    showToast(`打开 IP 检测页失败：${err?.message || String(err || '未知错误')}`, 'error');
+    showToast(`Failed to open the IP check page: ${err?.message || String(err || 'Unknown error')}`, 'error');
   }
 });
 
@@ -16045,7 +15952,7 @@ btnCfDomainMode.addEventListener('click', async () => {
 
     const newDomain = normalizeCloudflareDomainValue(inputCfDomain.value);
     if (!newDomain) {
-      showToast('请输入有效的 Cloudflare 域名。', 'warn');
+      showToast('Please enter a valid Cloudflare domain.', 'warn');
       inputCfDomain.focus();
       return;
     }
@@ -16126,7 +16033,7 @@ inputSub2ApiAccountPriority.addEventListener('blur', () => {
 
 btnAddSub2ApiGroup?.addEventListener('click', () => {
   handleAddSub2ApiGroup().catch((error) => {
-    showToast(error?.message || '添加 SUB2API 分组失败。', 'error');
+    showToast(error?.message || 'Failed to add SUB2API group.', 'error');
   });
 });
 
@@ -16708,8 +16615,8 @@ async function switchPhoneSmsProvider(nextProvider) {
   if (inputFiveSimOperator) {
     inputFiveSimOperator.value = normalizeFiveSimOperator(latestState?.fiveSimOperator);
   }
-  if (displayHeroSmsPriceTiers) displayHeroSmsPriceTiers.textContent = '未获取';
-  if (displayPhoneSmsBalance) displayPhoneSmsBalance.textContent = '余额未获取';
+  if (displayHeroSmsPriceTiers) displayHeroSmsPriceTiers.textContent = 'Not fetched';
+  if (displayPhoneSmsBalance) displayPhoneSmsBalance.textContent = 'Balance not fetched';
   if (rowHeroSmsPriceTiers) rowHeroSmsPriceTiers.style.display = 'none';
 
   await loadHeroSmsCountries({ silent: true });
@@ -16733,7 +16640,7 @@ async function switchPhoneSmsProvider(nextProvider) {
 
 selectPhoneSmsProvider?.addEventListener('change', () => {
   switchPhoneSmsProvider(selectPhoneSmsProvider.value).catch((error) => {
-    showToast(`切换接码平台失败：${error?.message || error}`, 'warn', 2200);
+    showToast(`Failed to switch SMS verification platform: ${error?.message || error}`, 'warn', 2200);
   });
 });
 
@@ -16743,7 +16650,7 @@ inputPhoneVerificationEnabled?.addEventListener('change', () => {
   } else {
     setSignupMethod(SIGNUP_METHOD_EMAIL);
     updatePhoneVerificationSettingsUI();
-    showToast('已切回邮箱注册', 'info', 1600);
+    showToast('Switched back to email signup', 'info', 1600);
   }
   syncStepDefinitionsFromUiState({
     phoneVerificationEnabled: Boolean(inputPhoneVerificationEnabled.checked),
@@ -16974,13 +16881,13 @@ inputFreePhoneReuseAutoEnabled?.addEventListener('change', () => {
 
 btnSaveFreeReusablePhone?.addEventListener('click', async () => {
   if (isPhoneSignupReuseLocked(latestState)) {
-    showToast?.('手机号注册流程不能记录白嫖复用号码，请切回邮箱注册后再使用。', 'warn', 2600);
+    showToast?.('The phone signup flow cannot record free-reuse phone numbers. Switch back to email signup before using this.', 'warn', 2600);
     updatePhoneVerificationSettingsUI();
     return;
   }
   const phoneNumber = String(inputFreeReusablePhone?.value || '').trim();
   if (!phoneNumber) {
-    showToast?.('请先填写白嫖复用手机号。', 'warn', 2200);
+    showToast?.('Please enter the free-reuse phone number first.', 'warn', 2200);
     inputFreeReusablePhone?.focus?.();
     return;
   }
@@ -16992,10 +16899,10 @@ btnSaveFreeReusablePhone?.addEventListener('click', async () => {
       throw new Error(response.error);
     }
     await refreshFreeReusablePhoneStateFallback(response || {});
-    showToast?.('已记录白嫖复用手机号。', 'success', 1800);
+    showToast?.('Free-reuse phone number recorded.', 'success', 1800);
   } catch (error) {
     console.error('Failed to save free reusable phone:', error);
-    showToast?.(`记录白嫖复用手机号失败：${error?.message || error}`, 'error', 4000);
+    showToast?.(`Failed to record the free-reuse phone number: ${error?.message || error}`, 'error', 4000);
   }
 });
 
@@ -17008,10 +16915,10 @@ btnClearFreeReusablePhone?.addEventListener('click', async () => {
       throw new Error(response.error);
     }
     await refreshFreeReusablePhoneStateFallback(response || {}, { clear: true });
-    showToast?.('已清除白嫖复用手机号。', 'info', 1800);
+    showToast?.('Free-reuse phone number cleared.', 'info', 1800);
   } catch (error) {
     console.error('Failed to clear free reusable phone:', error);
-    showToast?.(`清除白嫖复用手机号失败：${error?.message || error}`, 'error', 4000);
+    showToast?.(`Failed to clear the free-reuse phone number: ${error?.message || error}`, 'error', 4000);
   }
 });
 
@@ -17086,11 +16993,11 @@ btnHeroSmsPricePreview?.addEventListener('click', async () => {
   try {
     await previewHeroSmsPriceTiers();
     if (typeof showToast === 'function') {
-      showToast('已刷新接码国家价格预览。', 'info', 1600);
+      showToast('SMS verification country price preview refreshed.', 'info', 1600);
     }
   } catch (error) {
     if (typeof showToast === 'function') {
-      showToast(`价格预览失败：${error?.message || error}`, 'warn', 2200);
+      showToast(`Price preview failed: ${error?.message || error}`, 'warn', 2200);
     }
   }
 });
@@ -17099,11 +17006,11 @@ btnPhoneSmsBalance?.addEventListener('click', async () => {
   try {
     await previewPhoneSmsBalance();
     if (typeof showToast === 'function') {
-      showToast('已刷新接码平台余额。', 'info', 1600);
+      showToast('SMS verification platform balance refreshed.', 'info', 1600);
     }
   } catch (error) {
     if (typeof showToast === 'function') {
-      showToast(`余额查询失败：${error?.message || error}`, 'warn', 2200);
+      showToast(`Balance query failed: ${error?.message || error}`, 'warn', 2200);
     }
   }
 });
@@ -17220,7 +17127,7 @@ btnHeroSmsCountryClear?.addEventListener('click', () => {
   markSettingsDirty(true);
   saveSettings({ silent: true }).catch(() => { });
   if (typeof showToast === 'function') {
-    showToast('已清空国家优先级。', 'info', 1800);
+    showToast('Country priority cleared.', 'info', 1800);
   }
 });
 
@@ -17247,7 +17154,7 @@ btnFiveSimCountryClear?.addEventListener('click', () => {
   markSettingsDirty(true);
   saveSettings({ silent: true }).catch(() => { });
   if (typeof showToast === 'function') {
-    showToast('已清空国家优先级。', 'info', 1800);
+    showToast('Country priority cleared.', 'info', 1800);
   }
 });
 
@@ -17275,7 +17182,7 @@ btnNexSmsCountryClear?.addEventListener('click', () => {
   markSettingsDirty(true);
   saveSettings({ silent: true }).catch(() => { });
   if (typeof showToast === 'function') {
-    showToast('已清空国家优先级。', 'info', 1800);
+    showToast('Country priority cleared.', 'info', 1800);
   }
 });
 
@@ -17310,7 +17217,7 @@ btnPhoneSmsProviderOrderReset?.addEventListener('click', () => {
   markSettingsDirty(true);
   saveSettings({ silent: true }).catch(() => { });
   if (typeof showToast === 'function') {
-    showToast('已清空服务商顺序。', 'info', 1800);
+    showToast('Provider order cleared.', 'info', 1800);
   }
 });
 
@@ -17343,10 +17250,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
     case 'SECURITY_BLOCKED_ALERT': {
       openConfirmModal({
-        title: message.payload?.title || '流程已完全停止',
-        message: message.payload?.message || '检测到安全风控，当前流程已完全停止。',
-        alert: message.payload?.alert || { text: '检测到 Cloudflare 风控，请暂停当前操作。', tone: 'danger' },
-        confirmLabel: '我知道了',
+        title: message.payload?.title || 'Flow fully stopped',
+        message: message.payload?.message || 'A security risk control was detected. The current flow has been fully stopped.',
+        alert: message.payload?.alert || { text: 'Cloudflare risk control detected. Please pause the current action.', tone: 'danger' },
+        confirmLabel: 'I understand',
         confirmVariant: 'btn-danger',
       }).catch(() => { });
       break;
@@ -17397,9 +17304,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         autoRunCountdownTitle: '',
         autoRunCountdownNote: '',
       });
-      displayOauthUrl.textContent = '等待中...';
+      displayOauthUrl.textContent = 'Waiting...';
       displayOauthUrl.classList.remove('has-value');
-      displayLocalhostUrl.textContent = '等待中...';
+      displayLocalhostUrl.textContent = 'Waiting...';
       displayLocalhostUrl.classList.remove('has-value');
       inputEmail.value = '';
       if (typeof inputSignupPhone !== 'undefined' && inputSignupPhone) {
@@ -17413,7 +17320,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       if (typeof syncSignupPhoneInputFromState === 'function') {
         syncSignupPhoneInputFromState(latestState);
       }
-      displayStatus.textContent = '就绪';
+      displayStatus.textContent = 'Ready';
       statusBar.className = 'status-bar';
       logArea.innerHTML = '';
       resetIcloudManager();
@@ -17666,11 +17573,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         updateIpProxyUI(latestState);
       }
       if (message.payload.oauthUrl !== undefined) {
-        displayOauthUrl.textContent = message.payload.oauthUrl || '等待中...';
+        displayOauthUrl.textContent = message.payload.oauthUrl || 'Waiting...';
         displayOauthUrl.classList.toggle('has-value', Boolean(message.payload.oauthUrl));
       }
       if (message.payload.localhostUrl !== undefined) {
-        displayLocalhostUrl.textContent = message.payload.localhostUrl || '等待中...';
+        displayLocalhostUrl.textContent = message.payload.localhostUrl || 'Waiting...';
         displayLocalhostUrl.classList.toggle('has-value', Boolean(message.payload.localhostUrl));
       }
       if (message.payload.cloudflareTempEmailBaseUrl !== undefined) {
@@ -17747,8 +17654,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           const balanceText = String(message.payload.gopayHelperBalance ?? latestState?.gopayHelperBalance ?? '').trim();
           const balanceError = String(message.payload.gopayHelperBalanceError ?? latestState?.gopayHelperBalanceError ?? '').trim();
           displayGpcHelperBalance.textContent = balanceError
-            ? `余额查询失败：${balanceError}`
-            : (balanceText || '余额已更新');
+            ? `Balance query failed: ${balanceError}`
+            : (balanceText || 'Balance updated');
         }
       }
       if (
@@ -18155,7 +18062,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
 
     case 'ICLOUD_LOGIN_REQUIRED': {
-      const loginMessage = '需要登录 iCloud，我已经为你打开登录页。';
+      const loginMessage = 'iCloud login is required. I have opened the login page for you.';
       showToast(loginMessage, 'warn', 5000);
       if (icloudSummary) {
         icloudSummary.textContent = loginMessage;

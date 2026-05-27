@@ -31,13 +31,13 @@
     function updateMail2925ListViewport() {
       const count = getMail2925Accounts().length;
       if (dom.btnDeleteAllMail2925Accounts) {
-        dom.btnDeleteAllMail2925Accounts.textContent = `全部删除${count > 0 ? `（${count}）` : ''}`;
+        dom.btnDeleteAllMail2925Accounts.textContent = `Delete All${count > 0 ? `(${count})` : ''}`;
         dom.btnDeleteAllMail2925Accounts.disabled = count === 0;
       }
       if (dom.btnToggleMail2925List) {
         const label = typeof mail2925Utils.getMail2925ListToggleLabel === 'function'
           ? mail2925Utils.getMail2925ListToggleLabel(listExpanded, count)
-          : `${listExpanded ? '收起列表' : '展开列表'}${count > 0 ? `（${count}）` : ''}`;
+          : `${listExpanded ? 'Collapse List' : 'Expand List'}${count > 0 ? `(${count})` : ''}`;
         dom.btnToggleMail2925List.textContent = label;
         dom.btnToggleMail2925List.setAttribute('aria-expanded', String(listExpanded));
         dom.btnToggleMail2925List.disabled = count === 0;
@@ -65,7 +65,7 @@
     function formatDateTime(timestamp) {
       const value = Number(timestamp);
       if (!Number.isFinite(value) || value <= 0) {
-        return '未记录';
+        return 'Not recorded';
       }
       return new Date(value).toLocaleString('zh-CN', {
         hour12: false,
@@ -79,15 +79,15 @@
         : 'ready';
       switch (status) {
         case 'cooldown':
-          return { label: '冷却中', className: 'status-used' };
+          return { label: 'Cooling down', className: 'status-used' };
         case 'disabled':
-          return { label: '已禁用', className: 'status-disabled' };
+          return { label: 'Disabled', className: 'status-disabled' };
         case 'error':
-          return { label: '异常', className: 'status-error' };
+          return { label: 'Error', className: 'status-error' };
         case 'pending':
-          return { label: '待完善', className: 'status-pending' };
+          return { label: 'Pending', className: 'status-pending' };
         default:
-          return { label: '可用', className: 'status-authorized' };
+          return { label: 'Available', className: 'status-authorized' };
       }
     }
 
@@ -125,7 +125,7 @@
           account.email,
           statusKey,
           status.label,
-          isCurrent ? 'current 当前' : '',
+          isCurrent ? 'current' : '',
         ].join(' ').toLowerCase();
 
         return haystack.includes(normalizedSearchTerm);
@@ -166,8 +166,8 @@
       ? createAccountPoolFormController({
         formShell: dom.mail2925FormShell,
         toggleButton: dom.btnToggleMail2925Form,
-        hiddenLabel: '添加账号',
-        visibleLabel: '取消添加',
+        hiddenLabel: 'Add Account',
+        visibleLabel: 'Cancel Add',
         onClear: () => {
           stopEditingAccount({ clearForm: true });
         },
@@ -183,7 +183,7 @@
 
     function syncEditUi() {
       if (dom.btnAddMail2925Account) {
-        dom.btnAddMail2925Account.textContent = editingAccountId ? '保存修改' : '添加账号';
+        dom.btnAddMail2925Account.textContent = editingAccountId ? 'Save Changes' : 'Add Account';
       }
     }
 
@@ -213,52 +213,52 @@
       const currentId = getCurrentMail2925AccountId(latestState);
 
       if (!accounts.length) {
-        dom.mail2925AccountsList.innerHTML = '<div class="hotmail-empty">还没有 2925 账号，先添加一条再使用。</div>';
+        dom.mail2925AccountsList.innerHTML = '<div class="hotmail-empty">No 2925 accounts yet. Add one before using.</div>';
         updateMail2925ListViewport();
         return;
       }
 
       const visibleAccounts = getFilteredMail2925Accounts(accounts, currentId);
       if (!visibleAccounts.length) {
-        dom.mail2925AccountsList.innerHTML = '<div class="hotmail-empty">没有匹配当前筛选条件的 2925 账号。</div>';
+        dom.mail2925AccountsList.innerHTML = '<div class="hotmail-empty">No 2925 accounts match the current filter.</div>';
         updateMail2925ListViewport();
         return;
       }
 
       dom.mail2925AccountsList.innerHTML = visibleAccounts.map((account) => {
         const status = getStatusSnapshot(account);
-        const coolingDown = status.label === '冷却中';
+        const coolingDown = status.label === 'Cooling down';
         return `
           <div class="hotmail-account-item${account.id === currentId ? ' is-current' : ''}">
             <div class="hotmail-account-top">
               <div class="hotmail-account-title-row">
-                <div class="hotmail-account-email">${helpers.escapeHtml(account.email || '(未命名账号)')}</div>
+                <div class="hotmail-account-email">${helpers.escapeHtml(account.email || '(unnamed account)')}</div>
                 <button
                   class="hotmail-copy-btn"
                   type="button"
                   data-account-action="copy-email"
                   data-account-id="${helpers.escapeHtml(account.id)}"
-                  title="复制邮箱"
-                  aria-label="复制邮箱 ${helpers.escapeHtml(account.email || '')}"
+                  title="Copy email"
+                  aria-label="Copy email ${helpers.escapeHtml(account.email || '')}"
                 >${copyIcon}</button>
               </div>
               <span class="hotmail-status-chip ${helpers.escapeHtml(status.className)}">${helpers.escapeHtml(status.label)}</span>
             </div>
             <div class="hotmail-account-meta">
-              <span>密码：${account.password ? '已保存' : '未保存'}</span>
-              <span>上次登录：${helpers.escapeHtml(formatDateTime(account.lastLoginAt))}</span>
-              <span>上次使用：${helpers.escapeHtml(formatDateTime(account.lastUsedAt))}</span>
-              <span>上限记录：${helpers.escapeHtml(formatDateTime(account.lastLimitAt))}</span>
-              <span>恢复时间：${helpers.escapeHtml(formatDateTime(account.disabledUntil))}</span>
+              <span>Password: ${account.password ? 'Saved' : 'Not saved'}</span>
+              <span>Last login: ${helpers.escapeHtml(formatDateTime(account.lastLoginAt))}</span>
+              <span>Last used: ${helpers.escapeHtml(formatDateTime(account.lastUsedAt))}</span>
+              <span>Limit record: ${helpers.escapeHtml(formatDateTime(account.lastLimitAt))}</span>
+              <span>Recovery time: ${helpers.escapeHtml(formatDateTime(account.disabledUntil))}</span>
             </div>
             ${account.lastError ? `<div class="hotmail-account-error">${helpers.escapeHtml(account.lastError)}</div>` : ''}
             <div class="hotmail-account-actions">
-              <button class="btn btn-outline btn-sm" type="button" data-account-action="select" data-account-id="${helpers.escapeHtml(account.id)}">使用此账号</button>
-              <button class="btn btn-primary btn-sm" type="button" data-account-action="login" data-account-id="${helpers.escapeHtml(account.id)}">登录</button>
-              <button class="btn btn-outline btn-sm" type="button" data-account-action="edit" data-account-id="${helpers.escapeHtml(account.id)}">编辑</button>
-              <button class="btn btn-outline btn-sm" type="button" data-account-action="toggle-enabled" data-account-id="${helpers.escapeHtml(account.id)}">${account.enabled === false ? '启用' : '禁用'}</button>
-              ${coolingDown ? `<button class="btn btn-outline btn-sm" type="button" data-account-action="clear-cooldown" data-account-id="${helpers.escapeHtml(account.id)}">清冷却</button>` : ''}
-              <button class="btn btn-ghost btn-sm" type="button" data-account-action="delete" data-account-id="${helpers.escapeHtml(account.id)}">删除</button>
+              <button class="btn btn-outline btn-sm" type="button" data-account-action="select" data-account-id="${helpers.escapeHtml(account.id)}">Use this account</button>
+              <button class="btn btn-primary btn-sm" type="button" data-account-action="login" data-account-id="${helpers.escapeHtml(account.id)}">Login</button>
+              <button class="btn btn-outline btn-sm" type="button" data-account-action="edit" data-account-id="${helpers.escapeHtml(account.id)}">Edit</button>
+              <button class="btn btn-outline btn-sm" type="button" data-account-action="toggle-enabled" data-account-id="${helpers.escapeHtml(account.id)}">${account.enabled === false ? 'Enable' : 'Disable'}</button>
+              ${coolingDown ? `<button class="btn btn-outline btn-sm" type="button" data-account-action="clear-cooldown" data-account-id="${helpers.escapeHtml(account.id)}">Clear Cooldown</button>` : ''}
+              <button class="btn btn-ghost btn-sm" type="button" data-account-action="delete" data-account-id="${helpers.escapeHtml(account.id)}">Delete</button>
             </div>
           </div>
         `;
@@ -273,11 +273,11 @@
       const email = String(dom.inputMail2925Email?.value || '').trim();
       const password = String(dom.inputMail2925Password?.value || '');
       if (!email) {
-        helpers.showToast('请先填写 2925 邮箱。', 'warn');
+        helpers.showToast('Please fill in the 2925 email first.', 'warn');
         return;
       }
       if (!password) {
-        helpers.showToast('请先填写 2925 密码。', 'warn');
+        helpers.showToast('Please fill in the 2925 password first.', 'warn');
         return;
       }
 
@@ -305,13 +305,13 @@
         formController.setVisible(false, { clearForm: true });
         helpers.showToast(
           updatingExisting
-            ? `已更新 2925 账号 ${email}`
-            : `已保存 2925 账号 ${email}`,
+            ? `Updated 2925 account ${email}`
+            : `Saved 2925 account ${email}`,
           'success',
           1800
         );
       } catch (err) {
-        helpers.showToast(`保存 2925 账号失败：${err.message}`, 'error');
+        helpers.showToast(`Failed to save 2925 account: ${err.message}`, 'error');
       } finally {
         actionInFlight = false;
         if (dom.btnAddMail2925Account) {
@@ -323,19 +323,19 @@
     async function handleImportMail2925Accounts() {
       if (actionInFlight) return;
       if (typeof mail2925Utils.parseMail2925ImportText !== 'function') {
-        helpers.showToast('2925 导入解析器未加载，请刷新扩展后重试。', 'error');
+        helpers.showToast('2925 import parser not loaded, please refresh the extension and retry.', 'error');
         return;
       }
 
       const rawText = String(dom.inputMail2925Import?.value || '').trim();
       if (!rawText) {
-        helpers.showToast('请先粘贴 2925 账号导入内容。', 'warn');
+        helpers.showToast('Please paste the 2925 account import content first.', 'warn');
         return;
       }
 
       const parsedAccounts = mail2925Utils.parseMail2925ImportText(rawText);
       if (!parsedAccounts.length) {
-        helpers.showToast('没有解析到有效账号，请检查格式是否为 邮箱----密码。', 'error');
+        helpers.showToast('No valid accounts parsed. Please check format: email----password.', 'error');
         return;
       }
 
@@ -359,9 +359,9 @@
         if (dom.inputMail2925Import) {
           dom.inputMail2925Import.value = '';
         }
-        helpers.showToast(`已导入 ${parsedAccounts.length} 条 2925 账号`, 'success', 2200);
+        helpers.showToast(`Imported ${parsedAccounts.length} 2925 accounts`, 'success', 2200);
       } catch (err) {
-        helpers.showToast(`批量导入 2925 账号失败：${err.message}`, 'error');
+        helpers.showToast(`Bulk import of 2925 accounts failed: ${err.message}`, 'error');
       } finally {
         actionInFlight = false;
         if (dom.btnImportMail2925Accounts) {
@@ -373,14 +373,14 @@
     async function deleteAllMail2925Accounts() {
       const accounts = getMail2925Accounts();
       if (!accounts.length) {
-        helpers.showToast('没有可删除的 2925 账号。', 'warn');
+        helpers.showToast('No 2925 accounts to delete.', 'warn');
         return;
       }
 
       const confirmed = await helpers.openConfirmModal({
-        title: '全部删除 2925 账号',
-        message: `确认删除当前全部 ${accounts.length} 个 2925 账号吗？`,
-        confirmLabel: '确认全部删除',
+        title: 'Delete All 2925 Accounts',
+        message: `Are you sure you want to delete all ${accounts.length} current 2925 accounts?`,
+        confirmLabel: 'Confirm Delete All',
         confirmVariant: 'btn-danger',
       });
       if (!confirmed) {
@@ -403,7 +403,7 @@
       formController.setVisible(false, { clearForm: true });
       refreshManagedAliasBaseEmail();
       renderMail2925Accounts();
-      helpers.showToast(`已删除全部 ${response.deletedCount || 0} 个 2925 账号`, 'success', 2200);
+      helpers.showToast(`Deleted all ${response.deletedCount || 0} 2925 accounts`, 'success', 2200);
     }
 
     async function handleAccountListClick(event) {
@@ -424,9 +424,9 @@
 
       try {
         if (action === 'copy-email') {
-          if (!targetAccount?.email) throw new Error('未找到可复制的 2925 邮箱。');
+          if (!targetAccount?.email) throw new Error('No 2925 email found to copy.');
           await helpers.copyTextToClipboard(targetAccount.email);
-          helpers.showToast(`已复制 ${targetAccount.email}`, 'success', 1800);
+          helpers.showToast(`Copied ${targetAccount.email}`, 'success', 1800);
           return;
         }
 
@@ -440,7 +440,7 @@
           state.syncLatestState({ currentMail2925AccountId: response.account.id });
           refreshManagedAliasBaseEmail();
           renderMail2925Accounts();
-          helpers.showToast(`已切换当前 2925 账号为 ${response.account.email}`, 'success', 2000);
+          helpers.showToast(`Switched current 2925 account to ${response.account.email}`, 'success', 2000);
           return;
         }
 
@@ -457,19 +457,19 @@
           state.syncLatestState({ currentMail2925AccountId: response.account.id });
           refreshManagedAliasBaseEmail();
           renderMail2925Accounts();
-          helpers.showToast(`已使用 ${response.account.email} 登录 2925 邮箱`, 'success', 2200);
+          helpers.showToast(`Logged in to 2925 with ${response.account.email}`, 'success', 2200);
           return;
         }
 
         if (action === 'edit') {
-          if (!targetAccount) throw new Error('未找到目标 2925 账号。');
+          if (!targetAccount) throw new Error('Target 2925 account not found.');
           startEditingAccount(targetAccount);
-          helpers.showToast(`已载入 ${targetAccount.email}，修改后点“保存修改”即可`, 'info', 1800);
+          helpers.showToast(`Loaded ${targetAccount.email}, click "Save Changes" after editing`, 'info', 1800);
           return;
         }
 
         if (action === 'toggle-enabled') {
-          if (!targetAccount) throw new Error('未找到目标 2925 账号。');
+          if (!targetAccount) throw new Error('Target 2925 account not found.');
           const response = await runtime.sendMessage({
             type: 'PATCH_MAIL2925_ACCOUNT',
             source: 'sidepanel',
@@ -482,7 +482,7 @@
           });
           if (response?.error) throw new Error(response.error);
           applyMail2925AccountMutation(response.account);
-          helpers.showToast(`2925 账号 ${response.account.email} 已${response.account.enabled === false ? '禁用' : '启用'}`, 'success', 2200);
+          helpers.showToast(`2925 account ${response.account.email} ${response.account.enabled === false ? 'disabled' : 'enabled'}`, 'success', 2200);
           return;
         }
 
@@ -500,15 +500,15 @@
           });
           if (response?.error) throw new Error(response.error);
           applyMail2925AccountMutation(response.account);
-          helpers.showToast(`2925 账号 ${response.account.email} 已清除冷却`, 'success', 2200);
+          helpers.showToast(`2925 account ${response.account.email} cooldown cleared`, 'success', 2200);
           return;
         }
 
         if (action === 'delete') {
           const confirmed = await helpers.openConfirmModal({
-            title: '删除 2925 账号',
-            message: '确认删除这个 2925 账号吗？',
-            confirmLabel: '确认删除',
+            title: 'Delete 2925 Account',
+            message: 'Are you sure you want to delete this 2925 account?',
+            confirmLabel: 'Confirm Delete',
             confirmVariant: 'btn-danger',
           });
           if (!confirmed) {
@@ -532,7 +532,7 @@
           }
           refreshManagedAliasBaseEmail();
           renderMail2925Accounts();
-          helpers.showToast('2925 账号已删除', 'success', 1800);
+          helpers.showToast('2925 account deleted', 'success', 1800);
         }
       } catch (err) {
         helpers.showToast(err.message, 'error');

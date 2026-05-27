@@ -133,7 +133,7 @@
   }
 
   function getErrorMessage(error) {
-    return error instanceof Error ? error.message : String(error ?? '未知错误');
+    return error instanceof Error ? error.message : String(error ?? 'Unknown error');
   }
 
   function isKiroWebUrl(rawUrl = '') {
@@ -178,7 +178,7 @@
       return {
         url: normalizedUrl,
         state: stateValue,
-        error: `回调 state 不匹配：expected=${cleanString(expectedState)} actual=${stateValue}`,
+        error: `Callback state mismatch: expected=${cleanString(expectedState)} actual=${stateValue}`,
       };
     }
     const error = cleanString(parsed.searchParams.get('error_description') || parsed.searchParams.get('error'));
@@ -253,7 +253,7 @@
       installListeners();
       const expectedState = cleanString(params.expectedState);
       if (!expectedState) {
-        throw new Error('缺少桌面授权 state，无法注册回调监听。');
+        throw new Error('Missing desktop authorization state, cannot register callback listener.');
       }
       const existingResolved = resolvedSessions.get(expectedState);
       const existingPending = pendingSessions.get(expectedState);
@@ -286,7 +286,7 @@
       }
       const session = pendingSessions.get(stateKey);
       if (!session) {
-        return Promise.reject(new Error(`未注册桌面授权回调监听：${stateKey}`));
+        return Promise.reject(new Error(`Desktop authorization callback listener not registered: ${stateKey}`));
       }
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
@@ -295,7 +295,7 @@
             nextSession.waiters = (nextSession.waiters || []).filter((entry) => entry.reject !== reject);
             pendingSessions.set(stateKey, nextSession);
           }
-          reject(new Error('等待桌面授权回调超时。'));
+          reject(new Error('Timed out waiting for desktop authorization callback.'));
         }, Math.max(1000, Math.floor(Number(timeoutMs) || DEFAULT_KIRO_PAGE_LOAD_TIMEOUT_MS)));
         session.waiters.push({
           resolve: (result) => {
@@ -318,7 +318,7 @@
       }
       const session = pendingSessions.get(stateKey);
       if (session && Array.isArray(session.waiters)) {
-        session.waiters.forEach(({ reject }) => reject(new Error('桌面授权回调监听已清理。')));
+        session.waiters.forEach(({ reject }) => reject(new Error('Desktop authorization callback listener cleared.')));
       }
       pendingSessions.delete(stateKey);
       resolvedSessions.delete(stateKey);
@@ -414,12 +414,12 @@
 
     async function finalizeDesktopAuthorizeCallback(currentState = {}, runtimeState = {}, resolvedCallback = {}, nodeId = '') {
       if (resolvedCallback?.error) {
-        throw new Error(`桌面授权回调失败：${resolvedCallback.error}`);
+        throw new Error(`Desktop authorization callback failed: ${resolvedCallback.error}`);
       }
 
       const authorizationCode = cleanString(resolvedCallback?.code);
       if (!authorizationCode) {
-        throw new Error('桌面授权回调缺少 authorization code。');
+        throw new Error('Desktop authorization callback missing authorization code.');
       }
 
       const tokenResult = await desktopClientApi.exchangeDesktopAuthorizationCode({
@@ -449,7 +449,7 @@
           error: '',
         },
       });
-      await log('步骤 8：桌面授权回调已捕获，Token 换取成功。', 'ok', nodeId);
+      await log('Step 8: desktop authorization callback captured, token exchange succeeded.', 'ok', nodeId);
       await completeNodeFromBackground(nodeId, payload);
       return payload;
     }
@@ -465,11 +465,11 @@
         return tabId;
       }
       if (!authorizeUrl) {
-        throw new Error(options.missingUrlMessage || '缺少桌面授权地址，请先执行步骤 7。');
+        throw new Error(options.missingUrlMessage || 'Missing desktop authorization URL, please run step 7 first.');
       }
       tabId = await reuseOrCreateTab(KIRO_DESKTOP_SOURCE_ID, authorizeUrl);
       if (!Number.isInteger(tabId)) {
-        throw new Error(options.openFailedMessage || '无法打开桌面授权页，请重试步骤 7。');
+        throw new Error(options.openFailedMessage || 'Unable to open desktop authorization page, please retry step 7.');
       }
       await registerTab(KIRO_DESKTOP_SOURCE_ID, tabId);
       await setState(mergeRuntimePatch(state, {
@@ -488,7 +488,7 @@
 
     async function reattachDesktopAuthorizePage(tabId, options = {}) {
       if (!Number.isInteger(tabId)) {
-        throw new Error('缺少 Kiro 桌面授权页标签页，无法重新连接内容脚本。');
+        throw new Error('Missing Kiro desktop authorization page tab, cannot reconnect content script.');
       }
       const timeoutBudget = resolveTimeoutBudget(options);
       if (typeof waitForTabStableComplete === 'function') {
@@ -505,7 +505,7 @@
           injectSource: KIRO_DESKTOP_SOURCE_ID,
           timeoutMs: timeoutBudget.getRemainingMs(1000),
           retryDelayMs: 800,
-          logMessage: options.injectLogMessage || 'Kiro 桌面授权页已跳转，正在重新连接内容脚本...',
+          logMessage: options.injectLogMessage || 'Kiro desktop authorization page navigated, reconnecting content script...',
         });
       }
     }
@@ -522,14 +522,14 @@
           timeoutBudget: createTimeoutBudget(remainingTimeoutMs),
           stableMs: Number(options.recoveryStableMs) || Number(options.stableMs) || 1200,
           initialDelayMs: Number(options.recoveryInitialDelayMs) || 120,
-          injectLogMessage: options.recoveryInjectLogMessage || options.injectLogMessage || 'Kiro 桌面授权页已跳转，正在重新连接内容脚本...',
+          injectLogMessage: options.recoveryInjectLogMessage || options.injectLogMessage || 'Kiro desktop authorization page navigated, reconnecting content script...',
         });
       };
     }
 
     async function getDesktopAuthorizePageState(tabId, options = {}) {
       if (!Number.isInteger(tabId)) {
-        throw new Error('缺少 Kiro 桌面授权页标签页，无法继续执行。');
+        throw new Error('Missing Kiro desktop authorization page tab, cannot continue.');
       }
       const pageLoadTimeoutMs = normalizeKiroPageLoadTimeoutMs(
         options.pageTimeoutMs,
@@ -550,7 +550,7 @@
           injectSource: KIRO_DESKTOP_SOURCE_ID,
           timeoutMs: timeoutBudget.getRemainingMs(1000),
           retryDelayMs: 800,
-          logMessage: options.injectLogMessage || 'Kiro 桌面授权页内容脚本未就绪，正在等待页面恢复...',
+          logMessage: options.injectLogMessage || 'Kiro desktop authorization page content script not ready, waiting for page recovery...',
         });
       }
       const stateWaitTimeoutMs = timeoutBudget.getRemainingMs(1000);
@@ -565,7 +565,7 @@
           ...options,
           timeoutBudget,
         }),
-        logMessage: options.readyLogMessage || '正在读取 Kiro 桌面授权页状态...',
+        logMessage: options.readyLogMessage || 'Reading Kiro desktop authorization page state...',
       });
       if (result?.error) {
         throw new Error(result.error);
@@ -590,7 +590,7 @@
           ...options,
           timeoutBudget,
         }),
-        logMessage: options.logMessage || '正在执行 Kiro 桌面授权动作...',
+        logMessage: options.logMessage || 'Executing Kiro desktop authorization action...',
       });
       if (result?.error) {
         throw new Error(result.error);
@@ -601,7 +601,7 @@
     function resolveDesktopLoginPassword(state = {}) {
       const password = String(state?.customPassword || state?.password || '');
       if (!password) {
-        throw new Error('缺少已注册账号密码，无法完成桌面授权重登。');
+        throw new Error('Missing registered account password, cannot complete desktop authorization re-login.');
       }
       return password;
     }
@@ -657,7 +657,7 @@
         });
       }
       if (!Number.isInteger(tabId)) {
-        throw new Error('无法打开 Kiro 账号页，请手动打开 app.kiro.dev/settings/account 后重试步骤 7。');
+        throw new Error('Unable to open Kiro account page, please manually open app.kiro.dev/settings/account and retry step 7.');
       }
       await registerTab(KIRO_REGISTER_PAGE_SOURCE_ID, tabId);
       return {
@@ -682,7 +682,7 @@
           injectSource: KIRO_REGISTER_PAGE_SOURCE_ID,
           timeoutMs: timeoutBudget.getRemainingMs(1000),
           retryDelayMs: 800,
-          logMessage: options.injectLogMessage || '步骤 7：正在连接已登录的 Kiro Web 页面...',
+          logMessage: options.injectLogMessage || 'Step 7: connecting to logged-in Kiro Web page...',
         });
       }
       if (typeof sendToContentScriptResilient !== 'function') {
@@ -697,7 +697,7 @@
         timeoutMs: stateWaitTimeoutMs,
         retryDelayMs: 700,
         responseTimeoutMs: Math.min(stateWaitTimeoutMs, 10000),
-        logMessage: '步骤 7：正在读取 Kiro Web 登录态...',
+        logMessage: 'Step 7: reading Kiro Web sign-in state...',
       });
       if (result?.error) {
         throw new Error(result.error);
@@ -730,7 +730,7 @@
         try {
           const pageState = await readKiroWebSessionStateFromTab(tabId, {
             timeoutMs: DEFAULT_KIRO_PAGE_LOAD_TIMEOUT_MS,
-            injectLogMessage: '步骤 7：Kiro Web 页面内容脚本未就绪，正在等待页面恢复...',
+            injectLogMessage: 'Step 7: Kiro Web page content script not ready, waiting for page recovery...',
           });
           if (pageState?.state !== 'kiro_web_signed_in') {
             return null;
@@ -772,7 +772,7 @@
             ...currentState,
             ...payload,
           };
-          await log(`步骤 7：检测到已有 Kiro Web 登录态，已恢复账号 ${detectedEmail}，继续启动桌面授权。`, 'ok', nodeId);
+          await log(`Step 7: detected existing Kiro Web sign-in, restored account ${detectedEmail}, continuing with desktop authorization.`, 'ok', nodeId);
           return {
             currentState: nextState,
             runtimeState: readKiroRuntime(nextState),
@@ -797,7 +797,7 @@
         }
       }
 
-      await log('步骤 7：未能从已打开页面确认 Kiro Web 登录态，正在打开 Kiro 账号页重新确认...', 'info', nodeId);
+      await log('Step 7: could not confirm Kiro Web sign-in from open tabs, opening Kiro account page to re-confirm...', 'info', nodeId);
       const accountTab = await openKiroWebAccountSessionTab();
       const restoredSession = await tryRestoreFromTab(accountTab);
       if (restoredSession) {
@@ -805,15 +805,15 @@
       }
 
       if (detectedSignedInWithoutEmail) {
-        throw new Error('已检测到 Kiro Web 登录态，但未能识别账号邮箱。请打开 Kiro 账号设置页后重试步骤 7。');
+        throw new Error('Detected Kiro Web sign-in, but could not identify account email. Please open the Kiro account settings page and retry step 7.');
       }
-      const detail = lastRecoveryError ? `最后一次检测错误：${lastRecoveryError}` : '';
-      throw new Error(`Kiro Web 登录态尚未建立。请在自动打开的 Kiro 账号页登录后，从步骤 7 继续。${detail}`);
+      const detail = lastRecoveryError ? `Last detection error: ${lastRecoveryError}` : '';
+      throw new Error(`Kiro Web sign-in not yet established. After signing in on the auto-opened Kiro account page, resume from step 7. ${detail}`);
     }
 
     async function pollDesktopOtpCode(step, state = {}, nodeId = '') {
       if (typeof pollFlowVerificationCode !== 'function') {
-        throw new Error('Kiro 桌面授权验证码步骤缺少共享邮件轮询能力，无法继续执行。');
+        throw new Error('Kiro desktop authorization OTP step missing shared mail polling, cannot continue.');
       }
 
       const runtimeState = readKiroRuntime(state);
@@ -824,14 +824,14 @@
         : requestedAt;
 
       return pollFlowVerificationCode({
-        actionLabel: '桌面授权验证码',
+        actionLabel: 'Desktop authorization OTP',
         filterAfterTimestamp,
         flowId: 'kiro',
         logStep: step,
         logStepKey: 'kiro-complete-desktop-authorize',
-        missingCapabilityMessage: 'Kiro 桌面授权验证码步骤缺少共享邮件轮询能力，无法继续执行。',
+        missingCapabilityMessage: 'Kiro desktop authorization OTP step missing shared mail polling, cannot continue.',
         nodeId: 'kiro-complete-desktop-authorize',
-        notFoundMessage: `步骤 ${step}：邮箱轮询结束，但未获取到桌面授权验证码。`,
+        notFoundMessage: `Step ${step}: mailbox polling ended without obtaining desktop authorization OTP.`,
         state: {
           ...state,
           activeFlowId: 'kiro',
@@ -873,7 +873,7 @@
 
         const tabId = await reuseOrCreateTab(KIRO_DESKTOP_SOURCE_ID, authorizeUrl);
         if (!Number.isInteger(tabId)) {
-          throw new Error('无法打开 Kiro 桌面授权页，请重试步骤 7。');
+          throw new Error('Unable to open Kiro desktop authorization page, please retry step 7.');
         }
         await registerTab(KIRO_DESKTOP_SOURCE_ID, tabId);
         callbackTracker.registerPending({
@@ -919,7 +919,7 @@
           },
         });
         await activateTab(tabId);
-        await log('步骤 7：Kiro 桌面授权页已打开，下一步将继续完成授权并抓取回调。', 'ok', nodeId);
+        await log('Step 7: Kiro desktop authorization page opened. Next step will complete authorization and capture the callback.', 'ok', nodeId);
         await completeNodeFromBackground(nodeId, payload);
       } catch (error) {
         const message = getErrorMessage(error);
@@ -935,16 +935,16 @@
       const desktopState = cleanString(runtimeState.desktopAuth?.state);
       try {
         if (!desktopState) {
-          throw new Error('缺少桌面授权 state，请先执行步骤 7。');
+          throw new Error('Missing desktop authorization state, please run step 7 first.');
         }
         if (!cleanString(runtimeState.desktopAuth?.clientId) || !cleanString(runtimeState.desktopAuth?.clientSecret)) {
-          throw new Error('缺少桌面授权客户端凭据，请先执行步骤 7。');
+          throw new Error('Missing desktop authorization client credentials, please run step 7 first.');
         }
         if (!cleanString(runtimeState.desktopAuth?.redirectUri) || !runtimeState.desktopAuth?.redirectPort) {
-          throw new Error('缺少桌面授权回调地址，请先执行步骤 7。');
+          throw new Error('Missing desktop authorization callback URL, please run step 7 first.');
         }
         if (!cleanString(runtimeState.desktopAuth?.codeVerifier)) {
-          throw new Error('缺少桌面授权 PKCE verifier，请先执行步骤 7。');
+          throw new Error('Missing desktop authorization PKCE verifier, please run step 7 first.');
         }
 
         callbackTracker.registerPending({
@@ -1017,8 +1017,8 @@
             }
           } else {
             tabId = await activateDesktopAuthorizeTab(currentState, {
-              missingUrlMessage: '缺少桌面授权地址，请先执行步骤 7。',
-              openFailedMessage: '无法恢复桌面授权页，请重新执行步骤 7。',
+              missingUrlMessage: 'Missing desktop authorization URL, please run step 7 first.',
+              openFailedMessage: 'Unable to restore desktop authorization page, please re-run step 7.',
             });
           }
 
@@ -1027,8 +1027,8 @@
             pageState = await getDesktopAuthorizePageState(tabId, {
               step: 8,
               timeoutBudget,
-              injectLogMessage: '步骤 8：Kiro 桌面授权页内容脚本未就绪，正在等待页面恢复...',
-              readyLogMessage: '步骤 8：正在读取 Kiro 桌面授权页当前状态...',
+              injectLogMessage: 'Step 8: Kiro desktop authorization page content script not ready, waiting for page recovery...',
+              readyLogMessage: 'Step 8: reading current state of Kiro desktop authorization page...',
             });
           } catch (error) {
             if (awaitingCallbackAfterConsent && isMissingTabError(error)) {
@@ -1048,11 +1048,11 @@
 
           if (pageState.state === 'relogin_email') {
             const email = cleanString(runtimeState.register?.email || currentState?.email);
-            await log(`步骤 8：桌面授权页要求重新输入邮箱，正在填写 ${email}...`, 'info', nodeId);
+            await log(`Step 8: desktop authorization page requires email re-entry, filling in ${email}...`, 'info', nodeId);
             await executeDesktopAction(tabId, 'submit-email', { email }, {
               step: 8,
               timeoutBudget,
-              logMessage: '步骤 8：正在向桌面授权页提交邮箱...',
+              logMessage: 'Step 8: submitting email to desktop authorization page...',
             });
             await sleepWithStop(1200);
             continue;
@@ -1060,11 +1060,11 @@
 
           if (pageState.state === 'relogin_password') {
             const password = resolveDesktopLoginPassword(currentState);
-            await log('步骤 8：桌面授权页要求重新输入密码，正在填写密码...', 'info', nodeId);
+            await log('Step 8: desktop authorization page requires password re-entry, filling in password...', 'info', nodeId);
             await executeDesktopAction(tabId, 'submit-password', { password }, {
               step: 8,
               timeoutBudget,
-              logMessage: '步骤 8：正在向桌面授权页提交密码...',
+              logMessage: 'Step 8: submitting password to desktop authorization page...',
             });
             await sleepWithStop(1200);
             continue;
@@ -1082,24 +1082,24 @@
             const codeResult = await pollDesktopOtpCode(8, currentState, nodeId);
             const code = cleanString(codeResult?.code);
             if (!code) {
-              throw new Error('未获取到桌面授权验证码。');
+              throw new Error('Failed to obtain desktop authorization OTP.');
             }
-            await log(`步骤 8：已获取桌面授权验证码 ${code}，正在提交...`, 'info', nodeId);
+            await log(`Step 8: obtained desktop authorization OTP ${code}, submitting...`, 'info', nodeId);
             await executeDesktopAction(tabId, 'submit-otp', { code }, {
               step: 8,
               timeoutBudget,
-              logMessage: '步骤 8：正在向桌面授权页提交验证码...',
+              logMessage: 'Step 8: submitting OTP to desktop authorization page...',
             });
             await sleepWithStop(1200);
             continue;
           }
 
           if (pageState.state === 'consent_page') {
-            await log('步骤 8：正在确认 Kiro 桌面授权访问...', 'info', nodeId);
+            await log('Step 8: confirming Kiro desktop authorization access...', 'info', nodeId);
             await executeDesktopAction(tabId, 'confirm-consent', {}, {
               step: 8,
               timeoutBudget,
-              logMessage: '步骤 8：正在确认桌面授权访问...',
+              logMessage: 'Step 8: confirming desktop authorization access...',
             });
             awaitingCallbackAfterConsent = true;
             await sleepWithStop(1200);
@@ -1126,7 +1126,7 @@
           return;
         }
 
-        throw new Error('等待桌面授权回调超时。');
+        throw new Error('Timed out waiting for desktop authorization callback.');
       } catch (error) {
         callbackTracker.clear(desktopState);
         const message = getErrorMessage(error);

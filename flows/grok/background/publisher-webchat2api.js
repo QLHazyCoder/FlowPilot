@@ -45,7 +45,7 @@
   }
 
   function getErrorMessage(error) {
-    return error instanceof Error ? error.message : cleanString(error) || '未知错误';
+    return error instanceof Error ? error.message : cleanString(error) || 'Unknown error';
   }
 
   async function readResponse(response) {
@@ -71,17 +71,17 @@
   function normalizeWebchat2ApiBaseUrl(value = '') {
     const rawUrl = cleanString(value);
     if (!rawUrl) {
-      throw new Error('缺少 webchat2api 地址。');
+      throw new Error('Missing webchat2api URL.');
     }
     const withProtocol = /^https?:\/\//i.test(rawUrl) ? rawUrl : `http://${rawUrl}`;
     let parsed = null;
     try {
       parsed = new URL(withProtocol);
     } catch (_error) {
-      throw new Error('webchat2api 地址格式无效，请检查配置。');
+      throw new Error('Invalid webchat2api URL format, please check the config.');
     }
     if (!/^https?:$/.test(parsed.protocol)) {
-      throw new Error('webchat2api 地址只支持 http 或 https。');
+      throw new Error('webchat2api URL only supports http or https.');
     }
     return parsed.origin;
   }
@@ -146,7 +146,7 @@
   function buildGrokSsoInjectPayload(ssoCookie = '') {
     const normalizedCookie = cleanString(ssoCookie);
     if (!normalizedCookie) {
-      throw new Error('缺少 Grok SSO Cookie，请先完成步骤 5。');
+      throw new Error('Missing Grok SSO Cookie, please complete step 5 first.');
     }
     return {
       accounts: [{
@@ -165,7 +165,7 @@
     const endpointUrl = buildWebchat2ApiInjectUrl(baseUrl);
     const normalizedApiKey = normalizeWebchat2ApiAdminKey(apiKey);
     if (!normalizedApiKey) {
-      throw new Error('缺少 webchat2api 管理密钥。');
+      throw new Error('Missing webchat2api admin key.');
     }
 
     const response = await fetchImpl(endpointUrl, {
@@ -180,15 +180,15 @@
     const body = await readResponse(response);
     if (!response.ok) {
       const message = readWebchat2ApiResponseMessage(body, response.statusText) || `HTTP ${response.status}`;
-      throw new Error(`webchat2api SSO 上传失败：${message}`);
+      throw new Error(`webchat2api SSO upload failed: ${message}`);
     }
     if (isPlainObject(body.json) && Object.prototype.hasOwnProperty.call(body.json, 'code') && Number(body.json.code) !== 0) {
       const message = readWebchat2ApiResponseMessage(body, `code=${body.json.code}`);
-      throw new Error(`webchat2api SSO 上传失败：${message}`);
+      throw new Error(`webchat2api SSO upload failed: ${message}`);
     }
     return {
       endpointUrl,
-      message: readWebchat2ApiResponseMessage(body, '') || '上传成功',
+      message: readWebchat2ApiResponseMessage(body, '') || 'Upload succeeded',
       raw: body.json,
     };
   }
@@ -248,11 +248,11 @@
         failureTargetUrl = endpointUrl;
         const apiKey = normalizeWebchat2ApiAdminKey(targetConfig.apiKey);
         if (!apiKey) {
-          throw new Error('缺少 webchat2api 管理密钥。');
+          throw new Error('Missing webchat2api admin key.');
         }
         const ssoCookie = resolveGrokSsoCookie(currentState);
         if (!ssoCookie) {
-          throw new Error('缺少 Grok SSO Cookie，请先完成步骤 5。');
+          throw new Error('Missing Grok SSO Cookie, please complete step 5 first.');
         }
 
         await applyRuntimeState(currentState, {
@@ -267,7 +267,7 @@
           },
         });
 
-        await log('步骤 6：正在上传 Grok SSO 到 webchat2api...', 'info', nodeId);
+        await log('Step 6: uploading Grok SSO to webchat2api...', 'info', nodeId);
         const uploadResult = await uploadGrokSsoToWebchat2Api(
           targetConfig.baseUrl,
           apiKey,
@@ -282,16 +282,16 @@
           upload: {
             status: 'uploaded',
             uploadedAt,
-            message: uploadResult.message || '上传成功',
+            message: uploadResult.message || 'Upload succeeded',
             targetUrl: uploadResult.endpointUrl,
           },
         });
-        await log(`步骤 6：Grok SSO 已上传到 webchat2api，状态：${uploadResult.message || '上传成功'}。`, 'ok', nodeId);
+        await log(`Step 6: Grok SSO uploaded to webchat2api, status: ${uploadResult.message || 'Upload succeeded'}.`, 'ok', nodeId);
         await completeNodeFromBackground(nodeId, payload);
       } catch (error) {
         const message = getErrorMessage(error);
         await persistFailure(currentState, message, failureTargetUrl);
-        await log(`步骤 6：${message}`, 'error', nodeId);
+        await log(`Step 6: ${message}`, 'error', nodeId);
         throw error;
       }
     }

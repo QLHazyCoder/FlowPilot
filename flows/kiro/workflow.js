@@ -1,7 +1,7 @@
 (function attachMultiPageKiroWorkflow(root, factory) {
   root.MultiPageKiroWorkflow = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createMultiPageKiroWorkflow() {
-  const KIRO_CONTRIBUTION_STEP_TITLE = '\u8d21\u732e\u4e0a\u4f20';
+  const KIRO_CONTRIBUTION_STEP_TITLE = 'Contribution upload';
 
   function freezeDeep(entry) {
     if (!entry || typeof entry !== 'object' || Object.isFrozen(entry)) {
@@ -19,7 +19,7 @@
       "id": 1,
       "order": 10,
       "key": "kiro-open-register-page",
-      "title": "打开注册页",
+      "title": "Open signup page",
       "sourceId": "kiro-register-page",
       "driverId": "flows/kiro/background/register-runner",
       "command": "kiro-open-register-page",
@@ -29,7 +29,7 @@
       "id": 2,
       "order": 20,
       "key": "kiro-submit-email",
-      "title": "获取邮箱并继续",
+      "title": "Get email and continue",
       "sourceId": "kiro-register-page",
       "driverId": "flows/kiro/background/register-runner",
       "command": "kiro-submit-email",
@@ -39,7 +39,7 @@
       "id": 3,
       "order": 30,
       "key": "kiro-submit-name",
-      "title": "填写姓名并继续",
+      "title": "Fill in name and continue",
       "sourceId": "kiro-register-page",
       "driverId": "flows/kiro/background/register-runner",
       "command": "kiro-submit-name",
@@ -49,7 +49,7 @@
       "id": 4,
       "order": 40,
       "key": "kiro-submit-verification-code",
-      "title": "获取验证码并继续",
+      "title": "Get verification code and continue",
       "sourceId": "kiro-register-page",
       "driverId": "flows/kiro/background/register-runner",
       "command": "kiro-submit-verification-code",
@@ -59,7 +59,7 @@
       "id": 5,
       "order": 50,
       "key": "kiro-submit-password",
-      "title": "设置密码并继续",
+      "title": "Set password and continue",
       "sourceId": "kiro-register-page",
       "driverId": "flows/kiro/background/register-runner",
       "command": "kiro-submit-password",
@@ -69,7 +69,7 @@
       "id": 6,
       "order": 60,
       "key": "kiro-complete-register-consent",
-      "title": "完成注册授权",
+      "title": "Complete signup authorization",
       "sourceId": "kiro-register-page",
       "driverId": "flows/kiro/background/register-runner",
       "command": "kiro-complete-register-consent",
@@ -79,7 +79,7 @@
       "id": 7,
       "order": 70,
       "key": "kiro-start-desktop-authorize",
-      "title": "启动桌面授权",
+      "title": "Start desktop authorization",
       "sourceId": "kiro-desktop-authorize",
       "driverId": "flows/kiro/background/desktop-authorize-runner",
       "command": "kiro-start-desktop-authorize",
@@ -89,7 +89,7 @@
       "id": 8,
       "order": 80,
       "key": "kiro-complete-desktop-authorize",
-      "title": "完成桌面授权",
+      "title": "Complete desktop authorization",
       "sourceId": "kiro-desktop-authorize",
       "driverId": "flows/kiro/background/desktop-authorize-runner",
       "command": "kiro-complete-desktop-authorize",
@@ -99,7 +99,7 @@
       "id": 9,
       "order": 90,
       "key": "kiro-upload-credential",
-      "title": "上传凭据到 kiro.rs",
+      "title": "Upload credentials to kiro.rs",
       "sourceId": "kiro-rs-admin",
       "driverId": "flows/kiro/background/publisher-kiro-rs",
       "command": "kiro-upload-credential",

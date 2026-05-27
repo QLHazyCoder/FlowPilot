@@ -28,7 +28,7 @@
       const factory = deps.createSub2ApiApi
         || self.MultiPageBackgroundSub2ApiApi?.createSub2ApiApi;
       if (typeof factory !== 'function') {
-        throw new Error('SUB2API 直连接口模块未加载，无法生成 OAuth 链接。');
+        throw new Error('SUB2API direct API module is not loaded — cannot generate OAuth link.');
       }
       sub2ApiApi = factory({
         addLog,
@@ -60,19 +60,19 @@
       const message = candidates
         .map((value) => String(value || '').trim())
         .find(Boolean);
-      return message || `Codex2API 请求失败（HTTP ${responseStatus}）。`;
+      return message || `Codex2API request failed (HTTP ${responseStatus}).`;
     }
 
     function deriveCpaManagementOrigin(vpsUrl) {
       const normalizedUrl = String(vpsUrl || '').trim();
       if (!normalizedUrl) {
-        throw new Error('尚未配置 CPA 地址，请先在侧边栏填写。');
+        throw new Error('CPA URL is not configured. Please fill it in the side panel first.');
       }
       let parsed;
       try {
         parsed = new URL(normalizedUrl);
       } catch {
-        throw new Error('CPA 地址格式无效，请先在侧边栏检查。');
+        throw new Error('CPA URL format is invalid. Please check the side panel.');
       }
       return parsed.origin;
     }
@@ -87,7 +87,7 @@
       const message = candidates
         .map((value) => String(value || '').trim())
         .find(Boolean);
-      return message || `CPA 管理接口请求失败（HTTP ${responseStatus}）。`;
+      return message || `CPA management API request failed (HTTP ${responseStatus}).`;
     }
 
     async function fetchCpaManagementJson(origin, path, options = {}) {
@@ -127,7 +127,7 @@
         return payload;
       } catch (error) {
         if (error?.name === 'AbortError') {
-          throw new Error('CPA 管理接口请求超时，请稍后重试。');
+          throw new Error('CPA management API request timed out. Please retry later.');
         }
         throw error;
       } finally {
@@ -166,7 +166,7 @@
         return payload;
       } catch (error) {
         if (error?.name === 'AbortError') {
-          throw new Error('Codex2API 请求超时，请稍后重试。');
+          throw new Error('Codex2API request timed out. Please retry later.');
         }
         throw error;
       } finally {
@@ -185,18 +185,18 @@
     }
 
     async function requestCpaOAuthUrl(state, options = {}) {
-      const { logLabel = 'OAuth 刷新' } = options;
+      const { logLabel = 'OAuth refresh' } = options;
       if (!state.vpsUrl) {
-        throw new Error('尚未配置 CPA 地址，请先在侧边栏填写。');
+        throw new Error('CPA URL is not configured. Please fill it in the side panel first.');
       }
       const managementKey = String(state.vpsPassword || '').trim();
       if (!managementKey) {
-        throw new Error('尚未配置 CPA 管理密钥，请先在侧边栏填写。');
+        throw new Error('CPA management key is not configured. Please fill it in the side panel first.');
       }
 
       const origin = deriveCpaManagementOrigin(state.vpsUrl);
 
-      await addLog(`${logLabel}：正在通过 CPA 管理接口获取 OAuth 授权链接...`);
+      await addLog(`${logLabel}: Fetching OAuth authorization link via CPA management API...`);
       const result = await fetchCpaManagementJson(origin, '/v0/management/codex-auth-url', {
         method: 'GET',
         managementKey,
@@ -223,7 +223,7 @@
         || extractStateFromAuthUrl(oauthUrl);
 
       if (!oauthUrl || !oauthUrl.startsWith('http')) {
-        throw new Error('CPA 管理接口未返回有效的 auth_url。');
+        throw new Error('CPA management API did not return a valid auth_url.');
       }
 
       return {
@@ -234,16 +234,16 @@
     }
 
     async function requestCodex2ApiOAuthUrl(state, options = {}) {
-      const { logLabel = 'OAuth 刷新' } = options;
+      const { logLabel = 'OAuth refresh' } = options;
       const codex2apiUrl = normalizeCodex2ApiUrl(state.codex2apiUrl);
       const adminKey = normalizeAdminKey(state.codex2apiAdminKey);
 
       if (!adminKey) {
-        throw new Error('尚未配置 Codex2API 管理密钥，请先在侧边栏填写。');
+        throw new Error('Codex2API admin key is not configured. Please fill it in the side panel first.');
       }
 
       const origin = new URL(codex2apiUrl).origin;
-      await addLog(`${logLabel}：正在通过 Codex2API 协议生成 OAuth 授权链接...`);
+      await addLog(`${logLabel}: Generating OAuth authorization link via Codex2API protocol...`);
 
       const result = await fetchCodex2ApiJson(origin, '/api/admin/oauth/generate-auth-url', {
         adminKey,
@@ -256,7 +256,7 @@
       const oauthState = extractStateFromAuthUrl(oauthUrl);
 
       if (!oauthUrl || !sessionId) {
-        throw new Error('Codex2API 未返回有效的 auth_url 或 session_id。');
+        throw new Error('Codex2API did not return a valid auth_url or session_id.');
       }
 
       return {
@@ -267,17 +267,17 @@
     }
 
     async function requestSub2ApiOAuthUrl(state, options = {}) {
-      const { logLabel = 'OAuth 刷新' } = options;
+      const { logLabel = 'OAuth refresh' } = options;
       const sub2apiUrl = normalizeSub2ApiUrl(state.sub2apiUrl);
 
       if (!sub2apiUrl) {
         throw new Error('SUB2API URL is not configured. Please fill it in the side panel first.');
       }
       if (!state.sub2apiEmail) {
-        throw new Error('尚未配置 SUB2API 登录邮箱，请先在侧边栏填写。');
+        throw new Error('SUB2API login email is not configured. Please fill it in the side panel first.');
       }
       if (!state.sub2apiPassword) {
-        throw new Error('尚未配置 SUB2API 登录密码，请先在侧边栏填写。');
+        throw new Error('SUB2API login password is not configured. Please fill it in the side panel first.');
       }
 
       const api = getSub2ApiApi();

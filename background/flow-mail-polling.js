@@ -158,7 +158,7 @@
         throw new Error(result.error);
       }
       if (!result?.code) {
-        throw new Error(notFoundMessage || '邮箱轮询结束，但未获取到验证码。');
+        throw new Error(notFoundMessage || 'Mailbox polling finished but no verification code obtained.');
       }
       return result;
     }
@@ -173,11 +173,11 @@
         return null;
       }
       if (typeof handler.poll !== 'function') {
-        throw new Error(`${handler.label} 邮箱轮询能力未接入，无法继续执行。`);
+        throw new Error(`${handler.label} mailbox polling capability not connected, cannot continue.`);
       }
 
       await log(
-        `步骤 ${step}：正在通过 ${mail.label || handler.label} 轮询${options.actionLabel || '验证码'}...`,
+        `Step ${step}: Polling ${options.actionLabel || 'verification code'} via ${mail.label || handler.label}...`,
         'info',
         options.logOptions
       );
@@ -188,21 +188,21 @@
     async function ensureBrowserMailSession(step, state, mail, options) {
       if (isIcloudMail(mail) && typeof ensureIcloudMailSession === 'function') {
         await log(
-          `步骤 ${step}：正在确认 ${mail.label || 'iCloud 邮箱'} 登录状态...`,
+          `Step ${step}: Confirming ${mail.label || 'iCloud Mail'} login state...`,
           'info',
           options.logOptions
         );
         await ensureIcloudMailSession({
           state,
           step,
-          actionLabel: `步骤 ${step}：确认 iCloud 邮箱登录状态`,
+          actionLabel: `Step ${step}: Confirm iCloud Mail login state`,
         });
         return;
       }
 
       if (isMail2925Provider(mail) && typeof ensureMail2925MailboxSession === 'function') {
         await log(
-          `步骤 ${step}：正在确认 ${mail.label || '2925 邮箱'} 登录状态...`,
+          `Step ${step}: Confirming ${mail.label || '2925 Mail'} login state...`,
           'info',
           options.logOptions
         );
@@ -211,12 +211,12 @@
           forceRelogin: false,
           allowLoginWhenOnLoginPage: Boolean(state?.mail2925UseAccountPool),
           expectedMailboxEmail: getExpectedMail2925MailboxEmail(state),
-          actionLabel: `步骤 ${step}：确认 2925 邮箱登录状态`,
+          actionLabel: `Step ${step}: Confirm 2925 Mail login state`,
         });
         return;
       }
 
-      await log(`步骤 ${step}：正在打开 ${mail.label || '邮箱'}...`, 'info', options.logOptions);
+      await log(`Step ${step}: Opening ${mail.label || 'mailbox'}...`, 'info', options.logOptions);
       await focusOrOpenMailTab(mail);
     }
 
@@ -224,7 +224,7 @@
       await ensureBrowserMailSession(step, state, mail, options);
 
       if (typeof sendToMailContentScriptResilient !== 'function') {
-        throw new Error(options.missingContentScriptMessage || '当前验证码步骤缺少邮箱内容脚本通信能力，无法继续执行。');
+        throw new Error(options.missingContentScriptMessage || 'Current verification code step lacks mailbox content script communication, cannot continue.');
       }
 
       const timeoutWindow = resolveMailPollingTimeouts(mail, pollPayload);
@@ -264,12 +264,12 @@
 
     async function pollFlowVerificationCode(options = {}) {
       const {
-        actionLabel = '验证码',
+        actionLabel = 'verification code',
         filterAfterTimestamp,
         flowId = '',
         logStep,
         logStepKey = '',
-        missingCapabilityMessage = '当前验证码步骤缺少共享邮件轮询能力，无法继续执行。',
+        missingCapabilityMessage = 'Current verification code step lacks shared mail polling capability, cannot continue.',
         nodeId = '',
         notFoundMessage = '',
         payloadOverrides = {},
@@ -278,7 +278,7 @@
       } = options;
 
       if (typeof getMailConfig !== 'function') {
-        throw new Error('当前验证码步骤缺少邮箱配置能力，无法继续执行。');
+        throw new Error('Current verification code step lacks mailbox configuration capability, cannot continue.');
       }
       if (typeof buildVerificationPollPayloadForNode !== 'function') {
         throw new Error(missingCapabilityMessage);
@@ -332,7 +332,7 @@
         logStepKey: logStepKey || nodeId,
         missingContentScriptMessage: missingCapabilityMessage,
         nodeId,
-        notFoundMessage: notFoundMessage || `步骤 ${normalizedStep}：邮箱轮询结束，但未获取到验证码。`,
+        notFoundMessage: notFoundMessage || `Step ${normalizedStep}: Mailbox polling finished but no verification code obtained.`,
       });
     }
 

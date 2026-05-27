@@ -30,7 +30,7 @@
       }
       const discoveredPayPalTabId = await findOpenPayPalTabId();
       if (discoveredPayPalTabId) {
-        await addLog('步骤 8：已从当前浏览器标签中发现 PayPal 页面，正在接管继续执行。', 'info');
+        await addLog('Step 8: Found the PayPal page in the current browser tabs. Taking over and continuing.', 'info');
         return discoveredPayPalTabId;
       }
       const checkoutTabId = await getTabId(PLUS_CHECKOUT_SOURCE);
@@ -41,7 +41,7 @@
       if (storedTabId) {
         return storedTabId;
       }
-      throw new Error('步骤 8：未找到 PayPal 标签页，请先完成步骤 7。');
+      throw new Error('Step 8: PayPal tab not found. Complete Step 7 first.');
     }
 
     async function findOpenPayPalTabId() {
@@ -75,7 +75,7 @@
       await ensureContentScriptReadyOnTabUntilStopped(PAYPAL_SOURCE, tabId, {
         inject: PAYPAL_INJECT_FILES,
         injectSource: PAYPAL_SOURCE,
-        logMessage: logMessage || '步骤 8：PayPal 页面仍在加载，等待脚本就绪...',
+        logMessage: logMessage || 'Step 8: PayPal page is still loading. Waiting for the script to become ready...',
       });
     }
 
@@ -118,9 +118,9 @@
     async function submitLogin(tabId, state = {}) {
       const credentials = resolvePayPalCredentials(state);
       if (!credentials.password) {
-        throw new Error('步骤 8：未配置可用的 PayPal 账号，请先在侧边栏添加并选择账号。');
+        throw new Error('Step 8: No available PayPal account is configured. Add and select one in the side panel first.');
       }
-      await addLog('步骤 8：正在填写 PayPal 登录信息并提交...', 'info');
+      await addLog('Step 8: Filling in PayPal login details and submitting...', 'info');
       const result = await sendTabMessageUntilStopped(tabId, PAYPAL_SOURCE, {
         type: 'PAYPAL_SUBMIT_LOGIN',
         source: 'background',
@@ -152,7 +152,7 @@
       while (Date.now() - startedAt < PAYPAL_LOGIN_TRANSITION_TIMEOUT_MS) {
         const tab = await chrome.tabs.get(tabId).catch(() => null);
         if (!tab) {
-          throw new Error('步骤 8：PayPal 标签页已关闭，无法继续识别登录后的页面。');
+          throw new Error('Step 8: PayPal tab was closed. Cannot continue identifying the page after login.');
         }
 
         const currentUrl = tab.url || '';
@@ -175,8 +175,8 @@
         await ensurePayPalReady(
           tabId,
           phase === 'email_submitted'
-            ? '步骤 8：PayPal 账号已提交，正在识别下一页...'
-            : '步骤 8：PayPal 密码已提交，正在识别跳转结果...'
+            ? 'Step 8: PayPal account submitted. Identifying the next page...'
+            : 'Step 8: PayPal password submitted. Identifying the navigation result...'
         );
         const pageState = await getPayPalState(tabId);
 
@@ -238,35 +238,35 @@
       while (true) {
         const currentUrl = (await chrome.tabs.get(tabId).catch(() => null))?.url || '';
         if (currentUrl && !isPayPalUrl(currentUrl)) {
-          await addLog('步骤 8：PayPal 已跳转离开授权页，准备进入回跳确认。', 'ok');
+          await addLog('Step 8: PayPal has navigated away from the authorization page. Preparing to confirm the return.', 'ok');
           break;
         }
 
-        await ensurePayPalReady(tabId, '步骤 8：PayPal 页面正在切换，等待脚本重新就绪...');
+        await ensurePayPalReady(tabId, 'Step 8: PayPal page is switching. Waiting for the script to become ready again...');
         const pageState = await getPayPalState(tabId);
 
         if (pageState.needsLogin) {
           const submitResult = await submitLogin(tabId, state);
           const decision = await waitForPayPalPostLoginDecision(tabId, submitResult);
           if (decision.outcome === 'left_paypal') {
-            await addLog('步骤 8：PayPal 登录后已跳转离开登录/授权页，继续进入回跳确认。', 'ok');
+            await addLog('Step 8: After PayPal login, the page has left the login/authorization view. Continuing to return confirmation.', 'ok');
             break;
           }
           if (decision.outcome === 'password_ready') {
-            await addLog('步骤 8：PayPal 账号页提交后已识别到密码页，继续填写密码。', 'info');
+            await addLog('Step 8: After submitting the PayPal account page, the password page was detected. Continuing to fill the password.', 'info');
           } else if (decision.outcome === 'approve_ready') {
-            await addLog('步骤 8：PayPal 登录后已识别到授权确认页，继续点击授权。', 'info');
+            await addLog('Step 8: After PayPal login, the authorization confirmation page was detected. Continuing to authorize.', 'info');
           } else if (decision.outcome === 'prompt') {
-            await addLog('步骤 8：PayPal 登录后已识别到提示弹窗，继续处理弹窗。', 'info');
+            await addLog('Step 8: After PayPal login, a prompt dialog was detected. Continuing to handle it.', 'info');
           } else if (decision.outcome === 'timeout') {
-            await addLog('步骤 8：PayPal 登录动作后暂未识别到新页面，重新检查当前页面状态。', 'warn');
+            await addLog('Step 8: No new page was detected after the PayPal login action. Rechecking the current page state.', 'warn');
           }
           loggedWaiting = false;
           continue;
         }
 
         if (pageState.hasPasskeyPrompt) {
-          await addLog('步骤 8：检测到 PayPal 通行密钥提示，正在关闭...', 'info');
+          await addLog('Step 8: Detected a PayPal passkey prompt. Closing it...', 'info');
           await dismissPrompts(tabId);
           await sleepWithStop(1000);
           continue;
@@ -279,7 +279,7 @@
         }
 
         if (pageState.approveReady) {
-          await addLog('步骤 8：正在点击 PayPal“同意并继续”...', 'info');
+          await addLog('Step 8: Clicking PayPal "Agree and continue"...', 'info');
           const clicked = await clickApprove(tabId);
           if (clicked) {
             await setState({ plusPaypalApprovedAt: Date.now() });
@@ -289,7 +289,7 @@
 
         if (!loggedWaiting) {
           loggedWaiting = true;
-          await addLog('步骤 8：等待 PayPal 授权按钮或下一步页面出现...', 'info');
+          await addLog('Step 8: Waiting for the PayPal authorization button or the next page to appear...', 'info');
         }
         await sleepWithStop(500);
       }

@@ -20,7 +20,7 @@
   }
 
   function getErrorMessage(error) {
-    return error instanceof Error ? error.message : cleanString(error) || '未知错误';
+    return error instanceof Error ? error.message : cleanString(error) || 'Unknown error';
   }
 
   function createGeneratedPassword() {
@@ -135,7 +135,7 @@
       }
 
       if (!options.openIfMissing) {
-        throw new Error(options.missingMessage || '缺少 Grok 注册页，请先执行步骤 1。');
+        throw new Error(options.missingMessage || 'Missing Grok registration page, please run step 1 first.');
       }
 
       const openedTabId = await reuseOrCreateTab(GROK_REGISTER_PAGE_SOURCE_ID, GROK_SIGNUP_URL, {
@@ -143,7 +143,7 @@
         injectSource: GROK_REGISTER_PAGE_SOURCE_ID,
       });
       if (!Number.isInteger(openedTabId)) {
-        throw new Error('无法打开 Grok 注册页。');
+        throw new Error('Unable to open Grok registration page.');
       }
       await registerTab(GROK_REGISTER_PAGE_SOURCE_ID, openedTabId);
       return openedTabId;
@@ -151,7 +151,7 @@
 
     async function ensureContentReady(tabId, options = {}) {
       if (!Number.isInteger(tabId)) {
-        throw new Error('缺少 Grok 注册页标签页，无法连接内容脚本。');
+        throw new Error('Missing Grok registration page tab, cannot connect content script.');
       }
       if (typeof waitForTabStableComplete === 'function') {
         await waitForTabStableComplete(tabId, {
@@ -167,14 +167,14 @@
           injectSource: GROK_REGISTER_PAGE_SOURCE_ID,
           timeoutMs: options.timeoutMs || DEFAULT_GROK_PAGE_TIMEOUT_MS,
           retryDelayMs: 700,
-          logMessage: options.logMessage || 'Grok 注册页内容脚本未就绪，正在等待页面恢复...',
+          logMessage: options.logMessage || 'Grok registration page content script not ready, waiting for page recovery...',
         });
       }
     }
 
     async function sendGrokCommand(nodeId, payload = {}, options = {}) {
       if (typeof sendToContentScriptResilient !== 'function') {
-        throw new Error('Grok 注册页通信能力不可用。');
+        throw new Error('Grok registration page communication unavailable.');
       }
       const result = await sendToContentScriptResilient(GROK_REGISTER_PAGE_SOURCE_ID, {
         type: 'EXECUTE_NODE',
@@ -233,8 +233,8 @@
 
       const stateLabel = cleanString(lastState?.state) || 'unknown';
       const urlLabel = cleanString(lastState?.url);
-      const errorLabel = lastError ? `，最后通信错误：${lastError}` : '';
-      throw new Error(`Grok 邮箱提交后尚未进入验证码页面，当前状态：${stateLabel}${urlLabel ? `，URL：${urlLabel}` : ''}${errorLabel}。`);
+      const errorLabel = lastError ? `, last communication error: ${lastError}` : '';
+      throw new Error(`Grok email submission did not reach verification-code page. Current state: ${stateLabel}${urlLabel ? `, URL: ${urlLabel}` : ''}${errorLabel}.`);
     }
 
     function shouldClearGrokCookie(cookie = {}) {
@@ -252,7 +252,7 @@
 
     async function clearGrokCookiesBeforeStep1() {
       if (!chrome?.cookies?.getAll || !chrome.cookies?.remove) {
-        await log('步骤 1：当前浏览器不支持 cookies API，跳过 Grok Cookie 清理。', 'warn', 'grok-open-signup-page');
+        await log('Step 1: cookies API not supported by this browser, skipping Grok cookie cleanup.', 'warn', 'grok-open-signup-page');
         return;
       }
 
@@ -304,7 +304,7 @@
           }
         }
       }
-      await log(`步骤 1：已清理 Grok/xAI Cookie ${removedCount} 个。`, removedCount ? 'ok' : 'info', 'grok-open-signup-page');
+      await log(`Step 1: cleared ${removedCount} Grok/xAI cookies.`, removedCount ? 'ok' : 'info', 'grok-open-signup-page');
     }
 
     function resolveProfile(currentState = {}) {
@@ -376,9 +376,9 @@
         const result = await sendGrokCommand(nodeId, {}, {
           step: 1,
           timeoutMs: DEFAULT_GROK_PAGE_TIMEOUT_MS,
-          logMessage: '步骤 1：正在打开 Grok 邮箱注册入口...',
+          logMessage: 'Step 1: opening Grok email signup page...',
         });
-        await log('步骤 1：已打开 Grok 邮箱注册页。', 'ok', nodeId);
+        await log('Step 1: opened Grok email signup page.', 'ok', nodeId);
         await completeNode(nodeId, {
           grokRegisterTabId: tabId,
           grokPageState: result.state || 'email_signup_ready',
@@ -403,7 +403,7 @@
             lastError: message,
           },
         }));
-        await log(`步骤 1：${message}`, 'error', nodeId);
+        await log(`Step 1: ${message}`, 'error', nodeId);
         throw error;
       }
     }
@@ -413,7 +413,7 @@
       const currentState = await getExecutionState(state);
       try {
         if (typeof resolveSignupEmailForFlow !== 'function') {
-          throw new Error('Grok 邮箱步骤缺少公共邮箱解析能力，无法继续执行。');
+          throw new Error('Grok email step missing shared email resolver, cannot continue.');
         }
         const tabId = await ensureGrokRegisterTab(currentState, { openIfMissing: false });
         await activateTab(tabId);
@@ -423,7 +423,7 @@
         });
         const email = cleanString(resolvedEmail).toLowerCase();
         if (!email) {
-          throw new Error('Grok 注册邮箱为空，无法继续执行。');
+          throw new Error('Grok registration email is empty, cannot continue.');
         }
         const requestedAt = Date.now();
         await persistState({
@@ -442,12 +442,12 @@
         const result = await sendGrokCommand(nodeId, { email }, {
           step: 2,
           timeoutMs: GROK_VERIFICATION_READY_TIMEOUT_MS + 15000,
-          logMessage: '步骤 2：正在提交 Grok 注册邮箱...',
+          logMessage: 'Step 2: submitting Grok registration email...',
         });
         if (result.state !== GROK_VERIFICATION_PAGE_STATE) {
-          throw new Error(`Grok 邮箱提交后尚未进入验证码页面，当前状态：${cleanString(result.state) || 'unknown'}${cleanString(result.url) ? `，URL：${cleanString(result.url)}` : ''}。`);
+          throw new Error(`Grok email submission did not reach verification-code page. Current state: ${cleanString(result.state) || 'unknown'}${cleanString(result.url) ? `, URL: ${cleanString(result.url)}` : ''}.`);
         }
-        await log(`步骤 2：已提交 Grok 注册邮箱 ${email}。`, 'ok', nodeId);
+        await log(`Step 2: submitted Grok registration email ${email}.`, 'ok', nodeId);
         await completeNode(nodeId, {
           grokEmail: email,
           grokVerificationRequestedAt: requestedAt,
@@ -479,7 +479,7 @@
             status: 'error',
           },
         }));
-        await log(`步骤 2：${message}`, 'error', nodeId);
+        await log(`Step 2: ${message}`, 'error', nodeId);
         throw error;
       }
     }
@@ -489,7 +489,7 @@
       const currentState = await getExecutionState(state);
       try {
         if (typeof pollFlowVerificationCode !== 'function') {
-          throw new Error('Grok 验证码步骤缺少共享邮件轮询能力，无法继续执行。');
+          throw new Error('Grok verification-code step missing shared mail polling, cannot continue.');
         }
         const requestedAt = Math.max(
           0,
@@ -510,7 +510,7 @@
         await activateTab(tabId);
         const readyState = await waitForGrokVerificationPageReady(tabId, {
           step: 3,
-          logMessage: '步骤 3：正在等待 Grok 验证码页面就绪...',
+          logMessage: 'Step 3: waiting for Grok verification-code page to be ready...',
         });
         await persistState({
           grokPageState: readyState.state || '',
@@ -524,13 +524,13 @@
           }),
         });
         const pollResult = await pollFlowVerificationCode({
-          actionLabel: 'Grok 验证码',
+          actionLabel: 'Grok verification code',
           filterAfterTimestamp,
           flowId: 'grok',
           logStep: 3,
           logStepKey: nodeId,
           nodeId,
-          notFoundMessage: '步骤 3：邮箱轮询结束，但未获取到 xAI 验证码。',
+          notFoundMessage: 'Step 3: mailbox polling ended without obtaining xAI verification code.',
           state: {
             ...currentState,
             activeFlowId: 'grok',
@@ -543,15 +543,15 @@
         });
         const code = normalizeGrokVerificationCode(pollResult?.code);
         if (!code) {
-          throw new Error('未能获取到 xAI 邮箱验证码。');
+          throw new Error('Failed to obtain xAI email verification code.');
         }
         await activateTab(tabId);
         await ensureContentReady(tabId);
         const result = await sendGrokCommand(nodeId, { code }, {
           step: 3,
-          logMessage: '步骤 3：正在填写 xAI 邮箱验证码...',
+          logMessage: 'Step 3: filling in xAI email verification code...',
         });
-        await log(`步骤 3：已提交 xAI 邮箱验证码，当前页面状态：${result.state || 'unknown'}。`, 'ok', nodeId);
+        await log(`Step 3: submitted xAI email verification code, current page state: ${result.state || 'unknown'}.`, 'ok', nodeId);
         await completeNode(nodeId, {
           grokVerificationCode: code,
           grokVerificationRawCode: cleanString(pollResult?.code),
@@ -580,7 +580,7 @@
             status: 'error',
           },
         }));
-        await log(`步骤 3：${message}`, 'error', nodeId);
+        await log(`Step 3: ${message}`, 'error', nodeId);
         throw error;
       }
     }
@@ -616,12 +616,12 @@
           password,
         }, {
           step: 4,
-          logMessage: '步骤 4：正在填写 xAI 注册资料...',
+          logMessage: 'Step 4: filling in xAI registration profile...',
         });
-        await log(`步骤 4：已提交 Grok 注册资料，等待 ${Math.floor(GROK_POST_PROFILE_CF_WAIT_MS / 1000)} 秒完成注册验证...`, 'info', nodeId);
+        await log(`Step 4: submitted Grok registration profile, waiting ${Math.floor(GROK_POST_PROFILE_CF_WAIT_MS / 1000)} seconds for registration verification...`, 'info', nodeId);
         await sleepWithStop(GROK_POST_PROFILE_CF_WAIT_MS);
         await ensureContentReady(tabId, { timeoutMs: DEFAULT_GROK_PAGE_TIMEOUT_MS });
-        await log('步骤 4：已提交 Grok 注册资料并完成等待。', 'ok', nodeId);
+        await log('Step 4: submitted Grok registration profile and finished waiting.', 'ok', nodeId);
         await completeNode(nodeId, {
           grokFirstName: profile.firstName,
           grokLastName: profile.lastName,
@@ -652,7 +652,7 @@
             status: 'error',
           },
         }));
-        await log(`步骤 4：${message}`, 'error', nodeId);
+        await log(`Step 4: ${message}`, 'error', nodeId);
         throw error;
       }
     }
@@ -663,7 +663,7 @@
       try {
         const tabId = await ensureGrokRegisterTab(currentState, { openIfMissing: false });
         await activateTab(tabId);
-        await log(`步骤 5：等待 ${Math.floor(GROK_PRE_SSO_EXTRACT_WAIT_MS / 1000)} 秒后提取 Grok SSO...`, 'info', nodeId);
+        await log(`Step 5: waiting ${Math.floor(GROK_PRE_SSO_EXTRACT_WAIT_MS / 1000)} seconds before extracting Grok SSO...`, 'info', nodeId);
         await sleepWithStop(GROK_PRE_SSO_EXTRACT_WAIT_MS);
 
         let ssoCookie = await readSsoCookieFromChrome();
@@ -671,12 +671,12 @@
           await ensureContentReady(tabId);
           const result = await sendGrokCommand(nodeId, {}, {
             step: 5,
-            logMessage: '步骤 5：正在从 Grok 注册页读取 sso Cookie...',
+            logMessage: 'Step 5: reading sso cookie from Grok registration page...',
           });
           ssoCookie = cleanString(result?.ssoCookie);
         }
         if (!ssoCookie) {
-          throw new Error('未找到 x.ai/grok sso Cookie。');
+          throw new Error('x.ai/grok sso cookie not found.');
         }
 
         const completedAt = Date.now();
@@ -716,11 +716,11 @@
             ...currentState,
             ...completionPatch,
           }, {
-            logPrefix: 'Grok 注册成功',
+            logPrefix: 'Grok registration succeeded',
             level: 'ok',
           });
         }
-        await log('步骤 5：已提取 Grok SSO Cookie。', 'ok', nodeId);
+        await log('Step 5: extracted Grok SSO cookie.', 'ok', nodeId);
         await completeNode(nodeId, completionPatch);
       } catch (error) {
         const message = getErrorMessage(error);
@@ -732,7 +732,7 @@
             status: 'error',
           },
         }));
-        await log(`步骤 5：${message}`, 'error', nodeId);
+        await log(`Step 5: ${message}`, 'error', nodeId);
         throw error;
       }
     }

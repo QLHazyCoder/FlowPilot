@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
@@ -16,7 +16,7 @@
 <body>
   <header>
     <div class="header-left">
-      <button id="btn-repo-home" class="header-icon-link" type="button" aria-label="打开 GitHub 仓库" title="打开 GitHub 仓库">
+      <button id="btn-repo-home" class="header-icon-link" type="button" aria-label="Open GitHub repository" title="Open GitHub repository">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
@@ -25,8 +25,8 @@
       <div class="header-version-block">
         <div class="header-version-main">
           <button id="extension-update-status" class="header-version-title header-version-link" type="button"
-          aria-label="打开 GitHub Releases 页面" title="打开 GitHub Releases 页面">FlowPilot0.0</button>
-          <button id="btn-release-log" class="header-link-btn" type="button" hidden>更新日志</button>
+          aria-label="Open GitHub Releases page" title="Open GitHub Releases page">FlowPilot0.0</button>
+          <button id="btn-release-log" class="header-link-btn" type="button" hidden>Release Notes</button>
         </div>
         <span id="extension-version-meta" class="header-version-meta" hidden></span>
       </div>
@@ -34,24 +34,24 @@
     <div class="header-btns">
       <div class="run-group">
         <button id="btn-contribution-mode" class="btn btn-outline btn-sm btn-contribution-mode" type="button"
-          aria-pressed="false" title="进入贡献模式并打开官网页">贡献/使用教程</button>
-        <input type="number" id="input-run-count" class="run-count-input" value="1" min="1" title="运行次数" />
-        <button id="btn-auto-run" class="btn btn-success" title="自动执行全部步骤">
+          aria-pressed="false" title="Enter contribution mode and open portal page">Contribute/Tutorial</button>
+        <input type="number" id="input-run-count" class="run-count-input" value="1" min="1" title="Run count" />
+        <button id="btn-auto-run" class="btn btn-success" title="Automatically execute all steps">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
             <polygon points="5 3 19 12 5 21 5 3" />
           </svg>
-          自动
+          Auto
         </button>
-        <button id="btn-stop" class="btn btn-danger" title="停止当前流程" disabled>停止</button>
+        <button id="btn-stop" class="btn btn-danger" title="Stop current flow" disabled>Stop</button>
       </div>
-      <button id="btn-reset" class="btn btn-ghost" title="重置全部步骤">
+      <button id="btn-reset" class="btn btn-ghost" title="Reset all steps">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
           <polyline points="1 4 1 10 7 10" />
           <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
         </svg>
       </button>
-      <button id="btn-theme" class="theme-toggle" title="切换主题">
+      <button id="btn-theme" class="theme-toggle" title="Toggle theme">
         <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
@@ -71,33 +71,33 @@
       </button>
       <div id="config-menu-shell" class="header-menu">
         <button id="btn-config-menu" class="btn btn-ghost btn-sm header-config-btn" type="button" aria-haspopup="menu"
-          aria-expanded="false">配置</button>
+          aria-expanded="false">Config</button>
         <div id="config-menu" class="header-dropdown" role="menu" aria-labelledby="btn-config-menu" hidden>
-          <button id="btn-export-settings" class="header-dropdown-item" type="button" role="menuitem">导出配置</button>
-          <button id="btn-import-settings" class="header-dropdown-item" type="button" role="menuitem">导入配置</button>
+          <button id="btn-export-settings" class="header-dropdown-item" type="button" role="menuitem">Export Config</button>
+          <button id="btn-import-settings" class="header-dropdown-item" type="button" role="menuitem">Import Config</button>
         </div>
       </div>
     </div>
   </header>
 
   <div id="auto-run-ad-bar" class="auto-run-ad-bar" hidden aria-live="polite">
-    <span class="auto-run-ad-badge">作者自营</span>
+    <span class="auto-run-ad-badge">Author-operated</span>
     <div id="auto-run-ad-viewport" class="auto-run-ad-viewport">
       <div id="auto-run-ad-track" class="auto-run-ad-track">
         <span id="auto-run-ad-text" class="auto-run-ad-text"></span>
         <span id="auto-run-ad-text-clone" class="auto-run-ad-text auto-run-ad-text--clone" aria-hidden="true"></span>
       </div>
     </div>
-    <span class="auto-run-ad-badge auto-run-ad-badge--end">售后保障</span>
+    <span class="auto-run-ad-badge auto-run-ad-badge--end">After-sale support</span>
   </div>
 
   <div id="contribution-update-layer" class="contribution-update-layer" hidden>
     <div id="contribution-update-hint" class="contribution-update-hint" aria-live="polite" hidden>
       <p id="contribution-update-hint-text" class="contribution-update-hint-text">
-        公告 / 使用教程有更新了，可点上方“贡献/使用教程”查看。
+        Announcements / Tutorials have been updated. Click "Contribute/Tutorial" above to view.
       </p>
       <button id="btn-dismiss-contribution-update-hint" class="contribution-update-hint-close" type="button"
-        aria-label="关闭更新提示" title="关闭更新提示">×</button>
+        aria-label="Close update hint" title="Close update hint">×</button>
     </div>
   </div>
 
@@ -105,16 +105,16 @@
     <div class="update-card">
       <div class="update-card-header">
         <div class="update-card-copy">
-          <span class="section-label">更新内容</span>
+          <span class="section-label">Update Details</span>
           <div id="update-card-version" class="update-card-version"></div>
           <p id="update-card-summary" class="update-card-summary"></p>
         </div>
         <div class="update-card-actions">
-          <button id="btn-ignore-release" class="btn btn-outline btn-sm" type="button" hidden>忽略本次更新</button>
-          <button id="btn-open-release" class="btn btn-primary btn-sm" type="button">前往更新</button>
+          <button id="btn-ignore-release" class="btn btn-outline btn-sm" type="button" hidden>Ignore this update</button>
+          <button id="btn-open-release" class="btn btn-primary btn-sm" type="button">Go to Update</button>
         </div>
       </div>
-      <p class="update-card-reminder">一定请先导出配置，再执行更新</p>
+      <p class="update-card-reminder">Be sure to export your config before updating</p>
       <div id="update-release-list" class="update-release-list"></div>
     </div>
   </section>
@@ -122,18 +122,18 @@
   <section id="data-section">
     <div id="settings-card" class="data-card">
       <div class="data-row" id="row-flow-selector">
-        <span class="data-label">注册</span>
-        <select id="select-flow" class="data-select" aria-label="Flow 选择">
+        <span class="data-label">Register</span>
+        <select id="select-flow" class="data-select" aria-label="Flow selection">
           <option value="openai" selected>Codex / OpenAI</option>
           <option value="kiro">Kiro</option>
           <option value="grok">Grok</option>
         </select>
       </div>
       <div class="data-row" id="row-source-selector">
-        <span id="label-source-selector" class="data-label">来源</span>
+        <span id="label-source-selector" class="data-label">Source</span>
         <div class="data-inline">
           <select id="select-panel-mode" class="data-select">
-            <option value="cpa">CPA 面板</option>
+            <option value="cpa">CPA Panel</option>
             <option value="sub2api">SUB2API</option>
             <option value="codex2api">Codex2API</option>
           </select>
@@ -142,35 +142,35 @@
       </div>
         <div id="contribution-mode-panel" class="contribution-mode-panel" hidden>
           <div class="contribution-mode-panel-header">
-            <span class="section-label">贡献模式</span>
+            <span class="section-label">Contribution Mode</span>
             <span id="contribution-mode-badge" class="contribution-mode-badge">CPA</span>
           </div>
         <p id="contribution-mode-text" class="contribution-mode-text">
-          当前账号将用于支持项目维护。扩展会自动申请贡献登录地址并持续跟踪授权状态；如检测到回调地址，会自动提交，无需手动复制。</p>
+          The current account will be used to support project maintenance. The extension will automatically request the contribution login URL and continuously track authorization status. If a callback URL is detected, it will be submitted automatically without manual copying.</p>
         <div class="data-row contribution-mode-field">
-          <span class="data-label">贡献昵称</span>
-          <input type="text" id="input-contribution-nickname" class="data-input" placeholder="可留空，将显示为匿名贡献者" />
+          <span class="data-label">Nickname</span>
+          <input type="text" id="input-contribution-nickname" class="data-input" placeholder="Optional, will display as anonymous contributor" />
         </div>
         <div class="data-row contribution-mode-field">
           <span class="data-label">QQ</span>
           <input type="text" id="input-contribution-qq" class="data-input" inputmode="numeric"
-            placeholder="可留空，只能填写数字" />
+            placeholder="Optional, digits only" />
         </div>
         <div class="contribution-mode-status-grid">
           <div class="contribution-mode-status-card">
             <span id="contribution-primary-status-label" class="contribution-mode-status-label">OAUTH</span>
-            <span id="contribution-oauth-status" class="contribution-mode-status-value">未生成登录地址</span>
+            <span id="contribution-oauth-status" class="contribution-mode-status-value">Login URL not generated</span>
           </div>
           <div class="contribution-mode-status-card">
-            <span id="contribution-secondary-status-label" class="contribution-mode-status-label">回调</span>
-            <span id="contribution-callback-status" class="contribution-mode-status-value">等待回调</span>
+            <span id="contribution-secondary-status-label" class="contribution-mode-status-label">Callback</span>
+            <span id="contribution-callback-status" class="contribution-mode-status-value">Waiting for callback</span>
           </div>
         </div>
-        <div id="contribution-mode-summary" class="contribution-mode-summary">等待开始贡献</div>
+        <div id="contribution-mode-summary" class="contribution-mode-summary">Waiting to start contribution</div>
         <div class="contribution-mode-actions">
-          <button id="btn-start-contribution" class="btn btn-primary btn-sm" type="button">开始贡献</button>
-          <button id="btn-open-contribution-upload" class="btn btn-outline btn-sm" type="button">已有认证文件？前往上传</button>
-          <button id="btn-exit-contribution-mode" class="btn btn-ghost btn-sm" type="button">退出贡献模式</button>
+          <button id="btn-start-contribution" class="btn btn-primary btn-sm" type="button">Start Contribution</button>
+          <button id="btn-open-contribution-upload" class="btn btn-outline btn-sm" type="button">Already have auth file? Go to upload</button>
+          <button id="btn-exit-contribution-mode" class="btn btn-ghost btn-sm" type="button">Exit Contribution Mode</button>
         </div>
       </div>
       <div class="data-row" id="row-vps-url">
@@ -178,24 +178,24 @@
         <div class="input-with-icon">
           <input type="password" id="input-vps-url" class="data-input data-input-with-icon"
             placeholder="http://ip:port/management.html#/oauth" />
-          <button id="btn-toggle-vps-url" class="input-icon-btn" type="button" aria-label="显示 CPA 地址"
-            title="显示 CPA 地址"></button>
+          <button id="btn-toggle-vps-url" class="input-icon-btn" type="button" aria-label="Show CPA URL"
+            title="Show CPA URL"></button>
         </div>
       </div>
       <div class="data-row" id="row-vps-password">
-        <span class="data-label">管理密钥</span>
+        <span class="data-label">Admin Key</span>
         <div class="input-with-icon">
           <input type="password" id="input-vps-password" class="data-input data-input-with-icon"
-            placeholder="请输入 CPA 管理密钥" />
-          <button id="btn-toggle-vps-password" class="input-icon-btn" type="button" aria-label="显示管理密钥"
-            title="显示管理密钥"></button>
+            placeholder="Enter CPA admin key" />
+          <button id="btn-toggle-vps-password" class="input-icon-btn" type="button" aria-label="Show admin key"
+            title="Show admin key"></button>
         </div>
       </div>
       <div class="data-row" id="row-local-cpa-step9-mode">
-        <span class="data-label">回调方式</span>
-        <div id="local-cpa-step9-mode-group" class="choice-group" role="group" aria-label="回调方式">
-          <button type="button" class="choice-btn" data-local-cpa-step9-mode="submit">服务器部署</button>
-          <button type="button" class="choice-btn" data-local-cpa-step9-mode="bypass">本地部署</button>
+        <span class="data-label">Callback Mode</span>
+        <div id="local-cpa-step9-mode-group" class="choice-group" role="group" aria-label="Callback mode">
+          <button type="button" class="choice-btn" data-local-cpa-step9-mode="submit">Server Deploy</button>
+          <button type="button" class="choice-btn" data-local-cpa-step9-mode="bypass">Local Deploy</button>
         </div>
       </div>
       <div class="data-row" id="row-sub2api-url" style="display:none;">
@@ -204,21 +204,21 @@
           placeholder="https://your-sub2api-domain/admin/accounts" />
       </div>
       <div class="data-row" id="row-sub2api-email" style="display:none;">
-        <span class="data-label">账号</span>
-        <input type="text" id="input-sub2api-email" class="data-input" placeholder="请输入 SUB2API 登录邮箱" />
+        <span class="data-label">Account</span>
+        <input type="text" id="input-sub2api-email" class="data-input" placeholder="Enter SUB2API login email" />
       </div>
       <div class="data-row" id="row-sub2api-password" style="display:none;">
-        <span class="data-label">密码</span>
+        <span class="data-label">Password</span>
         <div class="input-with-icon">
           <input type="password" id="input-sub2api-password" class="data-input data-input-with-icon"
-            placeholder="请输入 SUB2API 登录密码" />
+            placeholder="Enter SUB2API login password" />
           <button id="btn-toggle-sub2api-password" class="input-icon-btn" type="button"
-            data-password-toggle="input-sub2api-password" data-show-label="显示 SUB2API 密码"
-            data-hide-label="隐藏 SUB2API 密码" aria-label="显示 SUB2API 密码" title="显示 SUB2API 密码"></button>
+            data-password-toggle="input-sub2api-password" data-show-label="Show SUB2API password"
+            data-hide-label="Hide SUB2API password" aria-label="Show SUB2API password" title="Show SUB2API password"></button>
         </div>
       </div>
       <div class="data-row" id="row-sub2api-group" style="display:none;">
-        <span class="data-label">分组</span>
+        <span class="data-label">Group</span>
         <div class="data-inline">
           <input type="hidden" id="input-sub2api-group" value="codex" />
           <div id="sub2api-group-picker" class="editable-list-picker">
@@ -229,16 +229,16 @@
             </button>
             <div id="sub2api-group-menu" class="editable-list-menu" role="listbox" hidden></div>
           </div>
-          <button id="btn-add-sub2api-group" class="btn btn-outline btn-sm data-inline-btn" type="button">添加</button>
+          <button id="btn-add-sub2api-group" class="btn btn-outline btn-sm data-inline-btn" type="button">Add</button>
         </div>
       </div>
       <div class="data-row" id="row-sub2api-account-priority" style="display:none;">
-        <span class="data-label">优先级</span>
+        <span class="data-label">Priority</span>
         <input type="number" id="input-sub2api-account-priority" class="data-input mono" value="1" min="1" step="1" />
       </div>
       <div class="data-row" id="row-sub2api-default-proxy" style="display:none;">
-        <span class="data-label">默认代理</span>
-        <input type="text" id="input-sub2api-default-proxy" class="data-input" placeholder="留空则不使用代理；或填写代理名称 / ID" />
+        <span class="data-label">Default Proxy</span>
+        <input type="text" id="input-sub2api-default-proxy" class="data-input" placeholder="Leave blank for no proxy; or fill in proxy name / ID" />
       </div>
       <div class="data-row" id="row-codex2api-url" style="display:none;">
         <span class="data-label">Codex2API</span>
@@ -246,21 +246,21 @@
           placeholder="http://localhost:8080/admin/accounts" />
       </div>
       <div class="data-row" id="row-codex2api-admin-key" style="display:none;">
-        <span class="data-label">管理密钥</span>
+        <span class="data-label">Admin Key</span>
         <div class="input-with-icon">
           <input type="password" id="input-codex2api-admin-key" class="data-input data-input-with-icon"
-            placeholder="请输入 Codex2API Admin Secret" />
+            placeholder="Enter Codex2API Admin Secret" />
           <button id="btn-toggle-codex2api-admin-key" class="input-icon-btn" type="button"
-            data-password-toggle="input-codex2api-admin-key" data-show-label="显示 Codex2API 管理密钥"
-            data-hide-label="隐藏 Codex2API 管理密钥" aria-label="显示 Codex2API 管理密钥"
-            title="显示 Codex2API 管理密钥"></button>
+            data-password-toggle="input-codex2api-admin-key" data-show-label="Show Codex2API admin key"
+            data-hide-label="Hide Codex2API admin key" aria-label="Show Codex2API admin key"
+            title="Show Codex2API admin key"></button>
         </div>
       </div>
       <div class="data-row" id="row-kiro-rs-url" style="display:none;">
         <span class="data-label">kiro.rs</span>
         <div class="data-inline">
           <input type="text" id="input-kiro-rs-url" class="data-input"
-            placeholder="请输入 kiro.rs 管理地址" />
+            placeholder="Enter kiro.rs management URL" />
           <button id="btn-open-kiro-rs-github" class="btn btn-ghost btn-xs data-inline-btn" type="button">GitHub</button>
         </div>
       </div>
@@ -269,152 +269,152 @@
         <div class="data-inline">
           <div class="input-with-icon">
             <input type="password" id="input-kiro-rs-key" class="data-input data-input-with-icon"
-              placeholder="请输入 kiro.rs API Key" />
+              placeholder="Enter kiro.rs API Key" />
             <button id="btn-toggle-kiro-rs-key" class="input-icon-btn" type="button"
-              data-password-toggle="input-kiro-rs-key" data-show-label="显示 kiro.rs API Key"
-              data-hide-label="隐藏 kiro.rs API Key" aria-label="显示 kiro.rs API Key"
-              title="显示 kiro.rs API Key"></button>
+              data-password-toggle="input-kiro-rs-key" data-show-label="Show kiro.rs API Key"
+              data-hide-label="Hide kiro.rs API Key" aria-label="Show kiro.rs API Key"
+              title="Show kiro.rs API Key"></button>
           </div>
-          <button id="btn-test-kiro-rs" class="btn btn-ghost btn-xs data-inline-btn" type="button">测试</button>
+          <button id="btn-test-kiro-rs" class="btn btn-ghost btn-xs data-inline-btn" type="button">Test</button>
         </div>
       </div>
       <div class="data-row" id="row-kiro-rs-test-status" style="display:none;">
-        <span class="data-label">连接测试</span>
-        <span id="display-kiro-rs-test-status" class="data-value mono">未测试</span>
+        <span class="data-label">Connection Test</span>
+        <span id="display-kiro-rs-test-status" class="data-value mono">Not tested</span>
       </div>
       <div class="data-row" id="row-kiro-web-status" style="display:none;">
         <span class="data-label">Kiro Web</span>
-        <span id="display-kiro-web-status" class="data-value mono">未开始</span>
+        <span id="display-kiro-web-status" class="data-value mono">Not started</span>
       </div>
       <div class="data-row" id="row-kiro-login-url" style="display:none;">
-        <span class="data-label">注册入口</span>
-        <span id="display-kiro-login-url" class="data-value mono">未打开</span>
+        <span class="data-label">Register Entry</span>
+        <span id="display-kiro-login-url" class="data-value mono">Not opened</span>
       </div>
       <div class="data-row" id="row-kiro-upload-status" style="display:none;">
-        <span class="data-label">上传状态</span>
-        <span id="display-kiro-upload-status" class="data-value mono">未开始</span>
+        <span class="data-label">Upload Status</span>
+        <span id="display-kiro-upload-status" class="data-value mono">Not started</span>
       </div>
       <div class="data-row" id="row-grok-webchat2api-url" style="display:none;">
         <span class="data-label">webchat</span>
         <input type="text" id="input-grok-webchat2api-url" class="data-input"
-          placeholder="请输入 webchat2api 地址，例如 http://localhost:83" />
+          placeholder="Enter webchat2api URL, e.g. http://localhost:83" />
       </div>
       <div class="data-row" id="row-grok-webchat2api-key" style="display:none;">
-        <span class="data-label">管理密钥</span>
+        <span class="data-label">Admin Key</span>
         <div class="input-with-icon">
           <input type="password" id="input-grok-webchat2api-key" class="data-input data-input-with-icon"
-            placeholder="请输入 webchat2api 管理密钥" />
+            placeholder="Enter webchat2api admin key" />
           <button id="btn-toggle-grok-webchat2api-key" class="input-icon-btn" type="button"
-            data-password-toggle="input-grok-webchat2api-key" data-show-label="显示 webchat2api 管理密钥"
-            data-hide-label="隐藏 webchat2api 管理密钥" aria-label="显示 webchat2api 管理密钥"
-            title="显示 webchat2api 管理密钥"></button>
+            data-password-toggle="input-grok-webchat2api-key" data-show-label="Show webchat2api admin key"
+            data-hide-label="Hide webchat2api admin key" aria-label="Show webchat2api admin key"
+            title="Show webchat2api admin key"></button>
         </div>
       </div>
       <div class="data-row" id="row-grok-register-status" style="display:none;">
-        <span class="data-label">Grok 注册</span>
-        <span id="display-grok-register-status" class="data-value mono">未开始</span>
+        <span class="data-label">Grok Register</span>
+        <span id="display-grok-register-status" class="data-value mono">Not started</span>
       </div>
       <div class="data-row" id="row-grok-sso-status" style="display:none;">
-        <span class="data-label">SSO 状态</span>
-        <span id="display-grok-sso-status" class="data-value mono">未提取</span>
+        <span class="data-label">SSO Status</span>
+        <span id="display-grok-sso-status" class="data-value mono">Not extracted</span>
       </div>
       <div class="data-row" id="row-grok-webchat2api-upload-status" style="display:none;">
-        <span class="data-label">上传状态</span>
-        <span id="display-grok-webchat2api-upload-status" class="data-value mono">未开始</span>
+        <span class="data-label">Upload Status</span>
+        <span id="display-grok-webchat2api-upload-status" class="data-value mono">Not started</span>
       </div>
       <div class="data-row" id="row-grok-sso-settings" style="display:none;">
         <span class="data-label">SSO Cookie</span>
         <div class="data-inline">
-          <span id="display-grok-sso-cookie" class="data-value mono">未提取</span>
-          <button id="btn-copy-grok-sso" class="btn btn-ghost btn-xs data-inline-btn" type="button">复制</button>
-          <button id="btn-clear-grok-sso" class="btn btn-ghost btn-xs data-inline-btn" type="button">清空</button>
+          <span id="display-grok-sso-cookie" class="data-value mono">Not extracted</span>
+          <button id="btn-copy-grok-sso" class="btn btn-ghost btn-xs data-inline-btn" type="button">Copy</button>
+          <button id="btn-clear-grok-sso" class="btn btn-ghost btn-xs data-inline-btn" type="button">Clear</button>
         </div>
       </div>
       <div class="data-row module-divider-start" id="row-custom-password">
-        <span class="data-label">账户密码</span>
+        <span class="data-label">Account Password</span>
         <div class="input-with-icon">
           <input type="password" id="input-password" class="data-input data-input-with-icon"
-            placeholder="账户密码，留空则自动生成" />
-          <button id="btn-toggle-password" class="input-icon-btn" type="button" aria-label="显示密码" title="显示密码"></button>
+            placeholder="Account password, auto-generated if empty" />
+          <button id="btn-toggle-password" class="input-icon-btn" type="button" aria-label="Show password" title="Show password"></button>
         </div>
       </div>
       <div class="data-row" id="row-plus-mode">
-        <span class="data-label">Plus 模式</span>
+        <span class="data-label">Plus Mode</span>
         <div class="data-inline setting-pair">
           <div class="setting-group setting-group-primary">
-            <label class="toggle-switch" for="input-plus-mode-enabled" title="开启后使用 Plus Checkout 支付授权流程">
+            <label class="toggle-switch" for="input-plus-mode-enabled" title="Enable to use Plus Checkout payment authorization flow">
               <input type="checkbox" id="input-plus-mode-enabled" />
               <span class="toggle-switch-track" aria-hidden="true">
                 <span class="toggle-switch-thumb"></span>
               </span>
             </label>
           </div>
-          <span class="setting-caption">Plus 订阅链路</span>
+          <span class="setting-caption">Plus subscription flow</span>
         </div>
       </div>
       <div class="data-row" id="row-plus-account-access-strategy" style="display:none;">
-        <span class="data-label">账号接入策略</span>
+        <span class="data-label">Account Access Strategy</span>
         <div class="data-inline">
           <select id="select-plus-account-access-strategy" class="data-select">
             <option value="oauth">OAuth</option>
-            <option value="codex_session">使用会话 JSON 导入</option>
+            <option value="codex_session">Import via session JSON</option>
           </select>
-          <span class="setting-caption" id="plus-account-access-strategy-caption">当前来源仅支持 OAuth</span>
+          <span class="setting-caption" id="plus-account-access-strategy-caption">Current source only supports OAuth</span>
         </div>
       </div>
       <div class="data-row" id="row-plus-payment-method" style="display:none;">
-        <span class="data-label">Plus 支付</span>
+        <span class="data-label">Plus Payment</span>
         <div class="data-inline">
           <select id="select-plus-payment-method" class="data-select">
-            <option value="none">无需支付</option>
-            <option value="paypal-hosted">PayPal 无卡直绑</option>
+            <option value="none">No payment required</option>
+            <option value="paypal-hosted">PayPal Cardless Direct</option>
             <option value="paypal">PayPal</option>
             <!--
             <option value="gopay">GoPay</option>
             <option value="gpc-helper">GPC</option>
             -->
           </select>
-          <button id="btn-gpc-card-key-purchase" class="btn btn-outline btn-sm data-inline-btn" type="button" style="display:none;">购买卡密</button>
-          <span class="setting-caption" id="plus-payment-method-caption">PayPal 订阅链路</span>
+          <button id="btn-gpc-card-key-purchase" class="btn btn-outline btn-sm data-inline-btn" type="button" style="display:none;">Buy Card Key</button>
+          <span class="setting-caption" id="plus-payment-method-caption">PayPal subscription flow</span>
         </div>
       </div>
       <div class="data-row" id="row-paypal-account" style="display:none;">
-        <span class="data-label">PayPal 账号</span>
+        <span class="data-label">PayPal Account</span>
         <div class="data-inline">
           <input type="hidden" id="select-paypal-account" value="" />
           <div id="paypal-account-picker" class="editable-list-picker">
             <button id="btn-paypal-account-menu" class="data-select editable-list-trigger" type="button"
               aria-haspopup="listbox" aria-expanded="false">
-              <span id="paypal-account-current" class="truncate">请先添加 PayPal 账号</span>
+              <span id="paypal-account-current" class="truncate">Please add a PayPal account first</span>
               <span class="editable-list-caret" aria-hidden="true"></span>
             </button>
             <div id="paypal-account-menu" class="editable-list-menu" role="listbox" hidden></div>
           </div>
-          <button id="btn-add-paypal-account" class="btn btn-outline btn-sm data-inline-btn" type="button">添加</button>
+          <button id="btn-add-paypal-account" class="btn btn-outline btn-sm data-inline-btn" type="button">Add</button>
         </div>
       </div>
       <div class="data-row" id="row-hosted-checkout-verification-url" style="display:none;">
-        <span class="data-label">直绑验证码</span>
+        <span class="data-label">Direct Bind Code</span>
         <input type="text" id="input-hosted-checkout-verification-url" class="data-input"
-          placeholder="用于读取 PayPal / OpenAI 验证码的接口地址" autocomplete="off" />
+          placeholder="API URL for reading PayPal / OpenAI verification codes" autocomplete="off" />
       </div>
       <div class="data-row" id="row-hosted-checkout-phone" style="display:none;">
-        <span class="data-label">直绑电话</span>
+        <span class="data-label">Direct Bind Phone</span>
         <input type="text" id="input-hosted-checkout-phone" class="data-input"
-          placeholder="填 10 位美国本地号码，不要带 +1" autocomplete="tel" />
+          placeholder="Enter 10-digit US local number, without +1" autocomplete="tel" />
       </div>
       <div class="data-row" id="row-plus-hosted-checkout-oauth-delay" style="display:none;">
-        <span class="data-label">成功等待</span>
+        <span class="data-label">Success Wait</span>
         <input type="number" id="input-plus-hosted-checkout-oauth-delay-seconds" class="data-input auto-delay-input"
           value="3" min="0" max="120" step="1" />
-        <span class="setting-caption">支付成功页出现后再继续账号接入</span>
+        <span class="setting-caption">Wait after success page appears, then continue account access</span>
       </div>
       <div class="data-row" id="row-gpc-helper-api" style="display:none;">
         <span class="data-label">GPC API</span>
         <div class="data-inline">
           <input type="text" id="input-gpc-helper-api" class="data-input gpc-helper-api-input"
             value="https://gpc.qlhazycoder.top/" placeholder="https://gpc.qlhazycoder.top/" autocomplete="off" readonly />
-          <button id="btn-gpc-helper-convert-api-key" class="btn btn-outline btn-sm data-inline-btn" type="button">转换 API Key</button>
+          <button id="btn-gpc-helper-convert-api-key" class="btn btn-outline btn-sm data-inline-btn" type="button">Convert API Key</button>
         </div>
       </div>
       <div class="data-row" id="row-gpc-helper-card-key" style="display:none;">
@@ -422,43 +422,43 @@
         <div class="data-inline">
           <div class="input-with-icon">
             <input type="password" id="input-gpc-helper-card-key" class="data-input data-input-with-icon"
-              placeholder="请输入 GPC API Key（gpc-...）" autocomplete="off" />
+              placeholder="Enter GPC API Key (gpc-...)" autocomplete="off" />
             <button id="btn-toggle-gpc-helper-card-key" class="input-icon-btn" type="button"
-              data-password-toggle="input-gpc-helper-card-key" data-show-label="显示 GPC API Key"
-              data-hide-label="隐藏 GPC API Key" aria-label="显示 GPC API Key" title="显示 GPC API Key"></button>
+              data-password-toggle="input-gpc-helper-card-key" data-show-label="Show GPC API Key"
+              data-hide-label="Hide GPC API Key" aria-label="Show GPC API Key" title="Show GPC API Key"></button>
           </div>
-          <button id="btn-gpc-helper-balance" class="btn btn-ghost btn-xs data-inline-btn" type="button">查余额</button>
-          <span id="display-gpc-helper-balance" class="data-value mono">余额未获取</span>
+          <button id="btn-gpc-helper-balance" class="btn btn-ghost btn-xs data-inline-btn" type="button">Check Balance</button>
+          <span id="display-gpc-helper-balance" class="data-value mono">Balance not retrieved</span>
         </div>
       </div>
       <div class="data-row" id="row-gpc-helper-phone-mode" style="display:none;">
-        <span class="data-label">GPC 模式</span>
+        <span class="data-label">GPC Mode</span>
         <select id="select-gpc-helper-phone-mode" class="data-select">
-          <option value="manual">手动模式</option>
-          <option value="auto">自动模式</option>
+          <option value="manual">Manual mode</option>
+          <option value="auto">Auto mode</option>
         </select>
       </div>
       <div class="data-row" id="row-gpc-helper-country-code" style="display:none;">
-        <span class="data-label">GPC 区号</span>
+        <span class="data-label">GPC Code</span>
         <select id="select-gpc-helper-country-code" class="data-select">
-          <option value="+86">中国 +86</option>
-          <option value="+62">印度尼西亚 +62</option>
-          <option value="+1">美国/加拿大 +1</option>
-          <option value="+852">香港 +852</option>
-          <option value="+853">澳门 +853</option>
-          <option value="+886">台湾 +886</option>
-          <option value="+60">马来西亚 +60</option>
-          <option value="+65">新加坡 +65</option>
-          <option value="+66">泰国 +66</option>
-          <option value="+84">越南 +84</option>
-          <option value="+63">菲律宾 +63</option>
-          <option value="+91">印度 +91</option>
+          <option value="+86">China +86</option>
+          <option value="+62">Indonesia +62</option>
+          <option value="+1">USA/Canada +1</option>
+          <option value="+852">Hong Kong +852</option>
+          <option value="+853">Macau +853</option>
+          <option value="+886">Taiwan +886</option>
+          <option value="+60">Malaysia +60</option>
+          <option value="+65">Singapore +65</option>
+          <option value="+66">Thailand +66</option>
+          <option value="+84">Vietnam +84</option>
+          <option value="+63">Philippines +63</option>
+          <option value="+91">India +91</option>
         </select>
       </div>
       <div class="data-row" id="row-gpc-helper-phone" style="display:none;">
-        <span class="data-label">GPC 手机</span>
+        <span class="data-label">GPC Phone</span>
         <input type="text" id="input-gpc-helper-phone" class="data-input"
-          placeholder="GPC 专用手机号，不读取 GoPay 手机字段" autocomplete="tel" />
+          placeholder="GPC-specific phone number, does not read GoPay phone field" autocomplete="tel" />
       </div>
       <div class="data-row" id="row-gpc-helper-otp-channel" style="display:none;">
         <span class="data-label">GPC OTP</span>
@@ -468,17 +468,17 @@
         </select>
       </div>
       <div class="data-row" id="row-gpc-helper-local-sms-enabled" style="display:none;">
-        <span class="data-label">本地 OTP</span>
+        <span class="data-label">Local OTP</span>
         <label class="toggle-switch">
           <input type="checkbox" id="input-gpc-helper-local-sms-enabled" />
           <span class="toggle-switch-track" aria-hidden="true">
             <span class="toggle-switch-thumb"></span>
           </span>
         </label>
-        <span class="setting-caption">从本机 helper 读取当前通道 OTP，开启后不弹手动验证码</span>
+        <span class="setting-caption">Read current channel OTP from local helper; when enabled, no manual code prompt</span>
       </div>
       <div class="data-row" id="row-gpc-helper-local-sms-url" style="display:none;">
-        <span class="data-label">OTP 接口</span>
+        <span class="data-label">OTP API</span>
         <input type="text" id="input-gpc-helper-local-sms-url" class="data-input"
           placeholder="http://127.0.0.1:18767" autocomplete="off" />
       </div>
@@ -486,142 +486,142 @@
         <span class="data-label">GPC PIN</span>
         <div class="input-with-icon">
           <input type="password" id="input-gpc-helper-pin" class="data-input data-input-with-icon"
-            placeholder="请输入 GoPay PIN" autocomplete="off" />
+            placeholder="Enter GoPay PIN" autocomplete="off" />
           <button id="btn-toggle-gpc-helper-pin" class="input-icon-btn" type="button"
-            data-password-toggle="input-gpc-helper-pin" data-show-label="显示 GPC PIN"
-            data-hide-label="隐藏 GPC PIN" aria-label="显示 GPC PIN"
-            title="显示 GPC PIN"></button>
+            data-password-toggle="input-gpc-helper-pin" data-show-label="Show GPC PIN"
+            data-hide-label="Hide GPC PIN" aria-label="Show GPC PIN"
+            title="Show GPC PIN"></button>
         </div>
       </div>
       <div class="data-row" id="row-gopay-country-code" style="display:none;">
-        <span class="data-label">GoPay 区号</span>
+        <span class="data-label">GoPay Code</span>
         <select id="select-gopay-country-code" class="data-select">
-          <option value="+86">中国 +86</option>
-          <option value="+62">印度尼西亚 +62</option>
-          <option value="+1">美国/加拿大 +1</option>
-          <option value="+852">香港 +852</option>
-          <option value="+853">澳门 +853</option>
-          <option value="+886">台湾 +886</option>
-          <option value="+60">马来西亚 +60</option>
-          <option value="+65">新加坡 +65</option>
-          <option value="+66">泰国 +66</option>
-          <option value="+84">越南 +84</option>
-          <option value="+63">菲律宾 +63</option>
-          <option value="+91">印度 +91</option>
+          <option value="+86">China +86</option>
+          <option value="+62">Indonesia +62</option>
+          <option value="+1">USA/Canada +1</option>
+          <option value="+852">Hong Kong +852</option>
+          <option value="+853">Macau +853</option>
+          <option value="+886">Taiwan +886</option>
+          <option value="+60">Malaysia +60</option>
+          <option value="+65">Singapore +65</option>
+          <option value="+66">Thailand +66</option>
+          <option value="+84">Vietnam +84</option>
+          <option value="+63">Philippines +63</option>
+          <option value="+91">India +91</option>
         </select>
       </div>
       <div class="data-row" id="row-gopay-phone" style="display:none;">
-        <span class="data-label">GoPay 手机</span>
+        <span class="data-label">GoPay Phone</span>
         <input type="text" id="input-gopay-phone" class="data-input"
-          placeholder="请输入不含区号的 GoPay / WhatsApp 手机号" autocomplete="tel" />
+          placeholder="Enter GoPay / WhatsApp phone number without country code" autocomplete="tel" />
       </div>
       <div class="data-row" id="row-gopay-otp" style="display:none;">
-        <span class="data-label">GoPay 验证码</span>
+        <span class="data-label">GoPay Code</span>
         <input type="text" id="input-gopay-otp" class="data-input"
-          placeholder="可选；留空时执行中会弹窗手动输入" inputmode="numeric" autocomplete="one-time-code" />
+          placeholder="Optional; if blank, will prompt for manual input during execution" inputmode="numeric" autocomplete="one-time-code" />
       </div>
       <div class="data-row" id="row-gopay-pin" style="display:none;">
         <span class="data-label">GoPay PIN</span>
         <div class="input-with-icon">
           <input type="password" id="input-gopay-pin" class="data-input data-input-with-icon"
-            placeholder="请输入 GoPay PIN" autocomplete="off" />
+            placeholder="Enter GoPay PIN" autocomplete="off" />
           <button id="btn-toggle-gopay-pin" class="input-icon-btn" type="button"
-            data-password-toggle="input-gopay-pin" data-show-label="显示 GoPay PIN"
-            data-hide-label="隐藏 GoPay PIN" aria-label="显示 GoPay PIN"
-            title="显示 GoPay PIN"></button>
+            data-password-toggle="input-gopay-pin" data-show-label="Show GoPay PIN"
+            data-hide-label="Hide GoPay PIN" aria-label="Show GoPay PIN"
+            title="Show GoPay PIN"></button>
         </div>
       </div>
       <div class="data-row module-divider-start" id="row-mail-provider">
-        <span class="data-label">邮箱服务</span>
+        <span class="data-label">Mail Service</span>
         <div class="data-inline">
           <select id="select-mail-provider" class="data-select">
-            <option value="custom">自定义邮箱</option>
-            <option value="hotmail-api">Hotmail（账号池）</option>
-            <option value="luckmail-api">LuckMail（API 购邮）</option>
+            <option value="custom">Custom Email</option>
+            <option value="hotmail-api">Hotmail (account pool)</option>
+            <option value="luckmail-api">LuckMail (API purchase)</option>
             <option value="yyds-mail">YYDS Mail</option>
-            <option value="icloud">iCloud 邮箱</option>
-            <option value="163">163 邮箱 (mail.163.com) 版本老旧，请自行维护使用</option>
-            <option value="163-vip">163 VIP 邮箱 (vip.163.com) 版本老旧，请自行维护使用</option>
-            <option value="126">126 邮箱 (mail.126.com) 版本老旧，请自行维护使用</option>
-            <option value="qq">QQ 邮箱 (wx.mail.qq.com) 版本老旧，请自行维护使用</option>
-            <option value="inbucket">Inbucket（自定义主机）</option>
-            <option value="2925">2925 邮箱 (2925.com)（推荐）</option>
-            <option value="gmail">Gmail 邮箱 (mail.google.com)</option>
-            <option value="cloudflare-temp-email">Cloudflare Temp Email（推荐）</option>
+            <option value="icloud">iCloud Mail</option>
+            <option value="163">163 Mail (mail.163.com) outdated, please maintain yourself</option>
+            <option value="163-vip">163 VIP Mail (vip.163.com) outdated, please maintain yourself</option>
+            <option value="126">126 Mail (mail.126.com) outdated, please maintain yourself</option>
+            <option value="qq">QQ Mail (wx.mail.qq.com) outdated, please maintain yourself</option>
+            <option value="inbucket">Inbucket (custom host)</option>
+            <option value="2925">2925 Mail (2925.com) (Recommended)</option>
+            <option value="gmail">Gmail Mail (mail.google.com)</option>
+            <option value="cloudflare-temp-email">Cloudflare Temp Email (Recommended)</option>
             <option value="cloudmail">Cloud Mail</option>
           </select>
-          <button id="btn-mail-login" class="btn btn-outline btn-sm data-inline-btn" type="button" disabled>登录</button>
+          <button id="btn-mail-login" class="btn btn-outline btn-sm data-inline-btn" type="button" disabled>Login</button>
         </div>
       </div>
       <div class="data-row data-check-row" id="row-custom-mail-provider-pool" style="display:none;">
-        <span class="data-label">自定义号池</span>
+        <span class="data-label">Custom Pool</span>
         <textarea id="input-custom-mail-provider-pool" class="data-textarea"
-          placeholder="每行一个注册邮箱，例如&#10;alias001@example.com&#10;alias002@example.com"></textarea>
+          placeholder="One registration email per line, e.g.&#10;alias001@example.com&#10;alias002@example.com"></textarea>
       </div>
       <div class="data-row" id="row-mail-2925-mode" style="display:none;">
-        <span class="data-label">2925 模式</span>
-        <div id="mail-2925-mode-group" class="choice-group" role="group" aria-label="2925 邮箱模式">
-          <button type="button" class="choice-btn" data-mail2925-mode="provide">提供邮箱</button>
-          <button type="button" class="choice-btn" data-mail2925-mode="receive">接收邮箱</button>
+        <span class="data-label">2925 Mode</span>
+        <div id="mail-2925-mode-group" class="choice-group" role="group" aria-label="2925 mail mode">
+          <button type="button" class="choice-btn" data-mail2925-mode="provide">Provide Email</button>
+          <button type="button" class="choice-btn" data-mail2925-mode="receive">Receive Email</button>
         </div>
       </div>
       <div class="data-row" id="row-email-generator">
-        <span class="data-label">邮箱生成</span>
+        <span class="data-label">Email Generator</span>
         <select id="select-email-generator" class="data-select">
           <option value="gmail-alias">Gmail +tag</option>
           <option value="duck">DuckDuckGo</option>
-          <option value="custom-pool">自定义邮箱池</option>
+          <option value="custom-pool">Custom Pool</option>
           <option value="cloudflare">Cloudflare</option>
-          <option value="icloud">iCloud 隐私邮箱</option>
-          <option value="cloudflare-temp-email">Cloudflare Temp Email（推荐）</option>
+          <option value="icloud">iCloud Hide My Email</option>
+          <option value="cloudflare-temp-email">Cloudflare Temp Email (Recommended)</option>
           <option value="cloudmail">Cloud Mail</option>
         </select>
       </div>
       <div class="data-row data-check-row" id="row-custom-email-pool" style="display:none;">
-        <span class="data-label">邮箱池</span>
+        <span class="data-label">Email Pool</span>
         <div class="hotmail-import-box">
           <textarea id="input-custom-email-pool" class="data-textarea mono" hidden
-            placeholder="每行一个邮箱，例如&#10;alias001@gmail.com&#10;alias002@gmail.com"></textarea>
+            placeholder="One email per line, e.g.&#10;alias001@gmail.com&#10;alias002@gmail.com"></textarea>
           <div class="section-mini-header">
             <div class="section-mini-copy">
-              <span class="section-label">自定义邮箱池</span>
+              <span class="section-label">Custom Email Pool</span>
             </div>
             <div class="section-mini-actions">
-              <button id="btn-custom-email-pool-refresh" class="btn btn-ghost btn-xs" type="button">刷新</button>
-              <button id="btn-custom-email-pool-clear-used" class="btn btn-ghost btn-xs" type="button">清空已用</button>
-              <button id="btn-custom-email-pool-delete-all" class="btn btn-ghost btn-xs" type="button">全部删除</button>
+              <button id="btn-custom-email-pool-refresh" class="btn btn-ghost btn-xs" type="button">Refresh</button>
+              <button id="btn-custom-email-pool-clear-used" class="btn btn-ghost btn-xs" type="button">Clear Used</button>
+              <button id="btn-custom-email-pool-delete-all" class="btn btn-ghost btn-xs" type="button">Delete All</button>
             </div>
           </div>
           <textarea id="input-custom-email-pool-import" class="data-textarea mono" rows="4"
-            placeholder="每行一个邮箱，例如&#10;alias001@gmail.com&#10;alias002@gmail.com"></textarea>
+            placeholder="One email per line, e.g.&#10;alias001@gmail.com&#10;alias002@gmail.com"></textarea>
           <div class="data-inline">
-            <button id="btn-custom-email-pool-import" class="btn btn-primary btn-sm" type="button">导入邮箱</button>
+            <button id="btn-custom-email-pool-import" class="btn btn-primary btn-sm" type="button">Import Emails</button>
           </div>
           <div class="icloud-card">
-            <div id="custom-email-pool-summary" class="icloud-summary">导入你提前准备好的注册邮箱，每行一个邮箱地址。</div>
+            <div id="custom-email-pool-summary" class="icloud-summary">Import your pre-prepared registration emails, one email per line.</div>
             <div class="icloud-toolbar">
               <input id="input-custom-email-pool-search" class="data-input icloud-search" type="text"
-                placeholder="搜索邮箱 / 备注" />
+                placeholder="Search email / note" />
               <select id="select-custom-email-pool-filter" class="data-select icloud-filter">
-                <option value="all">全部</option>
-                <option value="current">当前</option>
-                <option value="enabled">启用</option>
-                <option value="disabled">停用</option>
-                <option value="used">已用</option>
-                <option value="unused">未用</option>
+                <option value="all">All</option>
+                <option value="current">Current</option>
+                <option value="enabled">Enabled</option>
+                <option value="disabled">Disabled</option>
+                <option value="used">Used</option>
+                <option value="unused">Unused</option>
               </select>
             </div>
             <div class="icloud-bulkbar">
               <label class="option-toggle luckmail-select-all" for="checkbox-custom-email-pool-select-all">
                 <input type="checkbox" id="checkbox-custom-email-pool-select-all" />
-                <span id="custom-email-pool-selection-summary">已选 0 个</span>
+                <span id="custom-email-pool-selection-summary">Selected 0</span>
               </label>
               <div class="luckmail-bulk-actions">
-                <button id="btn-custom-email-pool-bulk-used" class="btn btn-outline btn-xs" type="button">标记已用</button>
-                <button id="btn-custom-email-pool-bulk-unused" class="btn btn-outline btn-xs" type="button">标记未用</button>
-                <button id="btn-custom-email-pool-bulk-enable" class="btn btn-outline btn-xs" type="button">启用</button>
-                <button id="btn-custom-email-pool-bulk-disable" class="btn btn-outline btn-xs" type="button">停用</button>
-                <button id="btn-custom-email-pool-bulk-delete" class="btn btn-outline btn-xs" type="button">删除</button>
+                <button id="btn-custom-email-pool-bulk-used" class="btn btn-outline btn-xs" type="button">Mark Used</button>
+                <button id="btn-custom-email-pool-bulk-unused" class="btn btn-outline btn-xs" type="button">Mark Unused</button>
+                <button id="btn-custom-email-pool-bulk-enable" class="btn btn-outline btn-xs" type="button">Enable</button>
+                <button id="btn-custom-email-pool-bulk-disable" class="btn btn-outline btn-xs" type="button">Disable</button>
+                <button id="btn-custom-email-pool-bulk-delete" class="btn btn-outline btn-xs" type="button">Delete</button>
               </div>
             </div>
             <div id="custom-email-pool-list" class="luckmail-list"></div>
@@ -629,65 +629,65 @@
         </div>
       </div>
       <div class="data-row" id="row-cf-domain" style="display:none;">
-        <span class="data-label">CF 域名</span>
+        <span class="data-label">CF Domain</span>
         <div class="data-inline">
           <input type="hidden" id="select-cf-domain" value="" />
           <div id="cf-domain-picker" class="editable-list-picker">
             <button id="btn-cf-domain-menu" class="data-select editable-list-trigger" type="button"
               aria-haspopup="listbox" aria-expanded="false">
-              <span id="cf-domain-current" class="truncate">请先添加域名</span>
+              <span id="cf-domain-current" class="truncate">Please add a domain first</span>
               <span class="editable-list-caret" aria-hidden="true"></span>
             </button>
             <div id="cf-domain-menu" class="editable-list-menu" role="listbox" hidden></div>
           </div>
-          <input type="text" id="input-cf-domain" class="data-input" placeholder="例如 yourdomain.xyz"
+          <input type="text" id="input-cf-domain" class="data-input" placeholder="e.g. yourdomain.xyz"
             style="display:none;" />
-          <button id="btn-cf-domain-mode" class="btn btn-outline btn-sm data-inline-btn" type="button">添加</button>
+          <button id="btn-cf-domain-mode" class="btn btn-outline btn-sm data-inline-btn" type="button">Add</button>
         </div>
       </div>
       <div class="data-row" id="row-mail2925-pool-settings" style="display:none;">
-        <span class="data-label">2925 号池</span>
+        <span class="data-label">2925 Pool</span>
         <div class="data-inline mail2925-base-inline">
           <label class="toggle-switch mail2925-pool-toggle" id="label-mail2925-use-account-pool"
-            for="input-mail2925-use-account-pool" style="display:none;" title="开启后启用 2925 账号池">
+            for="input-mail2925-use-account-pool" style="display:none;" title="Enable 2925 account pool">
             <input type="checkbox" id="input-mail2925-use-account-pool" />
             <span class="toggle-switch-track" aria-hidden="true">
               <span class="toggle-switch-thumb"></span>
             </span>
-            <span>号池</span>
+            <span>Pool</span>
           </label>
           <select id="select-mail2925-pool-account" class="data-select mail2925-pool-select" style="display:none;">
-            <option value="">请选择号池邮箱</option>
+            <option value="">Please select a pool email</option>
           </select>
         </div>
       </div>
       <div class="data-row" id="row-email-prefix" style="display:none;">
-        <span class="data-label" id="label-email-prefix">别名基邮箱</span>
+        <span class="data-label" id="label-email-prefix">Alias Base Email</span>
         <div class="data-inline">
           <input type="text" id="input-email-prefix" class="data-input mail2925-base-input"
-            placeholder="例如 yourname@example.com" />
+            placeholder="e.g. yourname@example.com" />
         </div>
       </div>
       <div class="data-row" id="row-inbucket-host" style="display:none;">
         <span class="data-label">Inbucket</span>
-        <input type="text" id="input-inbucket-host" class="data-input" placeholder="填写主机或 https://主机地址" />
+        <input type="text" id="input-inbucket-host" class="data-input" placeholder="Enter host or https://host" />
       </div>
       <div class="data-row" id="row-inbucket-mailbox" style="display:none;">
-        <span class="data-label">邮箱名</span>
-        <input type="text" id="input-inbucket-mailbox" class="data-input" placeholder="例如 zju2001" />
+        <span class="data-label">Mailbox</span>
+        <input type="text" id="input-inbucket-mailbox" class="data-input" placeholder="e.g. zju2001" />
       </div>
       <div class="data-row" id="row-auto-run-controls">
-        <span class="data-label">注册邮箱</span>
+        <span class="data-label">Reg Email</span>
         <div class="data-inline">
-          <input type="text" id="input-email" class="data-input" placeholder="自动生成或手动粘贴邮箱" />
-          <button id="btn-fetch-email" class="btn btn-outline btn-sm data-inline-btn" type="button">获取</button>
+          <input type="text" id="input-email" class="data-input" placeholder="Auto-generated or manually pasted email" />
+          <button id="btn-fetch-email" class="btn btn-outline btn-sm data-inline-btn" type="button">Fetch</button>
         </div>
       </div>
       <div class="data-row" id="row-step6-cookie-settings">
-        <span class="data-label">第六步</span>
+        <span class="data-label">Step 6</span>
         <div class="data-inline">
           <div class="setting-group setting-group-primary step6-cookie-cleanup-setting">
-            <span class="setting-caption setting-caption-left">清 Cookies</span>
+            <span class="setting-caption setting-caption-left">Clear Cookies</span>
             <label class="toggle-switch" for="input-step6-cookie-cleanup-enabled">
               <input type="checkbox" id="input-step6-cookie-cleanup-enabled" />
               <span class="toggle-switch-track" aria-hidden="true">
@@ -698,7 +698,7 @@
         </div>
       </div>
       <div class="data-row module-divider-start" id="row-shared-auto-run">
-        <span class="data-label">自动重试</span>
+        <span class="data-label">Auto Retry</span>
         <div class="data-inline setting-pair">
           <div class="setting-group setting-group-primary">
             <label class="toggle-switch" for="input-auto-skip-failures">
@@ -709,59 +709,59 @@
             </label>
           </div>
           <div class="setting-group setting-group-secondary auto-step-delay-setting">
-            <span class="setting-caption">步间间隔</span>
+            <span class="setting-caption">Step Interval</span>
             <div class="setting-controls">
               <input type="number" id="input-auto-step-delay-seconds" class="data-input auto-delay-input" value=""
-                min="0" max="600" step="1" title="步间延迟秒数，0 或留空则不延迟" />
-              <span class="data-unit">秒</span>
+                min="0" max="600" step="1" title="Step delay in seconds, 0 or empty means no delay" />
+              <span class="data-unit">s</span>
             </div>
           </div>
         </div>
       </div>
       <div class="data-row" id="row-auto-run-thread-interval">
-        <span class="data-label">线程间隔</span>
+        <span class="data-label">Thread Interval</span>
         <div class="data-inline">
           <div class="setting-controls">
             <input type="number" id="input-auto-skip-failures-thread-interval-minutes"
-              class="data-input auto-delay-input" value="0" min="0" max="1440" step="1" title="兜底模式下，两轮线程之间的等待分钟数" />
-            <span class="data-unit">分钟</span>
+              class="data-input auto-delay-input" value="0" min="0" max="1440" step="1" title="In fallback mode, wait minutes between thread rounds" />
+            <span class="data-unit">min</span>
           </div>
         </div>
       </div>
       <div class="data-row" id="row-step-execution-range">
-        <span class="data-label">执行范围</span>
+        <span class="data-label">Execution Range</span>
         <div class="data-inline setting-pair step-execution-range-setting">
           <div class="setting-group setting-group-primary">
-            <label class="toggle-switch" for="input-step-execution-range-enabled" title="开启后，只执行指定起止步骤，范围外步骤禁用">
+            <label class="toggle-switch" for="input-step-execution-range-enabled" title="Enable to only execute steps in specified range; out-of-range steps disabled">
               <input type="checkbox" id="input-step-execution-range-enabled" />
               <span class="toggle-switch-track" aria-hidden="true">
                 <span class="toggle-switch-thumb"></span>
               </span>
-              <span>启用</span>
+              <span>Enable</span>
             </label>
           </div>
           <div class="setting-group setting-group-secondary step-range-controls">
-            <span class="setting-caption">节点</span>
-            <select id="input-step-execution-range-from" class="data-select step-range-input" title="允许执行的起始节点"></select>
-            <span class="data-unit">到</span>
-            <select id="input-step-execution-range-to" class="data-select step-range-input" title="允许执行的结束节点"></select>
+            <span class="setting-caption">Node</span>
+            <select id="input-step-execution-range-from" class="data-select step-range-input" title="Allowed start node"></select>
+            <span class="data-unit">to</span>
+            <select id="input-step-execution-range-to" class="data-select step-range-input" title="Allowed end node"></select>
           </div>
         </div>
       </div>
       <div class="data-row module-divider-start" id="row-oauth-display">
         <span class="data-label">OAuth</span>
-        <span id="display-oauth-url" class="data-value mono truncate">等待中...</span>
+        <span id="display-oauth-url" class="data-value mono truncate">Waiting...</span>
       </div>
       <div class="data-row" id="row-oauth-callback">
-        <span class="data-label">回调</span>
+        <span class="data-label">Callback</span>
         <div class="data-inline data-value-actions">
-          <span id="display-localhost-url" class="data-value data-value-fill mono truncate">等待中...</span>
+          <span id="display-localhost-url" class="data-value data-value-fill mono truncate">Waiting...</span>
         </div>
       </div>
       <div class="data-row module-divider-start" id="row-settings-actions">
-        <span class="data-label">设置</span>
+        <span class="data-label">Settings</span>
         <div class="data-inline data-value-actions">
-          <button id="btn-save-settings" class="btn btn-outline btn-sm data-inline-btn" type="button">保存</button>
+          <button id="btn-save-settings" class="btn btn-outline btn-sm data-inline-btn" type="button">Save</button>
         </div>
       </div>
     </div>
@@ -769,11 +769,11 @@
       <div class="section-mini-header">
         <div class="section-mini-copy">
           <span class="section-label">Cloudflare Temp Email</span>
-          <span class="data-value">用于生成邮箱或接收转发邮件</span>
+          <span class="data-value">Generate emails or receive forwarded emails</span>
         </div>
         <div class="section-mini-actions">
-          <button id="btn-cloudflare-temp-email-usage-guide" class="btn btn-ghost btn-xs" type="button">使用教程</button>
-          <button id="btn-cloudflare-temp-email-github" class="btn btn-ghost btn-xs" type="button">部署</button>
+          <button id="btn-cloudflare-temp-email-usage-guide" class="btn btn-ghost btn-xs" type="button">Tutorial</button>
+          <button id="btn-cloudflare-temp-email-github" class="btn btn-ghost btn-xs" type="button">Deploy</button>
         </div>
       </div>
       <div class="data-row" id="row-temp-email-base-url" style="display:none;">
@@ -786,61 +786,61 @@
           <input type="password" id="input-temp-email-admin-auth" class="data-input data-input-with-icon"
             placeholder="Cloudflare Temp Email admin password" />
           <button id="btn-toggle-temp-email-admin-auth" class="input-icon-btn" type="button"
-            data-password-toggle="input-temp-email-admin-auth" data-show-label="显示 Admin Auth"
-            data-hide-label="隐藏 Admin Auth" aria-label="显示 Admin Auth" title="显示 Admin Auth"></button>
+            data-password-toggle="input-temp-email-admin-auth" data-show-label="Show Admin Auth"
+            data-hide-label="Hide Admin Auth" aria-label="Show Admin Auth" title="Show Admin Auth"></button>
         </div>
       </div>
       <div class="data-row" id="row-temp-email-custom-auth" style="display:none;">
         <span class="data-label">Custom Auth</span>
         <div class="input-with-icon">
           <input type="password" id="input-temp-email-custom-auth" class="data-input data-input-with-icon"
-            placeholder="仅当站点启用了访问密码时再填写；这是额外鉴权，不替代 Admin Auth。" />
+            placeholder="Only fill in if the site has an access password; this is additional auth, does not replace Admin Auth." />
           <button id="btn-toggle-temp-email-custom-auth" class="input-icon-btn" type="button"
-            data-password-toggle="input-temp-email-custom-auth" data-show-label="显示 Custom Auth"
-            data-hide-label="隐藏 Custom Auth" aria-label="显示 Custom Auth" title="显示 Custom Auth"></button>
+            data-password-toggle="input-temp-email-custom-auth" data-show-label="Show Custom Auth"
+            data-hide-label="Hide Custom Auth" aria-label="Show Custom Auth" title="Show Custom Auth"></button>
         </div>
       </div>
       <div class="data-row" id="row-temp-email-lookup-mode" style="display:none;">
-        <span class="data-label">查信方式</span>
-        <div id="temp-email-lookup-mode-group" class="choice-group" role="group" aria-label="Cloudflare Temp Email 查信方式">
-          <button type="button" class="choice-btn" data-temp-email-lookup-mode="receive-mailbox">邮件接收</button>
-          <button type="button" class="choice-btn" data-temp-email-lookup-mode="registration-email">注册邮箱</button>
+        <span class="data-label">Lookup Mode</span>
+        <div id="temp-email-lookup-mode-group" class="choice-group" role="group" aria-label="Cloudflare Temp Email lookup mode">
+          <button type="button" class="choice-btn" data-temp-email-lookup-mode="receive-mailbox">Receive Mailbox</button>
+          <button type="button" class="choice-btn" data-temp-email-lookup-mode="registration-email">Registration Email</button>
         </div>
       </div>
       <div class="data-row" id="row-temp-email-receive-mailbox" style="display:none;">
-        <span class="data-label">邮件接收</span>
+        <span class="data-label">Receive Mailbox</span>
         <input type="text" id="input-temp-email-receive-mailbox" class="data-input"
-          placeholder="用于接收转发邮件的邮箱，例如 1@email.example.com" />
+          placeholder="Mailbox used to receive forwarded emails, e.g. 1@email.example.com" />
       </div>
       <div class="data-row" id="row-temp-email-random-subdomain-toggle" style="display:none;">
-        <span class="data-label">随机子域</span>
+        <span class="data-label">Random Subdomain</span>
         <div class="data-inline">
           <label class="toggle-switch" for="input-temp-email-use-random-subdomain"
-            title="依赖后端 RANDOM_SUBDOMAIN_DOMAINS 配置">
+            title="Depends on backend RANDOM_SUBDOMAIN_DOMAINS config">
             <input type="checkbox" id="input-temp-email-use-random-subdomain" />
             <span class="toggle-switch-track" aria-hidden="true">
               <span class="toggle-switch-thumb"></span>
             </span>
-            <span>启用</span>
+            <span>Enable</span>
           </label>
-          <span class="setting-caption">依赖后端 RANDOM_SUBDOMAIN_DOMAINS</span>
+          <span class="setting-caption">Depends on backend RANDOM_SUBDOMAIN_DOMAINS</span>
         </div>
       </div>
       <div class="data-row" id="row-temp-email-domain" style="display:none;">
-        <span class="data-label">Temp 域名</span>
+        <span class="data-label">Temp Domain</span>
         <div class="data-inline">
           <input type="hidden" id="select-temp-email-domain" value="" />
           <div id="temp-email-domain-picker" class="editable-list-picker">
             <button id="btn-temp-email-domain-menu" class="data-select editable-list-trigger" type="button"
               aria-haspopup="listbox" aria-expanded="false">
-              <span id="temp-email-domain-current" class="truncate">请先更新域名</span>
+              <span id="temp-email-domain-current" class="truncate">Please update domain first</span>
               <span class="editable-list-caret" aria-hidden="true"></span>
             </button>
             <div id="temp-email-domain-menu" class="editable-list-menu" role="listbox" hidden></div>
           </div>
-          <input type="text" id="input-temp-email-domain" class="data-input" placeholder="例如 mail.example.com"
+          <input type="text" id="input-temp-email-domain" class="data-input" placeholder="e.g. mail.example.com"
             style="display:none;" />
-          <button id="btn-temp-email-domain-mode" class="btn btn-outline btn-sm" type="button">更新</button>
+          <button id="btn-temp-email-domain-mode" class="btn btn-outline btn-sm" type="button">Update</button>
         </div>
       </div>
     </div>
@@ -848,52 +848,52 @@
       <div class="section-mini-header">
         <div class="section-mini-copy">
           <span class="section-label">Cloud Mail</span>
-          <span class="data-value">用于生成邮箱或接收转发邮件（skymail.ink API）</span>
+          <span class="data-value">Generate emails or receive forwarded emails (skymail.ink API)</span>
         </div>
       </div>
       <div class="data-row" id="row-cloud-mail-base-url" style="display:none;">
-        <span class="data-label">API 地址</span>
+        <span class="data-label">API URL</span>
         <input type="text" id="input-cloud-mail-base-url" class="data-input" placeholder="https://your-cloudmail-domain" />
       </div>
       <div class="data-row" id="row-cloud-mail-admin-email" style="display:none;">
-        <span class="data-label">管理员邮箱</span>
+        <span class="data-label">Admin Email</span>
         <input type="text" id="input-cloud-mail-admin-email" class="data-input" placeholder="admin@example.com" />
       </div>
       <div class="data-row" id="row-cloud-mail-admin-password" style="display:none;">
-        <span class="data-label">管理员密码</span>
+        <span class="data-label">Admin Password</span>
         <div class="input-with-icon">
           <input type="password" id="input-cloud-mail-admin-password" class="data-input data-input-with-icon"
-            placeholder="Cloud Mail 管理员密码" />
+            placeholder="Cloud Mail admin password" />
           <button id="btn-toggle-cloud-mail-admin-password" class="input-icon-btn" type="button"
-            data-password-toggle="input-cloud-mail-admin-password" data-show-label="显示 Cloud Mail 密码"
-            data-hide-label="隐藏 Cloud Mail 密码" aria-label="显示 Cloud Mail 密码" title="显示 Cloud Mail 密码"></button>
+            data-password-toggle="input-cloud-mail-admin-password" data-show-label="Show Cloud Mail password"
+            data-hide-label="Hide Cloud Mail password" aria-label="Show Cloud Mail password" title="Show Cloud Mail password"></button>
         </div>
       </div>
       <div class="data-row" id="row-cloud-mail-receive-mailbox" style="display:none;">
-        <span class="data-label">邮件接收</span>
+        <span class="data-label">Receive Mailbox</span>
         <input type="text" id="input-cloud-mail-receive-mailbox" class="data-input"
-          placeholder="用于接收转发邮件的邮箱，例如 1@email.example.com" />
+          placeholder="Mailbox used to receive forwarded emails, e.g. 1@email.example.com" />
       </div>
       <div class="data-row" id="row-cloud-mail-domain" style="display:none;">
-        <span class="data-label">域名</span>
-        <input type="text" id="input-cloud-mail-domain" class="data-input" placeholder="例如 mail.example.com" />
+        <span class="data-label">Domain</span>
+        <input type="text" id="input-cloud-mail-domain" class="data-input" placeholder="e.g. mail.example.com" />
       </div>
     </div>
     <div id="yyds-mail-section" class="data-card hotmail-card" style="display:none;">
       <div class="section-mini-header">
         <div class="section-mini-copy">
           <span class="section-label">YYDS Mail</span>
-          <span class="data-value">自动创建临时邮箱并通过 API 收取验证码</span>
+          <span class="data-value">Automatically create temp mailboxes and fetch verification codes via API</span>
         </div>
       </div>
       <div class="data-row">
         <span class="data-label">API Key</span>
         <div class="input-with-icon">
           <input type="password" id="input-yyds-mail-api-key" class="data-input data-input-with-icon mono"
-            placeholder="请输入 YYDS Mail API Key（AC-...）" />
+            placeholder="Enter YYDS Mail API Key (AC-...)" />
           <button id="btn-toggle-yyds-mail-api-key" class="input-icon-btn" type="button"
-            data-password-toggle="input-yyds-mail-api-key" data-show-label="显示 YYDS Mail API Key"
-            data-hide-label="隐藏 YYDS Mail API Key" aria-label="显示 YYDS Mail API Key" title="显示 YYDS Mail API Key"></button>
+            data-password-toggle="input-yyds-mail-api-key" data-show-label="Show YYDS Mail API Key"
+            data-hide-label="Hide YYDS Mail API Key" aria-label="Show YYDS Mail API Key" title="Show YYDS Mail API Key"></button>
         </div>
       </div>
       <div class="data-row">
@@ -905,91 +905,91 @@
     <div id="hotmail-section" class="data-card hotmail-card" style="display:none;">
       <div class="section-mini-header">
         <div class="section-mini-copy">
-          <span class="section-label">Hotmail 账号池</span>
+          <span class="section-label">Hotmail Account Pool</span>
         </div>
         <div class="section-mini-actions">
           <button id="btn-toggle-hotmail-form" class="btn btn-outline btn-xs" type="button"
-            aria-expanded="false">添加账号</button>
-          <button id="btn-hotmail-usage-guide" class="btn btn-ghost btn-xs" type="button">使用教程</button>
-          <button id="btn-clear-used-hotmail-accounts" class="btn btn-ghost btn-xs" type="button">清空已用</button>
-          <button id="btn-delete-all-hotmail-accounts" class="btn btn-ghost btn-xs" type="button">全部删除</button>
+            aria-expanded="false">Add Account</button>
+          <button id="btn-hotmail-usage-guide" class="btn btn-ghost btn-xs" type="button">Tutorial</button>
+          <button id="btn-clear-used-hotmail-accounts" class="btn btn-ghost btn-xs" type="button">Clear Used</button>
+          <button id="btn-delete-all-hotmail-accounts" class="btn btn-ghost btn-xs" type="button">Delete All</button>
           <button id="btn-toggle-hotmail-list" class="btn btn-ghost btn-xs" type="button"
-            aria-expanded="false">展开列表</button>
+            aria-expanded="false">Expand List</button>
         </div>
       </div>
       <div class="data-row" id="row-hotmail-service-mode">
-        <span class="data-label">接码模式</span>
-        <div id="hotmail-service-mode-group" class="choice-group" role="group" aria-label="Hotmail 接码模式">
-          <button type="button" class="choice-btn" data-hotmail-service-mode="remote">API对接</button>
-          <button type="button" class="choice-btn" data-hotmail-service-mode="local">本地助手</button>
+        <span class="data-label">SMS Mode</span>
+        <div id="hotmail-service-mode-group" class="choice-group" role="group" aria-label="Hotmail SMS verification mode">
+          <button type="button" class="choice-btn" data-hotmail-service-mode="remote">API Integration</button>
+          <button type="button" class="choice-btn" data-hotmail-service-mode="local">Local Helper</button>
         </div>
       </div>
       <div class="data-row" id="row-hotmail-remote-base-url">
-        <span class="data-label">API对接</span>
+        <span class="data-label">API Integration</span>
         <input type="text" id="input-hotmail-remote-base-url" class="data-input mono"
-          placeholder="微软邮箱 API 对接模式无需填写地址" />
+          placeholder="Microsoft mailbox API integration mode does not require a URL" />
       </div>
       <div class="data-row" id="row-hotmail-local-base-url" style="display:none;">
-        <span class="data-label">本地助手</span>
+        <span class="data-label">Local Helper</span>
         <input type="text" id="input-hotmail-local-base-url" class="data-input mono"
           placeholder="http://127.0.0.1:17373" />
       </div>
       <div id="hotmail-form-shell" class="account-pool-form-shell" hidden>
         <div class="data-row">
-          <span class="data-label">邮箱</span>
+          <span class="data-label">Email</span>
           <input type="text" id="input-hotmail-email" class="data-input" placeholder="name@hotmail.com" />
         </div>
         <div class="data-row">
-          <span class="data-label">客户端 ID</span>
-          <input type="text" id="input-hotmail-client-id" class="data-input mono" placeholder="微软应用客户端 ID" />
+          <span class="data-label">Client ID</span>
+          <input type="text" id="input-hotmail-client-id" class="data-input mono" placeholder="Microsoft application client ID" />
         </div>
         <div class="data-row">
-          <span class="data-label">邮箱密码</span>
+          <span class="data-label">Email Password</span>
           <div class="input-with-icon">
             <input type="password" id="input-hotmail-password" class="data-input data-input-with-icon"
-              placeholder="可选，仅用于记录" />
+              placeholder="Optional, used only for record" />
             <button id="btn-toggle-hotmail-password" class="input-icon-btn" type="button"
-              data-password-toggle="input-hotmail-password" data-show-label="显示 Hotmail 密码"
-              data-hide-label="隐藏 Hotmail 密码" aria-label="显示 Hotmail 密码" title="显示 Hotmail 密码"></button>
+              data-password-toggle="input-hotmail-password" data-show-label="Show Hotmail password"
+              data-hide-label="Hide Hotmail password" aria-label="Show Hotmail password" title="Show Hotmail password"></button>
           </div>
         </div>
         <div class="data-row">
-          <span class="data-label">刷新令牌</span>
+          <span class="data-label">Refresh Token</span>
           <div class="input-with-icon">
             <input type="password" id="input-hotmail-refresh-token" class="data-input data-input-with-icon mono"
-              placeholder="必填，粘贴刷新令牌（refresh token）" />
+              placeholder="Required, paste refresh token" />
             <button id="btn-toggle-hotmail-refresh-token" class="input-icon-btn" type="button"
-              data-password-toggle="input-hotmail-refresh-token" data-show-label="显示 Hotmail 刷新令牌"
-              data-hide-label="隐藏 Hotmail 刷新令牌" aria-label="显示 Hotmail 刷新令牌"
-              title="显示 Hotmail 刷新令牌"></button>
+              data-password-toggle="input-hotmail-refresh-token" data-show-label="Show Hotmail refresh token"
+              data-hide-label="Hide Hotmail refresh token" aria-label="Show Hotmail refresh token"
+              title="Show Hotmail refresh token"></button>
           </div>
         </div>
         <div class="data-row hotmail-actions-row">
           <span class="data-label"></span>
           <div class="data-inline account-pool-actions-inline">
-            <button id="btn-add-hotmail-account" class="btn btn-primary btn-sm" type="button">添加账号</button>
+            <button id="btn-add-hotmail-account" class="btn btn-primary btn-sm" type="button">Add Account</button>
             <button id="btn-import-hotmail-accounts" class="btn btn-outline btn-sm account-pool-import-action"
-              type="button">批量导入</button>
+              type="button">Bulk Import</button>
           </div>
         </div>
         <div class="data-row hotmail-import-row">
-          <span class="data-label">批量导入</span>
+          <span class="data-label">Bulk Import</span>
           <div class="hotmail-import-box">
             <textarea id="input-hotmail-import" class="data-textarea mono"
-              placeholder="账号----密码----客户端ID----刷新令牌&#10;name@hotmail.com----password----client-id----refresh-token"></textarea>
+              placeholder="Account----Password----Client ID----Refresh Token&#10;name@hotmail.com----password----client-id----refresh-token"></textarea>
           </div>
         </div>
       </div>
       <div id="hotmail-list-shell" class="hotmail-list-shell is-collapsed">
         <div class="account-pool-toolbar">
           <input id="input-hotmail-search" class="data-input account-pool-search" type="text"
-            placeholder="搜索邮箱 / 状态" />
+            placeholder="Search email / status" />
           <select id="select-hotmail-filter" class="data-select account-pool-filter">
-            <option value="all">全部</option>
-            <option value="current">当前</option>
-            <option value="available">可分配</option>
-            <option value="used">已用</option>
-            <option value="error">异常</option>
+            <option value="all">All</option>
+            <option value="current">Current</option>
+            <option value="available">Available</option>
+            <option value="used">Used</option>
+            <option value="error">Error</option>
           </select>
         </div>
         <div id="hotmail-accounts-list" class="hotmail-accounts-list"></div>
@@ -998,58 +998,58 @@
     <div id="mail2925-section" class="data-card hotmail-card" style="display:none;">
       <div class="section-mini-header">
         <div class="section-mini-copy">
-          <span class="section-label">2925 账号池</span>
+          <span class="section-label">2925 Account Pool</span>
         </div>
         <div class="section-mini-actions">
           <button id="btn-toggle-mail2925-form" class="btn btn-outline btn-xs" type="button"
-            aria-expanded="false">添加账号</button>
-          <button id="btn-delete-all-mail2925-accounts" class="btn btn-ghost btn-xs" type="button">全部删除</button>
+            aria-expanded="false">Add Account</button>
+          <button id="btn-delete-all-mail2925-accounts" class="btn btn-ghost btn-xs" type="button">Delete All</button>
           <button id="btn-toggle-mail2925-list" class="btn btn-ghost btn-xs" type="button"
-            aria-expanded="false">展开列表</button>
+            aria-expanded="false">Expand List</button>
         </div>
       </div>
       <div id="mail2925-form-shell" class="account-pool-form-shell" hidden>
         <div class="data-row">
-          <span class="data-label">邮箱</span>
+          <span class="data-label">Email</span>
           <input type="text" id="input-mail2925-email" class="data-input" placeholder="name@2925.com" />
         </div>
         <div class="data-row">
-          <span class="data-label">密码</span>
+          <span class="data-label">Password</span>
           <div class="input-with-icon">
             <input type="password" id="input-mail2925-password" class="data-input data-input-with-icon"
-              placeholder="2925 登录密码" />
+              placeholder="2925 login password" />
             <button id="btn-toggle-mail2925-password" class="input-icon-btn" type="button"
-              data-password-toggle="input-mail2925-password" data-show-label="显示 2925 密码"
-              data-hide-label="隐藏 2925 密码" aria-label="显示 2925 密码" title="显示 2925 密码"></button>
+              data-password-toggle="input-mail2925-password" data-show-label="Show 2925 password"
+              data-hide-label="Hide 2925 password" aria-label="Show 2925 password" title="Show 2925 password"></button>
           </div>
         </div>
         <div class="data-row hotmail-actions-row">
           <span class="data-label"></span>
           <div class="data-inline account-pool-actions-inline">
-            <button id="btn-add-mail2925-account" class="btn btn-primary btn-sm" type="button">添加账号</button>
+            <button id="btn-add-mail2925-account" class="btn btn-primary btn-sm" type="button">Add Account</button>
             <button id="btn-import-mail2925-accounts" class="btn btn-outline btn-sm account-pool-import-action"
-              type="button">批量导入</button>
+              type="button">Bulk Import</button>
           </div>
         </div>
         <div class="data-row hotmail-import-row">
-          <span class="data-label">批量导入</span>
+          <span class="data-label">Bulk Import</span>
           <div class="hotmail-import-box">
             <textarea id="input-mail2925-import" class="data-textarea mono"
-              placeholder="邮箱----密码&#10;name@2925.com----password"></textarea>
+              placeholder="Email----Password&#10;name@2925.com----password"></textarea>
           </div>
         </div>
       </div>
       <div id="mail2925-list-shell" class="hotmail-list-shell is-collapsed">
         <div class="account-pool-toolbar">
           <input id="input-mail2925-search" class="data-input account-pool-search" type="text"
-            placeholder="搜索邮箱 / 状态" />
+            placeholder="Search email / status" />
           <select id="select-mail2925-filter" class="data-select account-pool-filter">
-            <option value="all">全部</option>
-            <option value="current">当前</option>
-            <option value="ready">可用</option>
-            <option value="cooldown">冷却中</option>
-            <option value="disabled">已禁用</option>
-            <option value="error">异常</option>
+            <option value="all">All</option>
+            <option value="current">Current</option>
+            <option value="ready">Ready</option>
+            <option value="cooldown">Cooling</option>
+            <option value="disabled">Disabled</option>
+            <option value="error">Error</option>
           </select>
         </div>
         <div id="mail2925-accounts-list" class="hotmail-accounts-list"></div>
@@ -1058,17 +1058,17 @@
     <div id="luckmail-section" class="data-card luckmail-card" style="display:none;">
       <div class="section-mini-header">
         <div class="section-mini-copy">
-          <span class="section-label">LuckMail 配置</span>
+          <span class="section-label">LuckMail Config</span>
         </div>
       </div>
       <div class="data-row">
         <span class="data-label">API Key</span>
         <div class="input-with-icon">
           <input type="password" id="input-luckmail-api-key" class="data-input data-input-with-icon mono"
-            placeholder="请输入 LuckMail API Key" />
+            placeholder="Enter LuckMail API Key" />
           <button id="btn-toggle-luckmail-api-key" class="input-icon-btn" type="button"
-            data-password-toggle="input-luckmail-api-key" data-show-label="显示 LuckMail API Key"
-            data-hide-label="隐藏 LuckMail API Key" aria-label="显示 LuckMail API Key" title="显示 LuckMail API Key"></button>
+            data-password-toggle="input-luckmail-api-key" data-show-label="Show LuckMail API Key"
+            data-hide-label="Hide LuckMail API Key" aria-label="Show LuckMail API Key" title="Show LuckMail API Key"></button>
         </div>
       </div>
       <div class="data-row">
@@ -1077,58 +1077,58 @@
           placeholder="https://mails.luckyous.com" />
       </div>
       <div class="data-row">
-        <span class="data-label">邮箱类型</span>
+        <span class="data-label">Email Type</span>
         <select id="select-luckmail-email-type" class="data-select">
-          <option value="self_built">自建邮箱</option>
-          <option value="ms_imap">微软 IMAP</option>
-          <option value="ms_graph">微软 Graph</option>
-          <option value="google_variant">谷歌变种</option>
+          <option value="self_built">Self-built mailbox</option>
+          <option value="ms_imap">Microsoft IMAP</option>
+          <option value="ms_graph">Microsoft Graph</option>
+          <option value="google_variant">Google variant</option>
         </select>
       </div>
       <div class="data-row">
-        <span class="data-label">域名</span>
-        <input type="text" id="input-luckmail-domain" class="data-input mono" placeholder="可选，留空则由 LuckMail 默认处理" />
+        <span class="data-label">Domain</span>
+        <input type="text" id="input-luckmail-domain" class="data-input mono" placeholder="Optional, leave blank to use LuckMail default" />
       </div>
       <div class="data-row">
-        <span class="data-label">项目</span>
+        <span class="data-label">Project</span>
         <span class="data-value mono">openai</span>
       </div>
       <div class="luckmail-manager-card">
         <div class="section-mini-header">
           <div class="section-mini-copy">
-            <span class="section-label">LuckMail 邮箱列表</span>
-            <span class="data-value">仅显示项目为 <span class="mono">openai</span> 的邮箱</span>
+            <span class="section-label">LuckMail Email List</span>
+            <span class="data-value">Only shows mailboxes with project <span class="mono">openai</span></span>
           </div>
           <div class="section-mini-actions">
-            <button id="btn-luckmail-refresh" class="btn btn-ghost btn-xs" type="button">刷新</button>
-            <button id="btn-luckmail-disable-used" class="btn btn-ghost btn-xs" type="button">禁用已用</button>
+            <button id="btn-luckmail-refresh" class="btn btn-ghost btn-xs" type="button">Refresh</button>
+            <button id="btn-luckmail-disable-used" class="btn btn-ghost btn-xs" type="button">Disable Used</button>
           </div>
         </div>
-        <div id="luckmail-summary" class="luckmail-summary">加载已购邮箱后可在这里管理 openai 项目的 LuckMail 邮箱。</div>
+        <div id="luckmail-summary" class="luckmail-summary">Load purchased mailboxes to manage LuckMail mailboxes for the openai project here.</div>
         <div class="luckmail-toolbar">
           <input id="input-luckmail-search" class="data-input luckmail-search" type="text"
-            placeholder="搜索邮箱 / 标签 / 项目" />
+            placeholder="Search email / tag / project" />
           <select id="select-luckmail-filter" class="data-select luckmail-filter">
-            <option value="all">全部</option>
-            <option value="reusable">可复用</option>
-            <option value="used">已用</option>
-            <option value="unused">未用</option>
-            <option value="preserved">保留</option>
-            <option value="disabled">已禁用</option>
+            <option value="all">All</option>
+            <option value="reusable">Reusable</option>
+            <option value="used">Used</option>
+            <option value="unused">Unused</option>
+            <option value="preserved">Preserved</option>
+            <option value="disabled">Disabled</option>
           </select>
         </div>
         <div class="luckmail-bulkbar">
           <label class="option-toggle luckmail-select-all" for="checkbox-luckmail-select-all">
             <input type="checkbox" id="checkbox-luckmail-select-all" />
-            <span id="luckmail-selection-summary">已选 0 个</span>
+            <span id="luckmail-selection-summary">Selected 0</span>
           </label>
           <div class="luckmail-bulk-actions">
-            <button id="btn-luckmail-bulk-used" class="btn btn-outline btn-xs" type="button">标记已用</button>
-            <button id="btn-luckmail-bulk-unused" class="btn btn-outline btn-xs" type="button">标记未用</button>
-            <button id="btn-luckmail-bulk-preserve" class="btn btn-outline btn-xs" type="button">保留</button>
-            <button id="btn-luckmail-bulk-unpreserve" class="btn btn-outline btn-xs" type="button">取消保留</button>
-            <button id="btn-luckmail-bulk-disable" class="btn btn-outline btn-xs" type="button">禁用</button>
-            <button id="btn-luckmail-bulk-enable" class="btn btn-outline btn-xs" type="button">启用</button>
+            <button id="btn-luckmail-bulk-used" class="btn btn-outline btn-xs" type="button">Mark Used</button>
+            <button id="btn-luckmail-bulk-unused" class="btn btn-outline btn-xs" type="button">Mark Unused</button>
+            <button id="btn-luckmail-bulk-preserve" class="btn btn-outline btn-xs" type="button">Preserve</button>
+            <button id="btn-luckmail-bulk-unpreserve" class="btn btn-outline btn-xs" type="button">Unpreserve</button>
+            <button id="btn-luckmail-bulk-disable" class="btn btn-outline btn-xs" type="button">Disable</button>
+            <button id="btn-luckmail-bulk-enable" class="btn btn-outline btn-xs" type="button">Enable</button>
           </div>
         </div>
         <div id="luckmail-list" class="luckmail-list"></div>
@@ -1137,83 +1137,82 @@
     <div id="icloud-section" class="data-card hotmail-card" style="display:none;">
       <div class="section-mini-header">
         <div class="section-mini-copy">
-          <span class="section-label">iCloud 隐私邮箱</span>
+          <span class="section-label">iCloud Hide My Email</span>
         </div>
         <div class="section-mini-actions">
-          <button id="btn-icloud-refresh" class="btn btn-ghost btn-xs" type="button">刷新</button>
-          <button id="btn-icloud-delete-used" class="btn btn-ghost btn-xs" type="button">删除已用</button>
+          <button id="btn-icloud-refresh" class="btn btn-ghost btn-xs" type="button">Refresh</button>
+          <button id="btn-icloud-delete-used" class="btn btn-ghost btn-xs" type="button">Delete Used</button>
         </div>
       </div>
       <div class="data-row">
         <span class="data-label">iCloud</span>
         <select id="select-icloud-host-preference" class="data-select">
-          <option value="auto">自动</option>
+          <option value="auto">Auto</option>
           <option value="icloud.com">iCloud.com</option>
           <option value="icloud.com.cn">iCloud.com.cn</option>
         </select>
       </div>
       <div class="data-row" id="row-icloud-target-mailbox-type">
-        <span class="data-label">目标邮箱类型</span>
+        <span class="data-label">Target Mailbox Type</span>
         <select id="select-icloud-target-mailbox-type" class="data-select">
-          <option value="icloud-inbox">iCloud 收件箱</option>
-          <option value="forward-mailbox">转发到其他邮箱</option>
+          <option value="icloud-inbox">iCloud Inbox</option>
+          <option value="forward-mailbox">Forward to other mailbox</option>
         </select>
       </div>
       <div class="data-row" id="row-icloud-forward-mail-provider" style="display:none;">
-        <span class="data-label">转发邮箱</span>
+        <span class="data-label">Forward Mailbox</span>
         <select id="select-icloud-forward-mail-provider" class="data-select">
-          <option value="qq">QQ 邮箱</option>
-          <option value="163">163 邮箱</option>
-          <option value="163-vip">163 VIP 邮箱</option>
-          <option value="126">126 邮箱</option>
-          <option value="gmail">Gmail 邮箱</option>
+          <option value="qq">QQ Mail</option>
+          <option value="163">163 Mail</option>
+          <option value="163-vip">163 VIP Mail</option>
+          <option value="126">126 Mail</option>
+          <option value="gmail">Gmail</option>
         </select>
       </div>
       <div class="data-row">
-        <span class="data-label">获取策略</span>
+        <span class="data-label">Fetch Strategy</span>
         <select id="select-icloud-fetch-mode" class="data-select">
-          <option value="reuse_existing">优先复用已有未用别名</option>
-          <option value="always_new">始终创建新别名</option>
+          <option value="reuse_existing">Prefer reusing existing unused alias</option>
+          <option value="always_new">Always create new alias</option>
         </select>
       </div>
       <div class="data-row">
-        <span class="data-label">自动删除</span>
+        <span class="data-label">Auto Delete</span>
         <label class="option-toggle" for="checkbox-auto-delete-icloud">
           <input type="checkbox" id="checkbox-auto-delete-icloud" />
-          <span>成功使用后自动删除 iCloud 别名</span>
+          <span>Auto delete iCloud alias after successful use</span>
         </label>
       </div>
       <div class="icloud-card">
-        <div id="icloud-summary" class="icloud-summary">加载你的 iCloud Hide My Email 别名以便在这里管理。</div>
+        <div id="icloud-summary" class="icloud-summary">Load your iCloud Hide My Email aliases to manage them here.</div>
         <div id="icloud-login-help" class="icloud-login-help" style="display:none;">
           <div class="icloud-login-help-main">
-            <div id="icloud-login-help-title" class="icloud-login-help-title">需要登录 iCloud</div>
-            <div id="icloud-login-help-text" class="icloud-login-help-text">我已经为你打开 iCloud
-              登录页。请在那个页面完成登录，然后回到这里点击“我已登录”。</div>
+            <div id="icloud-login-help-title" class="icloud-login-help-title">iCloud login required</div>
+            <div id="icloud-login-help-text" class="icloud-login-help-text">The iCloud login page has been opened for you. Please complete login on that page, then come back here and click "I've logged in".</div>
           </div>
-          <button id="btn-icloud-login-done" class="btn btn-primary btn-xs" type="button">我已登录</button>
+          <button id="btn-icloud-login-done" class="btn btn-primary btn-xs" type="button">I've logged in</button>
         </div>
         <div class="icloud-toolbar">
-          <input id="input-icloud-search" class="data-input icloud-search" type="text" placeholder="搜索邮箱 / 标签 / 备注" />
+          <input id="input-icloud-search" class="data-input icloud-search" type="text" placeholder="Search email / tag / note" />
           <select id="select-icloud-filter" class="data-select icloud-filter">
-            <option value="all">全部</option>
-            <option value="active">可用</option>
-            <option value="used">已用</option>
-            <option value="unused">未用</option>
-            <option value="preserved">保留</option>
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="used">Used</option>
+            <option value="unused">Unused</option>
+            <option value="preserved">Preserved</option>
           </select>
         </div>
         <div class="icloud-bulkbar">
           <label class="option-toggle icloud-select-all" for="checkbox-icloud-select-all">
             <input type="checkbox" id="checkbox-icloud-select-all" />
-            <span id="icloud-selection-summary">已选 0 个</span>
+            <span id="icloud-selection-summary">Selected 0</span>
           </label>
           <div class="icloud-bulk-actions">
-            <button id="btn-icloud-bulk-used" class="btn btn-outline btn-xs" type="button">标记已用</button>
-            <button id="btn-icloud-bulk-unused" class="btn btn-outline btn-xs" type="button">标记未用</button>
-            <button id="btn-icloud-bulk-preserve" class="btn btn-outline btn-xs" type="button">保留</button>
-            <button id="btn-icloud-bulk-unpreserve" class="btn btn-outline btn-xs" type="button">取消保留</button>
-            <button id="btn-icloud-bulk-delete" class="btn btn-outline btn-xs" type="button">删除</button>
+            <button id="btn-icloud-bulk-used" class="btn btn-outline btn-xs" type="button">Mark Used</button>
+            <button id="btn-icloud-bulk-unused" class="btn btn-outline btn-xs" type="button">Mark Unused</button>
+            <button id="btn-icloud-bulk-preserve" class="btn btn-outline btn-xs" type="button">Preserve</button>
+            <button id="btn-icloud-bulk-unpreserve" class="btn btn-outline btn-xs" type="button">Unpreserve</button>
+            <button id="btn-icloud-bulk-delete" class="btn btn-outline btn-xs" type="button">Delete</button>
           </div>
         </div>
         <div id="icloud-list" class="icloud-list"></div>
@@ -1222,13 +1221,13 @@
     <div id="ip-proxy-section" class="data-card ip-proxy-card">
       <div class="section-mini-header">
         <div class="section-mini-copy">
-          <span class="section-label">IP 代理</span>
-          <span class="data-value">用于浏览器代理接管与出口切换</span>
+          <span class="section-label">IP Proxy</span>
+          <span class="data-value">For browser proxy takeover and exit switching</span>
         </div>
         <div id="row-ip-proxy-enabled" class="section-mini-actions ip-proxy-header-actions">
           <button id="btn-toggle-ip-proxy-section" class="btn btn-ghost btn-xs" type="button"
-            aria-expanded="false" aria-controls="row-ip-proxy-fold">展开设置</button>
-          <label class="toggle-switch" for="input-ip-proxy-enabled" title="启用或禁用 IP 代理接管">
+            aria-expanded="false" aria-controls="row-ip-proxy-fold">Expand Settings</button>
+          <label class="toggle-switch" for="input-ip-proxy-enabled" title="Enable or disable IP proxy takeover">
             <input type="checkbox" id="input-ip-proxy-enabled" />
             <span class="toggle-switch-track" aria-hidden="true">
               <span class="toggle-switch-thumb"></span>
@@ -1240,56 +1239,56 @@
         <div id="ip-proxy-fold" class="ip-proxy-fold">
           <div class="ip-proxy-fold-body">
             <div class="data-row" id="row-ip-proxy-service" style="display:none;">
-              <span class="data-label">代理服务</span>
+              <span class="data-label">Proxy Service</span>
               <div class="data-inline">
                 <select id="select-ip-proxy-service" class="data-select" disabled>
-                  <option value="711proxy">711Proxy（首版）</option>
+                  <option value="711proxy">711Proxy (first release)</option>
                 </select>
                 <button id="btn-ip-proxy-service-login" class="btn btn-outline btn-sm data-inline-btn" type="button">
-                  注册
+                  Sign Up
                 </button>
               </div>
             </div>
             <div class="data-row" id="row-ip-proxy-mode" style="display:none;">
-              <span class="data-label">代理模式</span>
-              <div id="ip-proxy-mode-group" class="choice-group" role="group" aria-label="IP代理模式">
-                <button type="button" class="choice-btn" data-ip-proxy-mode="account">账号密码</button>
-                <button type="button" class="choice-btn" data-ip-proxy-mode="api" disabled title="首版暂未开放">API 拉取（暂未开放）</button>
+              <span class="data-label">Proxy Mode</span>
+              <div id="ip-proxy-mode-group" class="choice-group" role="group" aria-label="IP proxy mode">
+                <button type="button" class="choice-btn" data-ip-proxy-mode="account">Account/Password</button>
+                <button type="button" class="choice-btn" data-ip-proxy-mode="api" disabled title="Not available in first release">API Pull (not available)</button>
               </div>
             </div>
             <div class="data-row ip-proxy-layout-row" id="row-ip-proxy-layout" style="display:none;">
               <div class="ip-proxy-layout" id="ip-proxy-layout">
                 <div class="ip-proxy-column ip-proxy-column-account" id="ip-proxy-account-panel">
-                  <div class="ip-proxy-column-header">账号密码模式</div>
+                  <div class="ip-proxy-column-header">Account/Password Mode</div>
                   <div class="data-row ip-proxy-column-row" id="row-ip-proxy-account-list" style="display:none;">
-                    <span class="data-label">账号代理列表</span>
+                    <span class="data-label">Account Proxy List</span>
                     <textarea id="input-ip-proxy-account-list" class="data-textarea mono"
-                      placeholder="每行一条：host:port 或 host:port:username:password&#10;例如 global.rotgb.711proxy.com:10000:username:password"></textarea>
+                      placeholder="One per line: host:port or host:port:username:password&#10;e.g. global.rotgb.711proxy.com:10000:username:password"></textarea>
                   </div>
                   <div class="data-row ip-proxy-column-row" id="row-ip-proxy-account-session-prefix" style="display:none;">
-                    <span class="data-label">会话(session)</span>
+                    <span class="data-label">Session</span>
                     <input type="text" id="input-ip-proxy-account-session-prefix" class="data-input mono"
-                      placeholder="会话前缀，例如 ZC28qZ0KQL" />
+                      placeholder="Session prefix, e.g. ZC28qZ0KQL" />
                   </div>
                   <div class="data-row ip-proxy-column-row" id="row-ip-proxy-account-life-minutes" style="display:none;">
-                    <span class="data-label">时长(life)</span>
+                    <span class="data-label">Life</span>
                     <div class="data-inline">
                       <input type="number" id="input-ip-proxy-account-life-minutes" class="data-input" min="1" max="1440" step="1"
-                        placeholder="5-180（分钟）" title="711Proxy 会话时长范围：5-180 分钟" />
-                      <span class="data-unit">分钟</span>
+                        placeholder="5-180 (minutes)" title="711Proxy session lifetime: 5-180 minutes" />
+                      <span class="data-unit">min</span>
                     </div>
                   </div>
                   <div class="data-row ip-proxy-column-row" id="row-ip-proxy-host" style="display:none;">
-                    <span class="data-label">代理 Host</span>
-                    <input type="text" id="input-ip-proxy-host" class="data-input" placeholder="例如 global.rotgb.711proxy.com" />
+                    <span class="data-label">Proxy Host</span>
+                    <input type="text" id="input-ip-proxy-host" class="data-input" placeholder="e.g. global.rotgb.711proxy.com" />
                   </div>
                   <div class="data-row ip-proxy-column-row" id="row-ip-proxy-port" style="display:none;">
-                    <span class="data-label">代理 Port</span>
+                    <span class="data-label">Proxy Port</span>
                     <input type="number" id="input-ip-proxy-port" class="data-input" min="1" max="65535" step="1"
-                      placeholder="例如 10000" />
+                      placeholder="e.g. 10000" />
                   </div>
                   <div class="data-row ip-proxy-column-row" id="row-ip-proxy-protocol" style="display:none;">
-                    <span class="data-label">代理协议</span>
+                    <span class="data-label">Proxy Protocol</span>
                     <select id="select-ip-proxy-protocol" class="data-select">
                       <option value="http">HTTP</option>
                       <option value="https">HTTPS</option>
@@ -1298,99 +1297,99 @@
                     </select>
                   </div>
                   <div class="data-row ip-proxy-column-row" id="row-ip-proxy-username" style="display:none;">
-                    <span class="data-label">代理账号</span>
+                    <span class="data-label">Proxy Username</span>
                     <div class="input-with-icon">
                       <input type="password" id="input-ip-proxy-username" class="data-input data-input-with-icon"
-                        placeholder="例如 USER047152-zone-custom-region-US-asn-ASN81" />
-                      <button id="btn-toggle-ip-proxy-username" class="input-icon-btn" type="button" aria-label="显示代理账号"
-                        title="显示代理账号"></button>
+                        placeholder="e.g. USER047152-zone-custom-region-US-asn-ASN81" />
+                      <button id="btn-toggle-ip-proxy-username" class="input-icon-btn" type="button" aria-label="Show proxy username"
+                        title="Show proxy username"></button>
                     </div>
                   </div>
                   <div class="data-row ip-proxy-column-row" id="row-ip-proxy-password" style="display:none;">
-                    <span class="data-label">代理密码</span>
+                    <span class="data-label">Proxy Password</span>
                     <div class="input-with-icon">
                       <input type="password" id="input-ip-proxy-password" class="data-input data-input-with-icon"
-                        placeholder="账号密码代理的密码" />
-                      <button id="btn-toggle-ip-proxy-password" class="input-icon-btn" type="button" aria-label="显示代理密码"
-                        title="显示代理密码"></button>
+                        placeholder="Password for account/password proxy" />
+                      <button id="btn-toggle-ip-proxy-password" class="input-icon-btn" type="button" aria-label="Show proxy password"
+                        title="Show proxy password"></button>
                     </div>
                   </div>
                   <div class="data-row ip-proxy-column-row" id="row-ip-proxy-region" style="display:none;">
-                    <span class="data-label">地区参数</span>
-                    <input type="text" id="input-ip-proxy-region" class="data-input" placeholder="可选，例如 US / DE / HK" />
+                    <span class="data-label">Region</span>
+                    <input type="text" id="input-ip-proxy-region" class="data-input" placeholder="Optional, e.g. US / DE / HK" />
                   </div>
                   <div class="data-row ip-proxy-column-row" id="row-ip-proxy-pool-target-count" style="display:none;">
-                    <span class="data-label">任务切换阈值</span>
+                    <span class="data-label">Rotation Threshold</span>
                     <div class="data-inline">
                       <input type="number" id="input-ip-proxy-pool-target-count" class="data-input" min="1" max="500" step="1"
-                        placeholder="20（成功轮次）" title="每成功多少轮任务后自动切换一次代理；仅 1 条节点时会跳过自动切换" />
-                      <span class="data-unit">轮</span>
+                        placeholder="20 (success rounds)" title="Auto-rotate proxy after every N successful rounds; auto-rotation is skipped when there is only 1 node" />
+                      <span class="data-unit">rounds</span>
                     </div>
                   </div>
                   <div class="data-row ip-proxy-column-row" id="row-ip-proxy-auto-sync-enabled" style="display:none;">
-                    <span class="data-label">自动同步</span>
+                    <span class="data-label">Auto Sync</span>
                     <div class="data-inline">
-                      <label class="toggle-switch" for="input-ip-proxy-auto-sync-enabled" title="启用后会按间隔自动执行一次同步代理">
+                      <label class="toggle-switch" for="input-ip-proxy-auto-sync-enabled" title="When enabled, automatically syncs proxy at interval">
                         <input type="checkbox" id="input-ip-proxy-auto-sync-enabled" />
                         <span class="toggle-switch-track" aria-hidden="true">
                           <span class="toggle-switch-thumb"></span>
                         </span>
                       </label>
-                      <span class="data-value">定时刷新代理，降低账号凭据过期导致的中断概率</span>
+                      <span class="data-value">Periodically refresh proxy to reduce interruptions from expired credentials</span>
                     </div>
                   </div>
                   <div class="data-row ip-proxy-column-row" id="row-ip-proxy-auto-sync-interval" style="display:none;">
-                    <span class="data-label">同步间隔</span>
+                    <span class="data-label">Sync Interval</span>
                     <div class="data-inline">
                       <input type="number" id="input-ip-proxy-auto-sync-interval-minutes" class="data-input" min="1" max="1440" step="1"
-                        placeholder="15" title="自动同步间隔（分钟）" />
-                      <span class="data-unit">分钟</span>
+                        placeholder="15" title="Auto sync interval (minutes)" />
+                      <span class="data-unit">min</span>
                     </div>
                   </div>
                 </div>
                 <div class="ip-proxy-column ip-proxy-column-api" id="ip-proxy-api-panel">
-                  <div class="ip-proxy-column-header">API 模式</div>
+                  <div class="ip-proxy-column-header">API Mode</div>
                   <div class="data-row ip-proxy-column-row" id="row-ip-proxy-api-url" style="display:none;">
-                    <span class="data-label">代理API</span>
+                    <span class="data-label">Proxy API</span>
                     <div class="input-with-icon">
                       <input type="password" id="input-ip-proxy-api-url" class="data-input data-input-with-icon"
-                        placeholder="粘贴完整 API 链接" />
-                      <button id="btn-toggle-ip-proxy-api-url" class="input-icon-btn" type="button" aria-label="显示代理 API"
-                        title="显示代理 API"></button>
+                        placeholder="Paste full API URL" />
+                      <button id="btn-toggle-ip-proxy-api-url" class="input-icon-btn" type="button" aria-label="Show proxy API"
+                        title="Show proxy API"></button>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
             <div class="data-row" id="row-ip-proxy-actions" style="display:none;">
-              <span class="data-label">切换代理</span>
+              <span class="data-label">Switch Proxy</span>
               <div class="data-inline ip-proxy-actions-inline">
                 <span id="ip-proxy-action-buttons" class="ip-proxy-action-grid">
-                  <button id="btn-ip-proxy-refresh" class="btn btn-outline btn-sm data-inline-btn" type="button">拉取</button>
-                  <button id="btn-ip-proxy-next" class="btn btn-outline btn-sm data-inline-btn" type="button">下一条</button>
-                  <button id="btn-ip-proxy-change" class="btn btn-outline btn-sm data-inline-btn" type="button" title="保持当前会话并刷新出口（仅 711 + session）">Change</button>
-                  <button id="btn-ip-proxy-probe" class="btn btn-outline btn-sm data-inline-btn" type="button">检测出口</button>
+                  <button id="btn-ip-proxy-refresh" class="btn btn-outline btn-sm data-inline-btn" type="button">Fetch</button>
+                  <button id="btn-ip-proxy-next" class="btn btn-outline btn-sm data-inline-btn" type="button">Next</button>
+                  <button id="btn-ip-proxy-change" class="btn btn-outline btn-sm data-inline-btn" type="button" title="Keep current session and refresh exit (711 + session only)">Change</button>
+                  <button id="btn-ip-proxy-probe" class="btn btn-outline btn-sm data-inline-btn" type="button">Probe Exit</button>
                 </span>
                 <span id="ip-proxy-action-hint" class="ip-proxy-action-hint">
-                  下一条：切到代理池下一条。Change：保持当前 session 重绑链路（仅 711 + session）。
+                  Next: switch to next proxy in pool. Change: keep current session and re-bind link (711 + session only).
                 </span>
               </div>
             </div>
             <div class="data-row" id="row-ip-proxy-runtime-status" style="display:none;">
-              <span class="data-label">代理状态</span>
+              <span class="data-label">Proxy Status</span>
               <div id="ip-proxy-runtime-status" class="ip-proxy-runtime-status state-idle">
                 <span id="ip-proxy-runtime-dot" class="ip-proxy-runtime-dot" aria-hidden="true"></span>
                 <div class="ip-proxy-runtime-content">
-                  <div id="ip-proxy-runtime-text" class="ip-proxy-runtime-main">未启用，沿用浏览器默认/全局代理。</div>
+                  <div id="ip-proxy-runtime-text" class="ip-proxy-runtime-main">Not enabled, using browser default/global proxy.</div>
                   <div class="ip-proxy-runtime-meta">
-                    <span id="ip-proxy-current" class="ip-proxy-runtime-current">暂无可用代理</span>
+                    <span id="ip-proxy-current" class="ip-proxy-runtime-current">No proxy available</span>
                   </div>
                   <div class="ip-proxy-runtime-details-row">
                     <details id="ip-proxy-runtime-details" class="ip-proxy-runtime-details" hidden>
-                      <summary>详情</summary>
+                      <summary>Details</summary>
                       <div id="ip-proxy-runtime-details-text" class="ip-proxy-runtime-details-text"></div>
                     </details>
-                    <button id="btn-ip-proxy-check-ip" class="btn btn-outline btn-xs ip-proxy-check-ip-btn" type="button">检查IP</button>
+                    <button id="btn-ip-proxy-check-ip" class="btn btn-outline btn-xs ip-proxy-check-ip-btn" type="button">Check IP</button>
                   </div>
                 </div>
               </div>
@@ -1402,13 +1401,13 @@
     <div id="phone-verification-section" class="data-card phone-verification-card">
       <div class="section-mini-header">
         <div class="section-mini-copy">
-          <span class="section-label">接码设置</span>
-          <span class="data-value">手机号验证与接码服务商获取策略</span>
+          <span class="section-label">SMS Verification</span>
+          <span class="data-value">Phone number verification and SMS provider fetch strategy</span>
         </div>
         <div id="row-phone-verification-enabled" class="section-mini-actions phone-verification-header-actions">
           <button id="btn-toggle-phone-verification-section" class="btn btn-ghost btn-xs" type="button"
-            aria-expanded="false" aria-controls="row-phone-verification-fold">展开设置</button>
-          <label class="toggle-switch" for="input-phone-verification-enabled" title="启用或禁用手机号接码流程">
+            aria-expanded="false" aria-controls="row-phone-verification-fold">Expand Settings</button>
+          <label class="toggle-switch" for="input-phone-verification-enabled" title="Enable or disable phone SMS verification flow">
             <input type="checkbox" id="input-phone-verification-enabled" />
             <span class="toggle-switch-track" aria-hidden="true">
               <span class="toggle-switch-thumb"></span>
@@ -1420,30 +1419,30 @@
         <div id="phone-verification-fold" class="phone-verification-fold">
           <div class="phone-verification-fold-body">
             <div class="data-row" id="row-signup-method" style="display:none;">
-              <span class="data-label">注册方式</span>
-              <div id="signup-method-group" class="choice-group" role="group" aria-label="注册方式">
-                <button type="button" class="choice-btn" data-signup-method="email">邮箱注册</button>
-                <button type="button" class="choice-btn" data-signup-method="phone">手机号注册</button>
+              <span class="data-label">Signup Method</span>
+              <div id="signup-method-group" class="choice-group" role="group" aria-label="Signup method">
+                <button type="button" class="choice-btn" data-signup-method="email">Email Signup</button>
+                <button type="button" class="choice-btn" data-signup-method="phone">Phone Signup</button>
               </div>
             </div>
             <div class="data-row" id="row-phone-signup-relogin-after-bind-email" style="display:none;">
-              <span class="data-label">绑定后重登</span>
+              <span class="data-label">Re-login After Bind</span>
               <label class="toggle-switch" for="input-phone-signup-relogin-after-bind-email"
-                title="手机号注册绑定邮箱后，跳过绑定邮箱验证码，重新刷新 OAuth 并使用绑定邮箱登录">
+                title="After phone signup binds email, skip bind-email verification code, refresh OAuth and log in using bound email">
                 <input type="checkbox" id="input-phone-signup-relogin-after-bind-email" />
                 <span class="toggle-switch-track" aria-hidden="true">
                   <span class="toggle-switch-thumb"></span>
                 </span>
               </label>
-              <span class="data-value">绑定邮箱后切入邮箱注册模式 OAuth 尾部</span>
+              <span class="data-value">After binding email, switch to email signup OAuth tail</span>
             </div>
             <div class="data-row" id="row-account-run-history-helper-base-url" style="display:none;">
-              <span class="data-label">同步服务</span>
+              <span class="data-label">Sync Service</span>
               <input type="text" id="input-account-run-history-helper-base-url" class="data-input mono"
                 placeholder="http://127.0.0.1:17373" />
             </div>
             <div class="data-row" id="row-phone-sms-provider" style="display:none;">
-              <span class="data-label">接码服务商</span>
+              <span class="data-label">SMS Provider</span>
               <select id="select-phone-sms-provider" class="data-select mono">
                 <option value="hero-sms">HeroSMS</option>
                 <option value="5sim">5sim</option>
@@ -1451,7 +1450,7 @@
               </select>
             </div>
             <div class="data-row" id="row-phone-sms-provider-order" style="display:none;">
-              <span class="data-label">服务商顺序</span>
+              <span class="data-label">Provider Order</span>
               <div class="data-inline hero-sms-country-stack">
                 <select id="select-phone-sms-provider-order" class="data-input mono" multiple size="3" style="display:none;">
                   <option value="hero-sms" selected>HeroSMS</option>
@@ -1466,22 +1465,22 @@
                     <div id="phone-sms-provider-order-menu" class="hero-sms-country-menu-dropdown" role="listbox" aria-multiselectable="true" hidden></div>
                   </div>
                 </div>
-                <span class="data-value hero-sms-country-note">第一位为主服务商，后续按顺序自动回退。</span>
+                <span class="data-value hero-sms-country-note">The first is the primary provider; the rest fall back in order.</span>
               </div>
             </div>
             <div class="data-row" id="row-phone-sms-provider-order-actions" style="display:none;">
-              <span class="data-label">顺序管理</span>
+              <span class="data-label">Order Manage</span>
               <div class="data-inline data-value-actions">
-                <span id="display-phone-sms-provider-order" class="data-value data-value-fill mono country-order-list">未设置</span>
-                <button id="btn-phone-sms-provider-order-reset" class="btn btn-ghost btn-xs data-inline-btn" type="button">清空</button>
+                <span id="display-phone-sms-provider-order" class="data-value data-value-fill mono country-order-list">Not set</span>
+                <button id="btn-phone-sms-provider-order-reset" class="btn btn-ghost btn-xs data-inline-btn" type="button">Clear</button>
               </div>
             </div>
             <div class="data-row" id="row-hero-sms-platform" style="display:none;">
-              <span class="data-label">接码平台</span>
+              <span class="data-label">SMS Platform</span>
               <span id="display-hero-sms-platform" class="data-value mono">HeroSMS / OpenAI / Thailand</span>
             </div>
             <div class="data-row" id="row-hero-sms-country" style="display:none;">
-              <span class="data-label">国家优先级</span>
+              <span class="data-label">Country Priority</span>
               <div class="data-inline hero-sms-country-stack">
                 <select id="select-hero-sms-country" class="data-input mono" multiple size="6" style="display:none;">
                   <option value="52" selected>Thailand</option>
@@ -1494,75 +1493,75 @@
                     <div id="hero-sms-country-menu" class="hero-sms-country-menu-dropdown" role="listbox" aria-multiselectable="true" hidden></div>
                   </div>
                 </div>
-                <span class="data-value hero-sms-country-note">多选最多 3 个，按点击顺序生效。</span>
+                <span class="data-value hero-sms-country-note">Multi-select up to 3, applied in click order.</span>
               </div>
             </div>
             <div class="data-row" id="row-hero-sms-country-fallback" style="display:none;">
-              <span class="data-label">生效顺序</span>
+              <span class="data-label">Effective Order</span>
               <div class="data-inline data-value-actions">
-                <span id="display-hero-sms-country-fallback-order" class="data-value data-value-fill mono country-order-list">未设置</span>
-                <button id="btn-hero-sms-country-clear" class="btn btn-ghost btn-xs data-inline-btn" type="button">清空</button>
+                <span id="display-hero-sms-country-fallback-order" class="data-value data-value-fill mono country-order-list">Not set</span>
+                <button id="btn-hero-sms-country-clear" class="btn btn-ghost btn-xs data-inline-btn" type="button">Clear</button>
               </div>
             </div>
             <div class="data-row" id="row-hero-sms-acquire-priority" style="display:none;">
-              <span class="data-label">拿号优先级</span>
+              <span class="data-label">Acquire Priority</span>
               <select id="select-hero-sms-acquire-priority" class="data-input mono">
-                <option value="country">国家优先（默认）</option>
-                <option value="price">低价优先（同价按国家顺序）</option>
-                <option value="price_high">高价优先（同价按国家顺序）</option>
+                <option value="country">Country first (default)</option>
+                <option value="price">Low price first (same price by country order)</option>
+                <option value="price_high">High price first (same price by country order)</option>
               </select>
             </div>
             <div class="data-row" id="row-hero-sms-api-key" style="display:none;">
-              <span class="data-label">接码 API</span>
+              <span class="data-label">SMS API</span>
               <div class="input-with-icon">
                 <input type="password" id="input-hero-sms-api-key" class="data-input data-input-with-icon mono"
-                  placeholder="请输入 HeroSMS API Key" />
+                  placeholder="Enter HeroSMS API Key" />
                 <button id="btn-toggle-hero-sms-api-key" class="input-icon-btn" type="button"
-                  data-password-toggle="input-hero-sms-api-key" data-show-label="显示 HeroSMS API Key"
-                  data-hide-label="隐藏 HeroSMS API Key" aria-label="显示 HeroSMS API Key" title="显示 HeroSMS API Key"></button>
+                  data-password-toggle="input-hero-sms-api-key" data-show-label="Show HeroSMS API Key"
+                  data-hide-label="Hide HeroSMS API Key" aria-label="Show HeroSMS API Key" title="Show HeroSMS API Key"></button>
               </div>
             </div>
             <div class="data-row" id="row-five-sim-api-key" style="display:none;">
               <span class="data-label">5sim API</span>
               <div class="input-with-icon">
                 <input type="password" id="input-five-sim-api-key" class="data-input data-input-with-icon mono"
-                  placeholder="请输入 5sim API Key（Bearer Token）" />
+                  placeholder="Enter 5sim API Key (Bearer Token)" />
                 <button id="btn-toggle-five-sim-api-key" class="input-icon-btn" type="button"
-                  data-password-toggle="input-five-sim-api-key" data-show-label="显示 5sim API Key"
-                  data-hide-label="隐藏 5sim API Key" aria-label="显示 5sim API Key" title="显示 5sim API Key"></button>
+                  data-password-toggle="input-five-sim-api-key" data-show-label="Show 5sim API Key"
+                  data-hide-label="Hide 5sim API Key" aria-label="Show 5sim API Key" title="Show 5sim API Key"></button>
               </div>
             </div>
             <div class="data-row" id="row-five-sim-country" style="display:none;">
-              <span class="data-label">国家优先级</span>
+              <span class="data-label">Country Priority</span>
               <div class="data-inline hero-sms-country-stack">
                 <select id="select-five-sim-country" class="data-input mono" multiple size="6" style="display:none;">
-                  <option value="thailand" selected>泰国 (Thailand) [TH]</option>
+                  <option value="thailand" selected>Thailand [TH]</option>
                 </select>
                 <div class="hero-sms-country-mainline">
                   <div id="five-sim-country-menu-shell" class="hero-sms-country-menu">
                     <button id="btn-five-sim-country-menu" class="btn btn-outline btn-sm hero-sms-country-menu-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
-                      未选择 (0/3)
+                      None selected (0/3)
                     </button>
                     <div id="five-sim-country-menu" class="hero-sms-country-menu-dropdown" role="listbox" aria-multiselectable="true" hidden></div>
                   </div>
                 </div>
-                <span class="data-value hero-sms-country-note">多选最多 3 个，按点击顺序生效。</span>
+                <span class="data-value hero-sms-country-note">Multi-select up to 3, applied in click order.</span>
               </div>
             </div>
             <div class="data-row" id="row-five-sim-country-fallback" style="display:none;">
-              <span class="data-label">生效顺序</span>
+              <span class="data-label">Effective Order</span>
               <div class="data-inline data-value-actions">
-                <span id="display-five-sim-country-fallback-order" class="data-value data-value-fill mono country-order-list">未设置</span>
-                <button id="btn-five-sim-country-clear" class="btn btn-ghost btn-xs data-inline-btn" type="button">清空</button>
+                <span id="display-five-sim-country-fallback-order" class="data-value data-value-fill mono country-order-list">Not set</span>
+                <button id="btn-five-sim-country-clear" class="btn btn-ghost btn-xs data-inline-btn" type="button">Clear</button>
               </div>
             </div>
             <div class="data-row" id="row-five-sim-operator" style="display:none;">
-              <span class="data-label">运营商</span>
+              <span class="data-label">Operator</span>
               <input type="text" id="input-five-sim-operator" class="data-input mono"
                 placeholder="any" />
             </div>
             <div class="data-row" id="row-five-sim-product" style="display:none;">
-              <span class="data-label">产品代码</span>
+              <span class="data-label">Product Code</span>
               <input type="text" id="input-five-sim-product" class="data-input mono"
                 placeholder="openai" />
             </div>
@@ -1570,14 +1569,14 @@
               <span class="data-label">NexSMS API</span>
               <div class="input-with-icon">
                 <input type="password" id="input-nex-sms-api-key" class="data-input data-input-with-icon mono"
-                  placeholder="请输入 NexSMS API Key" />
+                  placeholder="Enter NexSMS API Key" />
                 <button id="btn-toggle-nex-sms-api-key" class="input-icon-btn" type="button"
-                  data-password-toggle="input-nex-sms-api-key" data-show-label="显示 NexSMS API Key"
-                  data-hide-label="隐藏 NexSMS API Key" aria-label="显示 NexSMS API Key" title="显示 NexSMS API Key"></button>
+                  data-password-toggle="input-nex-sms-api-key" data-show-label="Show NexSMS API Key"
+                  data-hide-label="Hide NexSMS API Key" aria-label="Show NexSMS API Key" title="Show NexSMS API Key"></button>
               </div>
             </div>
             <div class="data-row" id="row-nex-sms-country" style="display:none;">
-              <span class="data-label">国家优先级</span>
+              <span class="data-label">Country Priority</span>
               <div class="data-inline hero-sms-country-stack">
                 <select id="select-nex-sms-country" class="data-input mono" multiple size="6" style="display:none;">
                   <option value="1" selected>Country #1</option>
@@ -1590,55 +1589,55 @@
                     <div id="nex-sms-country-menu" class="hero-sms-country-menu-dropdown" role="listbox" aria-multiselectable="true" hidden></div>
                   </div>
                 </div>
-                <span class="data-value hero-sms-country-note">多选最多 3 个，按点击顺序生效。</span>
+                <span class="data-value hero-sms-country-note">Multi-select up to 3, applied in click order.</span>
               </div>
             </div>
             <div class="data-row" id="row-nex-sms-country-fallback" style="display:none;">
-              <span class="data-label">生效顺序</span>
+              <span class="data-label">Effective Order</span>
               <div class="data-inline data-value-actions">
-                <span id="display-nex-sms-country-fallback-order" class="data-value data-value-fill mono country-order-list">未设置</span>
-                <button id="btn-nex-sms-country-clear" class="btn btn-ghost btn-xs data-inline-btn" type="button">清空</button>
+                <span id="display-nex-sms-country-fallback-order" class="data-value data-value-fill mono country-order-list">Not set</span>
+                <button id="btn-nex-sms-country-clear" class="btn btn-ghost btn-xs data-inline-btn" type="button">Clear</button>
               </div>
             </div>
             <div class="data-row" id="row-nex-sms-service-code" style="display:none;">
-              <span class="data-label">服务代码</span>
+              <span class="data-label">Service Code</span>
               <input type="text" id="input-nex-sms-service-code" class="data-input mono"
                 placeholder="ot" />
             </div>
             <div class="data-row" id="row-hero-sms-max-price" style="display:none;">
-              <span class="data-label">价格区间</span>
+              <span class="data-label">Price Range</span>
               <div class="data-inline hero-sms-price-preview-stack">
                 <div class="hero-sms-price-preview-head">
-                  <button id="btn-hero-sms-price-preview" class="btn btn-outline btn-xs data-inline-btn" type="button">查询价格</button>
-                  <button id="btn-phone-sms-balance" class="btn btn-ghost btn-xs data-inline-btn" type="button">查余额</button>
+                  <button id="btn-hero-sms-price-preview" class="btn btn-outline btn-xs data-inline-btn" type="button">Query Price</button>
+                  <button id="btn-phone-sms-balance" class="btn btn-ghost btn-xs data-inline-btn" type="button">Check Balance</button>
                 </div>
                 <div id="row-hero-sms-price-tiers" class="hero-sms-price-preview-result" style="display:none;">
-                  <span id="display-hero-sms-price-tiers" class="data-value mono hero-sms-price-preview-text">未获取</span>
-                  <span id="display-phone-sms-balance" class="data-value mono hero-sms-price-preview-text">余额未获取</span>
+                  <span id="display-hero-sms-price-tiers" class="data-value mono hero-sms-price-preview-text">Not retrieved</span>
+                  <span id="display-phone-sms-balance" class="data-value mono hero-sms-price-preview-text">Balance not retrieved</span>
                 </div>
                 <div class="hero-sms-price-controls-grid">
                   <div class="hero-sms-price-control">
-                    <span class="hero-sms-settings-caption">最低购买价</span>
+                    <span class="hero-sms-settings-caption">Min Buy Price</span>
                     <div class="setting-controls">
-                      <input type="number" id="input-hero-sms-min-price" class="data-input auto-delay-input mono hero-sms-max-price-input" placeholder="0.05" min="0" step="0.0001" title="接码最低购买价；可空（空=不设下限）" />
+                      <input type="number" id="input-hero-sms-min-price" class="data-input auto-delay-input mono hero-sms-max-price-input" placeholder="0.05" min="0" step="0.0001" title="Minimum SMS buy price; can be empty (empty = no lower limit)" />
                     </div>
                   </div>
                   <div class="hero-sms-price-control">
-                    <span class="hero-sms-settings-caption">价格上限</span>
+                    <span class="hero-sms-settings-caption">Price Cap</span>
                     <div class="setting-controls">
-                      <input type="number" id="input-hero-sms-max-price" class="data-input auto-delay-input mono hero-sms-max-price-input" placeholder="0.12" min="0" step="0.0001" title="接码价格上限；可空（空=不设上限）" />
+                      <input type="number" id="input-hero-sms-max-price" class="data-input auto-delay-input mono hero-sms-max-price-input" placeholder="0.12" min="0" step="0.0001" title="SMS price cap; can be empty (empty = no upper limit)" />
                     </div>
                   </div>
                   <div class="hero-sms-price-control">
-                    <span class="hero-sms-settings-caption">指定档位</span>
+                    <span class="hero-sms-settings-caption">Preferred Tier</span>
                     <div class="setting-controls">
-                      <input type="number" id="input-hero-sms-preferred-price" class="data-input auto-delay-input mono hero-sms-max-price-input" placeholder="例如 0.0512（可空）" min="0" step="0.0001" title="优先尝试该价格档位；可空（空=按优先级策略）" />
+                      <input type="number" id="input-hero-sms-preferred-price" class="data-input auto-delay-input mono hero-sms-max-price-input" placeholder="e.g. 0.0512 (optional)" min="0" step="0.0001" title="Prefer trying this price tier first; can be empty (empty = use priority strategy)" />
                     </div>
                   </div>
                   <div class="hero-sms-price-control hero-sms-price-control-reuse">
-                    <span class="hero-sms-settings-caption">号码复用</span>
+                    <span class="hero-sms-settings-caption">Number Reuse</span>
                     <div class="setting-controls hero-sms-toggle-controls">
-                      <label class="toggle-switch hero-sms-price-reuse-toggle" for="input-hero-sms-reuse-enabled" title="开启后会优先复用未超次数的可用号码">
+                      <label class="toggle-switch hero-sms-price-reuse-toggle" for="input-hero-sms-reuse-enabled" title="When enabled, prefer reusing available numbers that haven't exceeded reuse limit">
                         <input type="checkbox" id="input-hero-sms-reuse-enabled" />
                         <span class="toggle-switch-track" aria-hidden="true">
                           <span class="toggle-switch-thumb"></span>
@@ -1650,55 +1649,55 @@
               </div>
             </div>
             <div class="data-row" id="row-phone-code-settings-group" style="display:none;">
-              <span class="data-label">接码参数</span>
+              <span class="data-label">SMS Params</span>
               <div class="data-inline hero-sms-settings-grid">
                 <div id="row-phone-verification-resend-count" class="hero-sms-settings-cell" style="display:none;">
-                  <span class="hero-sms-settings-caption">验证码重发</span>
+                  <span class="hero-sms-settings-caption">SMS Resend</span>
                   <div class="setting-controls">
                     <input type="number" id="input-verification-resend-count" class="data-input auto-delay-input" value="4"
-                      min="0" max="20" step="1" title="自动点击重新发送验证码的次数" />
-                    <span class="data-unit">次</span>
+                      min="0" max="20" step="1" title="Number of times to auto-click resend verification code" />
+                    <span class="data-unit">times</span>
                   </div>
                 </div>
                 <div id="row-phone-replacement-limit" class="hero-sms-settings-cell" style="display:none;">
-                  <span class="hero-sms-settings-caption">换号上限</span>
+                  <span class="hero-sms-settings-caption">Replace Limit</span>
                   <div class="setting-controls">
-                    <input type="number" id="input-phone-replacement-limit" class="data-input auto-delay-input" value="3" min="1" max="20" step="1" title="步骤 9 内部允许更换号码的最大次数" />
-                    <span class="data-unit">次</span>
+                    <input type="number" id="input-phone-replacement-limit" class="data-input auto-delay-input" value="3" min="1" max="20" step="1" title="Max times to replace number inside step 9" />
+                    <span class="data-unit">times</span>
                   </div>
                 </div>
                 <div id="row-phone-code-wait-seconds" class="hero-sms-settings-cell" style="display:none;">
-                  <span class="hero-sms-settings-caption">验证码限时</span>
+                  <span class="hero-sms-settings-caption">SMS Wait</span>
                   <div class="setting-controls">
-                    <input type="number" id="input-phone-code-wait-seconds" class="data-input auto-delay-input" value="60" min="15" max="300" step="1" title="每轮等待验证码的秒数" />
-                    <span class="data-unit">秒</span>
+                    <input type="number" id="input-phone-code-wait-seconds" class="data-input auto-delay-input" value="60" min="15" max="300" step="1" title="Seconds to wait for SMS code per round" />
+                    <span class="data-unit">s</span>
                   </div>
                 </div>
                 <div id="row-phone-code-timeout-windows" class="hero-sms-settings-cell" style="display:none;">
-                  <span class="hero-sms-settings-caption">超时次数</span>
+                  <span class="hero-sms-settings-caption">Timeout Rounds</span>
                   <div class="setting-controls">
-                    <input type="number" id="input-phone-code-timeout-windows" class="data-input auto-delay-input" value="2" min="1" max="10" step="1" title="验证码超时后，最多继续等待几轮再换号" />
-                    <span class="data-unit">轮</span>
+                    <input type="number" id="input-phone-code-timeout-windows" class="data-input auto-delay-input" value="2" min="1" max="10" step="1" title="After SMS timeout, max rounds to keep waiting before replacing the number" />
+                    <span class="data-unit">rounds</span>
                   </div>
                 </div>
                 <div id="row-phone-code-poll-interval-seconds" class="hero-sms-settings-cell" style="display:none;">
-                  <span class="hero-sms-settings-caption">轮询间隔</span>
+                  <span class="hero-sms-settings-caption">Poll Interval</span>
                   <div class="setting-controls">
-                    <input type="number" id="input-phone-code-poll-interval-seconds" class="data-input auto-delay-input" value="5" min="1" max="30" step="1" title="向 HeroSMS 查询验证码状态的间隔秒数" />
-                    <span class="data-unit">秒</span>
+                    <input type="number" id="input-phone-code-poll-interval-seconds" class="data-input auto-delay-input" value="5" min="1" max="30" step="1" title="Seconds between SMS status polls to HeroSMS" />
+                    <span class="data-unit">s</span>
                   </div>
                 </div>
                 <div id="row-phone-code-poll-max-rounds" class="hero-sms-settings-cell" style="display:none;">
-                  <span class="hero-sms-settings-caption">轮询次数</span>
+                  <span class="hero-sms-settings-caption">Poll Rounds</span>
                   <div class="setting-controls">
-                    <input type="number" id="input-phone-code-poll-max-rounds" class="data-input auto-delay-input" value="4" min="1" max="120" step="1" title="每个验证码等待窗口的基础轮询次数；如果低于等待时长和轮询间隔所需次数，会自动补足，避免提前结束" />
-                    <span class="data-unit">次</span>
+                    <input type="number" id="input-phone-code-poll-max-rounds" class="data-input auto-delay-input" value="4" min="1" max="120" step="1" title="Base poll rounds per SMS wait window; auto-padded if below the count needed for wait duration and poll interval, to avoid ending early" />
+                    <span class="data-unit">times</span>
                   </div>
                 </div>
                 <div id="row-free-phone-reuse-enabled" class="hero-sms-settings-cell hero-sms-reuse-cell" style="display:none;">
-                  <span class="hero-sms-settings-caption">白嫖复用</span>
+                  <span class="hero-sms-settings-caption">Free Reuse</span>
                   <div class="setting-controls hero-sms-toggle-controls">
-                    <label class="toggle-switch" for="input-free-phone-reuse-enabled" title="开启后保存首个成功接码手机号；自动复用关闭时，下次只填号码、不提交，并停止自动流程">
+                    <label class="toggle-switch" for="input-free-phone-reuse-enabled" title="When enabled, saves the first successful SMS phone number; when auto-reuse is off, next time only fills the number, doesn't submit, and stops the auto flow">
                       <input type="checkbox" id="input-free-phone-reuse-enabled" />
                       <span class="toggle-switch-track" aria-hidden="true">
                         <span class="toggle-switch-thumb"></span>
@@ -1707,9 +1706,9 @@
                   </div>
                 </div>
                 <div id="row-free-phone-reuse-auto-enabled" class="hero-sms-settings-cell hero-sms-reuse-cell" style="display:none;">
-                  <span class="hero-sms-settings-caption">自动白嫖复用</span>
+                  <span class="hero-sms-settings-caption">Auto Free Reuse</span>
                   <div class="setting-controls hero-sms-toggle-controls">
-                    <label class="toggle-switch" for="input-free-phone-reuse-auto-enabled" title="开启后自动将已记录手机号设为等待短信状态，自动提交并轮询验证码；最多复用 3 次">
+                    <label class="toggle-switch" for="input-free-phone-reuse-auto-enabled" title="When enabled, sets the recorded phone number to wait-for-SMS state, auto-submits, and polls for verification code; max reuse 3 times">
                       <input type="checkbox" id="input-free-phone-reuse-auto-enabled" />
                       <span class="toggle-switch-track" aria-hidden="true">
                         <span class="toggle-switch-thumb"></span>
@@ -1723,46 +1722,46 @@
         </div>
       </div>
       <div class="data-row" id="row-hero-sms-runtime-pair" style="display:none;">
-        <span class="data-label">运行状态</span>
+        <span class="data-label">Runtime</span>
         <div class="data-inline hero-sms-runtime-grid">
           <div id="row-hero-sms-current-number" class="hero-sms-runtime-cell" style="display:none;">
-            <span class="hero-sms-runtime-key">当前分配</span>
-            <span id="display-hero-sms-current-number" class="data-value mono hero-sms-runtime-value">未分配</span>
+            <span class="hero-sms-runtime-key">Allocated</span>
+            <span id="display-hero-sms-current-number" class="data-value mono hero-sms-runtime-value">Unallocated</span>
           </div>
           <div id="row-hero-sms-current-countdown" class="hero-sms-runtime-cell" style="display:none;">
-            <span class="hero-sms-runtime-key">倒计时</span>
-            <span id="display-hero-sms-current-countdown" class="data-value mono hero-sms-runtime-value">未启动</span>
+            <span class="hero-sms-runtime-key">Countdown</span>
+            <span id="display-hero-sms-current-countdown" class="data-value mono hero-sms-runtime-value">Not started</span>
           </div>
           <div id="row-hero-sms-current-code" class="hero-sms-runtime-cell" style="display:none;">
-            <span class="hero-sms-runtime-key">验证码</span>
-            <span id="display-hero-sms-current-code" class="data-value mono hero-sms-runtime-value">未获取</span>
+            <span class="hero-sms-runtime-key">SMS Code</span>
+            <span id="display-hero-sms-current-code" class="data-value mono hero-sms-runtime-value">Not received</span>
           </div>
           <div id="row-free-reusable-phone" class="hero-sms-runtime-cell hero-sms-runtime-cell-span2 hero-sms-free-phone-cell" style="display:none;">
-            <span class="hero-sms-runtime-key">白嫖号码</span>
-            <input type="text" id="input-free-reusable-phone" class="data-input mono hero-sms-manual-phone-input" placeholder="复用手机号" title="已记录号码会自动显示；未记录时可手动填写并记录" />
-            <span id="display-free-reusable-phone-country" class="data-value hero-sms-free-phone-country">地区：未保存</span>
-            <span id="display-free-reusable-phone" class="data-value mono hero-sms-runtime-value">未保存</span>
-            <button id="btn-save-free-reusable-phone" class="btn btn-outline btn-xs data-inline-btn hero-sms-runtime-action" type="button">记录</button>
-            <button id="btn-clear-free-reusable-phone" class="btn btn-ghost btn-xs data-inline-btn hero-sms-runtime-action" type="button">清除</button>
+            <span class="hero-sms-runtime-key">Free Number</span>
+            <input type="text" id="input-free-reusable-phone" class="data-input mono hero-sms-manual-phone-input" placeholder="Reuse phone number" title="Recorded numbers are shown automatically; if none recorded, fill in and record manually" />
+            <span id="display-free-reusable-phone-country" class="data-value hero-sms-free-phone-country">Region: not saved</span>
+            <span id="display-free-reusable-phone" class="data-value mono hero-sms-runtime-value">Not saved</span>
+            <button id="btn-save-free-reusable-phone" class="btn btn-outline btn-xs data-inline-btn hero-sms-runtime-action" type="button">Record</button>
+            <button id="btn-clear-free-reusable-phone" class="btn btn-ghost btn-xs data-inline-btn hero-sms-runtime-action" type="button">Clear</button>
           </div>
           <div id="row-hero-sms-preferred-activation" class="hero-sms-runtime-cell hero-sms-runtime-cell-span2" style="display:none;">
-            <span class="hero-sms-runtime-key">优先号码</span>
+            <span class="hero-sms-runtime-key">Preferred Number</span>
             <select id="select-hero-sms-preferred-activation" class="data-input mono hero-sms-runtime-select">
-              <option value="">自动（先复用已有可用号，再创建新号）</option>
+              <option value="">Auto (reuse existing available number first, then create new)</option>
             </select>
           </div>
         </div>
       </div>
       <div class="data-row" id="row-signup-phone" style="display:none;">
-        <span class="data-label">注册手机号</span>
+        <span class="data-label">Signup Phone</span>
         <div class="data-inline signup-phone-runtime-inline">
-          <input type="text" id="input-signup-phone" class="data-input mono signup-phone-runtime-input" placeholder="完整国际号码，如 +44..." />
+          <input type="text" id="input-signup-phone" class="data-input mono signup-phone-runtime-input" placeholder="Full international number, e.g. +44..." />
         </div>
       </div>
     </div>
     <div id="status-bar" class="status-bar">
       <div class="status-dot"></div>
-      <span id="display-status">就绪</span>
+      <span id="display-status">Ready</span>
     </div>
     <div id="auto-continue-bar" class="auto-continue-bar" style="display:none;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1770,8 +1769,8 @@
         <line x1="12" y1="8" x2="12" y2="12" />
         <line x1="12" y1="16" x2="12.01" y2="16" />
       </svg>
-      <span class="auto-hint">先自动获取邮箱，或手动粘贴邮箱后再继续</span>
-      <button id="btn-auto-continue" class="btn btn-primary btn-sm">继续</button>
+      <span class="auto-hint">Auto-fetch email first, or paste email manually before continuing</span>
+      <button id="btn-auto-continue" class="btn btn-primary btn-sm">Continue</button>
     </div>
     <div id="auto-countdown-bar" class="auto-countdown-bar" style="display:none;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1779,19 +1778,19 @@
         <polyline points="12 6 12 12 16 14" />
       </svg>
       <div class="auto-countdown-copy">
-        <span id="auto-countdown-title" class="auto-countdown-title">等待继续</span>
-        <span id="auto-countdown-meta" class="auto-countdown-meta">等待倒计时开始...</span>
+        <span id="auto-countdown-title" class="auto-countdown-title">Waiting to continue</span>
+        <span id="auto-countdown-meta" class="auto-countdown-meta">Waiting for countdown to start...</span>
       </div>
       <div class="auto-countdown-actions">
-        <button id="btn-auto-run-now" class="btn btn-primary btn-sm" type="button">立即开始</button>
-        <button id="btn-auto-cancel-schedule" class="btn btn-outline btn-sm" type="button">取消</button>
+        <button id="btn-auto-run-now" class="btn btn-primary btn-sm" type="button">Start Now</button>
+        <button id="btn-auto-cancel-schedule" class="btn btn-outline btn-sm" type="button">Cancel</button>
       </div>
     </div>
   </section>
 
   <section id="steps-section">
     <div class="steps-header">
-      <span class="section-label">流程</span>
+      <span class="section-label">Flow</span>
       <span id="steps-progress" class="steps-progress">0 / 9</span>
     </div>
     <div class="steps-list"></div>
@@ -1799,10 +1798,10 @@
 
   <section id="log-section">
     <div class="log-header">
-      <span class="section-label">日志</span>
+      <span class="section-label">Log</span>
       <div class="log-header-actions">
-        <button id="btn-open-account-records" class="btn btn-ghost btn-xs" title="查看账号记录">记录</button>
-        <button id="btn-clear-log" class="btn btn-ghost btn-xs" title="清空日志">清空</button>
+        <button id="btn-open-account-records" class="btn btn-ghost btn-xs" title="View account records">Records</button>
+        <button id="btn-clear-log" class="btn btn-ghost btn-xs" title="Clear log">Clear</button>
       </div>
     </div>
     <div id="log-area"></div>
@@ -1812,27 +1811,27 @@
     <div class="account-records-panel">
       <div class="account-records-panel-header">
         <div class="account-records-panel-copy">
-          <span class="account-records-panel-title">账号记录</span>
-          <span id="account-records-meta" class="account-records-panel-meta">暂无账号记录</span>
+          <span class="account-records-panel-title">Account Records</span>
+          <span id="account-records-meta" class="account-records-panel-meta">No account records</span>
         </div>
         <div class="account-records-panel-actions">
-          <button id="btn-close-account-records" class="modal-close" type="button" aria-label="关闭">×</button>
+          <button id="btn-close-account-records" class="modal-close" type="button" aria-label="Close">×</button>
         </div>
       </div>
       <div class="account-records-toolbar">
-        <div id="account-records-stats" class="account-records-stats" role="group" aria-label="账号记录筛选"></div>
+        <div id="account-records-stats" class="account-records-stats" role="group" aria-label="Account records filter"></div>
         <div class="account-records-toolbar-actions">
-          <button id="btn-toggle-account-records-selection" class="btn btn-ghost btn-xs" type="button">多选</button>
+          <button id="btn-toggle-account-records-selection" class="btn btn-ghost btn-xs" type="button">Multi-select</button>
           <button id="btn-delete-selected-account-records" class="btn btn-ghost btn-xs" type="button" hidden
-            disabled>删除选中</button>
-          <button id="btn-clear-account-records" class="btn btn-ghost btn-xs" type="button">清理记录</button>
+            disabled>Delete Selected</button>
+          <button id="btn-clear-account-records" class="btn btn-ghost btn-xs" type="button">Clear Records</button>
         </div>
       </div>
       <div id="account-records-list" class="account-records-list"></div>
       <div class="account-records-pagination">
-        <button id="btn-account-records-prev" class="btn btn-outline btn-xs" type="button">上一页</button>
+        <button id="btn-account-records-prev" class="btn btn-outline btn-xs" type="button">Prev</button>
         <span id="account-records-page-label" class="account-records-page-label mono">0 / 0</span>
-        <button id="btn-account-records-next" class="btn btn-outline btn-xs" type="button">下一页</button>
+        <button id="btn-account-records-next" class="btn btn-outline btn-xs" type="button">Next</button>
       </div>
     </div>
   </div>
@@ -1840,15 +1839,15 @@
   <div id="shared-form-modal" class="modal-overlay" hidden>
     <div class="modal-card modal-card-form">
       <div class="modal-header">
-        <span id="shared-form-modal-title" class="modal-title">添加账号</span>
-        <button id="btn-shared-form-modal-close" class="modal-close" type="button" aria-label="关闭">×</button>
+        <span id="shared-form-modal-title" class="modal-title">Add Account</span>
+        <button id="btn-shared-form-modal-close" class="modal-close" type="button" aria-label="Close">×</button>
       </div>
       <p id="shared-form-modal-message" class="modal-message" hidden></p>
       <p id="shared-form-modal-alert" class="modal-alert" hidden></p>
       <div id="shared-form-modal-fields" class="modal-form-fields"></div>
       <div class="modal-actions">
-        <button id="btn-shared-form-modal-cancel" class="btn btn-ghost btn-sm" type="button">取消</button>
-        <button id="btn-shared-form-modal-confirm" class="btn btn-primary btn-sm" type="button">确认</button>
+        <button id="btn-shared-form-modal-cancel" class="btn btn-ghost btn-sm" type="button">Cancel</button>
+        <button id="btn-shared-form-modal-confirm" class="btn btn-primary btn-sm" type="button">Confirm</button>
       </div>
     </div>
   </div>
@@ -1856,21 +1855,21 @@
   <div id="auto-start-modal" class="modal-overlay" hidden>
     <div class="modal-card">
       <div class="modal-header">
-        <span class="modal-title">启动自动</span>
-        <button id="btn-auto-start-close" class="modal-close" type="button" aria-label="关闭">×</button>
+        <span class="modal-title">Start Auto</span>
+        <button id="btn-auto-start-close" class="modal-close" type="button" aria-label="Close">×</button>
       </div>
-      <p id="auto-start-message" class="modal-message">检测到已有流程进度，选择继续当前还是重新开始。</p>
+      <p id="auto-start-message" class="modal-message">Existing flow progress detected. Choose to continue current or restart.</p>
       <p id="auto-start-alert" class="modal-alert" hidden></p>
       <div id="modal-option-row" class="modal-option-row" hidden>
         <label class="modal-option-label" for="modal-option-input">
           <input type="checkbox" id="modal-option-input" />
-          <span id="modal-option-text">不再提示</span>
+          <span id="modal-option-text">Don't show again</span>
         </label>
       </div>
       <div class="modal-actions">
-        <button id="btn-auto-start-cancel" class="btn btn-ghost btn-sm" type="button">取消</button>
-        <button id="btn-auto-start-restart" class="btn btn-outline btn-sm" type="button">重新开始</button>
-        <button id="btn-auto-start-continue" class="btn btn-primary btn-sm" type="button">继续当前</button>
+        <button id="btn-auto-start-cancel" class="btn btn-ghost btn-sm" type="button">Cancel</button>
+        <button id="btn-auto-start-restart" class="btn btn-outline btn-sm" type="button">Restart</button>
+        <button id="btn-auto-start-continue" class="btn btn-primary btn-sm" type="button">Continue</button>
       </div>
     </div>
   </div>

@@ -116,14 +116,14 @@ function detectDesktopFatalState(pageText = '', currentUrl = '', pageTitle = '')
     return {
       state: 'proxy_error_page',
       url: currentUrl,
-      fatalMessage: 'Kiro 桌面授权页出现 AWS 请求异常，通常是当前代理 IP 或出口区域异常，请先切换代理后再重试。',
+      fatalMessage: 'Kiro desktop authorization page encountered an AWS request error, usually caused by the current proxy IP or exit region. Please switch proxy and retry.',
     };
   }
   if (KIRO_DESKTOP_CLOUDFRONT_403_TEXT_PATTERN.test(combinedText)) {
     return {
       state: 'cloudfront_403_page',
       url: currentUrl,
-      fatalMessage: 'Kiro 桌面授权页返回 403（CloudFront 拒绝请求），通常是当前代理 IP 或区域触发了 AWS 风控，请更换代理后重试。',
+      fatalMessage: 'Kiro desktop authorization page returned 403 (CloudFront denied), usually caused by the current proxy IP or region triggering AWS risk control. Please switch proxy and retry.',
     };
   }
   return null;
@@ -228,10 +228,10 @@ function detectKiroDesktopAuthorizeState() {
 async function getCurrentDesktopAuthorizeState() {
   const detected = detectKiroDesktopAuthorizeState();
   if (detected.state === 'cloudfront_403_page' || detected.state === 'proxy_error_page') {
-    throw new Error(detected.fatalMessage || 'Kiro 桌面授权页出现代理异常。');
+    throw new Error(detected.fatalMessage || 'Proxy error on Kiro desktop authorization page.');
   }
   if (detected.state === 'callback_error') {
-    throw new Error(`Kiro 桌面授权回调失败：${detected.error || 'unknown_error'}`);
+    throw new Error(`Kiro desktop authorization callback failed: ${detected.error || 'unknown_error'}`);
   }
   return detected;
 }
@@ -239,11 +239,11 @@ async function getCurrentDesktopAuthorizeState() {
 async function submitDesktopEmail(payload = {}) {
   const email = String(payload?.email || '').trim();
   if (!email) {
-    throw new Error('缺少桌面授权邮箱，无法继续。');
+    throw new Error('Missing desktop authorization email, cannot continue.');
   }
   const currentState = await getCurrentDesktopAuthorizeState();
   if (currentState.state !== 'relogin_email' || !currentState.emailInput || !currentState.continueButton) {
-    throw new Error(`当前桌面授权页不是邮箱重登状态：${currentState.state}`);
+    throw new Error(`Current desktop authorization page is not in email re-login state: ${currentState.state}`);
   }
   fillInput(currentState.emailInput, email);
   await sleep(150);
@@ -258,11 +258,11 @@ async function submitDesktopEmail(payload = {}) {
 async function submitDesktopPassword(payload = {}) {
   const password = String(payload?.password || '');
   if (!password) {
-    throw new Error('缺少桌面授权密码，无法继续。');
+    throw new Error('Missing desktop authorization password, cannot continue.');
   }
   const currentState = await getCurrentDesktopAuthorizeState();
   if (currentState.state !== 'relogin_password' || !currentState.passwordInput || !currentState.continueButton) {
-    throw new Error(`当前桌面授权页不是密码重登状态：${currentState.state}`);
+    throw new Error(`Current desktop authorization page is not in password re-login state: ${currentState.state}`);
   }
   fillInput(currentState.passwordInput, password);
   await sleep(150);
@@ -277,11 +277,11 @@ async function submitDesktopPassword(payload = {}) {
 async function submitDesktopOtp(payload = {}) {
   const code = String(payload?.code || '').trim();
   if (!code) {
-    throw new Error('缺少桌面授权验证码，无法继续。');
+    throw new Error('Missing desktop authorization OTP, cannot continue.');
   }
   const currentState = await getCurrentDesktopAuthorizeState();
   if (currentState.state !== 'otp_page' || !currentState.otpInput || !currentState.continueButton) {
-    throw new Error(`当前桌面授权页不是验证码状态：${currentState.state}`);
+    throw new Error(`Current desktop authorization page is not in OTP state: ${currentState.state}`);
   }
   fillInput(currentState.otpInput, code);
   await sleep(150);
@@ -296,7 +296,7 @@ async function submitDesktopOtp(payload = {}) {
 async function confirmDesktopConsent() {
   const currentState = await getCurrentDesktopAuthorizeState();
   if (currentState.state !== 'consent_page' || !currentState.actionButton) {
-    throw new Error(`当前桌面授权页不是授权确认状态：${currentState.state}`);
+    throw new Error(`Current desktop authorization page is not in consent state: ${currentState.state}`);
   }
   simulateClick(currentState.actionButton);
   return {
@@ -325,7 +325,7 @@ async function handleKiroDesktopAuthorizeCommand(message) {
       if (action === 'confirm-consent') {
         return confirmDesktopConsent();
       }
-      throw new Error(`desktop-authorize-page.js 不处理动作：${action}`);
+      throw new Error(`desktop-authorize-page.js does not handle action: ${action}`);
     }
     default:
       return null;
@@ -349,7 +349,7 @@ if (document.documentElement.getAttribute(KIRO_DESKTOP_AUTHORIZE_LISTENER_SENTIN
             sendResponse({ stopped: true, error: error.message });
             return;
           }
-          sendResponse({ error: error?.message || String(error || '未知错误') });
+          sendResponse({ error: error?.message || String(error || 'Unknown error') });
         });
       return true;
     }

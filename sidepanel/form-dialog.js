@@ -130,8 +130,8 @@
         toggleButton.className = 'input-icon-btn';
         toggleButton.type = 'button';
         const labels = {
-          show: String(field.showPasswordLabel || `\u663e\u793a${labelText || '\u5bc6\u7801'}`),
-          hide: String(field.hidePasswordLabel || `\u9690\u85cf${labelText || '\u5bc6\u7801'}`),
+          show: String(field.showPasswordLabel || `Show ${labelText || 'Password'}`),
+          hide: String(field.hidePasswordLabel || `Hide ${labelText || 'Password'}`),
         };
         syncPasswordToggleButton(toggleButton, input, labels);
         toggleButton.addEventListener('click', () => {
@@ -180,7 +180,7 @@
         const rawValue = values[field.key];
         const textValue = String(rawValue || '').trim();
         if (field.required && !textValue) {
-          setAlert(field.requiredMessage || `${field.label || field.key}不能为空。`);
+          setAlert(field.requiredMessage || `${field.label || field.key} cannot be empty.`);
           input.focus?.();
           return;
         }
@@ -220,7 +220,7 @@
 
       currentConfig = config || {};
       currentInputs = [];
-      titleNode.textContent = String(currentConfig.title || '填写表单');
+      titleNode.textContent = String(currentConfig.title || 'Fill Out Form');
       if (messageNode) {
         const message = String(currentConfig.message || '').trim();
         messageNode.textContent = message;
@@ -231,7 +231,7 @@
         setAlert(currentConfig.alert.text, currentConfig.alert.tone || 'danger');
       }
 
-      confirmButton.textContent = String(currentConfig.confirmLabel || '确认');
+      confirmButton.textContent = String(currentConfig.confirmLabel || 'Confirm');
       confirmButton.className = `btn ${currentConfig.confirmVariant || 'btn-primary'} btn-sm`;
       fieldsContainer.innerHTML = '';
 

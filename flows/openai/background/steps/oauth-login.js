@@ -33,12 +33,12 @@
         return false;
       }
 
-      const mentionsSecret = /管理密钥|Admin Secret|X-Admin-Key|CPA Key/i.test(message);
+      const mentionsSecret = /admin key|Admin Secret|X-Admin-Key|CPA Key/i.test(message);
       if (!mentionsSecret) {
         return false;
       }
 
-      return /缺少|未配置|请输入|无效|错误|失败|401|认证失败|未授权|unauthorized|invalid/i.test(message);
+      return /missing|not configured|please enter|invalid|error|failed|401|authentication failed|unauthorized/i.test(message);
     }
 
     function normalizeStep7IdentifierType(value = '') {
@@ -188,7 +188,7 @@
 
       if (phoneSignupMode) {
         if (isStep7AddPhoneResult(result)) {
-          throw new Error(`步骤 ${completionStepForState(currentState)}：手机号注册模式 OAuth 登录不应进入添加手机号页。URL: ${result?.url || ''}`.trim());
+          throw new Error(`Step ${completionStepForState(currentState)}: Phone-signup OAuth login should not enter the add-phone page. URL: ${result?.url || ''}`.trim());
         }
         if (isStep7AddEmailResult(result)) {
           payload.skipLoginVerificationStep = true;
@@ -199,13 +199,13 @@
           return payload;
         }
         if (isStep7PlainVerificationResult(result)) {
-          throw new Error(`步骤 ${completionStepForState(currentState)}：手机号注册模式 OAuth 登录进入了普通邮箱登录验证码页，当前流程不会回落到邮箱验证码。URL: ${result?.url || ''}`.trim());
+          throw new Error(`Step ${completionStepForState(currentState)}: Phone-signup OAuth login entered the regular email login verification page. This flow will not fall back to email verification. URL: ${result?.url || ''}`.trim());
         }
-        throw new Error(`步骤 ${completionStepForState(currentState)}：手机号注册模式 OAuth 登录进入了不允许的页面：${getLoginAuthStateLabel(result.state)}。URL: ${result?.url || ''}`.trim());
+        throw new Error(`Step ${completionStepForState(currentState)}: Phone-signup OAuth login entered a disallowed page: ${getLoginAuthStateLabel(result.state)}。URL: ${result?.url || ''}`.trim());
       }
 
       if (isStep7AddEmailResult(result)) {
-        throw new Error(`步骤 ${completionStepForState(currentState)}：邮箱注册模式 OAuth 登录不应进入添加邮箱页。URL: ${result?.url || ''}`.trim());
+        throw new Error(`Step ${completionStepForState(currentState)}: Email-signup OAuth login should not enter the add-email page. URL: ${result?.url || ''}`.trim());
       }
       if (isStep7AddPhoneResult(result) || isStep7PhoneVerificationResult(result)) {
         payload.skipLoginVerificationStep = true;
@@ -217,7 +217,7 @@
         return payload;
       }
 
-      throw new Error(`步骤 ${completionStepForState(currentState)}：邮箱注册模式 OAuth 登录进入了不允许的页面：${getLoginAuthStateLabel(result.state)}。URL: ${result?.url || ''}`.trim());
+      throw new Error(`Step ${completionStepForState(currentState)}: Email-signup OAuth login entered a disallowed page: ${getLoginAuthStateLabel(result.state)}。URL: ${result?.url || ''}`.trim());
     }
 
     function completionStepForState(state = {}) {
@@ -228,7 +228,7 @@
     async function completeStep7PostLoginPhoneHandoff(state = {}, err, completionStep) {
       if (normalizeStep7SignupMethod(state?.resolvedSignupMethod || state?.signupMethod) === 'phone') {
         throw new Error(
-          `步骤 ${completionStep}：手机号注册模式 OAuth 登录进入了添加手机号页，当前流程不允许在手机号注册模式补手机号。URL: ${extractAddPhoneUrl(err)}`
+          `Step ${completionStep}: Phone-signup OAuth login entered the add-phone page. This flow does not allow adding a phone number in phone-signup mode. URL: ${extractAddPhoneUrl(err)}`
         );
       }
       await completeNodeFromBackground(state?.nodeId || 'oauth-login', {
@@ -263,7 +263,7 @@
         (resolvedIdentifierType === 'phone' && !phoneNumber)
         || (resolvedIdentifierType !== 'phone' && !email)
       ) {
-        throw new Error('缺少登录账号：请先完成步骤 2，或在侧栏“注册邮箱/注册手机号”中手动填写账号后再执行当前步骤。');
+        throw new Error('Missing login account: complete Step 2 first, or manually fill in the account in the side panel under "Signup Email/Signup Phone Number" before running this step.');
       }
 
       const forceEmailLoginForThisRun = shouldForceStep7EmailLogin(state);
@@ -325,18 +325,18 @@
           const loginTimeoutMs = typeof getOAuthFlowStepTimeoutMs === 'function'
             ? await getOAuthFlowStepTimeoutMs(180000, {
               step: completionStep,
-              actionLabel: 'OAuth 登录并进入验证码页',
+              actionLabel: 'OAuth login and enter the verification page',
               oauthUrl,
             })
             : 180000;
 
           if (attempt === 1) {
-            await addLog('正在打开最新 OAuth 链接并登录...', 'info', {
+            await addLog('Opening the latest OAuth link and logging in...', 'info', {
               step: completionStep,
               stepKey: 'oauth-login',
             });
           } else {
-            await addLog(`上一轮失败后，正在进行第 ${attempt} 次尝试（最多 ${STEP6_MAX_ATTEMPTS} 次）...`, 'warn', {
+            await addLog(`Previous round failed. Starting attempt ${attempt} (max ${STEP6_MAX_ATTEMPTS})...`, 'warn', {
               step: completionStep,
               stepKey: 'oauth-login',
             });
@@ -372,7 +372,7 @@
               timeoutMs: loginTimeoutMs,
               responseTimeoutMs: loginTimeoutMs,
               retryDelayMs: 700,
-              logMessage: '认证页正在切换，等待页面重新就绪后继续登录...',
+              logMessage: 'Auth page is switching. Waiting for the page to become ready again before continuing login...',
               logStep: completionStep,
               logStepKey: 'oauth-login',
             }
@@ -396,11 +396,11 @@
 
           if (isStep6RecoverableResult(result)) {
             const reasonMessage = result.message
-              || `当前停留在${getLoginAuthStateLabel(result.state)}，准备重新执行步骤 ${completionStep}。`;
+              || `Currently staying on ${getLoginAuthStateLabel(result.state)}. Preparing to rerun Step ${completionStep}.`;
             throw new Error(reasonMessage);
           }
 
-          throw new Error(`步骤 ${completionStep}：认证页未返回可识别的登录结果。`);
+          throw new Error(`Step ${completionStep}: Auth page did not return a recognizable login result.`);
         } catch (err) {
           throwIfStopped(err);
           if (isAddPhoneAuthFailure(err)) {
@@ -416,7 +416,7 @@
           }
           if (isManagementSecretConfigError(err)) {
             await addLog(
-              `检测到来源后台管理密钥缺失或错误，不再重试，当前流程停止。原因：${getErrorMessage(err)}`,
+              `Detected that the source backend admin key is missing or invalid. No more retries. The current flow will stop. Reason: ${getErrorMessage(err)}`,
               'error',
               { step: completionStep, stepKey: 'oauth-login' }
             );
@@ -427,14 +427,14 @@
             break;
           }
 
-          await addLog(`第 ${attempt} 次尝试失败，原因：${getErrorMessage(err)}；准备重试...`, 'warn', {
+          await addLog(`Attempt ${attempt} failed. Reason: ${getErrorMessage(err)}. Preparing to retry...`, 'warn', {
             step: completionStep,
             stepKey: 'oauth-login',
           });
         }
       }
 
-      throw new Error(`步骤 ${completionStep}：判断失败后已重试 ${STEP6_MAX_ATTEMPTS - 1} 次，仍未成功。最后原因：${getErrorMessage(lastError)}`);
+      throw new Error(`Step ${completionStep}: After a failed state judgment, retried ${STEP6_MAX_ATTEMPTS - 1} times and still did not succeed. Final reason: ${getErrorMessage(lastError)}`);
     }
 
     return { executeStep7 };

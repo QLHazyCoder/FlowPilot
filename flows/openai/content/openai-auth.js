@@ -49,7 +49,7 @@ if (document.documentElement.getAttribute(OPENAI_AUTH_LISTENER_SENTINEL) !== '1'
         const reportedNodeId = resolveCommandNodeId(message);
         if (isStopError(err)) {
           if (reportedStep) {
-            log(`步骤 ${reportedStep || 8}：已被用户停止。`, 'warn');
+            log(`Step ${reportedStep || 8}: stopped by the user.`, 'warn');
           }
           sendResponse({ stopped: true, error: err.message });
           return;
@@ -70,7 +70,7 @@ if (document.documentElement.getAttribute(OPENAI_AUTH_LISTENER_SENTINEL) !== '1'
     }
   });
 } else {
-  console.log('[MultiPage:openai-auth] 消息监听已存在，跳过重复注册');
+  console.log('[MultiPage:openai-auth] message listener already exists, skipping duplicate registration');
 }
 
 const OPENAI_AUTH_NODE_HANDLERS = Object.freeze({
@@ -122,7 +122,7 @@ async function handleCommand(message) {
       const nodeId = String(message.nodeId || message.payload?.nodeId || '').trim();
       const handler = OPENAI_AUTH_NODE_HANDLERS[nodeId];
       if (!handler) {
-        throw new Error(`openai-auth.js 不处理节点 ${nodeId}`);
+        throw new Error(`openai-auth.js does not handle node ${nodeId}`);
       }
       return await handler(message.payload || {});
     }
@@ -334,7 +334,7 @@ function buildContactVerificationServerError(errorText = '') {
     ? PHONE_RESEND_SERVER_ERROR_PREFIX
     : 'PHONE_RESEND_SERVER_ERROR::';
   const resolvedText = String(errorText || '').trim()
-    || 'OpenAI contact-verification 页面返回 HTTP ERROR 500。';
+    || 'OpenAI contact-verification page returned HTTP ERROR 500.';
   return new Error(
     resolvedText.startsWith(serverErrorPrefix)
       ? resolvedText
@@ -380,7 +380,7 @@ async function resendVerificationCode(step, timeout = 45000) {
     action = findResendVerificationCodeTrigger({ allowDisabled: true });
 
     if (action && isActionEnabled(action)) {
-      log(`步骤 ${step}：重新发送验证码按钮已可用。`);
+      log(`Step ${step}: the resend code button is now available.`);
       await humanPause(350, 900);
       await performOperationWithDelay({ stepKey: step === 8 ? 'oauth-login' : 'fetch-signup-code', kind: 'click', label: 'resend-verification-code' }, async () => {
         simulateClick(action);
@@ -389,7 +389,7 @@ async function resendVerificationCode(step, timeout = 45000) {
 
       // After clicking resend, check if 405 error appeared
       if (is405MethodNotAllowedPage()) {
-        log(`步骤 ${step}：点击重新发送后出现 405 错误，正在恢复...`, 'warn');
+        log(`Step ${step}: clicking resend returned a 405 error, recovering...`, 'warn');
         await handle405ResendError(step, timeout - (Date.now() - start));
         loggedWaiting = false;
         continue;
@@ -404,14 +404,14 @@ async function resendVerificationCode(step, timeout = 45000) {
 
     if (action && !loggedWaiting) {
       loggedWaiting = true;
-      log(`步骤 ${step}：正在等待重新发送验证码按钮变为可点击...`);
+      log(`Step ${step}: waiting for the resend code button to become clickable...`);
     }
 
     await sleep(250);
   }
 
   throwIfContactVerificationServerError();
-  throw new Error('无法点击重新发送验证码按钮。URL: ' + location.href);
+  throw new Error('Unable to click the resend code button. URL: ' + location.href);
 }
 
 function is405MethodNotAllowedPage() {
@@ -491,7 +491,7 @@ function clearStep405RecoveryCount(step) {
 function createStep405RecoveryLimitError(step, count) {
   const normalizedStep = Number(step) || step || '?';
   const limit = getStep405RecoveryLimit(normalizedStep) || count;
-  const message = `步骤 ${normalizedStep}：检测到 405 错误页面，已连续点击“重试”恢复 ${count}/${limit} 次仍未恢复，当前轮将结束并进入下一轮。URL: ${location.href}`;
+  const message = `Step ${normalizedStep}: detected a 405 error page, clicked "Retry" ${count}/${limit} times in a row and still did not recover; this round will end and the next round will begin. URL: ${location.href}`;
   return new Error(`${getStep405RecoveryErrorPrefix(normalizedStep)}${message}`);
 }
 
@@ -506,8 +506,8 @@ async function handle405ResendError(step, remainingTimeout = 30000) {
   const maxClickAttempts = Number(step) === 4 ? 1 : 5;
   await recoverCurrentAuthRetryPage({
     logLabel: Number(step) === 4
-      ? `步骤 ${step}：检测到 405 错误页面，正在点击“重试”恢复（总计 ${nextCount}/${getStep405RecoveryLimit(step)}）`
-      : `步骤 ${step}：检测到 405 错误页面，正在点击“重试”恢复`,
+      ? `Step ${step}: detected a 405 error page, clicking "Retry" to recover (total ${nextCount}/${getStep405RecoveryLimit(step)})`
+      : `Step ${step}: detected a 405 error page, clicking "Retry" to recover`,
     maxClickAttempts,
     pathPatterns: [],
     step,
@@ -517,7 +517,7 @@ async function handle405ResendError(step, remainingTimeout = 30000) {
     throw createStep405RecoveryLimitError(step, nextCount);
   }
   if (typeof clearStep405RecoveryCount === 'function') clearStep405RecoveryCount(step);
-  log(`步骤 ${step}：405 错误已恢复，页面已返回验证码页面。`);
+  log(`Step ${step}: 405 error recovered, page returned to the verification code page.`);
 }
 
 // ============================================================
@@ -1096,7 +1096,7 @@ function getSignupPasswordDiagnostics() {
 
 function logSignupPasswordDiagnostics(context, level = 'warn') {
   try {
-    log(`${context}：密码页诊断快照：${JSON.stringify(getSignupPasswordDiagnostics())}`, level);
+    log(`${context}: password page diagnostic snapshot: ${JSON.stringify(getSignupPasswordDiagnostics())}`, level);
   } catch (error) {
     console.warn('[MultiPage:openai-auth] failed to build signup password diagnostics:', error?.message || error);
   }
@@ -1132,7 +1132,7 @@ async function waitForSignupEntryState(options = {}) {
 
     if (logDiagnostics && snapshot.state !== lastState) {
       lastState = snapshot.state;
-      log(`步骤 ${step}：注册入口状态切换为 ${snapshot.state}，状态快照：${JSON.stringify(getSignupEntryStateSummary(snapshot))}`);
+      log(`Step ${step}: sign-up entry state changed to ${snapshot.state}, state snapshot: ${JSON.stringify(getSignupEntryStateSummary(snapshot))}`);
     }
 
     if (snapshot.state === 'password_page' || snapshot.state === 'email_entry') {
@@ -1148,21 +1148,21 @@ async function waitForSignupEntryState(options = {}) {
         lastSwitchToEmailAt = Date.now();
         loggedMissingSwitchToEmail = false;
         if (logDiagnostics) {
-          log(`步骤 ${step}：检测到手机号输入模式，准备点击切换邮箱入口："${getActionText(snapshot.switchToEmailTrigger).slice(0, 80)}"`);
+          log(`Step ${step}: detected phone-number input mode, preparing to click the switch-to-email entry: "${getActionText(snapshot.switchToEmailTrigger).slice(0, 80)}"`);
         }
-        log('步骤 2：检测到手机号输入模式，正在切换到邮箱输入模式...');
+        log('Step 2: detected phone-number input mode, switching to email input mode...');
         await humanPause(350, 900);
         await performOperationWithDelay({ stepKey: 'signup-entry', kind: 'click', label: 'switch-to-signup-email' }, async () => {
           simulateClick(snapshot.switchToEmailTrigger);
         });
       } else if (!snapshot.switchToEmailTrigger && !loggedMissingSwitchToEmail) {
         loggedMissingSwitchToEmail = true;
-        log('步骤 2：检测到手机号输入模式，但暂未识别到“改用邮箱/继续使用电子邮件地址登录”按钮，继续等待界面稳定...', 'warn');
+        log('Step 2: detected phone-number input mode, but the "switch to email / continue with email address" button has not been identified yet; keep waiting for the UI to settle...', 'warn');
       }
 
       if (logDiagnostics && !slowSnapshotLogged && Date.now() - start >= 5000) {
         slowSnapshotLogged = true;
-        log(`步骤 ${step}：等待手机号入口切换超过 5 秒，页面诊断快照：${JSON.stringify(getSignupEntryDiagnostics())}`, 'warn');
+        log(`Step ${step}: waiting for the phone-entry switch exceeded 5 seconds, page diagnostics snapshot: ${JSON.stringify(getSignupEntryDiagnostics())}`, 'warn');
       }
 
       await sleep(250);
@@ -1176,23 +1176,23 @@ async function waitForSignupEntryState(options = {}) {
 
       if (Date.now() - lastTriggerClickAt >= 1500) {
         if (clickAttempts >= maxSignupEntryClickAttempts) {
-          log(`步骤 ${step}：官网注册入口已完成 ${maxSignupEntryClickRetries} 次重试，页面仍未进入邮箱输入页，停止重试。`, 'warn');
+          log(`Step ${step}: the official sign-up entry has already been retried ${maxSignupEntryClickRetries} times, but the page still has not reached the email input page; stopping retries.`, 'warn');
           return snapshot;
         }
         lastTriggerClickAt = Date.now();
         clickAttempts += 1;
         const retryAttempt = clickAttempts - 1;
         if (logDiagnostics) {
-          log(`步骤 ${step}：正在点击官网注册入口（第 ${clickAttempts}/${maxSignupEntryClickAttempts} 次）："${getActionText(snapshot.signupTrigger).slice(0, 80)}"`);
+          log(`Step ${step}: clicking the official sign-up entry (attempt ${clickAttempts}/${maxSignupEntryClickAttempts}): "${getActionText(snapshot.signupTrigger).slice(0, 80)}"`);
         }
         log(retryAttempt > 0
-          ? `步骤 ${step}：上次点击后仍未进入邮箱输入页，等待 3 秒后重试点击官网注册入口（重试 ${retryAttempt}/${maxSignupEntryClickRetries}）...`
-          : `步骤 ${step}：已找到官网注册入口，等待 3 秒后点击...`);
+          ? `Step ${step}: still not on the email input page after the last click, waiting 3 seconds before retrying the official sign-up entry click (retry ${retryAttempt}/${maxSignupEntryClickRetries})...`
+          : `Step ${step}: found the official sign-up entry, waiting 3 seconds before clicking...`);
         await sleep(3000);
         throwIfStopped();
         const clickTarget = findSignupEntryTrigger({ allowHiddenFallback: false }) || snapshot.signupTrigger;
         if (!isVisibleElement(clickTarget)) {
-          log(`步骤 ${step}：注册入口仍处于不可见状态，继续按入口重试节奏尝试恢复点击...`, 'warn');
+          log(`Step ${step}: the sign-up entry is still invisible, continuing to recover the click according to the retry rhythm...`, 'warn');
         }
         await humanPause(350, 900);
         await performOperationWithDelay({ stepKey: 'signup-entry', kind: 'click', label: 'open-signup-entry' }, async () => {
@@ -1203,7 +1203,7 @@ async function waitForSignupEntryState(options = {}) {
 
     if (logDiagnostics && !slowSnapshotLogged && Date.now() - start >= 5000) {
       slowSnapshotLogged = true;
-      log(`步骤 ${step}：等待注册入口超过 5 秒，页面诊断快照：${JSON.stringify(getSignupEntryDiagnostics())}`, 'warn');
+      log(`Step ${step}: waiting for the sign-up entry exceeded 5 seconds, page diagnostics snapshot: ${JSON.stringify(getSignupEntryDiagnostics())}`, 'warn');
     }
 
     await sleep(250);
@@ -1211,7 +1211,7 @@ async function waitForSignupEntryState(options = {}) {
 
   const finalSnapshot = inspectSignupEntryState();
   if (logDiagnostics) {
-    log(`步骤 ${step}：等待注册入口状态超时，最终状态快照：${JSON.stringify(getSignupEntryStateSummary(finalSnapshot))}`, 'warn');
+    log(`Step ${step}: waiting for the sign-up entry state timed out, final state snapshot: ${JSON.stringify(getSignupEntryStateSummary(finalSnapshot))}`, 'warn');
   }
   return finalSnapshot;
 }
@@ -1226,8 +1226,8 @@ async function ensureSignupEntryReady(timeout = 15000) {
     };
   }
 
-  log(`注册入口识别失败，诊断快照：${JSON.stringify(getSignupEntryDiagnostics())}`, 'warn');
-  throw new Error('当前页面没有可用的注册入口，也不在邮箱/密码页。URL: ' + location.href);
+  log(`Sign-up entry identification failed, diagnostics snapshot: ${JSON.stringify(getSignupEntryDiagnostics())}`, 'warn');
+  throw new Error('The current page has no available sign-up entry, and it is not on the email/password page. URL: ' + location.href);
 }
 
 async function ensureSignupPhoneEntryReady(timeout = 25000) {
@@ -1243,8 +1243,8 @@ async function ensureSignupPhoneEntryReady(timeout = 25000) {
     };
   }
 
-  log(`手机号注册入口识别失败，诊断快照：${JSON.stringify(getSignupEntryDiagnostics())}`, 'warn');
-  throw new Error('当前页面没有可用的手机号注册入口，也不在密码页。URL: ' + location.href);
+  log(`Phone-number sign-up entry identification failed, diagnostics snapshot: ${JSON.stringify(getSignupEntryDiagnostics())}`, 'warn');
+  throw new Error('The current page has no available phone-number sign-up entry, and it is not on the password page. URL: ' + location.href);
 }
 
 async function ensureSignupPasswordPageReady(timeout = 20000) {
@@ -1263,7 +1263,7 @@ async function ensureSignupPasswordPageReady(timeout = 20000) {
     await sleep(200);
   }
 
-  throw new Error('等待进入密码页超时。URL: ' + location.href);
+  throw new Error('Timed out waiting to enter the password page. URL: ' + location.href);
 }
 
 async function fillSignupEmailAndContinue(email, step) {
@@ -1274,7 +1274,7 @@ async function fillSignupEmailAndContinue(email, step) {
         const gate = rootScope?.CodexOperationDelay?.performOperationWithDelay;
         return typeof gate === 'function' ? gate(metadata, operation) : operation();
       };
-  if (!email) throw new Error(`未提供邮箱地址，步骤 ${step} 无法继续。`);
+  if (!email) throw new Error(`No email address provided; step ${step} cannot continue.`);
   const normalizedEmail = String(email || '').trim().toLowerCase();
 
   const snapshot = await waitForSignupEntryState({
@@ -1286,9 +1286,9 @@ async function fillSignupEmailAndContinue(email, step) {
 
   if (snapshot.state === 'password_page') {
     if (snapshot.displayedEmail && snapshot.displayedEmail !== normalizedEmail) {
-      throw new Error(`步骤 ${step}：当前密码页邮箱为 ${snapshot.displayedEmail}，与目标邮箱 ${email} 不一致，请先回到步骤 1 重新开始。`);
+      throw new Error(`Step ${step}: the email on the current password page is ${snapshot.displayedEmail}, which does not match the target email ${email}; please go back to step 1 and start over.`);
     }
-    log(`步骤 ${step}：当前已在密码页，无需重复提交邮箱。`);
+    log(`Step ${step}: already on the password page, no need to resubmit the email.`);
     return {
       alreadyOnPasswordPage: true,
       url: snapshot.url || location.href,
@@ -1297,24 +1297,24 @@ async function fillSignupEmailAndContinue(email, step) {
 
   if (snapshot.state !== 'email_entry' || !snapshot.emailInput) {
     if (step === 2) {
-      log(`步骤 ${step}：未进入邮箱输入页，最终页面诊断快照：${JSON.stringify(getSignupEntryDiagnostics())}`, 'warn');
+      log(`Step ${step}: did not enter the email input page, final page diagnostics snapshot: ${JSON.stringify(getSignupEntryDiagnostics())}`, 'warn');
     }
-    throw new Error(`步骤 ${step}：未找到可用的邮箱输入入口。URL: ${location.href}`);
+    throw new Error(`Step ${step}: no available email input entry was found. URL: ${location.href}`);
   }
 
-  log(`步骤 ${step}：正在填写邮箱：${email}`);
+  log(`Step ${step}: filling email: ${email}`);
   await humanPause(500, 1400);
   await performOperationWithDelay({ stepKey: step === 2 ? 'signup-entry' : 'fill-password', kind: 'fill', label: 'signup-email' }, async () => {
     fillInput(snapshot.emailInput, email);
   });
-  log(`步骤 ${step}：邮箱已填写`);
+  log(`Step ${step}: email filled.`);
 
   const continueButton = snapshot.continueButton || getSignupEmailContinueButton({ allowDisabled: true });
   if (!continueButton || !isActionEnabled(continueButton)) {
-    throw new Error(`步骤 ${step}：未找到可点击的“继续”按钮。URL: ${location.href}`);
+    throw new Error(`Step ${step}: no clickable "Continue" button was found. URL: ${location.href}`);
   }
 
-  log(`步骤 ${step}：邮箱已准备提交，正在前往密码页...`);
+  log(`Step ${step}: email is ready to submit, moving to the password page...`);
   window.setTimeout(async () => {
     try {
       throwIfStopped();
@@ -2452,7 +2452,7 @@ async function waitForSignupPhoneEntryState(options = {}) {
       const switchToPhone = snapshot.switchToPhoneTrigger || findSignupUsePhoneTrigger();
       if (switchToPhone && Date.now() - lastSwitchToPhoneAt >= 1500) {
         lastSwitchToPhoneAt = Date.now();
-        log(`步骤 ${step}：检测到邮箱输入模式，正在切换到手机号注册入口...`);
+        log(`Step ${step}: detected email input mode, switching to the phone-number sign-up entry...`);
         await humanPause(350, 900);
         await performOperationWithDelay({ stepKey: 'signup-phone-entry', kind: 'click', label: 'switch-to-signup-phone' }, async () => {
           simulateClick(switchToPhone);
@@ -2461,14 +2461,14 @@ async function waitForSignupPhoneEntryState(options = {}) {
         const moreOptionsTrigger = findSignupMoreOptionsTrigger();
         if (moreOptionsTrigger && Date.now() - lastMoreOptionsClickAt >= 1500) {
           lastMoreOptionsClickAt = Date.now();
-          log(`步骤 ${step}：手机号入口可能隐藏在更多选项中，正在展开更多选项...`);
+          log(`Step ${step}: the phone-number entry may be hidden under More options, expanding them now...`);
           await humanPause(350, 900);
           await performOperationWithDelay({ stepKey: 'signup-phone-entry', kind: 'click', label: 'signup-phone-more-options' }, async () => {
             simulateClick(moreOptionsTrigger);
           });
         } else if (!switchToPhone && !slowSnapshotLogged && Date.now() - start >= 5000) {
           slowSnapshotLogged = true;
-          log(`步骤 ${step}：尚未找到手机号入口，页面诊断快照：${JSON.stringify(getSignupEntryDiagnostics())}`, 'warn');
+          log(`Step ${step}: phone-number entry not found yet, page diagnostics snapshot: ${JSON.stringify(getSignupEntryDiagnostics())}`, 'warn');
         }
       }
       await sleep(250);
@@ -2478,20 +2478,20 @@ async function waitForSignupPhoneEntryState(options = {}) {
     if (snapshot.state === 'entry_home' && snapshot.signupTrigger) {
       if (Date.now() - lastTriggerClickAt >= 1500) {
         if (clickAttempts >= maxSignupEntryClickAttempts) {
-          log(`步骤 ${step}：官网注册入口已完成 ${maxSignupEntryClickRetries} 次重试，页面仍未进入手机号输入页，停止重试。`, 'warn');
+          log(`Step ${step}: the official sign-up entry has already been retried ${maxSignupEntryClickRetries} times, but the page still has not reached the phone-number input page; stopping retries.`, 'warn');
           return snapshot;
         }
         lastTriggerClickAt = Date.now();
         clickAttempts += 1;
         const retryAttempt = clickAttempts - 1;
         log(retryAttempt > 0
-          ? `步骤 ${step}：上次点击后仍未进入手机号输入页，等待 3 秒后重试点击官网注册入口（重试 ${retryAttempt}/${maxSignupEntryClickRetries}）...`
-          : `步骤 ${step}：已找到官网注册入口，等待 3 秒后点击...`);
+          ? `Step ${step}: still not on the phone-number input page after the last click, waiting 3 seconds before retrying the official sign-up entry click (retry ${retryAttempt}/${maxSignupEntryClickRetries})...`
+          : `Step ${step}: found the official sign-up entry, waiting 3 seconds before clicking...`);
         await sleep(3000);
         throwIfStopped();
         const clickTarget = findSignupEntryTrigger({ allowHiddenFallback: false }) || snapshot.signupTrigger;
         if (!isVisibleElement(clickTarget)) {
-          log(`步骤 ${step}：注册入口仍处于不可见状态，继续按入口重试节奏尝试恢复点击...`, 'warn');
+          log(`Step ${step}: the sign-up entry is still invisible, continuing to recover the click according to the retry rhythm...`, 'warn');
         }
         await humanPause(350, 900);
         await performOperationWithDelay({ stepKey: 'signup-phone-entry', kind: 'click', label: 'open-signup-entry' }, async () => {
@@ -2504,14 +2504,14 @@ async function waitForSignupPhoneEntryState(options = {}) {
 
     if (!slowSnapshotLogged && Date.now() - start >= 5000) {
       slowSnapshotLogged = true;
-      log(`步骤 ${step}：等待手机号注册入口超过 5 秒，页面诊断快照：${JSON.stringify(getSignupEntryDiagnostics())}`, 'warn');
+      log(`Step ${step}: waiting for the phone-number sign-up entry exceeded 5 seconds, page diagnostics snapshot: ${JSON.stringify(getSignupEntryDiagnostics())}`, 'warn');
     }
 
     await sleep(250);
   }
 
   const finalSnapshot = inspectSignupEntryState();
-  log(`步骤 ${step}：等待手机号注册入口超时，最终状态快照：${JSON.stringify(getSignupEntryStateSummary(finalSnapshot))}`, 'warn');
+    log(`Step ${step}: waiting for the phone-number sign-up entry timed out, final state snapshot: ${JSON.stringify(getSignupEntryStateSummary(finalSnapshot))}`, 'warn');
   return finalSnapshot;
 }
 
@@ -2526,12 +2526,12 @@ async function submitSignupPhoneNumberAndContinue(payload = {}) {
   const phoneNumber = String(payload.phoneNumber || '').trim();
   const countryLabel = String(payload.countryLabel || '').trim();
   if (!phoneNumber) {
-    throw new Error('未提供手机号，步骤 2 无法继续。');
+    throw new Error('No phone number provided; step 2 cannot continue.');
   }
 
   const snapshot = await waitForSignupPhoneEntryState({ timeout: 25000, step: 2 });
   if (snapshot.state === 'password_page') {
-    log('步骤 2：当前已在密码页，无需重复提交手机号。');
+    log('Step 2: already on the password page, no need to resubmit the phone number.');
     return {
       alreadyOnPasswordPage: true,
       url: snapshot.url || location.href,
@@ -2539,7 +2539,7 @@ async function submitSignupPhoneNumberAndContinue(payload = {}) {
   }
 
   if (snapshot.state !== 'phone_entry' || !snapshot.phoneInput) {
-    throw new Error(`步骤 2：未找到可用的手机号输入入口。URL: ${location.href}`);
+    throw new Error(`Step 2: no available phone-number input entry was found. URL: ${location.href}`);
   }
 
   const countrySelection = await ensureSignupPhoneCountrySelected(snapshot.phoneInput, {
@@ -2547,12 +2547,12 @@ async function submitSignupPhoneNumberAndContinue(payload = {}) {
     phoneNumber,
   });
   if (countrySelection.hasCountryControl && !countrySelection.matched) {
-    const currentCountryText = getSignupPhoneCountryButtonText(snapshot.phoneInput) || '未知';
+    const currentCountryText = getSignupPhoneCountryButtonText(snapshot.phoneInput) || 'unknown';
     const targetDialCode = resolveSignupPhoneTargetDialCode({ countryLabel, phoneNumber }, countrySelection.selectedOption);
     const targetLabel = targetDialCode
-      ? `目标区号 +${targetDialCode}（号码 ${phoneNumber}${countryLabel ? `，国家 ${countryLabel}` : ''}）`
+      ? `Target country code +${targetDialCode} (number ${phoneNumber}${countryLabel ? `, country ${countryLabel}` : ''})`
       : (countryLabel || phoneNumber);
-    throw new Error(`步骤 2：手机号国家下拉框未能自动切换到 ${targetLabel}，当前显示为 ${currentCountryText}，已停止提交以避免区号不匹配。`);
+    throw new Error(`Step 2: the phone-number country dropdown could not switch to ${targetLabel} automatically; it currently shows ${currentCountryText}, so submission was stopped to avoid a dial-code mismatch.`);
   }
 
   const dialCode = resolveSignupPhoneDialCode(snapshot.phoneInput, {
@@ -2562,10 +2562,10 @@ async function submitSignupPhoneNumberAndContinue(payload = {}) {
   });
   const inputValue = toNationalPhoneNumber(phoneNumber, dialCode);
   if (!inputValue) {
-    throw new Error('步骤 2：手机号为空，无法填写。');
+    throw new Error('Step 2: phone number is empty and cannot be filled.');
   }
 
-  log(`步骤 2：正在填写手机号：${phoneNumber}`);
+  log(`Step 2: filling phone number: ${phoneNumber}`);
   await humanPause(500, 1400);
   await performOperationWithDelay({ stepKey: 'signup-phone-entry', kind: 'fill', label: 'signup-phone-number' }, async () => {
     fillInput(snapshot.phoneInput, inputValue);
@@ -2577,14 +2577,14 @@ async function submitSignupPhoneNumberAndContinue(payload = {}) {
       fillInput(hiddenPhoneNumberInput, e164PhoneNumber);
     });
   }
-  log(`步骤 2：手机号已填写：${phoneNumber}${dialCode ? `（区号 +${dialCode}，本地号 ${inputValue}）` : ''}`);
+  log(`Step 2: phone number filled: ${phoneNumber}${dialCode ? ` (dial code +${dialCode}, local number ${inputValue})` : ''}`);
 
   const continueButton = getSignupEmailContinueButton({ allowDisabled: true });
   if (!continueButton || !isActionEnabled(continueButton)) {
-    throw new Error(`步骤 2：未找到可点击的“继续”按钮。URL: ${location.href}`);
+    throw new Error(`Step 2: no clickable "Continue" button was found. URL: ${location.href}`);
   }
 
-  log('步骤 2：手机号已准备提交，正在前往下一页...');
+  log('Step 2: phone number is ready to submit, moving to the next page...');
   window.setTimeout(async () => {
     try {
       throwIfStopped();
@@ -2632,7 +2632,7 @@ async function step3_fillEmailPassword(payload) {
         return typeof gate === 'function' ? gate(metadata, operation) : operation();
       };
   const { email, password } = payload;
-  if (!password) throw new Error('未提供密码，步骤 3 需要可用密码。');
+  if (!password) throw new Error('No password provided; step 3 requires a usable password.');
   const normalizedEmail = String(email || '').trim().toLowerCase();
   const accountIdentifierType = String(payload?.accountIdentifierType || '').trim().toLowerCase() === 'phone'
     ? 'phone'
@@ -2641,7 +2641,7 @@ async function step3_fillEmailPassword(payload) {
 
   let snapshot = inspectSignupEntryState();
   if (snapshot.state === 'entry_home') {
-    throw new Error('当前仍停留在 ChatGPT 官网首页，请先完成步骤 2。');
+    throw new Error('Still on the ChatGPT home page; please complete step 2 first.');
   }
 
   if (
@@ -2663,7 +2663,7 @@ async function step3_fillEmailPassword(payload) {
       deferredSubmit: false,
       ...(snapshot.skipProfileStep ? { skipProfileStep: true } : {}),
     };
-    log('步骤 3：当前页面已进入验证码或后续阶段，密码页按已跳过处理。', 'warn');
+    log('Step 3: the current page has already entered the verification-code or later stage, so the password page is treated as skipped.', 'warn');
     reportComplete(3, completionPayload);
     return completionPayload;
   }
@@ -2683,30 +2683,30 @@ async function step3_fillEmailPassword(payload) {
   }
 
   if (snapshot.state !== 'password_page' || !snapshot.passwordInput) {
-    logSignupPasswordDiagnostics('步骤 3：未能识别可填写的密码输入框');
+    logSignupPasswordDiagnostics('Step 3: could not identify a password input box to fill');
   }
 
   if (snapshot.state !== 'password_page' || !snapshot.passwordInput) {
-    throw new Error('在密码页未找到密码输入框。URL: ' + location.href);
+    throw new Error('No password input box was found on the password page. URL: ' + location.href);
   }
   if (normalizedEmail && snapshot.displayedEmail && snapshot.displayedEmail !== normalizedEmail) {
-    throw new Error(`当前密码页邮箱为 ${snapshot.displayedEmail}，与目标邮箱 ${email} 不一致，请先回到步骤 1 重新开始。`);
+    throw new Error(`The email on the current password page is ${snapshot.displayedEmail}, which does not match the target email ${email}; please go back to step 1 and start over.`);
   }
 
   await humanPause(600, 1500);
   await performOperationWithDelay({ stepKey: 'fill-password', kind: 'fill', label: 'signup-password' }, async () => {
     fillInput(snapshot.passwordInput, password);
   });
-  log('步骤 3：密码已填写');
+  log('Step 3: password filled.');
 
   const submitBtn = snapshot.submitButton
     || getSignupPasswordSubmitButton({ allowDisabled: true })
     || await waitForElementByText('button', /continue|sign\s*up|submit|注册|创建|続行|続ける|次へ|サインアップ|登録|作成|create/i, 5000).catch(() => null);
 
   if (!submitBtn) {
-    logSignupPasswordDiagnostics('步骤 3：未找到可提交的密码页按钮');
+    logSignupPasswordDiagnostics('Step 3: no submit button was found on the password page');
   } else if (typeof findOneTimeCodeLoginTrigger === 'function' && findOneTimeCodeLoginTrigger()) {
-    logSignupPasswordDiagnostics('步骤 3：当前密码页同时存在一次性验证码入口', 'info');
+    logSignupPasswordDiagnostics('Step 3: the current password page also has a one-time-code login entry', 'info');
   }
 
   const signupVerificationRequestedAt = submitBtn ? Date.now() : null;
@@ -2730,7 +2730,7 @@ async function step3_fillEmailPassword(payload) {
         await performOperationWithDelay({ stepKey: 'fill-password', kind: 'submit', label: 'submit-signup-password' }, async () => {
           simulateClick(submitBtn);
         });
-        log('步骤 3：表单已提交');
+        log('Step 3: form submitted.');
       } catch (error) {
         if (!isStopError(error)) {
           console.error('[MultiPage:openai-auth] deferred step 3 submit failed:', error?.message || error);
@@ -2817,15 +2817,15 @@ function getVerificationErrorText() {
 
 function createSignupUserAlreadyExistsError() {
   return new Error(
-    `${SIGNUP_USER_ALREADY_EXISTS_ERROR_PREFIX}步骤 4：检测到 user_already_exists，说明当前用户已存在，当前轮将直接停止。`
+    `${SIGNUP_USER_ALREADY_EXISTS_ERROR_PREFIX}Step 4: detected user_already_exists, which means the current user already exists; this round will stop immediately.`
   );
 }
 
 function createSignupPhonePasswordMismatchError(detailText = '') {
   const detail = String(detailText || '').replace(/\s+/g, ' ').trim();
-  const suffix = detail ? `页面提示：${detail}` : '页面提示注册手机号不可继续使用，需重新开始当前轮。';
+  const suffix = detail ? `Page message: ${detail}` : 'Page message: the registration phone number can no longer be used; this round must be restarted.';
   return new Error(
-    `${SIGNUP_PHONE_PASSWORD_MISMATCH_ERROR_PREFIX}步骤 3：检测到注册手机号异常，需要重新开始当前轮。${suffix}`
+    `${SIGNUP_PHONE_PASSWORD_MISMATCH_ERROR_PREFIX}Step 3: detected an issue with the registration phone number; this round must be restarted. ${suffix}`
   );
 }
 
@@ -3185,7 +3185,7 @@ function isDocumentLoadComplete() {
   return getDocumentReadyStateSnapshot() === 'complete';
 }
 
-async function waitForDocumentLoadComplete(timeout = 15000, label = '页面') {
+async function waitForDocumentLoadComplete(timeout = 15000, label = 'page') {
   const start = Date.now();
 
   while (Date.now() - start < timeout) {
@@ -3196,7 +3196,7 @@ async function waitForDocumentLoadComplete(timeout = 15000, label = '页面') {
     await sleep(150);
   }
 
-  throw new Error(`${label}长时间未完成加载，当前 readyState=${getDocumentReadyStateSnapshot()}。URL: ${location.href}`);
+  throw new Error(`${label} did not finish loading for a long time; current readyState=${getDocumentReadyStateSnapshot()}. URL: ${location.href}`);
 }
 
 function isSignupVerificationPageInteractiveReady(snapshot = null) {
@@ -3301,7 +3301,7 @@ async function submitPhoneVerificationCodeWithProfileFallback(payload = {}) {
 
   const signupProfile = payload?.signupProfile || {};
   if (!signupProfile.firstName || !signupProfile.lastName) {
-    throw new Error('手机号验证后进入资料页，但未提供步骤 5 所需的姓名数据。');
+    throw new Error('Entered the profile page after phone verification, but no name data required for step 5 was provided.');
   }
 
   await step5_fillNameBirthday(signupProfile);
@@ -3410,13 +3410,13 @@ function findBirthdayReactAriaSelect(labelText) {
 
 async function setReactAriaBirthdaySelect(control, value) {
   if (!control?.nativeSelect) {
-    throw new Error('未找到可写入的生日下拉框。');
+    throw new Error('No writable birthday dropdown was found.');
   }
 
   const desiredValue = String(value);
   const option = Array.from(control.nativeSelect.options).find((item) => item.value === desiredValue);
   if (!option) {
-    throw new Error(`生日下拉框中不存在值 ${desiredValue}。`);
+    throw new Error(`The birthday dropdown does not contain value ${desiredValue}.`);
   }
 
   control.nativeSelect.value = desiredValue;
@@ -3632,7 +3632,7 @@ async function recoverCurrentAuthRetryPage(payload = {}) {
     }
 
     if (retryState.maxCheckAttemptsBlocked) {
-      throw new Error('CF_SECURITY_BLOCKED::您已触发Cloudflare 安全防护系统，已完全停止流程，请不要短时间内多次进行重新发送验证码，连续刷新、反复点击重试会加重风控；请先关闭页面等待 15-30 分钟，让系统的临时限制自动解除。或者更换浏览器');
+      throw new Error('CF_SECURITY_BLOCKED::You have triggered Cloudflare security protection and the flow has been fully stopped. Do not resend codes multiple times in a short period; repeated refreshes and retry clicks will increase risk controls. Close the page and wait 15-30 minutes for the temporary limit to lift automatically, or switch browsers.');
     }
     if (retryState.userAlreadyExistsBlocked) {
       throw createSignupUserAlreadyExistsError();
@@ -3640,7 +3640,7 @@ async function recoverCurrentAuthRetryPage(payload = {}) {
     if (retryState.retryButton && retryState.retryEnabled) {
       idlePollCount = 0;
       clickCount += 1;
-      log(`${logLabel || `步骤 ${step || '?'}：检测到重试页，正在点击“重试”恢复`}（第 ${clickCount} 次）...`, 'warn');
+      log(`${logLabel || `Step ${step || '?'}: detected a retry page, clicking "Retry" to recover`} (attempt ${clickCount})...`, 'warn');
       await humanPause(300, 800);
       await performOperationWithDelay({ stepKey: step === 8 || flow === 'login' ? 'oauth-login' : 'fetch-signup-code', kind: 'click', label: 'auth-retry-click' }, async () => {
         simulateClick(retryState.retryButton);
@@ -3662,7 +3662,7 @@ async function recoverCurrentAuthRetryPage(payload = {}) {
 
     idlePollCount += 1;
     if (idlePollCount >= maxIdlePolls) {
-      throw new Error(`${logLabel || `步骤 ${step || '?'}：重试页恢复`}超时：重试按钮长时间不可点击。URL: ${location.href}`);
+      throw new Error(`${logLabel || `Step ${step || '?'}: retry page recovery`} timed out: the Retry button was not clickable for a long time. URL: ${location.href}`);
     }
 
     await sleep(250);
@@ -3677,13 +3677,13 @@ async function recoverCurrentAuthRetryPage(payload = {}) {
     };
   }
   if (finalRetryState.maxCheckAttemptsBlocked) {
-    throw new Error('CF_SECURITY_BLOCKED::您已触发Cloudflare 安全防护系统，已完全停止流程，请不要短时间内多次进行重新发送验证码，连续刷新、反复点击重试会加重风控；请先关闭页面等待 15-30 分钟，让系统的临时限制自动解除。或者更换浏览器');
+    throw new Error('CF_SECURITY_BLOCKED::You have triggered Cloudflare security protection and the flow has been fully stopped. Do not resend codes multiple times in a short period; repeated refreshes and retry clicks will increase risk controls. Close the page and wait 15-30 minutes for the temporary limit to lift automatically, or switch browsers.');
   }
   if (finalRetryState.userAlreadyExistsBlocked) {
     throw createSignupUserAlreadyExistsError();
   }
 
-  throw new Error(`${logLabel || `步骤 ${step || '?'}：重试页恢复`}失败：已连续点击“重试” ${maxClickAttempts} 次，页面仍未恢复。URL: ${location.href}`);
+    throw new Error(`${logLabel || `Step ${step || '?'}: retry page recovery`} failed: clicked "Retry" ${maxClickAttempts} times in a row and the page still did not recover. URL: ${location.href}`);
 }
 
 function getSignupPasswordTimeoutErrorPageState() {
@@ -4112,9 +4112,9 @@ async function selectCountryForPhoneInput(phoneInput, phoneNumber = '', countryL
 
   if (selection.hasCountryControl && targetDialCode) {
     if (!selection.matched || (displayedDialCode && displayedDialCode !== targetDialCode)) {
-      const currentCountryText = getSignupPhoneCountryButtonText(phoneInput) || displayedDialCode || '未知';
-      const targetLabel = `目标区号 +${targetDialCode}（号码 ${phoneNumber}${countryLabel ? `，国家 ${countryLabel}` : ''}）`;
-      throw new Error(`步骤 ${visibleStep}：手机号登录国家下拉框未能自动切换到 ${targetLabel}，当前显示为 ${currentCountryText}，已停止提交以避免区号不匹配。`);
+      const currentCountryText = getSignupPhoneCountryButtonText(phoneInput) || displayedDialCode || 'unknown';
+      const targetLabel = `Target country code +${targetDialCode} (number ${phoneNumber}${countryLabel ? `, country ${countryLabel}` : ''})`;
+      throw new Error(`Step ${visibleStep}: the phone-login country dropdown could not switch to ${targetLabel} automatically; it currently shows ${currentCountryText}, so submission was stopped to avoid a dial-code mismatch.`);
     }
     return targetDialCode;
   }
@@ -4337,27 +4337,27 @@ function getLoginAuthStateLabel(snapshot) {
   const state = snapshot?.state;
   switch (state) {
     case 'verification_page':
-      return '登录验证码页';
+      return 'login verification code page';
     case 'password_page':
-      return '密码页';
+      return 'password page';
     case 'email_page':
-      return '邮箱输入页';
+      return 'email input page';
     case 'phone_entry_page':
-      return '手机号输入页';
+      return 'phone-number input page';
     case 'phone_verification_page':
-      return '手机验证码页';
+      return 'phone verification code page';
     case 'login_timeout_error_page':
-      return '登录超时报错页';
+      return 'login timeout error page';
     case 'oauth_consent_page':
-      return 'OAuth 授权页';
+      return 'OAuth consent page';
     case 'entry_page':
-      return '登录入口页';
+      return 'login entry page';
     case 'add_phone_page':
-      return '手机号页';
+      return 'phone-number page';
     case 'add_email_page':
-      return '添加邮箱页';
+      return 'add-email page';
     default:
-      return '未知页面';
+      return 'unknown page';
   }
 }
 
@@ -4399,7 +4399,7 @@ async function waitForLoginVerificationPageReady(timeout = 10000, visibleStep = 
   }
 
   throw new Error(
-    `当前未进入登录验证码页面，请先重新完成步骤 ${Number(visibleStep) >= 11 ? 10 : 7}。当前状态：${getLoginAuthStateLabel(snapshot)}。URL: ${snapshot?.url || location.href}`
+    `The page has not entered the login verification code page yet; please rerun step ${Number(visibleStep) >= 11 ? 10 : 7}. Current state: ${getLoginAuthStateLabel(snapshot)}. URL: ${snapshot?.url || location.href}`
   );
 }
 
@@ -4467,19 +4467,19 @@ async function createStep6LoginTimeoutRecoveryTransition(reason, snapshot, messa
     try {
       const recoveryResult = await recoverCurrentAuthRetryPage({
         flow: 'login',
-        logLabel: `步骤 ${visibleStep}：检测到登录超时报错，正在点击“重试”恢复当前页面`,
+        logLabel: `Step ${visibleStep}: detected a login timeout error page, clicking "Retry" to recover the current page`,
         step: visibleStep,
         timeoutMs: 12000,
       });
       recovered = Boolean(recoveryResult?.recovered);
       if (recovered) {
-        log('登录超时报错页已点击“重试”，正在按恢复后的页面状态继续当前流程。', 'warn', { step: visibleStep, stepKey: 'oauth-login' });
+        log('The login timeout error page has been clicked on "Retry"; continuing the current flow according to the recovered page state.', 'warn', { step: visibleStep, stepKey: 'oauth-login' });
       }
     } catch (error) {
       if (/CF_SECURITY_BLOCKED::/i.test(String(error?.message || error || ''))) {
         throw error;
       }
-      log(`登录超时报错页自动点击“重试”失败：${error.message}`, 'warn', { step: visibleStep, stepKey: 'oauth-login' });
+      log(`Automatic "Retry" click on the login timeout error page failed: ${error.message}`, 'warn', { step: visibleStep, stepKey: 'oauth-login' });
     }
   }
 
@@ -4516,17 +4516,17 @@ async function createStep6LoginTimeoutRecoveryTransition(reason, snapshot, messa
   }
 
   if (resolvedSnapshot.state === 'password_page') {
-    log('登录超时报错页恢复后已进入密码页，继续当前登录流程。', 'warn', { step: visibleStep, stepKey: 'oauth-login' });
+      log('After recovery from the login timeout error page, the flow entered the password page and will continue.', 'warn', { step: visibleStep, stepKey: 'oauth-login' });
     return { action: 'password', snapshot: resolvedSnapshot };
   }
 
   if (resolvedSnapshot.state === 'phone_entry_page') {
-    log('登录超时报错页恢复后已进入手机号输入页，继续当前登录流程。', 'warn', { step: visibleStep, stepKey: 'oauth-login' });
+      log('After recovery from the login timeout error page, the flow entered the phone-number input page and will continue.', 'warn', { step: visibleStep, stepKey: 'oauth-login' });
     return { action: 'phone', snapshot: resolvedSnapshot };
   }
 
   if (resolvedSnapshot.state === 'email_page') {
-    log('登录超时报错页恢复后已回到邮箱输入页，继续当前登录流程。', 'warn', { step: visibleStep, stepKey: 'oauth-login' });
+      log('After recovery from the login timeout error page, the flow returned to the email input page and will continue.', 'warn', { step: visibleStep, stepKey: 'oauth-login' });
     return { action: 'email', snapshot: resolvedSnapshot };
   }
 
@@ -4553,7 +4553,7 @@ async function createStep6LoginTimeoutRecoverableResult(reason, snapshot, messag
 async function finalizeStep6VerificationReady(options = {}) {
   const {
     visibleStep = 7,
-    logLabel = `步骤 ${visibleStep} 收尾`,
+    logLabel = `Step ${visibleStep} wrap-up`,
     loginVerificationRequestedAt = null,
     timeout = 12000,
     via = 'verification_page_ready',
@@ -4567,7 +4567,7 @@ async function finalizeStep6VerificationReady(options = {}) {
   while (Date.now() - start < timeout && round < maxRounds) {
     throwIfStopped();
     round += 1;
-    log(`确认页面是否稳定停留在登录验证码阶段（第 ${round}/${maxRounds} 轮，先等待 3 秒）...`, 'info', { step: visibleStep, stepKey: 'oauth-login' });
+    log(`Checking whether the page is stably staying on the login verification code stage (round ${round}/${maxRounds}, wait 3 seconds first)...`, 'info', { step: visibleStep, stepKey: 'oauth-login' });
     await sleep(settleDelayMs);
 
     const rawSnapshot = inspectLoginAuthState();
@@ -4575,7 +4575,7 @@ async function finalizeStep6VerificationReady(options = {}) {
 
     if (snapshot.state === 'verification_page' || (allowPhoneVerificationPage && snapshot.state === 'phone_verification_page')) {
       log(
-        snapshot.state === 'phone_verification_page' ? '登录手机验证码页面已稳定就绪。' : '登录验证码页面已稳定就绪。',
+        snapshot.state === 'phone_verification_page' ? 'The login phone verification code page is now stable and ready.' : 'The login verification code page is now stable and ready.',
         'ok',
         { step: visibleStep, stepKey: 'oauth-login' }
       );
@@ -4586,84 +4586,84 @@ async function finalizeStep6VerificationReady(options = {}) {
     }
 
     if (snapshot.state === 'oauth_consent_page') {
-      log('认证页已直接进入 OAuth 授权页，跳过登录验证码步骤。', 'ok', { step: visibleStep, stepKey: 'oauth-login' });
+      log('The auth page entered the OAuth consent page directly, so the login verification code step is skipped.', 'ok', { step: visibleStep, stepKey: 'oauth-login' });
       return createStep6OAuthConsentSuccessResult(snapshot, {
         via: `${via}_oauth_consent`,
       });
     }
 
     if (snapshot.state === 'add_email_page') {
-      log('认证页已进入添加邮箱页，登录阶段完成。', 'ok', { step: visibleStep, stepKey: 'oauth-login' });
+      log('The auth page entered the add-email page, so the login stage is complete.', 'ok', { step: visibleStep, stepKey: 'oauth-login' });
       return createStep6AddEmailSuccessResult(snapshot, {
         via: `${via}_add_email`,
       });
     }
 
     if (snapshot.state === 'login_timeout_error_page') {
-      log(`页面进入登录超时报错页，准备自动恢复后重试步骤 ${visibleStep}。`, 'warn', { step: visibleStep, stepKey: 'oauth-login' });
+      log(`The page entered the login timeout error page; preparing to recover automatically and retry step ${visibleStep}.`, 'warn', { step: visibleStep, stepKey: 'oauth-login' });
       return createStep6LoginTimeoutRecoverableResult(
         'login_timeout_error_page',
         snapshot,
-        '登录验证码页面准备就绪前进入登录超时报错页。',
+        'Entered the login timeout error page before the login verification code page was ready.',
         { visibleStep }
       );
     }
 
     if (snapshot.state === 'password_page' || snapshot.state === 'email_page') {
       return createStep6RecoverableResult('verification_page_unstable', snapshot, {
-        message: `页面曾进入登录验证码阶段，但又回到了${getLoginAuthStateLabel(snapshot)}，准备重新执行步骤 ${visibleStep}。`,
+        message: `The page had entered the login verification code stage, but then returned to ${getLoginAuthStateLabel(snapshot)}; preparing to run step ${visibleStep} again.`,
         loginVerificationRequestedAt,
       });
     }
 
     if (snapshot.state === 'add_phone_page') {
-      throw new Error(`登录验证码页面准备过程中页面进入手机号页面。URL: ${snapshot.url}`);
+      throw new Error(`The page entered the phone-number page while preparing the login verification code page. URL: ${snapshot.url}`);
     }
   }
 
   const rawSnapshot = inspectLoginAuthState();
   const snapshot = normalizeStep6Snapshot(rawSnapshot);
   if (snapshot.state === 'verification_page' || (allowPhoneVerificationPage && snapshot.state === 'phone_verification_page')) {
-    log(
-      snapshot.state === 'phone_verification_page' ? '登录手机验证码页面已稳定就绪。' : '登录验证码页面已稳定就绪。',
-      'ok',
-      { step: visibleStep, stepKey: 'oauth-login' }
-    );
+      log(
+        snapshot.state === 'phone_verification_page' ? 'The login phone verification code page is now stable and ready.' : 'The login verification code page is now stable and ready.',
+        'ok',
+        { step: visibleStep, stepKey: 'oauth-login' }
+      );
     return createStep6SuccessResult(snapshot, {
       via,
       loginVerificationRequestedAt,
     });
   }
   if (snapshot.state === 'oauth_consent_page') {
-    log('认证页已直接进入 OAuth 授权页，跳过登录验证码步骤。', 'ok', { step: visibleStep, stepKey: 'oauth-login' });
+    log('The auth page entered the OAuth consent page directly, so the login verification code step is skipped.', 'ok', { step: visibleStep, stepKey: 'oauth-login' });
     return createStep6OAuthConsentSuccessResult(snapshot, {
       via: `${via}_oauth_consent`,
     });
   }
   if (snapshot.state === 'add_email_page') {
-    log('认证页已进入添加邮箱页，登录阶段完成。', 'ok', { step: visibleStep, stepKey: 'oauth-login' });
+    log('The auth page entered the add-email page, so the login stage is complete.', 'ok', { step: visibleStep, stepKey: 'oauth-login' });
     return createStep6AddEmailSuccessResult(snapshot, {
       via: `${via}_add_email`,
     });
   }
   if (snapshot.state === 'login_timeout_error_page') {
-    log(`页面进入登录超时报错页，准备自动恢复后重试步骤 ${visibleStep}。`, 'warn', { step: visibleStep, stepKey: 'oauth-login' });
+    log(`The page entered the login timeout error page; preparing to recover automatically and retry step ${visibleStep}.`, 'warn', { step: visibleStep, stepKey: 'oauth-login' });
     return createStep6LoginTimeoutRecoverableResult(
       'login_timeout_error_page',
       snapshot,
-      '登录验证码页面准备就绪前进入登录超时报错页。',
+      'Entered the login timeout error page before the login verification code page was ready.',
       { visibleStep }
     );
   }
   if (snapshot.state === 'password_page' || snapshot.state === 'email_page') {
     return createStep6RecoverableResult('verification_page_unstable', snapshot, {
-      message: `页面曾进入登录验证码阶段，但又回到了${getLoginAuthStateLabel(snapshot)}，准备重新执行步骤 ${visibleStep}。`,
+      message: `The page had entered the login verification code stage, but then returned to ${getLoginAuthStateLabel(snapshot)}; preparing to run step ${visibleStep} again.`,
       loginVerificationRequestedAt,
     });
   }
 
   return createStep6RecoverableResult('verification_page_finalize_unknown', snapshot, {
-    message: `登录验证码页面状态在收尾确认阶段未稳定，准备重新执行步骤 ${visibleStep}。`,
+    message: `The login verification code page state was not stable during wrap-up confirmation; preparing to rerun step ${visibleStep}.`,
     loginVerificationRequestedAt,
   });
 }
@@ -4678,9 +4678,9 @@ function throwForStep6FatalState(snapshot, visibleStep = 7) {
     case 'oauth_consent_page':
       return;
     case 'add_phone_page':
-      throw new Error(`当前页面已进入手机号页面，未经过登录验证码页，无法完成步骤 ${visibleStep}。URL: ${snapshot.url}`);
+      throw new Error(`The current page entered the phone-number page without passing through the login verification code page, so step ${visibleStep} cannot be completed. URL: ${snapshot.url}`);
     case 'unknown':
-      throw new Error(`无法识别当前登录页面状态。URL: ${snapshot?.url || location.href}`);
+    throw new Error(`Unable to identify the current login page state. URL: ${snapshot?.url || location.href}`);
     default:
       return;
   }
@@ -4717,7 +4717,7 @@ async function triggerLoginSubmitAction(button, fallbackField) {
       return;
     }
 
-    throw new Error('未找到可用的登录提交按钮。URL: ' + location.href);
+    throw new Error('No available login submit button was found. URL: ' + location.href);
   });
 }
 
@@ -4829,7 +4829,7 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
   const { password } = payload;
   const prepareSource = String(payload?.prepareSource || '').trim() || 'step4_execute';
   const prepareLogLabel = String(payload?.prepareLogLabel || '').trim()
-    || (prepareSource === 'step3_finalize' ? '步骤 3 收尾' : '步骤 4 执行');
+    || (prepareSource === 'step3_finalize' ? 'Step 3 wrap-up' : 'Step 4 execution');
   const start = Date.now();
   let recoveryRound = 0;
   const maxRecoveryRounds = 3;
@@ -4882,16 +4882,16 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
     throwIfStopped();
 
     const roundNo = recoveryRound + 1;
-    log(`${prepareLogLabel}：等待页面进入验证码阶段（第 ${roundNo}/${maxRecoveryRounds} 轮，先等待 5 秒）...`, 'info');
+     log(`${prepareLogLabel}: waiting for the page to enter the verification code stage (round ${roundNo}/${maxRecoveryRounds}, wait 5 seconds first)...`, 'info');
     const snapshot = await waitForSignupVerificationTransition(5000);
 
     if (snapshot.state === 'step5') {
-      log(`${prepareLogLabel}：页面已进入验证码后的下一阶段，本步骤按已完成处理。`, 'ok');
+      log(`${prepareLogLabel}: the page has entered the stage after verification code, so this step is treated as complete.`, 'ok');
       return { ready: true, alreadyVerified: true, retried: recoveryRound, prepareSource };
     }
 
     if (snapshot.state === 'logged_in_home') {
-      log(`${prepareLogLabel}：页面已直接进入 ChatGPT 已登录态，本步骤按已完成处理，并将跳过步骤 5。`, 'ok');
+      log(`${prepareLogLabel}: the page entered the ChatGPT logged-in state directly, so this step is treated as complete and step 5 will be skipped.`, 'ok');
       return {
         ready: true,
         alreadyVerified: true,
@@ -4902,20 +4902,20 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
     }
 
     if (snapshot.state === 'verification') {
-      await waitForDocumentLoadComplete(15000, `${prepareLogLabel}：注册验证码页面`);
+      await waitForDocumentLoadComplete(15000, `${prepareLogLabel}: registration verification code page`);
       await waitForVerificationCodeTarget(15000);
-      log(`${prepareLogLabel}：验证码页面已完成加载并就绪${recoveryRound ? `（期间自动恢复 ${recoveryRound} 次）` : ''}。`, 'ok');
+      log(`${prepareLogLabel}: the verification code page has finished loading and is ready${recoveryRound ? ` (auto-recovered ${recoveryRound} times during the process)` : ''}.`, 'ok');
       return { ready: true, retried: recoveryRound, prepareSource };
     }
 
     if (snapshot.state === 'email_exists') {
-      throw new Error('当前邮箱已存在，需要重新开始新一轮。');
+      throw new Error('The current email already exists; start a new round.');
     }
 
     if (snapshot.state === 'contact_verification_server_error') {
       const serverErrorText = String(snapshot.serverErrorText || '').trim()
-        || 'OpenAI contact-verification 页面返回 HTTP ERROR 500。';
-      log(`${prepareLogLabel}：检测到 contact-verification 500 错误页，当前轮直接报错。`, 'warn');
+        || 'OpenAI contact-verification page returned HTTP ERROR 500.';
+      log(`${prepareLogLabel}: detected the contact-verification 500 error page; this round will fail immediately.`, 'warn');
       throw buildContactVerificationServerError(serverErrorText);
     }
 
@@ -4926,7 +4926,7 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
       recoveryRound += 1;
       await recoverCurrentAuthRetryPage({
         flow: 'signup',
-        logLabel: `${prepareLogLabel}：检测到注册认证重试页，正在点击“重试”恢复（第 ${recoveryRound}/${maxRecoveryRounds} 次）`,
+        logLabel: `${prepareLogLabel}: detected the registration auth retry page, clicking "Retry" to recover (attempt ${recoveryRound}/${maxRecoveryRounds})`,
         step: 4,
         timeoutMs: 12000,
       });
@@ -4935,19 +4935,19 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
 
     if (snapshot.state === 'password') {
       if (snapshot.passwordErrorText) {
-        log(`${prepareLogLabel}：检测到密码页报错“${snapshot.passwordErrorText}”，当前轮将回到步骤 1 重新开始。`, 'warn');
+        log(`${prepareLogLabel}: detected a password page error "${snapshot.passwordErrorText}"; this round will return to step 1 and start over.`, 'warn');
         throw createSignupPhonePasswordMismatchError(snapshot.passwordErrorText);
       }
       if (!passwordPageDiagnosticsLogged) {
         passwordPageDiagnosticsLogged = true;
-        logSignupPasswordDiagnostics(`${prepareLogLabel}：页面仍停留在密码页`);
+        logSignupPasswordDiagnostics(`${prepareLogLabel}: the page is still staying on the password page`);
       }
       if (!password) {
-        throw new Error('当前回到了密码页，但没有可用密码，无法自动重新提交。');
+        throw new Error('We are back on the password page, but no usable password is available, so automatic resubmission is impossible.');
       }
 
       if ((snapshot.passwordInput.value || '') !== password) {
-        log(`${prepareLogLabel}：页面仍停留在密码页，正在重新填写密码...`, 'warn');
+        log(`${prepareLogLabel}: the page is still staying on the password page, refilling the password...`, 'warn');
         await humanPause(450, 1100);
         await performOperationWithDelay({ stepKey: 'fill-password', kind: 'fill', label: 'retry-signup-password' }, async () => {
           fillInput(snapshot.passwordInput, password);
@@ -4956,7 +4956,7 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
 
       if (snapshot.submitButton && isPasswordSubmitButtonReadyForRetry(snapshot.submitButton)) {
         recoveryRound += 1;
-        log(`${prepareLogLabel}：页面仍停留在密码页，正在重新点击“继续”（第 ${recoveryRound}/${maxRecoveryRounds} 次）...`, 'warn');
+        log(`${prepareLogLabel}: the page is still staying on the password page, clicking "Continue" again (attempt ${recoveryRound}/${maxRecoveryRounds})...`, 'warn');
         await humanPause(350, 900);
         await performOperationWithDelay({ stepKey: 'fill-password', kind: 'submit', label: 'retry-submit-signup-password' }, async () => {
           simulateClick(snapshot.submitButton);
@@ -4965,14 +4965,14 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
         continue;
       }
 
-      log(`${prepareLogLabel}：页面仍停留在密码页，但“继续”按钮暂不可用，准备继续等待（${recoveryRound}/${maxRecoveryRounds}）...`, 'warn');
+      log(`${prepareLogLabel}: the page is still staying on the password page, but the "Continue" button is not available yet; continuing to wait (${recoveryRound}/${maxRecoveryRounds})...`, 'warn');
       continue;
     }
 
-    log(`${prepareLogLabel}：页面仍在切换中，准备继续等待（${recoveryRound}/${maxRecoveryRounds}）...`, 'warn');
+    log(`${prepareLogLabel}: the page is still transitioning; continuing to wait (${recoveryRound}/${maxRecoveryRounds})...`, 'warn');
   }
 
-  throw new Error(`等待注册验证码页面就绪超时或自动恢复失败（已尝试 ${recoveryRound}/${maxRecoveryRounds} 轮）。URL: ${location.href}`);
+  throw new Error(`Timed out waiting for the registration verification code page to become ready, or auto-recovery failed (attempted ${recoveryRound}/${maxRecoveryRounds} rounds). URL: ${location.href}`);
 }
 
 
@@ -4999,13 +4999,13 @@ async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
     }
     if (retryState) {
       if (recoveryCount >= maxRecoveryCount) {
-        throw new Error(`步骤 ${step}：验证码提交后连续进入认证重试页 ${maxRecoveryCount} 次，页面仍未恢复。URL: ${location.href}`);
+        throw new Error(`Step ${step}: after verification code submission, the page entered the auth retry page ${maxRecoveryCount} times in a row and still did not recover. URL: ${location.href}`);
       }
       recoveryCount += 1;
-      log(`步骤 ${step}：验证码提交后进入认证重试页，正在自动恢复（${recoveryCount}/${maxRecoveryCount}）...`, 'warn');
+      log(`Step ${step}: the page entered the auth retry page after verification code submission, recovering automatically (${recoveryCount}/${maxRecoveryCount})...`, 'warn');
       await recoverCurrentAuthRetryPage({
         flow: retryFlow,
-        logLabel: `步骤 ${step}：验证码提交后检测到认证重试页，正在点击“重试”恢复`,
+        logLabel: `Step ${step}: detected the auth retry page after verification code submission, clicking "Retry" to recover`,
         step,
         timeoutMs: 12000,
       });
@@ -5080,7 +5080,7 @@ async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
   if (isVerificationPageStillVisible()) {
     return {
       invalidCode: true,
-      errorText: getVerificationErrorText() || '提交后仍停留在验证码页面，准备重新发送验证码。',
+      errorText: getVerificationErrorText() || 'Still on the verification code page after submit; preparing to resend the code.',
     };
   }
 
@@ -5122,7 +5122,7 @@ async function waitForVerificationSubmitButton(codeInput, timeout = 5000) {
   while (Date.now() - start < timeout) {
     throwIfStopped();
     if (is405MethodNotAllowedPage()) {
-      throw new Error('当前页面处于 405 错误恢复流程中，暂时无法定位验证码提交按钮。');
+      throw new Error('The current page is in the 405 error recovery flow, so the verification code submit button cannot be located right now.');
     }
 
     const button = getVerificationSubmitButtonForTarget(codeInput, { allowDisabled: false });
@@ -5142,7 +5142,7 @@ async function waitForVerificationCodeTarget(timeout = 10000) {
   while (Date.now() - start < timeout) {
     throwIfStopped();
     if (is405MethodNotAllowedPage()) {
-      throw new Error('当前页面处于 405 错误恢复流程中，暂时无法定位验证码输入框。');
+      throw new Error('The current page is in the 405 error recovery flow, so the verification code input box cannot be located right now.');
     }
 
     const target = getVerificationCodeTarget();
@@ -5153,7 +5153,7 @@ async function waitForVerificationCodeTarget(timeout = 10000) {
     await sleep(150);
   }
 
-  throw new Error('未找到验证码输入框。URL: ' + location.href);
+  throw new Error('No verification code input box was found. URL: ' + location.href);
 }
 
 async function waitForSplitVerificationInputsFilled(inputs, code, timeout = 2500) {
@@ -5179,7 +5179,7 @@ async function waitForSplitVerificationInputsFilled(inputs, code, timeout = 2500
 
 async function fillVerificationCode(step, payload) {
   const { code, signupProfile } = payload;
-  if (!code) throw new Error('未提供验证码。');
+  if (!code) throw new Error('No verification code provided.');
   const performOperationWithDelay = typeof getOperationDelayRunner === 'function'
     ? getOperationDelayRunner()
     : async (metadata, operation) => {
@@ -5192,7 +5192,7 @@ async function fillVerificationCode(step, payload) {
     const postVerificationState = getStep4PostVerificationState();
     if (postVerificationState?.state === 'logged_in_home') {
       if (typeof clearStep405RecoveryCount === 'function') clearStep405RecoveryCount(step);
-      log(`步骤 ${step}：检测到页面已进入 ChatGPT 已登录态，本次验证码提交按成功处理。`, 'ok');
+      log(`Step ${step}: detected that the page has entered the ChatGPT logged-in state; this verification code submission is treated as successful.`, 'ok');
       return {
         success: true,
         assumed: true,
@@ -5203,13 +5203,13 @@ async function fillVerificationCode(step, payload) {
     }
     if (postVerificationState?.state === 'step5') {
       if (typeof clearStep405RecoveryCount === 'function') clearStep405RecoveryCount(step);
-      log(`步骤 ${step}：检测到页面已进入下一阶段，本次验证码提交按成功处理。`, 'ok');
+      log(`Step ${step}: detected that the page has entered the next stage; this verification code submission is treated as successful.`, 'ok');
       return { success: true, assumed: true, alreadyAdvanced: true };
     }
   }
   if (step === 8) {
     if (isStep8Ready()) {
-      log(`步骤 ${step}：检测到页面已进入 OAuth 同意页，本次验证码提交按成功处理。`, 'ok');
+      log(`Step ${step}: detected that the page has entered the OAuth consent page; this verification code submission is treated as successful.`, 'ok');
       return { success: true, assumed: true, alreadyAdvanced: true };
     }
     if (isAddPhonePageReady()) {
@@ -5217,7 +5217,7 @@ async function fillVerificationCode(step, payload) {
     }
   }
 
-  log(`步骤 ${step}：正在填写验证码：${code}`);
+  log(`Step ${step}: filling verification code: ${code}`);
 
   if (step === 8) {
     await waitForLoginVerificationPageReady(10000, step, {
@@ -5225,14 +5225,14 @@ async function fillVerificationCode(step, payload) {
     });
   }
   if (step === 4) {
-    await waitForDocumentLoadComplete(15000, `步骤 ${step}：注册验证码页面`);
+    await waitForDocumentLoadComplete(15000, `Step ${step}: registration verification code page`);
   }
 
   const combinedSignupProfilePage = step === 4
     && await waitForCombinedSignupVerificationProfilePage();
   if (combinedSignupProfilePage) {
     if (!signupProfile || !signupProfile.firstName || !signupProfile.lastName) {
-      throw new Error('当前注册验证码页面要求同时填写资料，但未提供姓名或生日数据。');
+      throw new Error('The current registration verification code page requires profile data too, but no name or birthday data was provided.');
     }
     await step5_fillNameBirthday({
       ...signupProfile,
@@ -5251,7 +5251,7 @@ async function fillVerificationCode(step, payload) {
 
     // Before looking for input, check if page is in 405 error state
     if (is405MethodNotAllowedPage()) {
-      log(`步骤 ${step}：检测到 405 错误页面，正在恢复...`, 'warn');
+      log(`Step ${step}: detected a 405 error page, recovering...`, 'warn');
       await handle405ResendError(step, 30000);
       continue;
     }
@@ -5267,17 +5267,17 @@ async function fillVerificationCode(step, payload) {
     } catch {
       // No input found — check if it's a 405 error and can be recovered
       if (is405MethodNotAllowedPage() && retry < maxRetries) {
-        log(`步骤 ${step}：未找到验证码输入框且页面出现 405 错误，正在恢复...`, 'warn');
+        log(`Step ${step}: no verification code input box was found and the page showed a 405 error, recovering...`, 'warn');
         await handle405ResendError(step, 30000);
         continue;
       }
 
-      throw new Error('未找到验证码输入框。URL: ' + location.href);
+       throw new Error('No verification code input box was found. URL: ' + location.href);
     }
   }
 
   if (splitInputs?.length >= 6) {
-    log(`步骤 ${step}：发现分开的单字符验证码输入框，正在逐个填写...`);
+    log(`Step ${step}: found separate single-character verification code inputs, filling them one by one...`);
     await performOperationWithDelay({ stepKey: 'fetch-signup-code', kind: 'grouped-code', label: 'split-code' }, async () => {
       for (let i = 0; i < 6 && i < splitInputs.length; i++) {
         const targetInput = splitInputs[i];
@@ -5296,9 +5296,9 @@ async function fillVerificationCode(step, payload) {
         .slice(0, 6)
         .map((input) => String(input?.value || '').trim() || '_')
         .join('');
-      log(`步骤 ${step}：分格验证码输入框未稳定呈现目标值，当前页面值为 ${current}，准备继续观察提交流程。`, 'warn');
+      log(`Step ${step}: the split verification code inputs have not yet stabilized to the target value; current page value is ${current}, so we will keep observing the submit flow.`, 'warn');
     } else {
-      log(`步骤 ${step}：分格验证码输入框已稳定显示 ${code}。`, 'info');
+      log(`Step ${step}: split verification code inputs are now stably showing ${code}.`, 'info');
     }
 
     await sleep(800);
@@ -5308,21 +5308,21 @@ async function fillVerificationCode(step, payload) {
       await performOperationWithDelay({ stepKey: 'fetch-signup-code', kind: 'submit', label: 'submit-code' }, async () => {
         simulateClick(splitSubmitBtn);
       });
-      log(`步骤 ${step}：分格验证码已提交`);
+      log(`Step ${step}: split verification code submitted.`);
     } else {
-      log(`步骤 ${step}：分格验证码页面未找到可点击提交按钮，继续等待页面自动推进。`, 'info');
+      log(`Step ${step}: no clickable submit button was found on the split verification code page; keep waiting for the page to advance automatically.`, 'info');
     }
 
     const outcome = await waitForVerificationSubmitOutcome(step, undefined, payload);
     if (outcome.invalidCode) {
-      log(`步骤 ${step}：验证码被拒绝：${outcome.errorText}`, 'warn');
+      log(`Step ${step}: verification code rejected: ${outcome.errorText}`, 'warn');
     } else if (outcome.emailVerificationRequired) {
-      log(`步骤 ${step}：手机验证码已通过，页面进入邮箱验证码验证。`, 'ok');
+      log(`Step ${step}: phone verification code accepted; the page moved to email verification.`, 'ok');
     } else if (outcome.addPhonePage) {
-      log(`步骤 ${step}：验证码提交后页面进入手机号页面，当前流程将停止自动授权。`, 'warn');
+      log(`Step ${step}: after verification code submission, the page moved to the phone-number page; the current flow will stop automatic authorization.`, 'warn');
     } else {
       if (typeof clearStep405RecoveryCount === 'function') clearStep405RecoveryCount(step);
-      log(`步骤 ${step}：验证码已通过${outcome.assumed ? '（按成功推定）' : ''}。`, 'ok');
+      log(`Step ${step}: verification code accepted${outcome.assumed ? ' (assumed successful)' : ''}.`, 'ok');
     }
     if (combinedSignupProfilePage && !outcome.invalidCode) {
       outcome.skipProfileStep = true;
@@ -5332,13 +5332,13 @@ async function fillVerificationCode(step, payload) {
   }
 
   if (!codeInput) {
-    throw new Error('未找到验证码输入框。URL: ' + location.href);
+    throw new Error('No verification code input box was found. URL: ' + location.href);
   }
 
   await performOperationWithDelay({ stepKey: step === 8 ? 'oauth-login' : 'fetch-signup-code', kind: 'fill', label: 'verification-code' }, async () => {
     fillInput(codeInput, code);
   });
-  log(`步骤 ${step}：验证码已填写`);
+  log(`Step ${step}: verification code filled.`);
 
   // Submit
   await sleep(800);
@@ -5349,21 +5349,21 @@ async function fillVerificationCode(step, payload) {
     await performOperationWithDelay({ stepKey: step === 8 ? 'oauth-login' : 'fetch-signup-code', kind: 'submit', label: 'submit-code' }, async () => {
       simulateClick(submitBtn);
     });
-    log(`步骤 ${step}：验证码已提交`);
+    log(`Step ${step}: verification code submitted.`);
   } else {
-    log(`步骤 ${step}：未找到可提交的验证码按钮，先等待页面自动推进或反馈结果。`, 'warn');
+    log(`Step ${step}: no submit button for the verification code was found; first wait for the page to advance automatically or return feedback.`, 'warn');
   }
 
   const outcome = await waitForVerificationSubmitOutcome(step, undefined, payload);
   if (outcome.invalidCode) {
-    log(`步骤 ${step}：验证码被拒绝：${outcome.errorText}`, 'warn');
+    log(`Step ${step}: verification code rejected: ${outcome.errorText}`, 'warn');
   } else if (outcome.emailVerificationRequired) {
-    log(`步骤 ${step}：手机验证码已通过，页面进入邮箱验证码验证。`, 'ok');
+    log(`Step ${step}: phone verification code accepted; the page moved to email verification.`, 'ok');
   } else if (outcome.addPhonePage) {
-    log(`步骤 ${step}：验证码提交后页面进入手机号页面，当前流程将停止自动授权。`, 'warn');
+    log(`Step ${step}: after verification code submission, the page moved to the phone-number page; the current flow will stop automatic authorization.`, 'warn');
   } else {
     if (typeof clearStep405RecoveryCount === 'function') clearStep405RecoveryCount(step);
-    log(`步骤 ${step}：验证码已通过${outcome.assumed ? '（按成功推定）' : ''}。`, 'ok');
+    log(`Step ${step}: verification code accepted${outcome.assumed ? ' (assumed successful)' : ''}.`, 'ok');
   }
 
   if (combinedSignupProfilePage && !outcome.invalidCode) {
@@ -5389,7 +5389,7 @@ async function resolveStep6PostSubmitSnapshot(snapshot, options = {}) {
     loginVerificationRequestedAt = null,
     oauthConsentVia = `${via}_oauth_consent`,
     timeoutRecoveryReason = 'login_timeout_error_page',
-    timeoutRecoveryMessage = '登录提交后进入登录超时报错页。',
+    timeoutRecoveryMessage = 'After login submission, the page entered the login timeout error page.',
     timeoutRecoveryVia = `${via}_timeout_recovered`,
     allowPhoneVerificationPage = false,
     allowPhoneAction = false,
@@ -5484,7 +5484,7 @@ async function resolveStep6PostSubmitSnapshot(snapshot, options = {}) {
 
   if (normalizedSnapshot.state === 'add_phone_page') {
     const message = getStep6OptionMessage(addPhoneMessage, normalizedSnapshot)
-      || `登录提交后页面进入手机号页面。URL: ${normalizedSnapshot.url || location.href}`;
+      || `After login submission, the page entered the phone-number page. URL: ${normalizedSnapshot.url || location.href}`;
     throw new Error(message);
   }
 
@@ -5495,7 +5495,7 @@ async function waitForStep6PostSubmitTransition(options = {}) {
   const {
     timeout = 10000,
     stalledReason = 'post_submit_stalled',
-    stalledMessage = '登录提交后未进入可识别的下一页。',
+    stalledMessage = 'After login submission, the page did not reach a recognizable next page.',
   } = options;
   const start = Date.now();
   let snapshot = normalizeStep6Snapshot(inspectLoginAuthState());
@@ -5538,12 +5538,12 @@ async function waitForStep6EmailSubmitTransition(emailSubmittedAt, timeout = 120
     via: 'email_submit',
     oauthConsentVia: 'email_submit_oauth_consent',
     loginVerificationRequestedAt: emailSubmittedAt,
-    timeoutRecoveryMessage: '提交邮箱后进入登录超时报错页。',
+    timeoutRecoveryMessage: 'After submitting the email, the page entered the login timeout error page.',
     timeoutRecoveryVia: 'email_submit_timeout_recovered',
     allowPasswordAction: true,
     stalledReason: 'email_submit_stalled',
-    stalledMessage: '提交邮箱后长时间未进入密码页或登录验证码页。',
-    addPhoneMessage: (snapshot) => `提交邮箱后页面直接进入手机号页面，未经过登录验证码页。URL: ${snapshot.url}`,
+    stalledMessage: 'After submitting the email, the page did not reach the password page or login verification code page for a long time.',
+    addPhoneMessage: (snapshot) => `After submitting the email, the page went directly to the phone-number page without passing through the login verification code page. URL: ${snapshot.url}`,
   });
 }
 
@@ -5554,14 +5554,14 @@ async function waitForStep6PhoneSubmitTransition(phoneSubmittedAt, timeout = 120
     via: 'phone_submit',
     oauthConsentVia: 'phone_submit_oauth_consent',
     loginVerificationRequestedAt: phoneSubmittedAt,
-    timeoutRecoveryMessage: '提交手机号后进入登录超时报错页。',
+    timeoutRecoveryMessage: 'After submitting the phone number, the page entered the login timeout error page.',
     timeoutRecoveryVia: 'phone_submit_timeout_recovered',
     allowPhoneVerificationPage: true,
     allowPasswordAction: true,
     allowFinalPhoneAction: true,
     stalledReason: 'phone_submit_stalled',
-    stalledMessage: '提交手机号后长时间未进入密码页或手机验证码页。',
-    addPhoneMessage: (snapshot) => `提交手机号后页面直接进入手机号补全页面，未经过登录验证码页。URL: ${snapshot.url}`,
+    stalledMessage: 'After submitting the phone number, the page did not reach the password page or phone verification code page for a long time.',
+    addPhoneMessage: (snapshot) => `After submitting the phone number, the page went directly to the phone-number completion page without passing through the login verification code page. URL: ${snapshot.url}`,
   });
 }
 
@@ -5572,12 +5572,12 @@ async function waitForStep6PasswordSubmitTransition(passwordSubmittedAt, timeout
     via: 'password_submit',
     oauthConsentVia: 'password_submit_oauth_consent',
     loginVerificationRequestedAt: passwordSubmittedAt,
-    timeoutRecoveryMessage: '提交密码后进入登录超时报错页。',
+    timeoutRecoveryMessage: 'After submitting the password, the page entered the login timeout error page.',
     timeoutRecoveryVia: 'password_submit_timeout_recovered',
     allowFinalSwitchAction: true,
     stalledReason: 'password_submit_stalled',
-    stalledMessage: '提交密码后仍未进入登录验证码页。',
-    addPhoneMessage: (snapshot) => `提交密码后页面直接进入手机号页面，未经过登录验证码页。URL: ${snapshot.url}`,
+    stalledMessage: 'After submitting the password, the page still did not reach the login verification code page.',
+    addPhoneMessage: (snapshot) => `After submitting the password, the page went directly to the phone-number page without passing through the login verification code page. URL: ${snapshot.url}`,
   });
 }
 
@@ -5588,11 +5588,11 @@ async function waitForStep6SwitchTransition(loginVerificationRequestedAt, timeou
     via: 'switch_to_one_time_code_login',
     oauthConsentVia: 'switch_to_one_time_code_oauth_consent',
     loginVerificationRequestedAt,
-    timeoutRecoveryMessage: '切换到一次性验证码登录后进入登录超时报错页。',
+    timeoutRecoveryMessage: 'After switching to one-time-code login, the page entered the login timeout error page.',
     timeoutRecoveryVia: 'switch_to_one_time_code_timeout_recovered',
     stalledReason: 'one_time_code_switch_stalled',
-    stalledMessage: '点击一次性验证码登录后仍未进入登录验证码页。',
-    addPhoneMessage: (snapshot) => `切换到一次性验证码登录后页面直接进入手机号页面，未经过登录验证码页。URL: ${snapshot.url}`,
+    stalledMessage: 'After clicking one-time-code login, the page still did not reach the login verification code page.',
+    addPhoneMessage: (snapshot) => `After switching to one-time-code login, the page went directly to the phone-number page without passing through the login verification code page. URL: ${snapshot.url}`,
   });
 
   if (transition.action === 'done' || transition.action === 'recoverable') {
@@ -5650,12 +5650,12 @@ async function step6OpenLoginEntry(payload, snapshot) {
   if (!trigger || !isActionEnabled(trigger)) {
     return createStep6RecoverableResult('missing_login_entry_trigger', currentSnapshot, {
       message: preferPhoneLogin
-        ? '当前登录入口页没有可点击的手机号登录入口。'
-        : '当前登录入口页没有可点击的邮箱登录入口。',
+        ? 'The current login entry page has no clickable phone-number login entry.'
+        : 'The current login entry page has no clickable email login entry.',
     });
   }
 
-  log(`检测到登录入口页，正在点击 "${getActionText(trigger).slice(0, 80)}"...`, 'info', { step: visibleStep, stepKey: 'oauth-login' });
+  log(`Detected the login entry page, clicking "${getActionText(trigger).slice(0, 80)}"...`, 'info', { step: visibleStep, stepKey: 'oauth-login' });
   await humanPause(350, 900);
   await performOperationWithDelay({ stepKey: 'oauth-login', kind: 'click', label: 'open-login-entry' }, async () => {
     simulateClick(trigger);
@@ -5695,7 +5695,7 @@ async function step6OpenLoginEntry(payload, snapshot) {
     const transition = await createStep6LoginTimeoutRecoveryTransition(
       'login_timeout_after_entry_open',
       nextSnapshot,
-      '点击登录入口后进入登录超时报错页。',
+      'After clicking the login entry, the page entered the login timeout error page.',
       { visibleStep }
     );
     if (transition.action === 'done') return transition.result;
@@ -5706,7 +5706,7 @@ async function step6OpenLoginEntry(payload, snapshot) {
   }
 
   return createStep6RecoverableResult('login_entry_open_stalled', nextSnapshot, {
-    message: '点击登录入口后仍未进入手机号/邮箱/密码/验证码页。',
+    message: 'After clicking the login entry, the page still did not reach the phone-number/email/password/verification-code page.',
   });
 }
 
@@ -5722,17 +5722,17 @@ async function step6SwitchToOneTimeCodeLogin(payload, snapshot) {
   const switchTrigger = snapshot?.switchTrigger || findOneTimeCodeLoginTrigger();
   if (!switchTrigger || !isActionEnabled(switchTrigger)) {
     return createStep6RecoverableResult('missing_one_time_code_trigger', normalizeStep6Snapshot(inspectLoginAuthState()), {
-      message: '当前登录页没有可用的一次性验证码登录入口。',
+      message: 'The current login page has no available one-time-code login entry.',
     });
   }
 
-  log('已检测到一次性验证码登录入口，准备切换...', 'info', { step: visibleStep, stepKey: 'oauth-login' });
+  log('Detected the one-time-code login entry, preparing to switch...', 'info', { step: visibleStep, stepKey: 'oauth-login' });
   const loginVerificationRequestedAt = Date.now();
   await humanPause(350, 900);
   await performOperationWithDelay({ stepKey: 'oauth-login', kind: 'click', label: 'switch-one-time-code-login' }, async () => {
     simulateClick(switchTrigger);
   });
-  log('已点击一次性验证码登录', 'info', { step: visibleStep, stepKey: 'oauth-login' });
+  log('Clicked one-time-code login.', 'info', { step: visibleStep, stepKey: 'oauth-login' });
   await sleep(1200);
   const result = await waitForStep6SwitchTransition(loginVerificationRequestedAt, 10000, { visibleStep });
   if (result?.step6Outcome === 'success') {
@@ -5774,12 +5774,12 @@ async function step6LoginFromPhonePage(payload, snapshot) {
 
   if (!phoneNumber) {
     return createStep6RecoverableResult('missing_phone_number', currentSnapshot, {
-      message: '手机号登录时缺少手机号，请重新执行步骤 2 获取号码。',
+      message: 'Missing phone number for phone login; rerun step 2 to get a number.',
     });
   }
   if (!phoneInput) {
     return createStep6RecoverableResult('missing_phone_input', currentSnapshot, {
-      message: '当前登录页没有可用的手机号输入框。',
+      message: 'The current login page has no available phone-number input box.',
     });
   }
 
@@ -5791,11 +5791,11 @@ async function step6LoginFromPhonePage(payload, snapshot) {
   });
   const inputValue = toNationalPhoneNumber(phoneNumber, dialCode);
   if (!inputValue) {
-    throw new Error(`步骤 ${visibleStep}：手机号为空，无法填写。`);
+    throw new Error(`Step ${visibleStep}: phone number is empty and cannot be filled.`);
   }
 
   log(
-    `步骤 ${visibleStep}：手机号登录填写前诊断 ${JSON.stringify({
+    `Step ${visibleStep}: phone login pre-fill diagnostics ${JSON.stringify({
       phoneNumber,
       countryLabel,
       countryId,
@@ -5806,7 +5806,7 @@ async function step6LoginFromPhonePage(payload, snapshot) {
     'info',
     { step: visibleStep, stepKey: 'oauth-login' }
   );
-  log(`步骤 ${visibleStep}：正在填写手机号 ${phoneNumber}...`, 'info', { step: visibleStep, stepKey: 'oauth-login' });
+  log(`Step ${visibleStep}: filling phone number ${phoneNumber}...`, 'info', { step: visibleStep, stepKey: 'oauth-login' });
   await humanPause(500, 1400);
   const fillResult = await fillLoginPhoneInputAndConfirm(phoneInput, {
     phoneNumber,
@@ -5814,7 +5814,7 @@ async function step6LoginFromPhonePage(payload, snapshot) {
     visibleStep,
     resolvePhoneInput: () => getLoginPhoneInput() || phoneInput,
   });
-  log(`步骤 ${visibleStep}：手机号已填写${dialCode ? `（区号 +${dialCode}，本地号 ${fillResult.inputValue}，可见提交值 ${fillResult.attemptedValue}）` : ''}。`, 'info', { step: visibleStep, stepKey: 'oauth-login' });
+  log(`Step ${visibleStep}: phone number filled${dialCode ? ` (dial code +${dialCode}, local number ${fillResult.inputValue}, visible submit value ${fillResult.attemptedValue})` : ''}.`, 'info', { step: visibleStep, stepKey: 'oauth-login' });
 
   await sleep(500);
   const verifiedPhoneInput = fillResult.input || phoneInput;
@@ -5832,16 +5832,16 @@ async function step6LoginFromPhonePage(payload, snapshot) {
     submitButton: getLoginPhoneSubmitButtonDiagnostics(submitButton),
   };
   log(
-    `步骤 ${visibleStep}：手机号提交前复查 ${JSON.stringify(preSubmitDiagnostics)}`,
+    `Step ${visibleStep}: pre-submit review for the phone number ${JSON.stringify(preSubmitDiagnostics)}`,
     'info',
     { step: visibleStep, stepKey: 'oauth-login' }
   );
   if (!preSubmitDiagnostics.inputVerified) {
-    throw new Error(`步骤 ${visibleStep}：提交前手机号输入框复查失败，完整号码 ${phoneNumber}，区号 +${dialCode || '未识别'}，期望本地号 ${inputValue}，当前输入框为 ${normalizePhoneDigits(preSubmitRenderedValue) || '空'}，已停止提交。`);
+    throw new Error(`Step ${visibleStep}: pre-submit review of the phone-number input failed; full number ${phoneNumber}, dial code +${dialCode || 'unrecognized'}, expected local number ${inputValue}, current input is ${normalizePhoneDigits(preSubmitRenderedValue) || 'empty'}, so submission was stopped.`);
   }
   const phoneSubmittedAt = Date.now();
   await triggerLoginSubmitAction(submitButton, verifiedPhoneInput);
-  log(`步骤 ${visibleStep}：手机号已提交。`, 'info', { step: visibleStep, stepKey: 'oauth-login' });
+  log(`Step ${visibleStep}: phone number submitted.`, 'info', { step: visibleStep, stepKey: 'oauth-login' });
 
   const transition = await waitForStep6PhoneSubmitTransition(phoneSubmittedAt, 12000, { visibleStep });
   if (transition.action === 'done') {
@@ -5856,7 +5856,7 @@ async function step6LoginFromPhonePage(payload, snapshot) {
     });
   }
   if (transition.action === 'recoverable') {
-    log(transition.result.message || `提交手机号后仍未进入目标页面，准备重新执行步骤 ${visibleStep}。`, 'warn', {
+    log(transition.result.message || `After submitting the phone number, the page still did not reach the target page; preparing to rerun step ${visibleStep}.`, 'warn', {
       step: visibleStep,
       stepKey: 'oauth-login',
     });
@@ -5873,7 +5873,7 @@ async function step6LoginFromPhonePage(payload, snapshot) {
   }
 
   return createStep6RecoverableResult('phone_submit_unknown', normalizeStep6Snapshot(inspectLoginAuthState()), {
-    message: '提交手机号后未得到可用的下一步状态。',
+    message: 'After submitting the phone number, no usable next-step state was returned.',
   });
 }
 
@@ -5891,7 +5891,7 @@ async function switchFromEmailPageToPhoneLogin(payload, snapshot) {
   if (!phoneEntryTrigger || !isActionEnabled(phoneEntryTrigger)) {
     const moreOptionsTrigger = currentSnapshot.moreOptionsTrigger || findLoginMoreOptionsTrigger();
     if (moreOptionsTrigger && isActionEnabled(moreOptionsTrigger)) {
-      log(`步骤 ${visibleStep}：手机号入口可能隐藏在更多选项中，正在展开更多选项...`, 'info', {
+        log(`Step ${visibleStep}: the phone-number entry may be hidden under More options, expanding them now...`, 'info', {
         step: visibleStep,
         stepKey: 'oauth-login',
       });
@@ -5907,11 +5907,11 @@ async function switchFromEmailPageToPhoneLogin(payload, snapshot) {
 
   if (!phoneEntryTrigger || !isActionEnabled(phoneEntryTrigger)) {
     return createStep6RecoverableResult('missing_phone_login_entry_trigger', currentSnapshot, {
-      message: '本轮要求使用手机号登录，但当前邮箱登录页没有可用的手机号登录入口。',
+      message: 'This round requires phone-number login, but the current email login page has no available phone-number login entry.',
     });
   }
 
-  log(`步骤 ${visibleStep}：当前在邮箱入口，正在切换到手机号登录...`, 'info', { step: visibleStep, stepKey: 'oauth-login' });
+  log(`Step ${visibleStep}: currently on the email entry, switching to phone-number login...`, 'info', { step: visibleStep, stepKey: 'oauth-login' });
   await humanPause(350, 900);
   await performOperationWithDelay({ stepKey: 'oauth-login', kind: 'click', label: 'switch-phone-login' }, async () => {
     simulateClick(phoneEntryTrigger);
@@ -5945,7 +5945,7 @@ async function switchFromEmailPageToPhoneLogin(payload, snapshot) {
     const transition = await createStep6LoginTimeoutRecoveryTransition(
       'login_timeout_after_phone_entry_switch',
       nextSnapshot,
-      '点击手机号登录入口后进入登录超时报错页。',
+      'After clicking the phone-number login entry, the page entered the login timeout error page.',
       {
         visibleStep,
         allowPhoneVerificationPage: true,
@@ -5959,7 +5959,7 @@ async function switchFromEmailPageToPhoneLogin(payload, snapshot) {
   }
 
   return createStep6RecoverableResult('phone_login_entry_switch_stalled', nextSnapshot, {
-    message: `点击手机号登录入口后仍未进入手机号或密码页，当前停留在${getLoginAuthStateLabel(nextSnapshot)}。`,
+    message: `After clicking the phone-number login entry, the page still did not reach the phone-number or password page and is currently on ${getLoginAuthStateLabel(nextSnapshot)}.`,
   });
 }
 
@@ -5978,26 +5978,26 @@ async function step6LoginFromPasswordPage(payload, snapshot) {
   if (currentSnapshot.passwordInput) {
     if (!hasPassword) {
       if (currentSnapshot.switchTrigger) {
-        log('当前未提供密码，改走一次性验证码登录。', 'warn', { step: visibleStep, stepKey: 'oauth-login' });
+        log('No password provided right now, switching to one-time-code login instead.', 'warn', { step: visibleStep, stepKey: 'oauth-login' });
         return step6SwitchToOneTimeCodeLogin(payload, currentSnapshot);
       }
 
       return createStep6RecoverableResult('missing_password_and_one_time_code_trigger', currentSnapshot, {
-        message: '登录时未提供密码，且当前页面没有可用的一次性验证码登录入口。',
+        message: 'No password was provided for login, and the current page has no available one-time-code login entry.',
       });
     }
 
-    log('已进入密码页，准备填写密码...', 'info', { step: visibleStep, stepKey: 'oauth-login' });
+    log('Entered the password page, preparing to fill the password...', 'info', { step: visibleStep, stepKey: 'oauth-login' });
     await humanPause(550, 1450);
     await performOperationWithDelay({ stepKey: 'oauth-login', kind: 'fill', label: 'login-password' }, async () => {
       fillInput(currentSnapshot.passwordInput, payload.password);
     });
-    log('已填写密码', 'info', { step: visibleStep, stepKey: 'oauth-login' });
+    log('Password filled.', 'info', { step: visibleStep, stepKey: 'oauth-login' });
 
     await sleep(500);
     const passwordSubmittedAt = Date.now();
     await triggerLoginSubmitAction(currentSnapshot.submitButton, currentSnapshot.passwordInput);
-    log('已提交密码', 'info', { step: visibleStep, stepKey: 'oauth-login' });
+    log('Password submitted.', 'info', { step: visibleStep, stepKey: 'oauth-login' });
 
     const transition = await waitForStep6PasswordSubmitTransition(passwordSubmittedAt, 10000, { visibleStep });
     if (transition.action === 'done') {
@@ -6011,7 +6011,7 @@ async function step6LoginFromPasswordPage(payload, snapshot) {
       });
     }
     if (transition.action === 'recoverable') {
-      log(transition.result.message || `提交密码后仍未进入登录验证码页面，准备重新执行步骤 ${visibleStep}。`, 'warn', { step: visibleStep, stepKey: 'oauth-login' });
+      log(transition.result.message || `After submitting the password, the page still did not reach the login verification code page; preparing to rerun step ${visibleStep}.`, 'warn', { step: visibleStep, stepKey: 'oauth-login' });
       return transition.result;
     }
     if (transition.action === 'password') {
@@ -6028,7 +6028,7 @@ async function step6LoginFromPasswordPage(payload, snapshot) {
     }
 
     return createStep6RecoverableResult('password_submit_unknown', normalizeStep6Snapshot(inspectLoginAuthState()), {
-      message: '提交密码后未得到可用的下一步状态。',
+    message: 'After submitting the password, no usable next-step state was returned.',
     });
   }
 
@@ -6037,7 +6037,7 @@ async function step6LoginFromPasswordPage(payload, snapshot) {
   }
 
   return createStep6RecoverableResult('password_page_unactionable', currentSnapshot, {
-    message: '当前停留在登录页，但没有可提交密码的输入框，也没有一次性验证码登录入口。',
+    message: 'The page is still on the login page, but there is neither a password input box nor a one-time-code login entry.',
   });
 }
 
@@ -6056,7 +6056,7 @@ async function step6LoginFromEmailPage(payload, snapshot) {
   }
   const emailInput = currentSnapshot.emailInput || getLoginEmailInput();
   if (!emailInput) {
-    throw new Error('在登录页未找到邮箱输入框。URL: ' + location.href);
+    throw new Error('No email input box was found on the login page. URL: ' + location.href);
   }
 
   if ((emailInput.value || '').trim() !== payload.email) {
@@ -6064,15 +6064,15 @@ async function step6LoginFromEmailPage(payload, snapshot) {
     await performOperationWithDelay({ stepKey: 'oauth-login', kind: 'fill', label: 'login-email' }, async () => {
       fillInput(emailInput, payload.email);
     });
-    log('已填写邮箱', 'info', { step: visibleStep, stepKey: 'oauth-login' });
+    log('Email filled.', 'info', { step: visibleStep, stepKey: 'oauth-login' });
   } else {
-    log('邮箱已在输入框中，准备提交...', 'info', { step: visibleStep, stepKey: 'oauth-login' });
+    log('Email is already in the input box, preparing to submit...', 'info', { step: visibleStep, stepKey: 'oauth-login' });
   }
 
   await sleep(500);
   const emailSubmittedAt = Date.now();
   await triggerLoginSubmitAction(currentSnapshot.submitButton, emailInput);
-  log('已提交邮箱', 'info', { step: visibleStep, stepKey: 'oauth-login' });
+  log('Email submitted.', 'info', { step: visibleStep, stepKey: 'oauth-login' });
 
   const transition = await waitForStep6EmailSubmitTransition(emailSubmittedAt, 12000, { visibleStep });
   if (transition.action === 'done') {
@@ -6086,7 +6086,7 @@ async function step6LoginFromEmailPage(payload, snapshot) {
     });
   }
   if (transition.action === 'recoverable') {
-    log(transition.result.message || `提交邮箱后仍未进入目标页面，准备重新执行步骤 ${visibleStep}。`, 'warn', { step: visibleStep, stepKey: 'oauth-login' });
+    log(transition.result.message || `After submitting the email, the page still did not reach the target page; preparing to rerun step ${visibleStep}.`, 'warn', { step: visibleStep, stepKey: 'oauth-login' });
     return transition.result;
   }
   if (transition.action === 'email') {
@@ -6100,7 +6100,7 @@ async function step6LoginFromEmailPage(payload, snapshot) {
   }
 
   return createStep6RecoverableResult('email_submit_unknown', normalizeStep6Snapshot(inspectLoginAuthState()), {
-    message: '提交邮箱后未得到可用的下一步状态。',
+    message: 'After submitting the email, no usable next-step state was returned.',
   });
 }
 
@@ -6108,12 +6108,12 @@ async function step6_login(payload) {
   const visibleStep = Math.floor(Number(payload?.visibleStep) || 0) || 7;
   const { email, phoneNumber } = payload;
   const loginIdentifierType = String(payload?.loginIdentifierType || '').trim();
-  if (!email && !phoneNumber) throw new Error('登录时缺少邮箱地址或手机号。');
+  if (!email && !phoneNumber) throw new Error('Login is missing both an email address and a phone number.');
 
   const snapshot = normalizeStep6Snapshot(await waitForKnownLoginAuthState(15000));
 
   if (snapshot.state === 'verification_page' || snapshot.state === 'phone_verification_page') {
-    log('认证页已在登录验证码页，开始确认页面是否稳定。', 'info', { step: visibleStep, stepKey: 'oauth-login' });
+    log('The auth page is already on the login verification code page; checking whether the page is stable.', 'info', { step: visibleStep, stepKey: 'oauth-login' });
     return finalizeStep6VerificationReady({
       visibleStep,
       loginVerificationRequestedAt: null,
@@ -6125,25 +6125,25 @@ async function step6_login(payload) {
   }
 
   if (snapshot.state === 'oauth_consent_page') {
-    log('认证页已直接进入 OAuth 授权页，跳过登录验证码步骤。', 'ok', { step: visibleStep, stepKey: 'oauth-login' });
+    log('The auth page entered the OAuth consent page directly, so the login verification code step is skipped.', 'ok', { step: visibleStep, stepKey: 'oauth-login' });
     return createStep6OAuthConsentSuccessResult(snapshot, {
       via: 'already_on_oauth_consent_page',
     });
   }
 
   if (snapshot.state === 'add_email_page') {
-    log('认证页已在添加邮箱页，登录阶段完成。', 'ok', { step: visibleStep, stepKey: 'oauth-login' });
+    log('The auth page is already on the add-email page, so the login stage is complete.', 'ok', { step: visibleStep, stepKey: 'oauth-login' });
     return createStep6AddEmailSuccessResult(snapshot, {
       via: 'already_on_add_email_page',
     });
   }
 
   if (snapshot.state === 'login_timeout_error_page') {
-    log('检测到登录超时报错页，先尝试恢复当前页面。', 'warn', { step: visibleStep, stepKey: 'oauth-login' });
+    log('Detected the login timeout error page; trying to recover the current page first.', 'warn', { step: visibleStep, stepKey: 'oauth-login' });
     const transition = await createStep6LoginTimeoutRecoveryTransition(
       'login_timeout_error_page',
       snapshot,
-      '当前页面处于登录超时报错页。',
+      'The current page is on the login timeout error page.',
       {
         visibleStep,
         loginVerificationRequestedAt: null,
@@ -6177,17 +6177,17 @@ async function step6_login(payload) {
     if (loginIdentifierType === 'phone' && phoneNumber) {
       return switchFromEmailPageToPhoneLogin(payload, snapshot);
     }
-    log(`正在使用 ${email} 登录...`, 'info', { step: visibleStep, stepKey: 'oauth-login' });
+    log(`Logging in with ${email}...`, 'info', { step: visibleStep, stepKey: 'oauth-login' });
     return step6LoginFromEmailPage(payload, snapshot);
   }
 
   if (snapshot.state === 'phone_entry_page') {
-    log('正在使用手机号登录...', 'info', { step: visibleStep, stepKey: 'oauth-login' });
+    log('Logging in with a phone number...', 'info', { step: visibleStep, stepKey: 'oauth-login' });
     return step6LoginFromPhonePage(payload, snapshot);
   }
 
   if (snapshot.state === 'password_page') {
-    log('认证页已在密码页，继续当前登录流程。', 'info', { step: visibleStep, stepKey: 'oauth-login' });
+    log('The auth page is already on the password page; continuing the current login flow.', 'info', { step: visibleStep, stepKey: 'oauth-login' });
     return step6LoginFromPasswordPage(payload, snapshot);
   }
 
@@ -6196,7 +6196,7 @@ async function step6_login(payload) {
   }
 
   throwForStep6FatalState(snapshot, visibleStep);
-  throw new Error(`无法识别当前登录页面状态。URL: ${snapshot?.url || location.href}`);
+  throw new Error(`Unable to पहचान current login page state. URL: ${snapshot?.url || location.href}`);
 }
 
 async function waitForAddEmailPageReady(timeout = 15000) {
@@ -6214,9 +6214,9 @@ async function waitForAddEmailPageReady(timeout = 15000) {
     await sleep(200);
   }
   if (sawAddEmailPage) {
-    throw new Error('等待添加邮箱页面输入框就绪超时。URL: ' + location.href);
+    throw new Error('Timed out waiting for the add-email page input box to be ready. URL: ' + location.href);
   }
-  throw new Error('等待添加邮箱页面就绪超时。URL: ' + location.href);
+  throw new Error('Timed out waiting for the add-email page to be ready. URL: ' + location.href);
 }
 
 async function waitForAddEmailSubmitOutcome(timeout = 45000) {
@@ -6270,7 +6270,7 @@ async function waitForAddEmailSubmitOutcome(timeout = 45000) {
     await sleep(200);
   }
 
-  throw new Error(`提交邮箱后未进入验证码页。当前状态：${getLoginAuthStateLabel(lastState)}。URL: ${lastState?.url || location.href}`);
+  throw new Error(`After submitting the email, the page did not enter the verification page. Current state: ${getLoginAuthStateLabel(lastState)}. URL: ${lastState?.url || location.href}`);
 }
 
 async function submitAddEmailAndContinue(payload = {}) {
@@ -6283,36 +6283,36 @@ async function submitAddEmailAndContinue(payload = {}) {
       };
   const email = String(payload.email || '').trim().toLowerCase();
   if (!email) {
-    throw new Error('未提供邮箱地址，无法添加邮箱。');
+    throw new Error('No email address provided; cannot add email.');
   }
 
   const snapshot = await waitForAddEmailPageReady();
   const emailInput = snapshot.emailInput || getLoginEmailInput();
   if (!emailInput) {
-    throw new Error('添加邮箱页未找到邮箱输入框。URL: ' + location.href);
+    throw new Error('No email input box was found on the add-email page. URL: ' + location.href);
   }
 
   await humanPause(500, 1400);
   await performOperationWithDelay({ stepKey: 'oauth-login', kind: 'fill', label: 'add-email' }, async () => {
     fillInput(emailInput, email);
   });
-  log(`步骤 8：已填写邮箱：${email}`);
+  log(`Step 8: email filled: ${email}`);
 
   await sleep(500);
   const submitButton = snapshot.submitButton || getLoginSubmitButton({ allowDisabled: true });
   if (!submitButton || !isActionEnabled(submitButton)) {
-    throw new Error('添加邮箱页未找到可点击的继续按钮。URL: ' + location.href);
+    throw new Error('No clickable Continue button was found on the add-email page. URL: ' + location.href);
   }
 
   await triggerLoginSubmitAction(submitButton, emailInput);
-  log('步骤 8：已提交邮箱，正在等待邮箱验证码页...');
+  log('Step 8: email submitted, waiting for the email verification code page...');
 
   const outcome = await waitForAddEmailSubmitOutcome();
   if (outcome.errorText && (SIGNUP_EMAIL_EXISTS_PATTERN.test(outcome.errorText) || /email_in_use/i.test(outcome.errorText))) {
     throw createStep8EmailInUseError();
   }
   if (outcome.errorText) {
-    throw new Error(`添加邮箱失败：${outcome.errorText}`);
+    throw new Error(`Add-email failed: ${outcome.errorText}`);
   }
   if (outcome.emailInUse) {
     throw createStep8EmailInUseError();
@@ -6321,7 +6321,7 @@ async function submitAddEmailAndContinue(payload = {}) {
     throw createAuthMaxCheckAttemptsError();
   }
   if (outcome.retryPage) {
-    throw new Error(`添加邮箱后进入认证重试页，请重新执行步骤 8。URL: ${outcome.url}`);
+    throw new Error(`After adding the email, the page entered the auth retry page; please rerun step 8. URL: ${outcome.url}`);
   }
 
   return {
@@ -6340,12 +6340,12 @@ async function submitAddEmailAndContinue(payload = {}) {
 
 async function step8_findAndClick(payload = {}) {
   const visibleStep = Math.floor(Number(payload?.visibleStep) || 0) || 9;
-  log('正在查找 OAuth 同意页的“继续”按钮...', 'info', { step: visibleStep, stepKey: 'confirm-oauth' });
+  log('Looking for the "Continue" button on the OAuth consent page...', 'info', { step: visibleStep, stepKey: 'confirm-oauth' });
 
   const continueBtn = await prepareStep8ContinueButton();
 
   const rect = getSerializableRect(continueBtn);
-  log('已找到“继续”按钮并准备好调试器点击坐标。', 'info', { step: visibleStep, stepKey: 'confirm-oauth' });
+  log('Found the "Continue" button and prepared the debugger click coordinates.', 'info', { step: visibleStep, stepKey: 'confirm-oauth' });
   return {
     rect,
     buttonText: (continueBtn.textContent || '').trim(),
@@ -6397,7 +6397,7 @@ async function step8_triggerContinue(payload = {}) {
   switch (strategy) {
     case 'requestSubmit':
       if (!form || typeof form.requestSubmit !== 'function') {
-        throw new Error('“继续”按钮当前不在可提交的 form 中，无法使用 requestSubmit。URL: ' + location.href);
+        throw new Error('"Continue" button is not currently inside a submitable form, so requestSubmit cannot be used. URL: ' + location.href);
       }
       form.requestSubmit(continueBtn);
       break;
@@ -6408,7 +6408,7 @@ async function step8_triggerContinue(payload = {}) {
       simulateClick(continueBtn);
       break;
     default:
-      throw new Error(`未知的 Step ${visibleStep} 触发策略：${strategy}`);
+      throw new Error(`Unknown Step ${visibleStep} trigger strategy: ${strategy}`);
   }
 
   log(`continue button triggered via ${strategy}.`, 'info', { step: visibleStep, stepKey: 'confirm-oauth' });
@@ -6439,10 +6439,10 @@ async function findContinueButton(timeout = 10000) {
   while (Date.now() - start < timeout) {
     throwIfStopped();
     if (isAddPhonePageReady()) {
-      throw new Error('当前页面已进入手机号页面，不是 OAuth 授权同意页。URL: ' + location.href);
+       throw new Error('The current page has entered the phone-number page, not the OAuth consent page. URL: ' + location.href);
     }
     if (isAddEmailPageReady()) {
-      throw new Error('当前页面已进入添加邮箱页面，不是 OAuth 授权同意页。URL: ' + location.href);
+       throw new Error('The current page has entered the add-email page, not the OAuth consent page. URL: ' + location.href);
     }
     const button = getPrimaryContinueButton();
     if (button && isStep8Ready()) {
@@ -6451,7 +6451,7 @@ async function findContinueButton(timeout = 10000) {
     await sleep(150);
   }
 
-  throw new Error('在 OAuth 同意页未找到“继续”按钮，或页面尚未进入授权同意状态。URL: ' + location.href);
+   throw new Error('No "Continue" button was found on the OAuth consent page, or the page has not yet entered the consent state. URL: ' + location.href);
 }
 
 async function waitForButtonEnabled(button, timeout = 8000) {
@@ -6461,7 +6461,7 @@ async function waitForButtonEnabled(button, timeout = 8000) {
     if (isButtonEnabled(button)) return;
     await sleep(150);
   }
-  throw new Error('“继续”按钮长时间不可点击。URL: ' + location.href);
+   throw new Error('"Continue" button has been unclickable for a long time. URL: ' + location.href);
 }
 
 function isButtonEnabled(button) {
@@ -6511,7 +6511,7 @@ async function waitForStableButtonRect(button, timeout = 1500) {
 function getSerializableRect(el) {
   const rect = el.getBoundingClientRect();
   if (!rect.width || !rect.height) {
-    throw new Error('滚动后“继续”按钮没有可点击尺寸。URL: ' + location.href);
+    throw new Error('After scrolling, the "Continue" button has no clickable size. URL: ' + location.href);
   }
 
   return {
@@ -6812,7 +6812,7 @@ function logStep5SubmitDebug(message, options = {}) {
   ]
     .filter(Boolean)
     .join(' | ');
-  log(`步骤 5 [调试] ${message} | ${summary}`, options?.level || 'info', {
+  log(`Step 5 [debug] ${message} | ${summary}`, options?.level || 'info', {
     step: 5,
     stepKey: 'fill-profile',
   });
@@ -6822,7 +6822,7 @@ async function recoverStep5SubmitRetryPage(payload = {}) {
   return recoverCurrentAuthRetryPage({
     ...payload,
     flow: 'signup',
-    logLabel: payload?.logLabel || '步骤 5：资料提交后检测到认证重试页，正在点击“重试”恢复',
+     logLabel: payload?.logLabel || 'Step 5: detected the auth retry page after profile submission, clicking "Retry" to recover',
     maxClickAttempts: payload?.maxClickAttempts ?? 2,
     pathPatterns: Array.isArray(payload?.pathPatterns) ? payload.pathPatterns : getStep5AuthRetryPathPatterns(),
     step: 5,
@@ -6839,7 +6839,7 @@ function installStep5NavigationCompletionReporter(completeOnce) {
     ? logStep5SubmitDebug
     : (message, options = {}) => {
         if (typeof log === 'function') {
-          log(`步骤 5 [调试] ${message}`, options?.level || 'info', {
+          log(`Step 5 [debug] ${message}`, options?.level || 'info', {
             step: 5,
             stepKey: 'fill-profile',
           });
@@ -6860,14 +6860,14 @@ function installStep5NavigationCompletionReporter(completeOnce) {
         });
       } catch (error) {
         if (typeof log === 'function') {
-          log(`步骤 5 [调试] 导航交棒信号发送失败：${error?.message || error}`, 'warn', {
+           log(`Step 5 [debug] failed to send navigation handoff signal: ${error?.message || error}`, 'warn', {
             step: 5,
             stepKey: 'fill-profile',
           });
         }
       }
     }
-    debugLog(`检测到页面开始导航（event=${eventType}）。`, {
+     debugLog(`Detected that the page started navigating (event=${eventType}).`, {
       level: 'warn',
     });
   };
@@ -6886,7 +6886,7 @@ async function waitForStep5SubmitOutcome(options = {}) {
     ? logStep5SubmitDebug
     : (message, logOptions = {}) => {
         if (typeof log === 'function') {
-          log(`步骤 5 [调试] ${message}`, logOptions?.level || 'info', {
+           log(`Step 5 [debug] ${message}`, logOptions?.level || 'info', {
             step: 5,
             stepKey: 'fill-profile',
           });
@@ -6916,22 +6916,22 @@ async function waitForStep5SubmitOutcome(options = {}) {
     }
     if (retryState) {
       if (authRetryRecoveryCount >= maxAuthRetryRecoveries) {
-        throw new Error(`步骤 5：资料提交后连续进入认证重试页 ${maxAuthRetryRecoveries} 次，页面仍未恢复。URL: ${location.href}`);
+        throw new Error(`Step 5: after profile submission, the page entered the auth retry page ${maxAuthRetryRecoveries} times in a row and still did not recover. URL: ${location.href}`);
       }
       authRetryRecoveryCount += 1;
-      debugLog(`检测到资料提交后的认证重试页，准备执行恢复（${authRetryRecoveryCount}/${maxAuthRetryRecoveries}）。`, {
+      debugLog(`Detected the auth retry page after profile submission; preparing recovery (${authRetryRecoveryCount}/${maxAuthRetryRecoveries}).`, {
         level: 'warn',
       });
-      log(`步骤 5：资料提交后进入认证重试页，正在自动恢复（${authRetryRecoveryCount}/${maxAuthRetryRecoveries}）...`, 'warn');
+      log(`Step 5: after profile submission, the page entered the auth retry page; recovering automatically (${authRetryRecoveryCount}/${maxAuthRetryRecoveries})...`, 'warn');
       await recoverCurrentAuthRetryPage({
         flow: 'signup',
-        logLabel: '步骤 5：资料提交后检测到认证重试页，正在点击“重试”恢复',
+        logLabel: 'Step 5: detected the auth retry page after profile submission, clicking "Retry" to recover',
         maxClickAttempts: 2,
         pathPatterns: getStep5AuthRetryPathPatterns(),
         step: 5,
         timeoutMs: 12000,
       });
-      debugLog('认证重试页恢复动作已完成，准备继续等待最终结果。', {
+      debugLog('Auth retry page recovery action is complete; continuing to wait for the final result.', {
         level: 'info',
       });
       lastSubmitClickAt = Date.now();
@@ -6940,7 +6940,7 @@ async function waitForStep5SubmitOutcome(options = {}) {
 
     const successState = getStep5PostSubmitSuccessState();
     if (successState) {
-      debugLog(`检测到资料提交成功状态：${successState.state || 'unknown'}`, {
+      debugLog(`Detected profile submission success state: ${successState.state || 'unknown'}`, {
         level: 'ok',
       });
       return successState;
@@ -6959,7 +6959,7 @@ async function waitForStep5SubmitOutcome(options = {}) {
       const submitButton = getStep5SubmitButton();
       if (isStep5SubmitButtonClickable(submitButton)) {
         submitClickCount += 1;
-        log(`步骤 5：资料提交后仍停留在资料页，正在重新点击“完成帐户创建”（第 ${submitClickCount}/${maxSubmitClicks} 次）...`, 'warn');
+        log(`Step 5: after profile submission, the page is still on the profile page, clicking "Complete account creation" again (attempt ${submitClickCount}/${maxSubmitClicks})...`, 'warn');
         await humanPause(350, 900);
         simulateClick(submitButton);
         lastSubmitClickAt = Date.now();
@@ -6979,7 +6979,7 @@ async function waitForStep5SubmitOutcome(options = {}) {
     throw createAuthMaxCheckAttemptsError();
   }
   if (finalRetryState) {
-    throw new Error(`步骤 5：资料提交后仍停留在认证重试页，自动恢复未完成。URL: ${location.href}`);
+    throw new Error(`Step 5: after profile submission, the page is still on the auth retry page and automatic recovery is not complete. URL: ${location.href}`);
   }
 
   const finalSuccessState = getStep5PostSubmitSuccessState();
@@ -6989,15 +6989,15 @@ async function waitForStep5SubmitOutcome(options = {}) {
 
   const finalStep5Error = (typeof getStep5ErrorText === 'function' ? getStep5ErrorText() : '') || lastStep5Error;
   if (finalStep5Error) {
-    throw new Error(`步骤 5：资料提交后页面返回错误：${finalStep5Error}。URL: ${location.href}`);
+    throw new Error(`Step 5: after profile submission, the page returned an error: ${finalStep5Error}. URL: ${location.href}`);
   }
 
-  throw new Error(`步骤 5：资料提交后未检测到页面跳转或恢复成功（已点击提交 ${submitClickCount}/${maxSubmitClicks} 次）。URL: ${location.href}`);
+  throw new Error(`Step 5: after profile submission, no page transition or recovery success was detected (submit clicked ${submitClickCount}/${maxSubmitClicks} times). URL: ${location.href}`);
 }
 
 async function step5_fillNameBirthday(payload) {
   const { firstName, lastName, age, year, month, day, prefillOnly = false } = payload;
-  if (!firstName || !lastName) throw new Error('未提供姓名数据。');
+  if (!firstName || !lastName) throw new Error('No name data provided.');
   const performOperationWithDelay = typeof getOperationDelayRunner === 'function'
     ? getOperationDelayRunner()
     : async (metadata, operation) => {
@@ -7009,11 +7009,11 @@ async function step5_fillNameBirthday(payload) {
   const resolvedAge = age ?? (year ? new Date().getFullYear() - Number(year) : null);
   const hasBirthdayData = [year, month, day].every(value => value != null && !Number.isNaN(Number(value)));
   if (!hasBirthdayData && (resolvedAge == null || Number.isNaN(Number(resolvedAge)))) {
-    throw new Error('未提供生日或年龄数据。');
+    throw new Error('No birthday or age data provided.');
   }
 
   const fullName = `${firstName} ${lastName}`;
-  log(`步骤 5：正在填写姓名：${fullName}`);
+  log(`Step 5: filling name: ${fullName}`);
 
   // Actual DOM structure:
   // - Full name: <input name="name" placeholder="全名" type="text">
@@ -7028,13 +7028,13 @@ async function step5_fillNameBirthday(payload) {
       10000
     );
   } catch {
-    throw new Error('未找到姓名输入框。URL: ' + location.href);
+    throw new Error('No name input box was found. URL: ' + location.href);
   }
   await humanPause(500, 1300);
   await performOperationWithDelay({ stepKey: 'fill-profile', kind: 'fill', label: 'fill-name' }, async () => {
     fillInput(nameInput, fullName);
   });
-  log(`步骤 5：姓名已填写：${fullName}`);
+  log(`Step 5: name filled: ${fullName}`);
 
   let birthdayMode = false;
   let ageInput = null;
@@ -7090,7 +7090,7 @@ async function step5_fillNameBirthday(payload) {
 
   if (birthdayMode) {
     if (!hasBirthdayData) {
-      throw new Error('检测到生日字段，但未提供生日数据。');
+      throw new Error('Birthday fields were detected, but no birthday data was provided.');
     }
 
     const yearSpinner = document.querySelector('[role="spinbutton"][data-type="year"]');
@@ -7104,7 +7104,7 @@ async function step5_fillNameBirthday(payload) {
       const desiredDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const hiddenBirthday = document.querySelector('input[name="birthday"]');
 
-      log('步骤 5：检测到 React Aria 下拉生日字段，正在填写生日...');
+      log('Step 5: detected React Aria birthday dropdown fields, filling birthday...');
       await humanPause(450, 1100);
       await performOperationWithDelay({ stepKey: 'fill-profile', kind: 'select', label: 'select-birthday-year' }, async () => {
         await setReactAriaBirthdaySelect(yearReactSelect, year);
@@ -7126,15 +7126,15 @@ async function step5_fillNameBirthday(payload) {
         }
 
         if ((hiddenBirthday.value || '') !== desiredDate) {
-          throw new Error(`生日值未成功写入页面。期望 ${desiredDate}，实际 ${(hiddenBirthday.value || '空')}。`);
+          throw new Error(`Birthday value was not written to the page successfully. Expected ${desiredDate}, got ${(hiddenBirthday.value || 'empty')}.`);
         }
       }
 
-      log(`步骤 5：React Aria 生日已填写：${desiredDate}`);
+      log(`Step 5: React Aria birthday filled: ${desiredDate}`);
     }
 
     if (yearSpinner && monthSpinner && daySpinner) {
-      log('步骤 5：检测到生日字段，正在填写生日...');
+      log('Step 5: detected birthday fields, filling birthday...');
 
       async function setSpinButton(el, value) {
         el.focus();
@@ -7168,7 +7168,7 @@ async function step5_fillNameBirthday(payload) {
       await performOperationWithDelay({ stepKey: 'fill-profile', kind: 'fill', label: 'fill-birthday-day' }, async () => {
         await setSpinButton(daySpinner, String(day).padStart(2, '0'));
       });
-      log(`步骤 5：生日已填写：${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+      log(`Step 5: birthday filled: ${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
     }
 
     const hiddenBirthday = document.querySelector('input[name="birthday"]');
@@ -7179,19 +7179,19 @@ async function step5_fillNameBirthday(payload) {
         hiddenBirthday.dispatchEvent(new Event('input', { bubbles: true }));
         hiddenBirthday.dispatchEvent(new Event('change', { bubbles: true }));
       });
-      log(`步骤 5：已设置隐藏生日输入框：${dateStr}`);
+      log(`Step 5: hidden birthday input set: ${dateStr}`);
     }
   } else if (ageInput) {
     if (resolvedAge == null || Number.isNaN(Number(resolvedAge))) {
-      throw new Error('检测到年龄字段，但未提供年龄数据。');
+      throw new Error('Age field detected, but no age data was provided.');
     }
     await humanPause(500, 1300);
     await performOperationWithDelay({ stepKey: 'fill-profile', kind: 'fill', label: 'fill-birthday' }, async () => {
       fillInput(ageInput, String(resolvedAge));
     });
-    log(`步骤 5：年龄已填写：${resolvedAge}`);
+    log(`Step 5: age filled: ${resolvedAge}`);
   } else {
-    throw new Error('未找到生日或年龄输入项。URL: ' + location.href);
+    throw new Error('No birthday or age input was found. URL: ' + location.href);
   }
   // 韩国IP判断勾选框""I agree"
   const allConsentCheckbox = findStep5AllConsentCheckbox();
@@ -7217,18 +7217,18 @@ async function step5_fillNameBirthday(payload) {
       }
 
       if (!isStep5CheckboxChecked(allConsentCheckbox)) {
-        throw new Error('未能勾选 “I agree to all of the following” 复选框。');
+      throw new Error('Could not check the "I agree to all of the following" checkbox.');
       }
 
-      log('步骤 5：已勾选 “I agree to all of the following”。');
+      log('Step 5: checked "I agree to all of the following".');
     } else {
-      log('步骤 5：“I agree to all of the following” 已勾选，跳过。');
+      log('Step 5: "I agree to all of the following" is already checked; skipping.');
     }
   }
 
 
   if (prefillOnly) {
-    log('步骤 4：混合注册页资料已预填，继续填写验证码。', 'info');
+    log('Step 4: mixed sign-up page profile data is prefilled; continuing to fill the verification code.', 'info');
     return { prefilled: true };
   }
 
@@ -7237,12 +7237,12 @@ async function step5_fillNameBirthday(payload) {
   const completeBtn = await waitForStep5SubmitButton(5000)
     || await waitForElementByText('button', /完成|完了|作成|アカウント作成|アカウントを作成|続行|続ける|次へ|同意|create|continue|finish|done|agree/i, 5000).catch(() => null);
   if (!completeBtn) {
-    throw new Error('未找到“完成帐户创建”按钮。URL: ' + location.href);
+    throw new Error('No "Complete account creation" button was found. URL: ' + location.href);
   }
 
   const isAgeMode = !birthdayMode && Boolean(ageInput);
   if (isAgeMode) {
-    log('步骤 5：当前为年龄输入模式，点击“完成帐户创建”后将等待页面结果。', 'info');
+    log('Step 5: age-input mode is active; after clicking "Complete account creation" the code will wait for the page result.', 'info');
   }
 
   let reportedCompletionPayload = null;
@@ -7250,7 +7250,7 @@ async function step5_fillNameBirthday(payload) {
     ? logStep5SubmitDebug
     : (message, logOptions = {}) => {
         if (typeof log === 'function') {
-          log(`步骤 5 [调试] ${message}`, logOptions?.level || 'info', {
+          log(`Step 5 [debug] ${message}`, logOptions?.level || 'info', {
             step: 5,
             stepKey: 'fill-profile',
           });
@@ -7260,7 +7260,7 @@ async function step5_fillNameBirthday(payload) {
     const completionReason = extra?.outcome?.state
       || (extra?.navigationStarted ? `navigation_started:${extra?.navigationEventType || 'unknown'}` : 'direct_completion');
     if (reportedCompletionPayload) {
-      debugLog(`忽略重复完成信号（reason=${completionReason}）。`, {
+      debugLog(`Ignoring duplicate completion signal (reason=${completionReason}).`, {
         level: 'warn',
       });
       return reportedCompletionPayload;
@@ -7278,7 +7278,7 @@ async function step5_fillNameBirthday(payload) {
     } else {
       reportComplete(5, completionPayload);
     }
-    debugLog(`准备发送完成信号（reason=${completionReason}，isAgeMode=${isAgeMode}）。`, {
+    debugLog(`Preparing to send completion signal (reason=${completionReason}, isAgeMode=${isAgeMode}).`, {
       level: extra?.navigationStarted ? 'warn' : 'info',
     });
     return completionPayload;
@@ -7290,14 +7290,14 @@ async function step5_fillNameBirthday(payload) {
   await performOperationWithDelay({ stepKey: 'fill-profile', kind: 'submit', label: 'submit-profile' }, async () => {
     simulateClick(completeBtn);
   });
-  log('步骤 5：已点击“完成帐户创建”，正在等待页面跳转、重试页或提交结果。');
+  log('Step 5: clicked "Complete account creation", waiting for page navigation, retry page, or submission result.');
 
   try {
     const outcome = await waitForStep5SubmitOutcome();
     cleanupNavigationReporter();
 
     const completionPayload = completeStep5Once({ outcome });
-    log(`步骤 5：资料提交结果已确认（${outcome.state || 'success'}），准备继续后续步骤。`, 'ok');
+    log(`Step 5: profile submission result confirmed (${outcome.state || 'success'}); preparing to continue with later steps.`, 'ok');
     return completionPayload;
   } catch (error) {
     cleanupNavigationReporter();

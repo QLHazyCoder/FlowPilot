@@ -100,7 +100,7 @@
       addLog = async () => {},
       chrome: chromeApi = globalThis.chrome,
       completeNodeFromBackground,
-      getErrorMessage = (error) => error?.message || String(error || '未知错误'),
+      getErrorMessage = (error) => error?.message || String(error || 'Unknown error'),
       registrationSuccessWaitMs = DEFAULT_REGISTRATION_SUCCESS_WAIT_MS,
       sleepWithStop = async (ms) => new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(ms) || 0))),
     } = deps;
@@ -110,12 +110,12 @@
         return;
       }
       if (!chromeApi?.cookies?.getAll || !chromeApi.cookies?.remove) {
-        await addLog('步骤 6：当前浏览器不支持 cookies API，跳过第六步 Cookies 清理。', 'warn');
+        await addLog('Step 6: The current browser does not support the cookies API. Skipping Step 6 cookie cleanup.', 'warn');
         return;
       }
 
       try {
-        await addLog('步骤 6：已开启 Cookies 清理，正在清理 ChatGPT / OpenAI cookies...', 'info');
+        await addLog('Step 6: Cookie cleanup is enabled. Clearing ChatGPT / OpenAI cookies...', 'info');
         const cookies = await collectStep6Cookies(chromeApi);
         let removedCount = 0;
         for (const cookie of cookies) {
@@ -131,24 +131,24 @@
               origins: STEP6_COOKIE_CLEAR_ORIGINS,
             });
           } catch (error) {
-            await addLog(`步骤 6：browsingData 补扫 cookies 失败：${getErrorMessage(error)}`, 'warn');
+            await addLog(`Step 6: browsingData fallback cookie scan failed: ${getErrorMessage(error)}`, 'warn');
           }
         }
 
-        await addLog(`步骤 6：已清理 ${removedCount} 个 ChatGPT / OpenAI cookies。`, 'ok');
+        await addLog(`Step 6: Cleared ${removedCount} ChatGPT / OpenAI cookies.`, 'ok');
       } catch (error) {
-        await addLog(`步骤 6：Cookies 清理失败，已跳过并继续后续流程：${getErrorMessage(error)}`, 'warn');
+        await addLog(`Step 6: Cookie cleanup failed. Skipped and continuing the remaining flow: ${getErrorMessage(error)}`, 'warn');
       }
     }
 
     async function executeStep6(state = {}) {
       const waitMs = Math.max(0, Math.floor(Number(registrationSuccessWaitMs) || 0));
       if (waitMs > 0) {
-        await addLog(`步骤 6：等待 ${Math.round(waitMs / 1000)} 秒，确认注册成功并让页面稳定...`, 'info');
+        await addLog(`Step 6: Waiting ${Math.round(waitMs / 1000)} seconds to confirm signup success and let the page stabilize...`, 'info');
         await sleepWithStop(waitMs);
       }
       await clearCookiesIfEnabled(state);
-      await addLog('步骤 6：注册成功等待完成，准备继续获取 OAuth 链接并登录。', 'ok');
+      await addLog('Step 6: Signup success wait completed. Preparing to continue with the OAuth link and login.', 'ok');
       await completeNodeFromBackground('wait-registration-success');
     }
 

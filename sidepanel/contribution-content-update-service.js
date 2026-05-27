@@ -125,12 +125,12 @@
       });
 
       if (!response.ok) {
-        throw new Error(`内容摘要请求失败：${response.status}`);
+        throw new Error(`Content summary request failed: ${response.status}`);
       }
 
       const payload = await response.json();
       if (!payload || payload.ok !== true) {
-        throw new Error('内容摘要返回格式异常');
+        throw new Error('Content summary response format error');
       }
 
       const snapshot = buildSnapshot(payload, scope);
@@ -138,7 +138,7 @@
       return snapshot;
     } catch (error) {
       if (error?.name === 'AbortError') {
-        throw new Error('内容摘要请求超时');
+        throw new Error('Content summary request timed out');
       }
       throw error;
     } finally {
@@ -156,7 +156,7 @@
         return {
           ...cached,
           fromCache: true,
-          errorMessage: error?.message || '内容摘要获取失败',
+          errorMessage: error?.message || 'Failed to fetch content summary',
         };
       }
 
@@ -172,7 +172,7 @@
         portalUrl: PORTAL_BASE_URL,
         apiUrl: buildSummaryApiUrl(scope),
         checkedAt: Date.now(),
-        errorMessage: error?.message || '内容摘要获取失败',
+        errorMessage: error?.message || 'Failed to fetch content summary',
       };
     }
   }

@@ -35,8 +35,8 @@
         return hotmailUtils.getHotmailBulkActionLabel(mode, count);
       }
       const normalizedCount = Number.isFinite(Number(count)) ? Math.max(0, Number(count)) : 0;
-      const prefix = mode === 'used' ? '清空已用' : '全部删除';
-      const suffix = normalizedCount > 0 ? `（${normalizedCount}）` : '';
+      const prefix = mode === 'used' ? 'Clear Used' : 'Delete All';
+      const suffix = normalizedCount > 0 ? `(${normalizedCount})` : '';
       return `${prefix}${suffix}`;
     }
 
@@ -45,8 +45,8 @@
         return hotmailUtils.getHotmailListToggleLabel(expanded, count);
       }
       const normalizedCount = Number.isFinite(Number(count)) ? Math.max(0, Number(count)) : 0;
-      const suffix = normalizedCount > 0 ? `（${normalizedCount}）` : '';
-      return `${expanded ? '收起列表' : '展开列表'}${suffix}`;
+      const suffix = normalizedCount > 0 ? `(${normalizedCount})` : '';
+      return `${expanded ? 'Collapse List' : 'Expand List'}${suffix}`;
     }
 
     function updateHotmailListViewport() {
@@ -142,7 +142,7 @@
     function formatDateTime(timestamp) {
       const value = Number(timestamp);
       if (!Number.isFinite(value) || value <= 0) {
-        return '未使用';
+        return 'Not used';
       }
       return new Date(value).toLocaleString('zh-CN', {
         hour12: false,
@@ -151,20 +151,20 @@
     }
 
     function getHotmailAvailabilityLabel(account) {
-      if (account.used) return '已用';
-      return '可分配';
+      if (account.used) return 'Used';
+      return 'Available';
     }
 
     function getHotmailStatusLabel(account) {
-      if (account.used) return '已用';
+      if (account.used) return 'Used';
 
       switch (account.status) {
         case 'authorized':
-          return '可用';
+          return 'OK';
         case 'error':
-          return '异常';
+          return 'Error';
         default:
-          return '待校验';
+          return 'Pending';
       }
     }
 
@@ -199,7 +199,7 @@
           account.status,
           getHotmailAvailabilityLabel(account),
           getHotmailStatusLabel(account),
-          isCurrent ? 'current 当前' : '',
+          isCurrent ? 'current' : '',
         ].join(' ').toLowerCase();
 
         return haystack.includes(normalizedSearchTerm);
@@ -217,8 +217,8 @@
       ? createAccountPoolFormController({
         formShell: dom.hotmailFormShell,
         toggleButton: dom.btnToggleHotmailForm,
-        hiddenLabel: '添加账号',
-        visibleLabel: '取消添加',
+        hiddenLabel: 'Add Account',
+        visibleLabel: 'Cancel Add',
         onClear: () => {
           clearHotmailForm();
         },
@@ -239,14 +239,14 @@
       const currentId = latestState?.currentHotmailAccountId || '';
 
       if (!accounts.length) {
-        dom.hotmailAccountsList.innerHTML = '<div class="hotmail-empty">还没有 Hotmail 账号，先添加一条再校验。</div>';
+        dom.hotmailAccountsList.innerHTML = '<div class="hotmail-empty">No Hotmail accounts yet. Add one before verifying.</div>';
         updateHotmailListViewport();
         return;
       }
 
       const visibleAccounts = getFilteredHotmailAccounts(accounts, currentId);
       if (!visibleAccounts.length) {
-        dom.hotmailAccountsList.innerHTML = '<div class="hotmail-empty">没有匹配当前筛选条件的 Hotmail 账号。</div>';
+        dom.hotmailAccountsList.innerHTML = '<div class="hotmail-empty">No Hotmail accounts match the current filter.</div>';
         updateHotmailListViewport();
         return;
       }
@@ -255,32 +255,32 @@
         <div class="hotmail-account-item${account.id === currentId ? ' is-current' : ''}">
           <div class="hotmail-account-top">
             <div class="hotmail-account-title-row">
-              <div class="hotmail-account-email">${helpers.escapeHtml(account.email || '(未命名账号)')}</div>
+              <div class="hotmail-account-email">${helpers.escapeHtml(account.email || '(unnamed account)')}</div>
               <button
                 class="hotmail-copy-btn"
                 type="button"
                 data-account-action="copy-email"
                 data-account-id="${helpers.escapeHtml(account.id)}"
-                title="复制邮箱"
-                aria-label="复制邮箱 ${helpers.escapeHtml(account.email || '')}"
+                title="Copy email"
+                aria-label="Copy email ${helpers.escapeHtml(account.email || '')}"
               >${copyIcon}</button>
             </div>
             <span class="hotmail-status-chip ${helpers.escapeHtml(getHotmailStatusClass(account))}">${helpers.escapeHtml(getHotmailStatusLabel(account))}</span>
           </div>
           <div class="hotmail-account-meta">
-            <span>客户端 ID：${helpers.escapeHtml(account.clientId ? `${account.clientId.slice(0, 10)}...` : '未填写')}</span>
-            <span>刷新令牌：${account.refreshToken ? '已保存' : '未保存'}</span>
-            <span>分配状态: ${helpers.escapeHtml(getHotmailAvailabilityLabel(account))}</span>
-            <span>上次校验: ${helpers.escapeHtml(formatDateTime(account.lastAuthAt))}</span>
-            <span>上次使用: ${helpers.escapeHtml(formatDateTime(account.lastUsedAt))}</span>
+            <span>Client ID: ${helpers.escapeHtml(account.clientId ? `${account.clientId.slice(0, 10)}...` : 'Not filled')}</span>
+            <span>Refresh Token: ${account.refreshToken ? 'Saved' : 'Not saved'}</span>
+            <span>Allocation Status: ${helpers.escapeHtml(getHotmailAvailabilityLabel(account))}</span>
+            <span>Last Verified: ${helpers.escapeHtml(formatDateTime(account.lastAuthAt))}</span>
+            <span>Last Used: ${helpers.escapeHtml(formatDateTime(account.lastUsedAt))}</span>
           </div>
           ${account.lastError ? `<div class="hotmail-account-error">${helpers.escapeHtml(account.lastError)}</div>` : ''}
           <div class="hotmail-account-actions">
-            <button class="btn btn-outline btn-sm" type="button" data-account-action="select" data-account-id="${helpers.escapeHtml(account.id)}">使用此账号</button>
-            <button class="btn btn-outline btn-sm" type="button" data-account-action="toggle-used" data-account-id="${helpers.escapeHtml(account.id)}">${account.used ? '标记未用' : '标记已用'}</button>
-            <button class="btn btn-primary btn-sm" type="button" data-account-action="verify" data-account-id="${helpers.escapeHtml(account.id)}">校验</button>
-            <button class="btn btn-outline btn-sm" type="button" data-account-action="test" data-account-id="${helpers.escapeHtml(account.id)}">复制最新验证码</button>
-            <button class="btn btn-ghost btn-sm" type="button" data-account-action="delete" data-account-id="${helpers.escapeHtml(account.id)}">删除</button>
+            <button class="btn btn-outline btn-sm" type="button" data-account-action="select" data-account-id="${helpers.escapeHtml(account.id)}">Use this account</button>
+            <button class="btn btn-outline btn-sm" type="button" data-account-action="toggle-used" data-account-id="${helpers.escapeHtml(account.id)}">${account.used ? 'Mark Unused' : 'Mark Used'}</button>
+            <button class="btn btn-primary btn-sm" type="button" data-account-action="verify" data-account-id="${helpers.escapeHtml(account.id)}">Verify</button>
+            <button class="btn btn-outline btn-sm" type="button" data-account-action="test" data-account-id="${helpers.escapeHtml(account.id)}">Copy latest code</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-account-action="delete" data-account-id="${helpers.escapeHtml(account.id)}">Delete</button>
           </div>
         </div>
       `).join('');
@@ -291,16 +291,16 @@
       const isUsedMode = mode === 'used';
       const targetAccounts = getHotmailAccountsByUsage(isUsedMode ? 'used' : 'all');
       if (!targetAccounts.length) {
-        helpers.showToast(isUsedMode ? '没有已用账号可清空。' : '没有可删除的 Hotmail 账号。', 'warn');
+        helpers.showToast(isUsedMode ? 'No used accounts to clear.' : 'No Hotmail accounts to delete.', 'warn');
         return;
       }
 
       const confirmed = await helpers.openConfirmModal({
-        title: isUsedMode ? '清空已用账号' : '全部删除账号',
+        title: isUsedMode ? 'Clear Used Accounts' : 'Delete All Accounts',
         message: isUsedMode
-          ? `确认删除当前 ${targetAccounts.length} 个已用 Hotmail 账号吗？`
-          : `确认删除全部 ${targetAccounts.length} 个 Hotmail 账号吗？`,
-        confirmLabel: isUsedMode ? '确认清空已用' : '确认全部删除',
+          ? `Are you sure you want to delete the ${targetAccounts.length} currently used Hotmail accounts?`
+          : `Are you sure you want to delete all ${targetAccounts.length} Hotmail accounts?`,
+        confirmLabel: isUsedMode ? 'Confirm Clear Used' : 'Confirm Delete All',
         confirmVariant: isUsedMode ? 'btn-outline' : 'btn-danger',
       });
       if (!confirmed) {
@@ -334,8 +334,8 @@
 
       helpers.showToast(
         isUsedMode
-          ? `已清空 ${response.deletedCount || 0} 个已用 Hotmail 账号`
-          : `已删除全部 ${response.deletedCount || 0} 个 Hotmail 账号`,
+          ? `Cleared ${response.deletedCount || 0} used Hotmail accounts`
+          : `Deleted all ${response.deletedCount || 0} Hotmail accounts`,
         'success',
         2200
       );
@@ -348,15 +348,15 @@
       const clientId = dom.inputHotmailClientId.value.trim();
       const refreshToken = dom.inputHotmailRefreshToken.value.trim();
       if (!email) {
-        helpers.showToast('请先填写 Hotmail 邮箱。', 'warn');
+        helpers.showToast('Please fill in the Hotmail email first.', 'warn');
         return;
       }
       if (!clientId) {
-        helpers.showToast('请先填写微软应用客户端 ID。', 'warn');
+        helpers.showToast('Please fill in the Microsoft app client ID first.', 'warn');
         return;
       }
       if (!refreshToken) {
-        helpers.showToast('请先填写刷新令牌（refresh token）。', 'warn');
+        helpers.showToast('Please fill in the refresh token first.', 'warn');
         return;
       }
 
@@ -379,10 +379,10 @@
           throw new Error(response.error);
         }
 
-        helpers.showToast(`已保存 Hotmail 账号 ${email}`, 'success', 1800);
+        helpers.showToast(`Saved Hotmail account ${email}`, 'success', 1800);
         formController.setVisible(false, { clearForm: true });
       } catch (err) {
-        helpers.showToast(`保存 Hotmail 账号失败：${err.message}`, 'error');
+        helpers.showToast(`Failed to save Hotmail account: ${err.message}`, 'error');
       } finally {
         actionInFlight = false;
         dom.btnAddHotmailAccount.disabled = false;
@@ -392,19 +392,19 @@
     async function handleImportHotmailAccounts() {
       if (actionInFlight) return;
       if (typeof hotmailUtils.parseHotmailImportText !== 'function') {
-        helpers.showToast('导入解析器未加载，请刷新扩展后重试。', 'error');
+        helpers.showToast('Import parser not loaded, please refresh the extension and retry.', 'error');
         return;
       }
 
       const rawText = dom.inputHotmailImport.value.trim();
       if (!rawText) {
-        helpers.showToast('请先粘贴账号导入内容。', 'warn');
+        helpers.showToast('Please paste the account import content first.', 'warn');
         return;
       }
 
       const parsedAccounts = hotmailUtils.parseHotmailImportText(rawText);
       if (!parsedAccounts.length) {
-        helpers.showToast('没有解析到有效账号，请检查格式是否为 账号----密码----ID----Token。', 'error');
+        helpers.showToast('No valid accounts parsed. Please check format: account----password----ID----Token.', 'error');
         return;
       }
 
@@ -424,9 +424,9 @@
         }
 
         dom.inputHotmailImport.value = '';
-        helpers.showToast(`已导入 ${parsedAccounts.length} 条 Hotmail 账号`, 'success', 2200);
+        helpers.showToast(`Imported ${parsedAccounts.length} Hotmail accounts`, 'success', 2200);
       } catch (err) {
-        helpers.showToast(`批量导入失败：${err.message}`, 'error');
+        helpers.showToast(`Bulk import failed: ${err.message}`, 'error');
       } finally {
         actionInFlight = false;
         dom.btnImportHotmailAccounts.disabled = false;
@@ -452,9 +452,9 @@
 
       try {
         if (action === 'copy-email') {
-          if (!targetAccount?.email) throw new Error('未找到可复制的邮箱地址。');
+          if (!targetAccount?.email) throw new Error('No email address found to copy.');
           await helpers.copyTextToClipboard(targetAccount.email);
-          helpers.showToast(`已复制 ${targetAccount.email}`, 'success', 1800);
+          helpers.showToast(`Copied ${targetAccount.email}`, 'success', 1800);
         } else if (action === 'select') {
           const response = await runtime.sendMessage({
             type: 'SELECT_HOTMAIL_ACCOUNT',
@@ -464,9 +464,9 @@
           if (response?.error) throw new Error(response.error);
           state.syncLatestState({ currentHotmailAccountId: response.account.id });
           applyHotmailAccountMutation(response.account, { preserveCurrentSelection: true });
-          helpers.showToast(`已切换当前 Hotmail 账号为 ${response.account.email}`, 'success', 1800);
+          helpers.showToast(`Switched current Hotmail account to ${response.account.email}`, 'success', 1800);
         } else if (action === 'toggle-used') {
-          if (!targetAccount) throw new Error('未找到目标 Hotmail 账号。');
+          if (!targetAccount) throw new Error('Target Hotmail account not found.');
           const response = await runtime.sendMessage({
             type: 'PATCH_HOTMAIL_ACCOUNT',
             source: 'sidepanel',
@@ -477,7 +477,7 @@
           });
           if (response?.error) throw new Error(response.error);
           applyHotmailAccountMutation(response.account);
-          helpers.showToast(`账号 ${response.account.email} 已${response.account.used ? '标记为已用' : '恢复为未用'}`, 'success', 2200);
+          helpers.showToast(`Account ${response.account.email} ${response.account.used ? 'marked as used' : 'restored as unused'}`, 'success', 2200);
         } else if (action === 'verify') {
           const response = await runtime.sendMessage({
             type: 'VERIFY_HOTMAIL_ACCOUNT',
@@ -486,7 +486,7 @@
           });
           if (response?.error) throw new Error(response.error);
           applyHotmailAccountMutation(response.account, { preserveCurrentSelection: true });
-          helpers.showToast(`账号 ${response.account.email} 校验通过`, 'success', 2200);
+          helpers.showToast(`Account ${response.account.email} verified`, 'success', 2200);
         } else if (action === 'test') {
           const response = await runtime.sendMessage({
             type: 'TEST_HOTMAIL_ACCOUNT',
@@ -497,19 +497,19 @@
           applyHotmailAccountMutation(response.account, { preserveCurrentSelection: true });
           if (response.latestCode) {
             await helpers.copyTextToClipboard(response.latestCode);
-            const mailbox = response.latestMailbox ? `（${response.latestMailbox}）` : '';
-            helpers.showToast(`已复制最新验证码 ${response.latestCode}${mailbox}`, 'success', 2600);
+            const mailbox = response.latestMailbox ? `(${response.latestMailbox})` : '';
+            helpers.showToast(`Copied latest code ${response.latestCode}${mailbox}`, 'success', 2600);
           } else if (response.latestSubject) {
-            const mailbox = response.latestMailbox ? `（${response.latestMailbox}）` : '';
-            helpers.showToast(`最新邮件${mailbox}没有验证码：${response.latestSubject}`, 'warn', 3200);
+            const mailbox = response.latestMailbox ? `(${response.latestMailbox})` : '';
+            helpers.showToast(`Latest email${mailbox} has no code: ${response.latestSubject}`, 'warn', 3200);
           } else {
-            helpers.showToast('当前没有可读取的最新邮件。', 'warn', 2600);
+            helpers.showToast('No latest email available to read.', 'warn', 2600);
           }
         } else if (action === 'delete') {
           const confirmed = await helpers.openConfirmModal({
-            title: '删除账号',
-            message: '确认删除这个 Hotmail 账号吗？对应 token 也会一起移除。',
-            confirmLabel: '确认删除',
+            title: 'Delete Account',
+            message: 'Are you sure you want to delete this Hotmail account? The corresponding token will also be removed.',
+            confirmLabel: 'Confirm Delete',
             confirmVariant: 'btn-danger',
           });
           if (!confirmed) {
@@ -521,7 +521,7 @@
             payload: { accountId },
           });
           if (response?.error) throw new Error(response.error);
-          helpers.showToast('Hotmail 账号已删除', 'success', 1800);
+          helpers.showToast('Hotmail account deleted', 'success', 1800);
         }
       } catch (err) {
         helpers.showToast(err.message, 'error');
@@ -546,9 +546,9 @@
 
       dom.btnHotmailUsageGuide?.addEventListener('click', async () => {
         await helpers.openConfirmModal({
-          title: '使用教程',
-          message: 'API对接模式会直接调用微软邮箱接口取件；本地助手模式仍走本地服务。两种模式继续共用同一套 Hotmail 账号池与导入格式。',
-          confirmLabel: '确定',
+          title: 'Usage Guide',
+          message: 'API mode directly calls the Microsoft email interface to fetch mail; local helper mode still uses the local service. Both modes share the same Hotmail account pool and import format.',
+          confirmLabel: 'OK',
           confirmVariant: 'btn-primary',
         });
       });

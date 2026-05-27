@@ -12,7 +12,7 @@
       flowId: 'openai',
       artifactKind: 'openai-oauth',
       trigger: 'interactive-oauth',
-      label: 'OpenAI OAuth 贡献',
+      label: 'OpenAI OAuth contribution',
       defaultTargetId: DEFAULT_OPENAI_TARGET_ID,
       sensitiveFieldPaths: Object.freeze([
         'credentials.access_token',
@@ -25,7 +25,7 @@
       flowId: 'openai',
       artifactKind: 'codex',
       trigger: 'manual-upload',
-      label: 'OpenAI Codex 文件贡献',
+      label: 'OpenAI Codex file contribution',
       defaultTargetId: 'codex2api',
       sensitiveFieldPaths: Object.freeze([
         'credentials.access_token',
@@ -38,7 +38,7 @@
       flowId: 'openai',
       artifactKind: 'sub2api',
       trigger: 'manual-upload',
-      label: 'OpenAI Sub2API 文件贡献',
+      label: 'OpenAI Sub2API file contribution',
       defaultTargetId: 'sub2api',
       sensitiveFieldPaths: Object.freeze([
         'credentials.accounts[].credentials.access_token',
@@ -51,7 +51,7 @@
       flowId: 'kiro',
       artifactKind: 'kiro-builder-id',
       trigger: 'after-desktop-authorize',
-      label: 'Kiro Builder ID 贡献',
+      label: 'Kiro Builder ID contribution',
       defaultTargetId: DEFAULT_KIRO_TARGET_ID,
       sensitiveFieldPaths: Object.freeze([
         'credentials.refreshToken',

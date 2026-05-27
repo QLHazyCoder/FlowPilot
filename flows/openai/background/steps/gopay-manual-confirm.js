@@ -5,11 +5,11 @@
   const GOPAY_CONFIRM_NODE_ID = 'gopay-subscription-confirm';
   const SUB2API_SESSION_IMPORT_NODE_ID = 'sub2api-session-import';
   const CPA_SESSION_IMPORT_NODE_ID = 'cpa-session-import';
-  const DEFAULT_CONFIRM_TITLE = 'GoPay 订阅确认';
-  const OAUTH_CONTINUATION_LABEL = 'OAuth 登录';
-  const SUB2API_SESSION_CONTINUATION_LABEL = '导入当前 ChatGPT 会话到 SUB2API';
+  const DEFAULT_CONFIRM_TITLE = 'GoPay subscription confirmation';
+  const OAUTH_CONTINUATION_LABEL = 'OAuth login';
+  const SUB2API_SESSION_CONTINUATION_LABEL = 'Import current ChatGPT session to SUB2API';
 
-  const CPA_SESSION_CONTINUATION_LABEL = '导入当前 ChatGPT 会话到 CPA';
+  const CPA_SESSION_CONTINUATION_LABEL = 'Import current ChatGPT session to CPA';
 
   function normalizeString(value = '') {
     return String(value || '').trim();
@@ -55,7 +55,7 @@
 
   function buildDefaultConfirmMessage(state = {}, options = {}) {
     const continuationActionLabel = getContinuationActionLabel(state, options);
-    return `GoPay 订阅页已打开。请先手动完成订阅，完成后确认继续${continuationActionLabel}。`;
+    return `The GoPay subscription page is open. Please complete the subscription manually first, then confirm to continue ${continuationActionLabel}。`;
   }
 
   function createGoPayManualConfirmExecutor(deps = {}) {
@@ -96,11 +96,11 @@
 
       const checkoutUrl = normalizeString(state?.plusCheckoutUrl);
       if (!checkoutUrl) {
-        throw new Error('步骤 7：未检测到 GoPay 订阅页，请先执行步骤 6。');
+        throw new Error('Step 7: GoPay subscription page not detected. Run Step 6 first.');
       }
 
       if (!chrome?.tabs?.create) {
-        throw new Error('步骤 7：无法自动重新打开 GoPay 订阅页。');
+        throw new Error('Step 7: Could not automatically reopen the GoPay subscription page.');
       }
 
       const tab = typeof createAutomationTab === 'function'
@@ -108,7 +108,7 @@
         : await chrome.tabs.create({ url: checkoutUrl, active: true });
       const tabId = Number(tab?.id) || 0;
       if (!tabId) {
-        throw new Error('步骤 7：重新打开 GoPay 订阅页失败。');
+        throw new Error('Step 7: Failed to reopen the GoPay subscription page.');
       }
       if (typeof registerTab === 'function') {
         await registerTab(PLUS_CHECKOUT_SOURCE, tabId);
@@ -140,7 +140,7 @@
       }
 
       await addLog(
-        `步骤 ${visibleStep}：正在等待手动完成 GoPay 订阅，确认后继续${continuationActionLabel}。`,
+        `Step ${visibleStep}: Waiting for manual GoPay subscription completion. After confirmation, continue ${continuationActionLabel}。`,
         'info'
       );
     }

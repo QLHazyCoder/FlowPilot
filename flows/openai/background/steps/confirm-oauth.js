@@ -69,10 +69,10 @@
 
       if (!activeState.oauthUrl) {
         const authLoginStep = getAuthLoginStepForState(activeState, visibleStep);
-        throw new Error(`缺少登录用 OAuth 链接，请先完成步骤 ${authLoginStep}。`);
+        throw new Error(`Missing OAuth login link, please complete step ${authLoginStep} first.`);
       }
 
-      await addStepLog(visibleStep, '正在监听 localhost 回调地址...');
+      await addStepLog(visibleStep, 'Listening for localhost callback URL...');
 
       let callbackTimeoutMs = LOCALHOST_CALLBACK_LOCAL_TIMEOUT_MS;
       let timeoutRecoveryAttempted = false;
@@ -81,7 +81,7 @@
           callbackTimeoutMs = typeof getOAuthFlowStepTimeoutMs === 'function'
             ? await getOAuthFlowStepTimeoutMs(LOCALHOST_CALLBACK_LOCAL_TIMEOUT_MS, {
               step: visibleStep,
-              actionLabel: 'OAuth localhost 回调',
+              actionLabel: 'OAuth localhost callback',
               oauthUrl: activeState?.oauthUrl || '',
             })
             : LOCALHOST_CALLBACK_LOCAL_TIMEOUT_MS;
@@ -132,7 +132,7 @@
           resolved = true;
           cleanupListener();
 
-          addStepLog(visibleStep, `已捕获 localhost 地址：${callbackUrl}`, 'ok').then(() => {
+          addStepLog(visibleStep, `Captured localhost URL: ${callbackUrl}`, 'ok').then(() => {
             return completeNodeFromBackground(state?.nodeId || 'confirm-oauth', { localhostUrl: callbackUrl });
           }).then(() => {
             resolve();
@@ -156,7 +156,7 @@
               timeoutDeferredLogged = true;
               await addStepLog(
                 visibleStep,
-                '检测到认证页仍在安全验证/授权跳转中，暂停本地回调超时判定，继续等待 localhost 回调...',
+                'Detected that auth page is still in security verification/authorization redirect, pausing local callback timeout check, continuing to wait for localhost callback...',
                 'info'
               );
             }
@@ -164,7 +164,7 @@
           } catch (error) {
             await addStepLog(
               visibleStep,
-              `复核认证页跳转状态失败（${error?.message || error}），继续按原超时规则等待回调。`,
+              `Failed to verify auth page redirect status (${error?.message || error}), continuing to wait for callback per original timeout rules.`,
               'warn'
             );
             return false;
@@ -182,7 +182,7 @@
           }
 
           if (elapsedMs >= LOCALHOST_CALLBACK_LOCAL_TIMEOUT_MS) {
-            rejectStep9(new Error(`${Math.round(LOCALHOST_CALLBACK_LOCAL_TIMEOUT_MS / 1000)} 秒内未捕获到 localhost 回调跳转，步骤 ${visibleStep} 的点击可能被拦截了。`));
+            rejectStep9(new Error(`Did not capture localhost callback redirect within ${Math.round(LOCALHOST_CALLBACK_LOCAL_TIMEOUT_MS / 1000)} seconds, the click in step ${visibleStep} may have been intercepted.`));
             return;
           }
 
@@ -190,7 +190,7 @@
             try {
               await getOAuthFlowRemainingMs({
                 step: visibleStep,
-                actionLabel: 'OAuth localhost 回调',
+                actionLabel: 'OAuth localhost callback',
                 oauthUrl: activeState?.oauthUrl || '',
               });
             } catch (error) {
@@ -198,7 +198,7 @@
               return;
             }
           } else if (elapsedMs >= callbackTimeoutMs) {
-            rejectStep9(new Error(`${Math.round(callbackTimeoutMs / 1000)} 秒内未捕获到 localhost 回调跳转，步骤 ${visibleStep} 的点击可能被拦截了。`));
+            rejectStep9(new Error(`Did not capture localhost callback redirect within ${Math.round(callbackTimeoutMs / 1000)} seconds, the click in step ${visibleStep} may have been intercepted.`));
             return;
           }
 
@@ -237,10 +237,10 @@
 
             if (signupTabId && await isTabAlive('openai-auth')) {
               await chrome.tabs.update(signupTabId, { active: true });
-              await addStepLog(visibleStep, '已切回认证页，正在准备调试器点击...');
+              await addStepLog(visibleStep, 'Switched back to auth page, preparing debugger click...');
             } else {
               signupTabId = await reuseOrCreateTab('openai-auth', activeState.oauthUrl);
-              await addStepLog(visibleStep, '已重新打开认证页，正在准备调试器点击...');
+              await addStepLog(visibleStep, 'Reopened auth page, preparing debugger click...');
             }
 
             throwIfStep8SettledOrStopped(resolved);
@@ -251,12 +251,12 @@
               timeoutMs: typeof getOAuthFlowStepTimeoutMs === 'function'
                 ? await getOAuthFlowStepTimeoutMs(15000, {
                   step: visibleStep,
-                  actionLabel: '等待 OAuth 同意页内容脚本就绪',
+                  actionLabel: 'Wait for OAuth consent page content script to be ready',
                 })
                 : 15000,
               visibleStep,
               logStepKey: 'confirm-oauth',
-              logMessage: '认证页内容脚本尚未就绪，正在等待页面恢复...',
+              logMessage: 'Auth page content script not yet ready, waiting for page to recover...',
             });
 
             for (let round = 1; round <= STEP8_MAX_ROUNDS && !resolved; round++) {
@@ -266,7 +266,7 @@
                 typeof getOAuthFlowStepTimeoutMs === 'function'
                   ? await getOAuthFlowStepTimeoutMs(STEP8_READY_WAIT_TIMEOUT_MS, {
                     step: visibleStep,
-                    actionLabel: '等待 OAuth 同意页出现',
+                    actionLabel: 'Wait for OAuth consent page to appear',
                   })
                   : STEP8_READY_WAIT_TIMEOUT_MS,
                 { visibleStep }
@@ -278,13 +278,13 @@
 
               const strategy = STEP8_STRATEGIES[Math.min(round - 1, STEP8_STRATEGIES.length - 1)];
 
-              await addStepLog(visibleStep, `第 ${round}/${STEP8_MAX_ROUNDS} 轮尝试点击“继续”（${strategy.label}）...`);
+              await addStepLog(visibleStep, `Round ${round}/${STEP8_MAX_ROUNDS} attempting to click "Continue" (${strategy.label})...`);
 
               if (strategy.mode === 'debugger') {
                 const clickActionTimeoutMs = typeof getOAuthFlowStepTimeoutMs === 'function'
                   ? await getOAuthFlowStepTimeoutMs(15000, {
                     step: visibleStep,
-                    actionLabel: '定位 OAuth 同意页继续按钮',
+                    actionLabel: 'Locate OAuth consent page Continue button',
                   })
                   : 15000;
                 const clickTarget = await prepareStep8DebuggerClick(signupTabId, {
@@ -298,7 +298,7 @@
                 const clickActionTimeoutMs = typeof getOAuthFlowStepTimeoutMs === 'function'
                   ? await getOAuthFlowStepTimeoutMs(15000, {
                     step: visibleStep,
-                    actionLabel: '点击 OAuth 同意页继续按钮',
+                    actionLabel: 'Click OAuth consent page Continue button',
                   })
                   : 15000;
                 await triggerStep8ContentStrategy(signupTabId, strategy.strategy, {
@@ -318,7 +318,7 @@
                 typeof getOAuthFlowStepTimeoutMs === 'function'
                   ? await getOAuthFlowStepTimeoutMs(15000, {
                     step: visibleStep,
-                    actionLabel: '等待 OAuth 同意页点击生效',
+                    actionLabel: 'Wait for OAuth consent page click to take effect',
                   })
                   : 15000,
                 { visibleStep }
@@ -328,21 +328,21 @@
               }
 
               if (effect.progressed) {
-                await addStepLog(visibleStep, `检测到本次点击已生效，${getStep8EffectLabel(effect)}，继续等待 localhost 回调...`, 'info');
+                await addStepLog(visibleStep, `Detected that this click took effect, ${getStep8EffectLabel(effect)}, continuing to wait for localhost callback...`, 'info');
                 break;
               }
 
               if (round >= STEP8_MAX_ROUNDS) {
-                throw new Error(`步骤 ${visibleStep}：连续 ${STEP8_MAX_ROUNDS} 轮点击“继续”后页面仍无反应。`);
+                throw new Error(`Step ${visibleStep}: page still unresponsive after ${STEP8_MAX_ROUNDS} consecutive rounds of clicking "Continue".`);
               }
 
-              await addStepLog(visibleStep, `${strategy.label} 本轮点击后页面无反应，正在刷新认证页后重试（下一轮 ${round + 1}/${STEP8_MAX_ROUNDS}）...`, 'warn');
+              await addStepLog(visibleStep, `${strategy.label} no page response after this round's click, refreshing auth page and retrying (next round ${round + 1}/${STEP8_MAX_ROUNDS})...`, 'warn');
               await reloadStep8ConsentPage(
                 signupTabId,
                 typeof getOAuthFlowStepTimeoutMs === 'function'
                   ? await getOAuthFlowStepTimeoutMs(30000, {
                     step: visibleStep,
-                    actionLabel: '刷新 OAuth 同意页',
+                    actionLabel: 'Refresh OAuth consent page',
                   })
                   : 30000,
                 { visibleStep }

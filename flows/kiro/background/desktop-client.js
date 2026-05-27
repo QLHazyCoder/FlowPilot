@@ -80,7 +80,7 @@
   function buildRedirectUri(port) {
     const normalizedPort = Math.max(1, Math.floor(Number(port) || 0));
     if (!normalizedPort) {
-      throw new Error('缺少桌面授权回调端口。');
+      throw new Error('Missing desktop authorization callback port.');
     }
     return `http://127.0.0.1:${normalizedPort}/oauth/callback`;
   }
@@ -107,13 +107,13 @@
     });
     const body = await readResponse(response);
     if (!response.ok) {
-      throw new Error(`Kiro 桌面客户端注册失败：${cleanString(body.text || response.statusText) || response.status}`);
+      throw new Error(`Kiro desktop client registration failed: ${cleanString(body.text || response.statusText) || response.status}`);
     }
 
     const clientId = cleanString(body.json?.clientId);
     const clientSecret = String(body.json?.clientSecret || '');
     if (!clientId || !clientSecret) {
-      throw new Error('Kiro 桌面客户端注册响应缺少 clientId 或 clientSecret。');
+      throw new Error('Kiro desktop client registration response missing clientId or clientSecret.');
     }
 
     return {
@@ -164,13 +164,13 @@
     });
     const body = await readResponse(response);
     if (!response.ok) {
-      throw new Error(`Kiro 桌面授权换取 Token 失败：${cleanString(body.text || response.statusText) || response.status}`);
+      throw new Error(`Kiro desktop authorization token exchange failed: ${cleanString(body.text || response.statusText) || response.status}`);
     }
 
     const accessToken = String(body.json?.accessToken || '');
     const refreshToken = String(body.json?.refreshToken || '');
     if (!accessToken || !refreshToken) {
-      throw new Error('Kiro 桌面授权换取 Token 响应缺少 accessToken 或 refreshToken。');
+      throw new Error('Kiro desktop authorization token exchange response missing accessToken or refreshToken.');
     }
 
     return {

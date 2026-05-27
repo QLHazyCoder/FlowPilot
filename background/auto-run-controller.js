@@ -76,7 +76,7 @@
       if (typeof runAutoSequenceFromNode === 'function') {
         return runAutoSequenceFromNode(startNodeId, context);
       }
-      throw new Error('自动运行节点执行器未接入。');
+      throw new Error('Auto-run node executor is not connected.');
     }
 
     function buildFreshStartStateSnapshot(state = {}) {
@@ -302,18 +302,18 @@
 
     function formatAutoRunFailureReasons(reasons = []) {
       if (!Array.isArray(reasons) || !reasons.length) {
-        return '未知错误';
+        return 'Unknown error';
       }
 
       const counts = new Map();
       for (const reason of reasons) {
-        const normalized = String(reason || '').trim() || '未知错误';
+        const normalized = String(reason || '').trim() || 'Unknown error';
         counts.set(normalized, (counts.get(normalized) || 0) + 1);
       }
 
       return Array.from(counts.entries())
-        .map(([reason, count]) => (count > 1 ? `${reason}（${count}次）` : reason))
-        .join('；');
+        .map(([reason, count]) => (count > 1 ? `${reason} (${count} times)` : reason))
+        .join('; ');
     }
 
     function isPhoneNumberSupplyExhaustedFailure(errorLike) {
@@ -360,40 +360,40 @@
       const failedRounds = summaries.filter((item) => item.status === 'failed');
       const pendingRounds = summaries.filter((item) => item.status === 'pending');
 
-      await addLog('=== 自动运行汇总 ===', failedRounds.length ? 'warn' : 'ok');
+      await addLog('=== Auto-run summary ===', failedRounds.length ? 'warn' : 'ok');
       await addLog(
-        `总轮数：${totalRuns}；成功：${successRounds.length}；失败：${failedRounds.length}；未完成：${pendingRounds.length}`,
+        `Total rounds: ${totalRuns}; Success: ${successRounds.length}; Failed: ${failedRounds.length}; Pending: ${pendingRounds.length}`,
         failedRounds.length ? 'warn' : 'ok'
       );
 
       if (successRounds.length) {
         await addLog(
-          `成功轮次：${successRounds
-            .map((item) => `第 ${item.round} 轮（重试 ${getAutoRunRoundRetryCount(item)} 次）`)
-            .join('；')}`,
+          `Successful rounds: ${successRounds
+            .map((item) => `Round ${item.round} (retries: ${getAutoRunRoundRetryCount(item)})`)
+            .join('; ')}`,
           'ok'
         );
       }
 
       if (failedRounds.length) {
         await addLog(
-          `失败轮次：${failedRounds
+          `Failed rounds: ${failedRounds
             .map((item) => {
               const retryCount = getAutoRunRoundRetryCount(item);
-              const finalReason = item.finalFailureReason || item.failureReasons[item.failureReasons.length - 1] || '未知错误';
+              const finalReason = item.finalFailureReason || item.failureReasons[item.failureReasons.length - 1] || 'Unknown error';
               const reasonSummary = formatAutoRunFailureReasons(item.failureReasons);
               return !reasonSummary || reasonSummary === finalReason
-                ? `第 ${item.round} 轮（重试 ${retryCount} 次，最终原因：${finalReason}）`
-                : `第 ${item.round} 轮（重试 ${retryCount} 次，最终原因：${finalReason}；失败记录：${reasonSummary}）`;
+                ? `Round ${item.round} (retries: ${retryCount}, final reason: ${finalReason})`
+                : `Round ${item.round} (retries: ${retryCount}, final reason: ${finalReason}; failure history: ${reasonSummary})`;
             })
-            .join('；')}`,
+            .join('; ')}`,
           'error'
         );
       }
 
       if (pendingRounds.length) {
         await addLog(
-          `未完成轮次：${pendingRounds.map((item) => `第 ${item.round} 轮`).join('；')}`,
+          `Pending rounds: ${pendingRounds.map((item) => `Round ${item.round}`).join('; ')}`,
           'warn'
         );
       }
@@ -428,9 +428,9 @@
       }
 
       const currentRuntime = runtime.get();
-      const statusLabel = roundSummary?.status === 'failed' ? '失败' : '完成';
+      const statusLabel = roundSummary?.status === 'failed' ? 'failed' : 'completed';
       await addLog(
-        `线程间隔：第 ${targetRun}/${totalRuns} 轮已${statusLabel}，等待 ${fallbackThreadIntervalMinutes} 分钟后开始下一轮。`,
+        `Thread interval: Round ${targetRun}/${totalRuns} ${statusLabel}, waiting ${fallbackThreadIntervalMinutes} minutes before next round.`,
         'info'
       );
       await persistAutoRunTimerPlan({
@@ -442,8 +442,8 @@
         autoRunSessionId: currentRuntime.autoRunSessionId,
         autoRunSkipFailures,
         roundSummaries,
-        countdownTitle: '线程间隔中',
-        countdownNote: `第 ${Math.min(targetRun + 1, totalRuns)}/${totalRuns} 轮即将开始`,
+        countdownTitle: 'Thread interval in progress',
+        countdownNote: `Round ${Math.min(targetRun + 1, totalRuns)}/${totalRuns} about to start`,
       }, {
         autoRunSkipFailures,
         autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
@@ -462,7 +462,7 @@
       }
 
       await addLog(
-        `线程间隔：等待 ${fallbackThreadIntervalMinutes} 分钟后开始第 ${targetRun}/${totalRuns} 轮第 ${nextAttemptRun} 次尝试。`,
+        `Thread interval: Waiting ${fallbackThreadIntervalMinutes} minutes before starting Round ${targetRun}/${totalRuns} attempt ${nextAttemptRun}.`,
         'info'
       );
       await persistAutoRunTimerPlan({
@@ -474,8 +474,8 @@
         autoRunSessionId: runtime.get().autoRunSessionId,
         autoRunSkipFailures,
         roundSummaries,
-        countdownTitle: '线程间隔中',
-        countdownNote: `第 ${targetRun}/${totalRuns} 轮第 ${nextAttemptRun} 次尝试即将开始`,
+        countdownTitle: 'Thread interval in progress',
+        countdownNote: `Round ${targetRun}/${totalRuns} attempt ${nextAttemptRun} about to start`,
       }, {
         autoRunSkipFailures,
         autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
@@ -488,7 +488,7 @@
       const currentRuntime = runtime.get();
       console.error('Auto run loop crashed:', error);
       if (!isStopError(error)) {
-        await addLog(`自动运行异常终止：${getErrorMessage(error) || '未知错误'}`, 'error');
+        await addLog(`Auto-run terminated abnormally: ${getErrorMessage(error) || 'Unknown error'}`, 'error');
       }
 
       runtime.set({ autoRunActive: false, autoRunSessionId: 0 });
@@ -513,7 +513,7 @@
     async function autoRunLoop(totalRuns, options = {}) {
       let currentRuntime = runtime.get();
       if (currentRuntime.autoRunActive) {
-        await addLog('自动运行已在进行中', 'warn');
+        await addLog('Auto-run is already in progress', 'warn');
         return;
       }
 
@@ -618,7 +618,7 @@
               startNodeId = resumeNodeId;
               useExistingProgress = true;
             } else if (hasSavedWorkflowProgress(currentState)) {
-              await addLog('检测到当前流程已处理完成，本轮将改为从首个节点重新开始。', 'info');
+              await addLog('Current flow already processed — this round will restart from the first node.', 'info');
             }
           }
 
@@ -653,7 +653,7 @@
           }
 
           if (forceFreshTabsNextRun) {
-            await addLog(`上一轮尝试已放弃，当前开始第 ${targetRun}/${totalRuns} 轮第 ${attemptRun} 次尝试。`, 'warn');
+            await addLog(`Previous attempt abandoned, now starting Round ${targetRun}/${totalRuns} attempt ${attemptRun}.`, 'warn');
             forceFreshTabsNextRun = false;
           }
 
@@ -705,13 +705,13 @@
             await setState({
               autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
             });
-            await addLog(`=== 第 ${targetRun}/${totalRuns} 轮完成（第 ${attemptRun} 次尝试成功）===`, 'ok');
+            await addLog(`=== Round ${targetRun}/${totalRuns} completed (attempt ${attemptRun} succeeded) ===`, 'ok');
             break;
           } catch (err) {
             if (isStopError(err)) {
               stoppedEarly = true;
               await appendRoundRecordIfNeeded('stopped', getErrorMessage(err), err);
-              await addLog(`第 ${targetRun}/${totalRuns} 轮已被用户停止`, 'warn');
+              await addLog(`Round ${targetRun}/${totalRuns} stopped by user`, 'warn');
               await broadcastAutoRunStatus('stopped', {
                 currentRun: targetRun,
                 totalRuns,
@@ -764,11 +764,11 @@
                 autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               });
               await appendRoundRecordIfNeeded('failed', reason, err);
-              cancelPendingCommands('当前轮因认证流程进入 add-phone 已终止。');
+              cancelPendingCommands('Current round aborted due to add-phone authentication.');
               await broadcastStopToContentScripts();
               if (!autoRunSkipFailures) {
                 await addLog(
-                  `第 ${targetRun}/${totalRuns} 轮触发 add-phone/手机号页，自动重试未开启，当前自动运行将停止。`,
+                  `Round ${targetRun}/${totalRuns} hit add-phone/phone page, auto-retry not enabled, auto-run will stop.`,
                   'warn'
                 );
                 stoppedEarly = true;
@@ -781,11 +781,11 @@
                 break;
               }
 
-              await addLog(`第 ${targetRun}/${totalRuns} 轮触发 add-phone/手机号页，本轮将直接失败并跳过剩余重试。`, 'warn');
+              await addLog(`Round ${targetRun}/${totalRuns} hit add-phone/phone page, this round will fail directly and skip remaining retries.`, 'warn');
               await addLog(
                 targetRun < totalRuns
-                  ? `第 ${targetRun}/${totalRuns} 轮因 add-phone/手机号页提前结束，自动流程将继续下一轮。`
-                  : `第 ${targetRun}/${totalRuns} 轮因 add-phone/手机号页提前结束，已无后续轮次，本次自动运行结束。`,
+                  ? `Round ${targetRun}/${totalRuns} ended early due to add-phone/phone page, auto-run will continue to next round.`
+                  : `Round ${targetRun}/${totalRuns} ended early due to add-phone/phone page, no remaining rounds, auto-run finished.`,
                 'warn'
               );
               forceFreshTabsNextRun = true;
@@ -799,11 +799,11 @@
                 autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               });
               await appendRoundRecordIfNeeded('failed', reason, err);
-              cancelPendingCommands('当前轮因接码号池暂无可用号码已终止。');
+              cancelPendingCommands('Current round aborted due to no available SMS numbers.');
               await broadcastStopToContentScripts();
               if (!autoRunSkipFailures) {
                 await addLog(
-                  `第 ${targetRun}/${totalRuns} 轮接码号池暂无可用号码，自动重试未开启，当前自动运行将停止。`,
+                  `Round ${targetRun}/${totalRuns} no SMS numbers available, auto-retry not enabled, auto-run will stop.`,
                   'warn'
                 );
                 stoppedEarly = true;
@@ -816,11 +816,11 @@
                 break;
               }
 
-              await addLog(`第 ${targetRun}/${totalRuns} 轮接码号池暂无可用号码，本轮将直接失败并跳过剩余重试。`, 'warn');
+              await addLog(`Round ${targetRun}/${totalRuns} no SMS numbers available, this round will fail directly and skip remaining retries.`, 'warn');
               await addLog(
                 targetRun < totalRuns
-                  ? `第 ${targetRun}/${totalRuns} 轮因接码号池暂无可用号码提前结束，自动流程将继续下一轮。`
-                  : `第 ${targetRun}/${totalRuns} 轮因接码号池暂无可用号码提前结束，已无后续轮次，本次自动运行结束。`,
+                  ? `Round ${targetRun}/${totalRuns} ended early due to no SMS numbers, auto-run will continue to next round.`
+                  : `Round ${targetRun}/${totalRuns} ended early due to no SMS numbers, no remaining rounds, auto-run finished.`,
                 'warn'
               );
               forceFreshTabsNextRun = true;
@@ -834,11 +834,11 @@
                 autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               });
               await appendRoundRecordIfNeeded('failed', reason, err);
-              cancelPendingCommands('当前轮因 Plus 免费试用资格不可用已终止。');
+              cancelPendingCommands('Current round aborted because Plus free trial eligibility is unavailable.');
               await broadcastStopToContentScripts();
               if (!autoRunSkipFailures) {
                 await addLog(
-                  `第 ${targetRun}/${totalRuns} 轮检测到 Plus 今日应付金额非 0，自动重试未开启，当前自动运行将停止。`,
+                  `Round ${targetRun}/${totalRuns} detected non-zero Plus charge today, auto-retry not enabled, auto-run will stop.`,
                   'warn'
                 );
                 stoppedEarly = true;
@@ -851,11 +851,11 @@
                 break;
               }
 
-              await addLog(`第 ${targetRun}/${totalRuns} 轮没有 Plus 免费试用资格，本轮将直接失败并跳过剩余重试。`, 'warn');
+              await addLog(`Round ${targetRun}/${totalRuns} has no Plus free trial eligibility, this round will fail directly and skip remaining retries.`, 'warn');
               await addLog(
                 targetRun < totalRuns
-                  ? `第 ${targetRun}/${totalRuns} 轮因 Plus 今日应付金额非 0 提前结束，自动流程将继续下一轮。`
-                  : `第 ${targetRun}/${totalRuns} 轮因 Plus 今日应付金额非 0 提前结束，已无后续轮次，本次自动运行结束。`,
+                  ? `Round ${targetRun}/${totalRuns} ended early because Plus charge today is non-zero, auto-run will continue to next round.`
+                  : `Round ${targetRun}/${totalRuns} ended early because Plus charge today is non-zero, no remaining rounds, auto-run finished.`,
                 'warn'
               );
               forceFreshTabsNextRun = true;
@@ -869,11 +869,11 @@
                 autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               });
               await appendRoundRecordIfNeeded('failed', reason, err);
-              cancelPendingCommands('当前轮因 GPC 任务已结束。');
+              cancelPendingCommands('Current round aborted because GPC task ended.');
               await broadcastStopToContentScripts();
               if (!autoRunSkipFailures) {
                 await addLog(
-                  `第 ${targetRun}/${totalRuns} 轮 GPC 任务已结束，自动重试未开启，当前自动运行将停止。`,
+                  `Round ${targetRun}/${totalRuns} GPC task ended, auto-retry not enabled, auto-run will stop.`,
                   'warn'
                 );
                 stoppedEarly = true;
@@ -886,11 +886,11 @@
                 break;
               }
 
-              await addLog(`第 ${targetRun}/${totalRuns} 轮 GPC 任务已结束，本轮将直接失败并跳过剩余重试。`, 'warn');
+              await addLog(`Round ${targetRun}/${totalRuns} GPC task ended, this round will fail directly and skip remaining retries.`, 'warn');
               await addLog(
                 targetRun < totalRuns
-                  ? `第 ${targetRun}/${totalRuns} 轮因 GPC 任务结束提前结束，自动流程将继续下一轮。`
-                  : `第 ${targetRun}/${totalRuns} 轮因 GPC 任务结束提前结束，已无后续轮次，本次自动运行结束。`,
+                  ? `Round ${targetRun}/${totalRuns} ended early because GPC task ended, auto-run will continue to next round.`
+                  : `Round ${targetRun}/${totalRuns} ended early because GPC task ended, no remaining rounds, auto-run finished.`,
                 'warn'
               );
               forceFreshTabsNextRun = true;
@@ -904,11 +904,11 @@
                 autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               });
               await appendRoundRecordIfNeeded('failed', reason, err);
-              cancelPendingCommands('当前轮因 user_already_exists 已终止。');
+              cancelPendingCommands('Current round aborted because of user_already_exists.');
               await broadcastStopToContentScripts();
               if (!autoRunSkipFailures) {
                 await addLog(
-                  `第 ${targetRun}/${totalRuns} 轮触发 user_already_exists/用户已存在，自动重试未开启，当前自动运行将停止。`,
+                  `Round ${targetRun}/${totalRuns} hit user_already_exists/user already exists, auto-retry not enabled, auto-run will stop.`,
                   'warn'
                 );
                 stoppedEarly = true;
@@ -921,11 +921,11 @@
                 break;
               }
 
-              await addLog(`第 ${targetRun}/${totalRuns} 轮触发 user_already_exists/用户已存在，本轮将直接失败并跳过剩余重试。`, 'warn');
+              await addLog(`Round ${targetRun}/${totalRuns} hit user_already_exists/user already exists, this round will fail directly and skip remaining retries.`, 'warn');
               await addLog(
                 targetRun < totalRuns
-                  ? `第 ${targetRun}/${totalRuns} 轮因 user_already_exists/用户已存在提前结束，自动流程将继续下一轮。`
-                  : `第 ${targetRun}/${totalRuns} 轮因 user_already_exists/用户已存在提前结束，已无后续轮次，本次自动运行结束。`,
+                  ? `Round ${targetRun}/${totalRuns} ended early due to user_already_exists/user already exists, auto-run will continue to next round.`
+                  : `Round ${targetRun}/${totalRuns} ended early due to user_already_exists/user already exists, no remaining rounds, auto-run finished.`,
                 'warn'
               );
               forceFreshTabsNextRun = true;
@@ -939,11 +939,11 @@
                 autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               });
               await appendRoundRecordIfNeeded('failed', reason, err);
-              cancelPendingCommands('当前轮因步骤 4 连续 405 错误已终止。');
+              cancelPendingCommands('Current round aborted due to Step 4 consecutive 405 errors.');
               await broadcastStopToContentScripts();
               if (!autoRunSkipFailures) {
                 await addLog(
-                  `第 ${targetRun}/${totalRuns} 轮步骤 4 连续 405 恢复失败，自动重试未开启，当前自动运行将停止。`,
+                  `Round ${targetRun}/${totalRuns} Step 4 consecutive 405 recovery failed, auto-retry not enabled, auto-run will stop.`,
                   'warn'
                 );
                 stoppedEarly = true;
@@ -956,11 +956,11 @@
                 break;
               }
 
-              await addLog(`第 ${targetRun}/${totalRuns} 轮步骤 4 连续 405 恢复失败，本轮将直接失败并跳过剩余重试。`, 'warn');
+              await addLog(`Round ${targetRun}/${totalRuns} Step 4 consecutive 405 recovery failed, this round will fail directly and skip remaining retries.`, 'warn');
               await addLog(
                 targetRun < totalRuns
-                  ? `第 ${targetRun}/${totalRuns} 轮因步骤 4 连续 405 提前结束，自动流程将继续下一轮。`
-                  : `第 ${targetRun}/${totalRuns} 轮因步骤 4 连续 405 提前结束，已无后续轮次，本次自动运行结束。`,
+                  ? `Round ${targetRun}/${totalRuns} ended early due to Step 4 consecutive 405, auto-run will continue to next round.`
+                  : `Round ${targetRun}/${totalRuns} ended early due to Step 4 consecutive 405, no remaining rounds, auto-run finished.`,
                 'warn'
               );
               forceFreshTabsNextRun = true;
@@ -974,10 +974,10 @@
                 autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               });
               await appendRoundRecordIfNeeded('failed', reason, err);
-              cancelPendingCommands('当前轮检测到 Kiro 代理异常页，已停止自动运行，等待用户切换代理。');
+              cancelPendingCommands('Current round detected Kiro proxy error page, auto-run stopped, waiting for user to switch proxy.');
               await broadcastStopToContentScripts();
-              await addLog(`第 ${targetRun}/${totalRuns} 轮检测到 Kiro 代理异常页：${reason}`, 'error');
-              await addLog('当前代理可能不可用，请先切换代理后再继续。自动运行已停止。', 'warn');
+              await addLog(`Round ${targetRun}/${totalRuns} detected Kiro proxy error page: ${reason}`, 'error');
+              await addLog('Current proxy may be unavailable. Please switch proxy before continuing. Auto-run stopped.', 'warn');
               stoppedEarly = true;
               await broadcastAutoRunStatus('stopped', {
                 currentRun: targetRun,
@@ -991,11 +991,11 @@
             if (canRetry) {
               const retryIndex = attemptRun;
               if (isRestartCurrentAttemptError(err)) {
-                await addLog(`第 ${targetRun}/${totalRuns} 轮第 ${attemptRun} 次尝试需要整轮重开：${reason}`, 'warn');
+                await addLog(`Round ${targetRun}/${totalRuns} attempt ${attemptRun} requires full restart: ${reason}`, 'warn');
               } else {
-                await addLog(`第 ${targetRun}/${totalRuns} 轮第 ${attemptRun} 次尝试失败：${reason}`, 'error');
+                await addLog(`Round ${targetRun}/${totalRuns} attempt ${attemptRun} failed: ${reason}`, 'error');
               }
-              cancelPendingCommands('当前尝试已放弃。');
+              cancelPendingCommands('Current attempt abandoned.');
               await broadcastStopToContentScripts();
               await broadcastAutoRunStatus('retrying', {
                 currentRun: targetRun,
@@ -1006,8 +1006,8 @@
               forceFreshTabsNextRun = true;
               await addLog(
                 keepSameEmailUntilAddPhone
-                  ? `自动重试：${Math.round(AUTO_RUN_RETRY_DELAY_MS / 1000)} 秒后继续使用当前邮箱，开始第 ${targetRun}/${totalRuns} 轮第 ${attemptRun + 1} 次尝试。`
-                  : `自动重试：${Math.round(AUTO_RUN_RETRY_DELAY_MS / 1000)} 秒后开始第 ${targetRun}/${totalRuns} 轮第 ${attemptRun + 1} 次尝试（第 ${retryIndex}/${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次重试）。`,
+                  ? `Auto-retry: continuing with current email after ${Math.round(AUTO_RUN_RETRY_DELAY_MS / 1000)} seconds, starting Round ${targetRun}/${totalRuns} attempt ${attemptRun + 1}.`
+                  : `Auto-retry: starting Round ${targetRun}/${totalRuns} attempt ${attemptRun + 1} (retry ${retryIndex}/${AUTO_RUN_MAX_RETRIES_PER_ROUND}) after ${Math.round(AUTO_RUN_RETRY_DELAY_MS / 1000)} seconds.`,
                 'warn'
               );
               try {
@@ -1016,7 +1016,7 @@
                 if (isStopError(sleepError)) {
                   stoppedEarly = true;
                   await appendRoundRecordIfNeeded('stopped', getErrorMessage(sleepError), sleepError);
-                  await addLog(`第 ${targetRun}/${totalRuns} 轮已被用户停止`, 'warn');
+                  await addLog(`Round ${targetRun}/${totalRuns} stopped by user`, 'warn');
                   await broadcastAutoRunStatus('stopped', {
                     currentRun: targetRun,
                     totalRuns,
@@ -1040,7 +1040,7 @@
                 if (isStopError(sleepError)) {
                   stoppedEarly = true;
                   await appendRoundRecordIfNeeded('stopped', getErrorMessage(sleepError), sleepError);
-                  await addLog(`第 ${targetRun}/${totalRuns} 轮已被用户停止`, 'warn');
+                  await addLog(`Round ${targetRun}/${totalRuns} stopped by user`, 'warn');
                   await broadcastAutoRunStatus('stopped', {
                     currentRun: targetRun,
                     totalRuns,
@@ -1063,9 +1063,9 @@
             });
             await appendRoundRecordIfNeeded('failed', reason, err);
             if (!autoRunSkipFailures) {
-              cancelPendingCommands('当前轮执行失败。');
+              cancelPendingCommands('Current round execution failed.');
               await broadcastStopToContentScripts();
-              await addLog('自动重试未开启，自动运行将在当前失败后停止。', 'warn');
+              await addLog('Auto-retry not enabled, auto-run will stop on this failure.', 'warn');
               stoppedEarly = true;
               await broadcastAutoRunStatus('stopped', {
                 currentRun: targetRun,
@@ -1075,14 +1075,14 @@
               });
               break;
             }
-            await addLog(`第 ${targetRun}/${totalRuns} 轮最终失败：${reason}`, 'error');
+            await addLog(`Round ${targetRun}/${totalRuns} final failure: ${reason}`, 'error');
             await addLog(
               targetRun < totalRuns
-                ? `第 ${targetRun}/${totalRuns} 轮已达到 ${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次重试上限，继续下一轮。`
-                : `第 ${targetRun}/${totalRuns} 轮已达到 ${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次重试上限，本次自动运行结束。`,
+                ? `Round ${targetRun}/${totalRuns} reached retry limit of ${AUTO_RUN_MAX_RETRIES_PER_ROUND}, continuing to next round.`
+                : `Round ${targetRun}/${totalRuns} reached retry limit of ${AUTO_RUN_MAX_RETRIES_PER_ROUND}, auto-run finished.`,
               'warn'
             );
-            cancelPendingCommands('当前轮已达到重试上限。');
+            cancelPendingCommands('Current round reached retry limit.');
             await broadcastStopToContentScripts();
             forceFreshTabsNextRun = true;
             break;
@@ -1108,7 +1108,7 @@
         } catch (sleepError) {
           if (isStopError(sleepError)) {
             stoppedEarly = true;
-            await addLog(`第 ${targetRun}/${totalRuns} 轮已被用户停止`, 'warn');
+            await addLog(`Round ${targetRun}/${totalRuns} stopped by user`, 'warn');
             await broadcastAutoRunStatus('stopped', {
               currentRun: targetRun,
               totalRuns,
@@ -1134,7 +1134,7 @@
 
       const finalRuntime = runtime.get();
       if (deps.getStopRequested() || stoppedEarly) {
-        await addLog(`=== 已停止，完成 ${successfulRuns}/${finalRuntime.autoRunTotalRuns} 轮 ===`, 'warn');
+        await addLog(`=== Stopped, completed ${successfulRuns}/${finalRuntime.autoRunTotalRuns} rounds ===`, 'warn');
         await broadcastAutoRunStatus('stopped', {
           currentRun: finalRuntime.autoRunCurrentRun,
           totalRuns: finalRuntime.autoRunTotalRuns,
@@ -1142,7 +1142,7 @@
           sessionId: 0,
         });
       } else {
-        await addLog(`=== 全部 ${finalRuntime.autoRunTotalRuns} 轮已执行完成，成功 ${successfulRuns} 轮 ===`, 'ok');
+        await addLog(`=== All ${finalRuntime.autoRunTotalRuns} rounds completed, ${successfulRuns} succeeded ===`, 'ok');
         await broadcastAutoRunStatus('complete', {
           currentRun: finalRuntime.autoRunTotalRuns,
           totalRuns: finalRuntime.autoRunTotalRuns,

@@ -32,7 +32,7 @@ if (document.documentElement.getAttribute(GOPAY_FLOW_LISTENER_SENTINEL) !== '1')
     }
   });
 } else {
-  console.log('[MultiPage:gopay-flow] 消息监听已存在，跳过重复注册');
+  console.log('[MultiPage:gopay-flow] message listener already exists, skipping duplicate registration');
 }
 
 async function performGoPayOperationWithDelay(metadata, operation) {
@@ -60,7 +60,7 @@ async function handleGoPayCommand(message) {
     case 'GOPAY_GET_PAY_NOW_TARGET':
       return getGoPayPayNowTarget();
     default:
-      throw new Error(`gopay-flow.js 不处理消息：${message.type}`);
+      throw new Error(`gopay-flow.js does not handle message: ${message.type}`);
   }
 }
 
@@ -75,7 +75,7 @@ async function waitUntil(predicate, options = {}) {
       return value;
     }
     if (timeoutMs > 0 && Date.now() - startedAt >= timeoutMs) {
-      throw new Error(options.timeoutMessage || `${options.label || 'GoPay 页面状态'}等待超时`);
+      throw new Error(options.timeoutMessage || `${options.label || 'GoPay page state'} timed out`);
     }
     await sleep(intervalMs);
   }
@@ -97,7 +97,7 @@ async function waitForDocumentComplete(options = {}) {
       label: 'GoPay DOM',
     });
   } catch (_) {
-    // GoPay linking 页面有时长时间保持 loading；后续定位控件本身还有等待/重试。
+    // GoPay linking page may stay loading for a long time; later control lookup still includes its own waiting/retry logic.
   }
   await sleep(settleMs);
 }
@@ -230,7 +230,7 @@ function detectGoPayTerminalError(text = getPageBodyText()) {
   if (/waktunya\s+habis|ulang(?:i)?\s+prosesnya\s+dari\s+awal|time(?:'s|\s+is)?\s+(?:out|expired)|session\s+expired|expired|kedaluwarsa/i.test(normalizedText)) {
     return {
       code: 'expired',
-      message: 'GoPay 支付会话已超时，需要重新创建 Plus Checkout。',
+      message: 'GoPay payment session timed out. Recreate Plus Checkout.',
       rawText: normalizedText.slice(0, 240),
     };
   }
@@ -238,7 +238,7 @@ function detectGoPayTerminalError(text = getPageBodyText()) {
   if (/technical\s+error|don[’']t\s+worry|try\s+again|terjadi\s+kesalahan|error\s+teknis/i.test(normalizedText)) {
     return {
       code: 'technical-error',
-      message: 'GoPay 页面显示技术错误，需要重新发起支付授权。',
+      message: 'GoPay page shows a technical error. Payment authorization must be started again.',
       rawText: normalizedText.slice(0, 240),
     };
   }
@@ -246,7 +246,7 @@ function detectGoPayTerminalError(text = getPageBodyText()) {
   if (/payment\s+failed|pembayaran\s+gagal|transaksi\s+gagal|ditolak|declined|failed/i.test(normalizedText)) {
     return {
       code: 'failed',
-      message: 'GoPay 页面显示支付失败，需要重新发起支付授权。',
+      message: 'GoPay page shows payment failure. Payment authorization must be started again.',
       rawText: normalizedText.slice(0, 240),
     };
   }
@@ -371,7 +371,7 @@ function dispatchPointerMouseSequence(target) {
 
 async function humanClickElement(el, options = {}) {
   if (!el) {
-    throw new Error('GoPay 页面未找到可点击元素。');
+    throw new Error('No clickable element was found on the GoPay page.');
   }
   el.scrollIntoView?.({ block: 'center', inline: 'center' });
   await sleep(Math.max(0, Number(options.beforeMs) || 120));
@@ -519,7 +519,7 @@ async function ensureGoPayCountryCode(countryCode = '+86') {
 
   const toggle = findCountryCodeToggle();
   if (!toggle) {
-    throw new Error(`GoPay 页面未找到国家区号切换控件，当前识别区号：${selected || '未知'}，目标区号：${normalized}`);
+    throw new Error(`GoPay page did not find the country code switcher. Current detected code: ${selected || 'Unknown'}, target code: ${normalized}`);
   }
   robustClick(toggle);
   await sleep(500);
@@ -537,7 +537,7 @@ async function ensureGoPayCountryCode(countryCode = '+86') {
   }
 
   const option = await waitUntil(() => findCountryCodeOption(normalized), {
-    label: `GoPay 国家区号 ${normalized}`,
+    label: `GoPay country code ${normalized}`,
     intervalMs: 250,
     timeoutMs: 8000,
   });
@@ -549,7 +549,7 @@ async function ensureGoPayCountryCode(countryCode = '+86') {
     countryDropdown.style.display = 'none';
   }
   if (nextSelected !== normalized) {
-    throw new Error(`GoPay 国家区号切换失败：目标 ${normalized}，当前 ${nextSelected || '未知'}`);
+    throw new Error(`Failed to switch GoPay country code: target ${normalized}, current ${nextSelected || 'Unknown'}`);
   }
   return {
     changed: true,
@@ -639,10 +639,10 @@ async function submitGoPayPhone(payload = {}) {
   const countryCode = normalizeGoPayCountryCode(payload.countryCode || payload.gopayCountryCode || '+86');
   const phone = normalizeGoPayNationalPhone(payload.phone || payload.gopayPhone || '', countryCode);
   if (!phone) {
-    throw new Error('GoPay 手机号为空，请先在侧边栏配置。');
+    throw new Error('GoPay phone number is empty. Configure it in the side panel first.');
   }
   const input = await waitUntil(() => findPhoneInput(), {
-    label: 'GoPay 手机号输入框',
+    label: 'GoPay phone number input',
     intervalMs: 250,
     timeoutMs: 15000,
   });
@@ -676,11 +676,11 @@ async function submitGoPayOtp(payload = {}) {
   await waitForDocumentComplete();
   const code = normalizeOtp(payload.code || payload.otp || '');
   if (!code) {
-    throw new Error('GoPay WhatsApp 验证码为空。');
+    throw new Error('GoPay WhatsApp verification code is empty.');
   }
   const { filled, clickResult } = await delayOperation({ stepKey: 'gopay-approve', kind: 'submit', label: 'submit-otp' }, async () => {
     const filledOtp = await waitUntil(() => fillVisibleOtpInputs(code), {
-      label: 'GoPay 验证码输入框',
+      label: 'GoPay verification code input',
       intervalMs: 250,
       timeoutMs: 15000,
     });
@@ -706,11 +706,11 @@ async function submitGoPayPin(payload = {}) {
   await waitForDocumentComplete();
   const pin = normalizeOtp(payload.pin || payload.gopayPin || '');
   if (!pin) {
-    throw new Error('GoPay PIN 为空，请先在侧边栏配置。');
+    throw new Error('GoPay PIN is empty. Configure it in the side panel first.');
   }
   const { filled, clickResult } = await delayOperation({ stepKey: 'gopay-approve', kind: 'submit', label: 'submit-pin' }, async () => {
     const filledPin = await waitUntil(() => fillVisiblePinInputs(pin), {
-      label: 'GoPay PIN 输入框',
+      label: 'GoPay PIN input',
       intervalMs: 250,
       timeoutMs: 15000,
     });

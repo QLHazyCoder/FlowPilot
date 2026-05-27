@@ -35,7 +35,7 @@
     supportsLuckmail: false,
     canSwitchFlow: true,
     stepDefinitionMode: 'default',
-    targetSelectorLabel: '来源',
+    targetSelectorLabel: 'Source',
   });
 
   const FLOW_CAPABILITIES = Object.freeze(
@@ -424,36 +424,36 @@
       if (!flowState.supportsPhoneSignup) {
         return {
           code: 'phone_signup_flow_unsupported',
-          message: '当前 flow 不支持手机号注册。',
+          message: 'The current flow does not support phone number signup.',
         };
       }
       if (!targetState.supportsPhoneSignup) {
         return {
           code: 'phone_signup_panel_unsupported',
-          message: `当前来源 ${getTargetLabel(capabilityState.activeFlowId, capabilityState.requestedTargetId)} 不支持手机号注册。`,
+          message: `The current source ${getTargetLabel(capabilityState.activeFlowId, capabilityState.requestedTargetId)} does not support phone number signup.`,
         };
       }
       if (!runtimeLocks.phoneVerificationEnabled) {
         return {
           code: 'phone_signup_phone_verification_disabled',
-          message: '请先开启接码设置后再使用手机号注册。',
+          message: 'Please enable SMS verification settings before using phone number signup.',
         };
       }
       if (runtimeLocks.plusModeEnabled) {
         return {
           code: 'phone_signup_plus_mode_locked',
-          message: 'Plus 模式开启时不能使用手机号注册。',
+          message: 'Phone number signup cannot be used while Plus mode is enabled.',
         };
       }
       if (runtimeLocks.accountContribution) {
         return {
           code: 'phone_signup_contribution_mode_locked',
-          message: '贡献模式开启时不能使用手机号注册。',
+          message: 'Phone number signup cannot be used while contribution mode is enabled.',
         };
       }
       return {
         code: 'phone_signup_unavailable',
-        message: '当前设置暂不支持手机号注册。',
+        message: 'The current settings do not support phone number signup.',
       };
     }
 
@@ -469,21 +469,21 @@
       ) {
         errors.push({
           code: 'panel_mode_unsupported',
-          message: `当前 flow 不支持 ${getTargetLabel(capabilityState.activeFlowId, capabilityState.requestedTargetId)} 来源。`,
+          message: `The current flow does not support the ${getTargetLabel(capabilityState.activeFlowId, capabilityState.requestedTargetId)} source.`,
         });
       }
 
       if (Boolean(state?.plusModeEnabled) && !capabilityState.flowCapabilities?.supportsPlusMode) {
         errors.push({
           code: 'plus_mode_unsupported',
-          message: '当前 flow 不支持 Plus 模式。',
+          message: 'The current flow does not support Plus mode.',
         });
       }
 
       if (Boolean(state?.accountContributionEnabled) && !capabilityState.flowCapabilities?.supportsAccountContribution) {
         errors.push({
           code: 'contribution_mode_unsupported',
-          message: '当前 flow 不支持贡献模式。',
+          message: 'The current flow does not support contribution mode.',
         });
       }
 
@@ -525,7 +525,7 @@
         normalizedUpdates.targetId = capabilityState.effectiveTargetId;
         errors.push({
           code: 'panel_mode_unsupported',
-          message: `当前 flow 不支持 ${getTargetLabel(capabilityState.activeFlowId, capabilityState.requestedTargetId)} 来源。`,
+          message: `The current flow does not support the ${getTargetLabel(capabilityState.activeFlowId, capabilityState.requestedTargetId)} source.`,
         });
       }
 
@@ -533,7 +533,7 @@
         normalizedUpdates.plusModeEnabled = false;
         errors.push({
           code: 'plus_mode_unsupported',
-          message: '当前 flow 不支持 Plus 模式。',
+          message: 'The current flow does not support Plus mode.',
         });
       }
 
@@ -545,7 +545,7 @@
         normalizedUpdates.accountContributionEnabled = false;
         errors.push({
           code: 'contribution_mode_unsupported',
-          message: '当前 flow 不支持贡献模式。',
+          message: 'The current flow does not support contribution mode.',
         });
       }
 
@@ -557,7 +557,7 @@
         normalizedUpdates.phoneVerificationEnabled = false;
         errors.push({
           code: 'phone_verification_unsupported',
-          message: '当前 flow 不支持接码设置。',
+          message: 'The current flow does not support SMS verification settings.',
         });
       }
 

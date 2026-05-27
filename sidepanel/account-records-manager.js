@@ -13,40 +13,40 @@
 
     const FILTER_CONFIG = {
       all: {
-        label: '总',
+        label: 'Total',
         className: '',
         matches: () => true,
-        metaLabel: '全部',
+        metaLabel: 'All',
       },
       success: {
-        label: '成',
+        label: 'OK',
         className: 'is-success',
         matches: (record) => getRecordDisplayStatus(record) === 'success',
-        metaLabel: '成功',
+        metaLabel: 'Success',
       },
       running: {
-        label: '运行',
+        label: 'Running',
         className: 'is-running',
         matches: (record) => getRecordDisplayStatus(record) === 'running',
-        metaLabel: '运行中',
+        metaLabel: 'Running',
       },
       failed: {
-        label: '失',
+        label: 'Failed',
         className: 'is-failed',
         matches: (record) => getRecordDisplayStatus(record) === 'failed',
-        metaLabel: '失败',
+        metaLabel: 'Failed',
       },
       stopped: {
-        label: '停',
+        label: 'Stop',
         className: 'is-stopped',
         matches: (record) => getRecordDisplayStatus(record) === 'stopped',
-        metaLabel: '停止',
+        metaLabel: 'Stopped',
       },
       retry: {
-        label: '重试',
+        label: 'Retry',
         className: 'is-retry',
         matches: (record) => normalizeRetryCount(record.retryCount) > 0,
-        metaLabel: '重试',
+        metaLabel: 'Retry',
       },
     };
 
@@ -150,7 +150,7 @@
       return {
         ...record,
         displayStatus: 'running',
-        displaySummary: '正在运行',
+        displaySummary: 'Running',
       };
     }
 
@@ -205,16 +205,16 @@
       const email = getRecordEmail(record);
       const phoneNumber = getRecordPhoneNumber(record);
       if (identifierType === 'phone' && email) {
-        return `邮箱 ${email}`;
+        return `Email ${email}`;
       }
       if (identifierType !== 'phone' && phoneNumber) {
-        return `绑定手机号 ${phoneNumber}`;
+        return `Bound Phone ${phoneNumber}`;
       }
       return '';
     }
 
     function getRecordTitle(record = {}) {
-      const primaryIdentifier = getRecordPrimaryIdentifier(record) || '(空账号)';
+      const primaryIdentifier = getRecordPrimaryIdentifier(record) || '(empty account)';
       const secondaryIdentifier = getRecordSecondaryIdentifier(record);
       return secondaryIdentifier
         ? `${primaryIdentifier} / ${secondaryIdentifier}`
@@ -292,15 +292,15 @@
     function getStatusMeta(record = {}) {
       const status = getRecordDisplayStatus(record);
       if (status === 'success') {
-        return { kind: 'success', label: '成功' };
+        return { kind: 'success', label: 'Success' };
       }
       if (status === 'running') {
-        return { kind: 'running', label: '正在运行' };
+        return { kind: 'running', label: 'Running' };
       }
       if (status === 'stopped') {
-        return { kind: 'stopped', label: '停止' };
+        return { kind: 'stopped', label: 'Stopped' };
       }
-      return { kind: 'failed', label: '失败' };
+      return { kind: 'failed', label: 'Failed' };
     }
 
     function getRecordSummaryText(record = {}) {
@@ -309,15 +309,15 @@
         return String(record.displaySummary || '').trim();
       }
       if (status === 'success') {
-        return '流程完成';
+        return 'Flow completed';
       }
       if (status === 'running') {
-        return '正在运行';
+        return 'Running';
       }
 
       return String(record.failureDetail || record.reason || '').trim()
         || String(record.failureLabel || '').trim()
-        || '流程失败';
+        || 'Flow failed';
     }
 
     function getRecordTooltipText(record = {}, summaryText = '') {
@@ -438,19 +438,19 @@
       }
 
       if (!allRecords.length) {
-        dom.accountRecordsMeta.textContent = '暂无账号记录';
+        dom.accountRecordsMeta.textContent = 'No account records';
         return;
       }
 
       const latestTime = formatAccountRecordTime(allRecords[0]?.finishedAt);
-      let metaText = `共 ${allRecords.length} 条，最近更新于 ${latestTime}`;
+      let metaText = `Total ${allRecords.length}, last updated at ${latestTime}`;
 
       if (activeFilter !== 'all') {
-        metaText = `共 ${allRecords.length} 条，当前筛选 ${getFilterConfig(activeFilter).metaLabel} ${filteredRecords.length} 条，最近更新于 ${latestTime}`;
+        metaText = `Total ${allRecords.length}, current filter ${getFilterConfig(activeFilter).metaLabel} ${filteredRecords.length}, last updated at ${latestTime}`;
       }
 
       if (selectionMode) {
-        metaText += `，已选 ${selectedRecordIds.size} 条`;
+        metaText += `, selected ${selectedRecordIds.size}`;
       }
 
       dom.accountRecordsMeta.textContent = metaText;
@@ -479,14 +479,14 @@
       setNodeHidden(dom.btnClearAccountRecords, selectionMode);
       toggleNodeClass(dom.btnToggleAccountRecordsSelection, 'is-active', selectionMode);
       setNodeAttr(dom.btnToggleAccountRecordsSelection, 'aria-pressed', selectionMode ? 'true' : 'false');
-      setNodeText(dom.btnToggleAccountRecordsSelection, selectionMode ? '取消多选' : '多选');
+      setNodeText(dom.btnToggleAccountRecordsSelection, selectionMode ? 'Cancel Multi-select' : 'Multi-select');
 
       const selectedCount = selectedRecordIds.size;
       setNodeHidden(dom.btnDeleteSelectedAccountRecords, !selectionMode);
       setNodeDisabled(dom.btnDeleteSelectedAccountRecords, selectedCount === 0);
       setNodeText(
         dom.btnDeleteSelectedAccountRecords,
-        selectedCount > 0 ? `删除选中(${selectedCount})` : '删除选中'
+        selectedCount > 0 ? `Delete Selected(${selectedCount})` : 'Delete Selected'
       );
     }
 
@@ -513,8 +513,8 @@
       }
 
       const message = allRecords.length
-        ? `当前筛选“${getFilterConfig(activeFilter).metaLabel}”下暂无记录`
-        : '暂无账号记录';
+        ? `No records under current filter "${getFilterConfig(activeFilter).metaLabel}"`
+        : 'No account records';
       dom.accountRecordsList.innerHTML = `<div class="account-records-empty">${escapeHtml(message)}</div>`;
     }
 
@@ -534,7 +534,7 @@
 
       dom.accountRecordsList.innerHTML = visibleRecords.map((record) => {
         const recordId = buildRecordId(record);
-        const primaryIdentifier = getRecordPrimaryIdentifier(record) || '(空账号)';
+        const primaryIdentifier = getRecordPrimaryIdentifier(record) || '(empty account)';
         const secondaryIdentifier = getRecordSecondaryIdentifier(record);
         const statusMeta = getStatusMeta(record);
         const summaryText = getRecordSummaryText(record);
@@ -580,7 +580,7 @@
             </div>
             <div class="account-record-item-bottom">
               <div class="account-record-item-summary">${escapeHtml(summaryText)}</div>
-              <span class="account-record-item-retry mono">重试 ${escapeHtml(String(retryCount))}</span>
+              <span class="account-record-item-retry mono">Retry ${escapeHtml(String(retryCount))}</span>
             </div>
           </div>
         `;
@@ -653,14 +653,14 @@
     async function clearRecords() {
       const records = getAccountRunRecords();
       if (!records.length) {
-        helpers.showToast?.('没有可清理的账号记录。', 'warn', 1800);
+        helpers.showToast?.('No account records to clear.', 'warn', 1800);
         return;
       }
 
       const confirmed = await helpers.openConfirmModal({
-        title: '清理账号记录',
-        message: '确认清理当前全部账号记录吗？该操作会同时清空面板记录与本地同步快照。',
-        confirmLabel: '确认清理',
+        title: 'Clear Account Records',
+        message: 'Are you sure you want to clear all current account records? This will also clear panel records and local sync snapshots.',
+        confirmLabel: 'Confirm Clear',
         confirmVariant: 'btn-danger',
       });
       if (!confirmed) {
@@ -680,20 +680,20 @@
       selectionMode = false;
       resetSelection();
       state.syncLatestState({ accountRunHistory: [] });
-      helpers.showToast?.(`已清理 ${Math.max(0, Number(response?.clearedCount) || 0)} 条账号记录。`, 'success', 2200);
+      helpers.showToast?.(`Cleared ${Math.max(0, Number(response?.clearedCount) || 0)} account records.`, 'success', 2200);
     }
 
     async function deleteSelectedRecords() {
       const recordIds = Array.from(selectedRecordIds).filter(Boolean);
       if (!recordIds.length) {
-        helpers.showToast?.('请先勾选要删除的账号记录。', 'warn', 1800);
+        helpers.showToast?.('Please select account records to delete first.', 'warn', 1800);
         return;
       }
 
       const confirmed = await helpers.openConfirmModal({
-        title: '删除选中记录',
-        message: `确认删除选中的 ${recordIds.length} 条账号记录吗？该操作会同步更新本地 helper 快照。`,
-        confirmLabel: '确认删除',
+        title: 'Delete Selected Records',
+        message: `Are you sure you want to delete ${recordIds.length} selected account records? This will sync update the local helper snapshot.`,
+        confirmLabel: 'Confirm Delete',
         confirmVariant: 'btn-danger',
       });
       if (!confirmed) {
@@ -717,7 +717,7 @@
 
       resetSelection();
       state.syncLatestState({ accountRunHistory: nextRecords });
-      helpers.showToast?.(`已删除 ${Math.max(0, Number(response?.deletedCount) || 0)} 条账号记录。`, 'success', 2200);
+      helpers.showToast?.(`Deleted ${Math.max(0, Number(response?.deletedCount) || 0)} account records.`, 'success', 2200);
     }
 
     function handleStatsClick(event) {
@@ -802,14 +802,14 @@
         try {
           await deleteSelectedRecords();
         } catch (error) {
-          helpers.showToast?.(`删除账号记录失败：${error.message}`, 'error');
+          helpers.showToast?.(`Failed to delete account records: ${error.message}`, 'error');
         }
       });
       dom.btnClearAccountRecords?.addEventListener('click', async () => {
         try {
           await clearRecords();
         } catch (error) {
-          helpers.showToast?.(`清理账号记录失败：${error.message}`, 'error');
+          helpers.showToast?.(`Failed to clear account records: ${error.message}`, 'error');
         }
       });
     }

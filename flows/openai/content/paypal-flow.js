@@ -44,7 +44,7 @@ if (document.documentElement.getAttribute(PAYPAL_FLOW_LISTENER_SENTINEL) !== '1'
     }
   });
 } else {
-  console.log('[MultiPage:paypal-flow] 消息监听已存在，跳过重复注册');
+  console.log('[MultiPage:paypal-flow] message listener already exists, skipping duplicate registration');
 }
 
 async function performPayPalOperationWithDelay(metadata, operation) {
@@ -68,7 +68,7 @@ async function handlePayPalCommand(message) {
     case 'PAYPAL_RUN_HOSTED_CHECKOUT_STEP':
       return runPayPalHostedCheckoutStep(message.payload || {});
     default:
-      throw new Error(`paypal-flow.js 不处理消息：${message.type}`);
+      throw new Error(`paypal-flow.js does not handle message: ${message.type}`);
   }
 }
 
@@ -386,13 +386,13 @@ async function clickHostedSubmitButton(options = {}) {
     }, {
       intervalMs: 500,
       timeoutMs: 15000,
-      timeoutMessage: 'PayPal hosted checkout 未找到可点击的继续/提交按钮。',
+      timeoutMessage: 'PayPal hosted checkout did not find a clickable continue/submit button.',
     });
     lastButtonText = getActionText(button);
     lastDisabled = !isEnabledControl(button);
     if (lastDisabled) {
       if (attempt >= maxAttempts) {
-        throw new Error('PayPal hosted checkout 继续/提交按钮长时间不可用。');
+        throw new Error('PayPal hosted checkout continue/submit button stayed unavailable for too long.');
       }
       await sleep(1000);
       continue;
@@ -422,7 +422,7 @@ async function clickHostedEmailNextButton() {
   }, {
     intervalMs: 500,
     timeoutMs: 15000,
-    timeoutMessage: 'PayPal hosted checkout 未找到邮箱页“下一页”按钮。',
+    timeoutMessage: 'PayPal hosted checkout did not find the email-page "Next page" button.',
   });
   const buttonText = getActionText(button);
   await performPayPalOperationWithDelay({
@@ -445,18 +445,18 @@ function normalizeHostedPhoneDigits(value = '') {
 function verifyHostedPhoneBeforeSubmit(expectedPhone = '') {
   const phoneInput = document.getElementById('phone');
   if (!phoneInput || !isVisibleElement(phoneInput)) {
-    throw new Error('PayPal hosted checkout 未找到电话输入框。');
+    throw new Error('PayPal hosted checkout did not find the phone input.');
   }
   const expectedDigits = normalizeHostedPhoneDigits(expectedPhone || PAYPAL_HOSTED_DEFAULT_PHONE);
   const renderedDigits = normalizeHostedPhoneDigits(phoneInput.value || '');
   if (!expectedDigits) {
-    throw new Error('PayPal hosted checkout 电话配置为空。');
+    throw new Error('PayPal hosted checkout phone configuration is empty.');
   }
   const comparableRenderedDigits = renderedDigits.length > expectedDigits.length
     ? renderedDigits.slice(-expectedDigits.length)
     : renderedDigits;
   if (comparableRenderedDigits !== expectedDigits) {
-    throw new Error(`PayPal hosted checkout 电话不一致：配置 ${expectedDigits}，页面 ${renderedDigits || '(空)'}。`);
+    throw new Error(`PayPal hosted checkout phone mismatch: configured ${expectedDigits}, page ${renderedDigits || '(empty)'}。`);
   }
   return {
     payloadPhoneDigits: expectedDigits,
@@ -473,7 +473,7 @@ async function clickHostedCreateAccount(payload = {}) {
   }, {
     intervalMs: 500,
     timeoutMs: 30000,
-    timeoutMessage: 'PayPal hosted checkout 未找到创建账号确认按钮。',
+    timeoutMessage: 'PayPal hosted checkout did not find the create-account confirmation button.',
   });
   await performPayPalOperationWithDelay({
     stepKey: getHostedStepKey(PAYPAL_HOSTED_STAGE_CREATE_ACCOUNT),
@@ -538,7 +538,7 @@ async function submitHostedLogin(payload = {}) {
   const email = normalizeText(payload.email || buildHostedRandomEmail());
   const emailInput = document.getElementById('email') || findEmailInput();
   if (!emailInput) {
-    throw new Error('PayPal hosted checkout 未找到邮箱输入框。');
+    throw new Error('PayPal hosted checkout did not find the email input.');
   }
   refillPayPalEmailInput(emailInput, email);
   const clickResult = await clickHostedEmailNextButton();
@@ -604,7 +604,7 @@ async function clickHostedReviewConsent() {
   }, {
     intervalMs: 500,
     timeoutMs: 30000,
-    timeoutMessage: 'PayPal hosted checkout 未找到账单确认按钮。',
+    timeoutMessage: 'PayPal hosted checkout did not find the billing confirmation button.',
   });
   await performPayPalOperationWithDelay({
     stepKey: getHostedStepKey(PAYPAL_HOSTED_STAGE_REVIEW),
@@ -736,7 +736,7 @@ async function submitPayPalLogin(payload = {}) {
   const email = normalizeText(payload.email || '');
   const password = String(payload.password || '');
   if (!password) {
-    throw new Error('PayPal 密码为空，请先在侧边栏配置。');
+    throw new Error('PayPal password is empty. Configure it in the side panel first.');
   }
 
   let passwordInput = findPasswordInput();
@@ -774,7 +774,7 @@ async function submitPayPalLogin(payload = {}) {
       awaiting: 'password_page',
     };
   } else if (!passwordInput && emailInput && !email) {
-    throw new Error('PayPal 账号为空，请先在侧边栏配置。');
+    throw new Error('PayPal account is empty. Configure it in the side panel first.');
   } else if (emailInput && email) {
     await delayOperation({ stepKey: 'paypal-approve', kind: 'fill', label: 'paypal-email' }, async () => {
       refillPayPalEmailInput(emailInput, email);

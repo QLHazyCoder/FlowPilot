@@ -13,7 +13,7 @@
     contributionAdapterId: '',
     flowContributionRuntime: {},
     contributionSource: 'sub2api',
-    contributionTargetGroupName: 'codex号池',
+    contributionTargetGroupName: 'codex pool',
     contributionNickname: '',
     contributionQq: '',
     contributionSessionId: '',
@@ -117,23 +117,23 @@
     function getStatusLabel(status = '') {
       switch (normalizeContributionStatus(status)) {
         case 'started':
-          return '已生成登录地址';
+          return 'Login URL generated';
         case 'waiting':
-          return '等待提交回调';
+          return 'Waiting for callback submission';
         case 'processing':
-          return '已提交回调，等待 CPA 确认';
+          return 'Callback submitted, waiting for CPA confirmation';
         case 'auto_approved':
-          return '贡献成功，CPA 已确认';
+          return 'Contribution succeeded, CPA confirmed';
         case 'auto_rejected':
-          return '贡献未通过确认';
+          return 'Contribution failed confirmation';
         case 'manual_review_required':
-          return '已提交，等待人工处理';
+          return 'Submitted, waiting for manual review';
         case 'expired':
-          return '贡献会话已超时';
+          return 'Contribution session expired';
         case 'error':
-          return '贡献流程失败';
+          return 'Contribution flow failed';
         default:
-          return '等待开始贡献';
+          return 'Waiting to start contribution';
       }
     }
 
@@ -141,17 +141,17 @@
       switch (normalizeContributionCallbackStatus(status)) {
         case 'waiting':
         case 'idle':
-          return '等待回调';
+          return 'Waiting for callback';
         case 'captured':
-          return '已捕获回调地址';
+          return 'Callback URL captured';
         case 'submitting':
-          return '正在提交回调';
+          return 'Submitting callback';
         case 'submitted':
-          return '已提交回调';
+          return 'Callback submitted';
         case 'failed':
-          return '回调提交失败';
+          return 'Callback submission failed';
         default:
-          return '等待回调';
+          return 'Waiting for callback';
       }
     }
 
@@ -181,7 +181,7 @@
         return details;
       }
 
-      return `贡献服务请求失败（HTTP ${responseStatus}）。`;
+      return `Contribution service request failed (HTTP ${responseStatus}).`;
     }
 
     async function fetchContributionJson(endpoint, options = {}) {
@@ -218,7 +218,7 @@
         return payload;
       } catch (error) {
         if (error?.name === 'AbortError') {
-          throw new Error('贡献服务请求超时，请稍后重试。');
+          throw new Error('Contribution service request timed out. Please retry later.');
         }
         throw error;
       } finally {
@@ -285,7 +285,7 @@
         return {
           source: currentSource,
           targetGroupName: currentSource === 'sub2api'
-            ? (normalizeString(state?.contributionTargetGroupName) || 'codex号池')
+            ? (normalizeString(state?.contributionTargetGroupName) || 'codex pool')
             : '',
         };
       }
@@ -294,7 +294,7 @@
         source: 'sub2api',
         targetGroupName: isPlusModeState(state)
           ? 'openai-plus'
-          : (normalizeString(state?.contributionTargetGroupName) || 'codex号池'),
+          : (normalizeString(state?.contributionTargetGroupName) || 'codex pool'),
       };
     }
 
@@ -314,7 +314,7 @@
         return label;
       }
 
-      return `${label}：${details}`;
+      return `${label}: ${details}`;
     }
 
     function buildCallbackMessage(status, payload = {}) {
@@ -333,7 +333,7 @@
         return label;
       }
 
-      return `${label}：${details}`;
+      return `${label}: ${details}`;
     }
 
     function deriveCallbackState(payload = {}, state = {}) {
@@ -425,7 +425,7 @@
     async function openContributionAuthUrl(authUrl, options = {}) {
       const normalizedUrl = normalizeString(authUrl);
       if (!normalizedUrl) {
-        throw new Error('贡献服务未返回有效的登录地址。');
+        throw new Error('Contribution service did not return a valid login URL.');
       }
 
       const currentState = options.stateOverride || await getState();
@@ -459,7 +459,7 @@
         return await fetchContributionJson(`/result?session_id=${encodeURIComponent(sessionId)}`);
       } catch (error) {
         if (typeof addLog === 'function') {
-          await addLog(`贡献模式：获取最终结果失败：${error.message}`, 'warn');
+          await addLog(`Contribution mode: Failed to fetch final result: ${error.message}`, 'warn');
         }
         return null;
       }
@@ -516,11 +516,11 @@
           await applyRuntimeUpdates({
             contributionCallbackUrl: normalizedUrl,
             contributionCallbackStatus: 'failed',
-            contributionCallbackMessage: `回调提交失败：${error.message}`,
+            contributionCallbackMessage: `Callback submission failed: ${error.message}`,
           });
 
           if (typeof addLog === 'function') {
-            await addLog(`贡献模式：回调提交失败：${error.message}`, 'warn');
+            await addLog(`Contribution mode: Callback submission failed: ${error.message}`, 'warn');
           }
 
           throw error;
@@ -567,7 +567,7 @@
         });
 
         if (typeof addLog === 'function') {
-          await addLog(`贡献模式：已捕获回调地址（${metadata.source || 'unknown'}）。`, 'info');
+          await addLog(`Contribution mode: Captured callback URL (${metadata.source || 'unknown'}).`, 'info');
         }
 
         try {
@@ -648,7 +648,7 @@
       const currentState = options.stateOverride || await getState();
       const shouldOpenAuthTab = options.openAuthTab !== false;
       if (!currentState.accountContributionEnabled) {
-        throw new Error('请先进入贡献模式。');
+        throw new Error('Please enable contribution mode first.');
       }
 
       const currentSessionId = normalizeString(currentState.contributionSessionId);
@@ -681,7 +681,7 @@
       const authUrl = normalizeString(payload.auth_url || payload.authUrl);
       const authState = normalizeString(payload.state || payload.auth_state || payload.authState) || extractAuthStateFromUrl(authUrl);
       if (!sessionId || !authUrl) {
-        throw new Error('贡献服务未返回有效的 session_id 或 auth_url。');
+        throw new Error('Contribution service did not return a valid session_id or auth_url.');
       }
 
       await applyRuntimeUpdates({

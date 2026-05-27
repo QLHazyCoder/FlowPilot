@@ -80,10 +80,10 @@
     const clientId = cleanString(desktopAuth.clientId);
     const clientSecret = String(desktopAuth.clientSecret || '');
 
-    assertRequiredField('refreshToken', refreshToken, '缺少桌面授权 refreshToken，无法提交 Kiro Builder ID 贡献。');
-    assertRequiredField('clientId', clientId, '缺少桌面授权 clientId，无法提交 Kiro Builder ID 贡献。');
-    assertRequiredField('clientSecret', clientSecret, '缺少桌面授权 clientSecret，无法提交 Kiro Builder ID 贡献。');
-    assertRequiredField('email', email, '缺少注册邮箱，无法提交 Kiro Builder ID 贡献。');
+    assertRequiredField('refreshToken', refreshToken, 'Missing desktop authorization refreshToken, cannot submit Kiro Builder ID contribution.');
+    assertRequiredField('clientId', clientId, 'Missing desktop authorization clientId, cannot submit Kiro Builder ID contribution.');
+    assertRequiredField('clientSecret', clientSecret, 'Missing desktop authorization clientSecret, cannot submit Kiro Builder ID contribution.');
+    assertRequiredField('email', email, 'Missing registration email, cannot submit Kiro Builder ID contribution.');
 
     return {
       schemaVersion: 1,

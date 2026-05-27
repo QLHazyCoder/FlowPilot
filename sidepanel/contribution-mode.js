@@ -1,10 +1,10 @@
   (function attachSidepanelContributionMode(globalScope) {
     const ACTIVE_STATUSES = new Set(['started', 'waiting', 'processing']);
     const FINAL_STATUSES = new Set(['auto_approved', 'auto_rejected', 'expired', 'error']);
-    const DEFAULT_COPY = '当前账号将用于支持项目维护。扩展会自动申请贡献登录地址并持续跟踪授权状态；如检测到回调地址，会自动提交，并继续等待服务端确认。';
+    const DEFAULT_COPY = 'The current account will be used to support project maintenance. The extension will automatically request the contribution login URL and continuously track the authorization status. If a callback URL is detected, it will be submitted automatically and continue to wait for server confirmation.';
     const CONTRIBUTION_SOURCE_CPA = 'cpa';
     const CONTRIBUTION_SOURCE_SUB2API = 'sub2api';
-    const CONTRIBUTION_SUB2API_DEFAULT_GROUP_NAME = 'codex号池';
+    const CONTRIBUTION_SUB2API_DEFAULT_GROUP_NAME = 'codex pool';
 
   function createContributionModeManager(context = {}) {
     const {
@@ -87,7 +87,7 @@
         const adapter = typeof registry.getAdapterDefinition === 'function'
           ? registry.getAdapterDefinition(currentState.contributionAdapterId || '', { flowId: getActiveFlowId(currentState) })
           : null;
-        return normalizeString(adapter?.label) || '账号贡献';
+        return normalizeString(adapter?.label) || 'Account Contribution';
       }
       return getContributionSource(currentState) === CONTRIBUTION_SOURCE_SUB2API ? 'SUB2API' : 'CPA';
     }
@@ -201,13 +201,13 @@
       dom.btnContributionMode.setAttribute('aria-pressed', String(enabled));
       if (!available) {
         dom.btnContributionMode.disabled = true;
-        dom.btnContributionMode.title = '当前 flow 不支持贡献模式';
+        dom.btnContributionMode.title = 'Current flow does not support contribution mode';
         return;
       }
       dom.btnContributionMode.disabled = actionInFlight;
       dom.btnContributionMode.title = enabled
-        ? '打开当前 flow 教程；当前已在贡献模式'
-        : (blocked ? '打开当前 flow 教程；当前流程运行中暂时不能进入贡献模式' : '打开当前 flow 教程并进入贡献模式');
+        ? 'Open current flow tutorial; currently in contribution mode'
+        : (blocked ? 'Open current flow tutorial; cannot enter contribution mode while current flow is running' : 'Open current flow tutorial and enter contribution mode');
     }
 
     function stopPolling() {
@@ -244,60 +244,60 @@
         const flowRuntime = getCurrentFlowContributionRuntime(currentState);
         const status = normalizeString(flowRuntime.status).toLowerCase();
         if (status === 'submitting') {
-          return '正在提交账号产物';
+          return 'Submitting account artifact';
         }
         if (status === 'submitted') {
-          return '账号产物已提交';
+          return 'Account artifact submitted';
         }
         if (status === 'skipped') {
-          return '账号产物未就绪';
+          return 'Account artifact not ready';
         }
         if (status === 'error') {
-          return '账号产物提交失败';
+          return 'Failed to submit account artifact';
         }
-        return isContributionModeEnabled(currentState) ? '等待账号产物' : '未开启贡献模式';
+        return isContributionModeEnabled(currentState) ? 'Waiting for account artifact' : 'Contribution mode not enabled';
       }
       const status = normalizeStatus(currentState.contributionStatus);
       const hasAuthUrl = Boolean(normalizeString(currentState.contributionAuthUrl));
       if (!normalizeString(currentState.contributionSessionId) || !hasAuthUrl) {
-        return '未生成登录地址';
+        return 'Login URL not generated';
       }
       if (status === 'waiting') {
-        return '等待提交回调';
+        return 'Waiting for callback submission';
       }
       if (status === 'processing' || status === 'auto_approved' || status === 'auto_rejected') {
-        return status === 'processing' ? '已提交回调' : '授权已结束';
+        return status === 'processing' ? 'Callback submitted' : 'Authorization ended';
       }
       if (status === 'expired' || status === 'error') {
-        return '授权失败';
+        return 'Authorization failed';
       }
       if (Number(currentState.contributionAuthOpenedAt) > 0) {
-        return '已打开授权页';
+        return 'Authorization page opened';
       }
-      return '登录地址已生成';
+      return 'Login URL generated';
     }
 
     function getCallbackStatusText(currentState = getLatestState()) {
       if (getActiveFlowId(currentState) !== 'openai') {
         const flowRuntime = getCurrentFlowContributionRuntime(currentState);
-        return normalizeString(flowRuntime.lastMessage || flowRuntime.error) || '账号产物就绪后会自动提交';
+        return normalizeString(flowRuntime.lastMessage || flowRuntime.error) || 'Will auto-submit once account artifact is ready';
       }
       const status = normalizeCallbackStatus(currentState.contributionCallbackStatus);
       switch (status) {
         case 'captured':
-          return '已捕获回调地址';
+          return 'Callback URL captured';
         case 'submitting':
-          return '正在提交回调';
+          return 'Submitting callback';
         case 'submitted':
-          return '已提交回调';
+          return 'Callback submitted';
         case 'failed':
-          return '回调提交失败';
+          return 'Callback submission failed';
         case 'waiting':
         case 'idle':
         default:
           return normalizeString(currentState.contributionCallbackUrl)
-            ? '已捕获回调地址'
-            : '等待回调';
+            ? 'Callback URL captured'
+            : 'Waiting for callback';
       }
     }
 
@@ -307,11 +307,11 @@
         return statusMessage;
       }
       if (getActiveFlowId(currentState) !== 'openai') {
-        return '当前账号将用于支持项目维护。扩展会按当前 flow 的贡献适配器收集并提交账号产物，提交过程不会依赖 OpenAI OAuth 配置。';
+        return 'The current account will be used to support project maintenance. The extension will collect and submit account artifacts according to the current flow contribution adapter; the submission process does not depend on OpenAI OAuth configuration.';
       }
       if (getContributionSource(currentState) === CONTRIBUTION_SOURCE_SUB2API) {
         const groupName = normalizeString(currentState.contributionTargetGroupName) || CONTRIBUTION_SUB2API_DEFAULT_GROUP_NAME;
-        return `当前账号将用于支持项目维护。贡献会通过 SUB2API 完成，并固定写入 ${groupName} 分组；如检测到回调地址，扩展会自动提交并等待服务端确认。`;
+        return `The current account will be used to support project maintenance. Contributions will be completed via SUB2API and written to the ${groupName} group; if a callback URL is detected, the extension will auto-submit and wait for server confirmation.`;
       }
       return DEFAULT_COPY;
     }
@@ -353,7 +353,7 @@
       const nickname = normalizeString(partial.nickname);
       const qq = normalizeString(partial.qq);
       if (qq && !/^\d{1,20}$/.test(qq)) {
-        throw new Error('QQ 只能填写数字，且长度不能超过 20 位。');
+        throw new Error('QQ must contain only digits and cannot exceed 20 characters.');
       }
       helpers.applySettingsState?.({
         ...getLatestState(),
@@ -382,7 +382,7 @@
         throw new Error(response.error);
       }
       if (!response?.state) {
-        throw new Error('贡献模式切换后未返回最新状态。');
+        throw new Error('No latest state returned after contribution mode toggle.');
       }
 
       const nextState = applySelectedFlowToState(response.state, selectedFlowId, selectedTargetId);
@@ -429,13 +429,13 @@
 
     async function startAccountContributionFlow() {
       if (typeof helpers.startContributionAutoRun !== 'function') {
-        throw new Error('贡献模式尚未接入主自动流程启动能力。');
+        throw new Error('Contribution mode has not yet integrated the main auto-run start capability.');
       }
 
       const profile = helpers.getContributionProfile?.() || {};
       const qq = normalizeString(profile.qq);
       if (qq && !/^\d{1,20}$/.test(qq)) {
-        throw new Error('QQ 只能填写数字，且长度不能超过 20 位。');
+        throw new Error('QQ must contain only digits and cannot exceed 20 characters.');
       }
       await syncContributionProfile(profile);
       const started = await helpers.startContributionAutoRun();
@@ -443,19 +443,19 @@
         return;
       }
 
-      helpers.showToast?.('贡献自动流程已启动。', 'info', 1800);
+      helpers.showToast?.('Contribution auto-run started.', 'info', 1800);
       render();
     }
 
     async function enterContributionMode() {
       await requestContributionMode(true);
-      helpers.showToast?.('已进入贡献模式。', 'success', 1800);
+      helpers.showToast?.('Entered contribution mode.', 'success', 1800);
     }
 
     async function exitContributionMode() {
       stopPolling();
       await requestContributionMode(false);
-      helpers.showToast?.('已退出贡献模式。', 'info', 1800);
+      helpers.showToast?.('Exited contribution mode.', 'info', 1800);
     }
 
     function render() {
@@ -499,13 +499,13 @@
         dom.contributionOauthStatus.textContent = getOauthStatusText(currentState);
       }
       if (dom.contributionPrimaryStatusLabel) {
-        dom.contributionPrimaryStatusLabel.textContent = activeFlowId === 'openai' ? 'OAUTH' : '账号产物';
+        dom.contributionPrimaryStatusLabel.textContent = activeFlowId === 'openai' ? 'OAUTH' : 'Account Artifact';
       }
       if (dom.contributionCallbackStatus) {
         dom.contributionCallbackStatus.textContent = getCallbackStatusText(currentState);
       }
       if (dom.contributionSecondaryStatusLabel) {
-        dom.contributionSecondaryStatusLabel.textContent = activeFlowId === 'openai' ? '回调' : '提交';
+        dom.contributionSecondaryStatusLabel.textContent = activeFlowId === 'openai' ? 'Callback' : 'Submit';
       }
       if (dom.accountContributionSummary) {
         dom.accountContributionSummary.textContent = getSummaryText(currentState);
@@ -525,12 +525,12 @@
       if (dom.btnOpenContributionUpload) {
         dom.btnOpenContributionUpload.hidden = !available;
         dom.btnOpenContributionUpload.disabled = !available;
-        dom.btnOpenContributionUpload.textContent = '已有认证文件？前往上传';
+        dom.btnOpenContributionUpload.textContent = 'Already have an auth file? Go to upload';
       }
 
       if (dom.btnExitContributionMode) {
         dom.btnExitContributionMode.disabled = !available || actionInFlight || blocked;
-        dom.btnExitContributionMode.title = blocked ? '当前流程运行中，暂时不能退出贡献模式' : '退出贡献模式';
+        dom.btnExitContributionMode.title = blocked ? 'Cannot exit contribution mode while current flow is running' : 'Exit contribution mode';
       }
 
       if (dom.btnOpenAccountRecords) {
@@ -557,14 +557,14 @@
         try {
           openContributionPortalPage();
         } catch (error) {
-          helpers.showToast?.(`打开官网页面失败：${error.message}`, 'error');
+          helpers.showToast?.(`Failed to open portal page: ${error.message}`, 'error');
         }
         render();
         try {
           if (isContributionModeEnabled()) {
-            helpers.showToast?.('已打开当前 flow 教程。', 'info', 1800);
+            helpers.showToast?.('Opened current flow tutorial.', 'info', 1800);
           } else if (isModeSwitchBlocked()) {
-            helpers.showToast?.('已打开当前 flow 教程；当前流程运行中，暂时不能进入贡献模式。', 'warning', 2200);
+            helpers.showToast?.('Opened current flow tutorial; cannot enter contribution mode while current flow is running.', 'warning', 2200);
           } else {
             await enterContributionMode();
           }
@@ -622,7 +622,7 @@
         try {
           openContributionUploadPage();
         } catch (error) {
-          helpers.showToast?.(`打开上传页面失败：${error.message}`, 'error');
+          helpers.showToast?.(`Failed to open upload page: ${error.message}`, 'error');
         }
       });
 

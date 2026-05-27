@@ -3,7 +3,7 @@
   "name": "FlowPilot",
   "version": "2.5",
   "version_name": "FlowPilot2.5",
-  "description": "用于自动执行多步骤 OAuth 注册流程",
+  "description": "Automates multi-step OAuth registration flows",
   "permissions": [
     "sidePanel",
     "alarms",

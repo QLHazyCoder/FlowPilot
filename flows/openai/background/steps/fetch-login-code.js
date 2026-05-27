@@ -126,7 +126,7 @@
 
       return async (details = {}) => getOAuthFlowRemainingMs({
         step: visibleStep,
-        actionLabel: details.actionLabel || '登录验证码流程',
+        actionLabel: details.actionLabel || 'Login verification code flow',
         oauthUrl: expectedOauthUrl,
       });
     }
@@ -143,7 +143,7 @@
         || ''
       ).trim();
       if (!email) {
-        throw new Error(`步骤 ${visibleStep || 0}：缺少绑定邮箱，无法使用邮箱模式重新发起 OAuth 登录。`);
+        throw new Error(`Step ${visibleStep || 0}: missing bound email, unable to use email mode to re-initiate OAuth login.`);
       }
       return email;
     }
@@ -179,7 +179,7 @@
           timeoutMs,
           responseTimeoutMs: timeoutMs,
           retryDelayMs: 600,
-          logMessage: options.logMessage || `步骤 ${visibleStep}：认证页正在切换，等待页面重新就绪...`,
+          logMessage: options.logMessage || `Step ${visibleStep}: auth page is switching, waiting for page to be ready again...`,
           logStep: visibleStep,
           logStepKey: options.logStepKey || activeFetchLoginCodeStepKey || 'fetch-login-code',
         }
@@ -199,7 +199,7 @@
         ? initialPageState
         : await getLoginAuthStateFromContent(visibleStep, {
           timeoutMs: 15000,
-          logMessage: `步骤 ${visibleStep}：正在确认是否已进入添加邮箱页...`,
+          logMessage: `Step ${visibleStep}: confirming whether the add-email page has been reached...`,
         });
       if (pageState?.state !== 'add_email_page') {
         return { state, pageState };
@@ -209,12 +209,12 @@
       const resolvedEmail = await resolveSignupEmailForFlow(latestState, {
         preserveAccountIdentity: true,
       });
-      await addLog(`步骤 ${visibleStep}：检测到添加邮箱页，正在添加邮箱 ${resolvedEmail} 并进入邮箱验证码页...`);
+      await addLog(`Step ${visibleStep}: detected add-email page, adding email ${resolvedEmail} and entering email verification code page...`);
 
       const timeoutMs = typeof getOAuthFlowStepTimeoutMs === 'function'
         ? await getOAuthFlowStepTimeoutMs(60000, {
           step: visibleStep,
-          actionLabel: '添加邮箱并进入验证码页',
+          actionLabel: 'Add email and enter verification code page',
           oauthUrl: latestState?.oauthUrl || state?.oauthUrl || '',
         })
         : 60000;
@@ -232,7 +232,7 @@
           timeoutMs,
           responseTimeoutMs: timeoutMs,
           retryDelayMs: 700,
-          logMessage: `步骤 ${visibleStep}：添加邮箱页面正在切换，等待邮箱验证码页就绪...`,
+          logMessage: `Step ${visibleStep}: add-email page is switching, waiting for email verification code page to be ready...`,
           logStep: visibleStep,
           logStepKey: activeFetchLoginCodeStepKey || 'fetch-login-code',
         }
@@ -284,7 +284,7 @@
       const fromRecovery = Boolean(options.fromRecovery);
       const stepKey = options.stepKey || activeFetchLoginCodeStepKey || 'fetch-login-code';
       await addLog(
-        `步骤 ${visibleStep}：当前认证页已进入 OAuth 授权页${fromRecovery ? '（轮询失败后复核）' : ''}，跳过登录验证码拉取并继续后续流程。`,
+        `Step ${visibleStep}: current auth page has entered OAuth authorization page${fromRecovery ? ' (post-polling-failure recheck)' : ''}, skipping login verification code fetch and continuing with subsequent flow.`,
         'warn',
         { step: visibleStep, stepKey }
       );
@@ -304,7 +304,7 @@
       });
       const stepKey = options.stepKey || activeFetchLoginCodeStepKey || 'fetch-login-code';
       await addLog(
-        `步骤 ${visibleStep}：当前认证页已进入手机号验证流程，跳过登录邮箱验证码，交给后续“手机号验证”步骤处理。`,
+        `Step ${visibleStep}: current auth page has entered phone number verification flow, skipping login email verification code, deferring to subsequent "phone number verification" step.`,
         'warn',
         { step: visibleStep, stepKey }
       );
@@ -324,7 +324,7 @@
         loginVerificationRequestedAt: null,
       });
       await addLog(
-        `步骤 ${visibleStep}：当前认证页已进入添加邮箱页，跳过登录短信验证码，交给后续“绑定邮箱”步骤处理。`,
+        `Step ${visibleStep}: current auth page has entered the add-email page, skipping login SMS verification code, deferring to subsequent "bind email" step.`,
         'warn'
       );
       if (typeof completeNodeFromBackground === 'function') {
@@ -350,7 +350,7 @@
           allowPhoneVerificationPage: true,
           allowAddEmailPage: true,
           timeoutMs: await getStep8ReadyTimeoutMs(
-            '登录验证码轮询异常后复核认证页状态',
+            'Recheck auth page status after login verification code polling exception',
             currentState?.oauthUrl || '',
             visibleStep
           ),
@@ -361,7 +361,7 @@
         }
         if (pageState?.state === 'verification_page' || pageState?.state === 'phone_verification_page' || pageState?.state === 'add_email_page') {
           await addLog(
-            `步骤 ${visibleStep}：检测到邮箱轮询/页面通信异常，但认证页仍在当前登录后续页面，先在当前链路重试，不回到步骤 ${authLoginStep}。`,
+            `Step ${visibleStep}: detected mail polling/page-communication anomaly, but the auth page is still on the current post-login page. Retrying on the current path without going back to step ${authLoginStep}.`,
             'warn'
           );
           return { outcome: 'retry_without_step7' };
@@ -374,7 +374,7 @@
           throw inspectError;
         }
         await addLog(
-          `步骤 ${visibleStep}：轮询失败后复核认证页状态异常：${inspectError?.message || inspectError}，将回到步骤 ${authLoginStep} 重试。`,
+          `Step ${visibleStep}: error while rechecking auth page state after polling failure: ${inspectError?.message || inspectError}. Falling back to step ${authLoginStep}.`,
           'warn'
         );
       }
@@ -430,10 +430,10 @@
 
     async function executeLoginPhoneCodeStep(state, signupTabId, visibleStep) {
       if (!Number.isInteger(signupTabId)) {
-        throw new Error(`步骤 ${visibleStep}：认证页面标签页已关闭，无法继续手机号登录验证码流程。`);
+        throw new Error(`Step ${visibleStep}: auth page tab has been closed, cannot continue phone-number login verification code flow.`);
       }
       if (typeof phoneVerificationHelpers?.completeLoginPhoneVerificationFlow !== 'function') {
-        throw new Error(`步骤 ${visibleStep}：手机号登录验证码流程不可用，接码模块尚未初始化。`);
+        throw new Error(`Step ${visibleStep}: phone-number login verification code flow unavailable, SMS verification module not initialized.`);
       }
 
       const result = await phoneVerificationHelpers.completeLoginPhoneVerificationFlow(signupTabId, {
@@ -456,14 +456,14 @@
         return authTabId;
       }
       if (!state?.oauthUrl) {
-        throw new Error(`步骤 ${visibleStep}：缺少登录用 OAuth 链接，请先完成刷新 OAuth 并登录。`);
+        throw new Error(`Step ${visibleStep}: missing OAuth login URL, please refresh OAuth and log in first.`);
       }
       return reuseOrCreateTab('openai-auth', state.oauthUrl);
     }
 
     async function completePostLoginPhoneVerificationSkippedOnOauth(visibleStep, options = {}) {
       const stepKey = options.stepKey || 'post-login-phone-verification';
-      await addLog(`步骤 ${visibleStep}：当前认证页已进入 OAuth 授权页，跳过手机号验证步骤。`, 'warn', {
+      await addLog(`Step ${visibleStep}: current auth page has entered OAuth authorization page, skipping phone-number verification step.`, 'warn', {
         step: visibleStep,
         stepKey,
       });
@@ -481,8 +481,8 @@
       activeFetchLoginCodeStepKey = runtime.stepKey || 'post-login-phone-verification';
       const authTabId = await ensureAuthTabForPostLoginStep(state, visibleStep);
       const pageState = await getLoginAuthStateFromContent(visibleStep, {
-        timeoutMs: await getStep8ReadyTimeoutMs('确认手机号验证页或 OAuth 授权页已就绪', state?.oauthUrl || '', visibleStep),
-        logMessage: `步骤 ${visibleStep}：正在确认是否需要手机号验证...`,
+        timeoutMs: await getStep8ReadyTimeoutMs('Confirm phone-verification page or OAuth authorization page is ready', state?.oauthUrl || '', visibleStep),
+        logMessage: `Step ${visibleStep}: confirming whether phone-number verification is needed...`,
         logStepKey: activeFetchLoginCodeStepKey,
       });
 
@@ -494,13 +494,13 @@
         return;
       }
       if (pageState?.state !== 'add_phone_page' && pageState?.state !== 'phone_verification_page') {
-        throw new Error(`步骤 ${visibleStep}：手机号验证步骤只处理添加手机号页或手机验证码页，当前状态：${pageState?.state || 'unknown'}。URL: ${pageState?.url || ''}`.trim());
+        throw new Error(`Step ${visibleStep}: phone-verification step only handles add-phone or phone verification-code pages. Current state: ${pageState?.state || 'unknown'}. URL: ${pageState?.url || ''}`.trim());
       }
       if (!state?.phoneVerificationEnabled) {
-        throw new Error(`步骤 ${visibleStep}：检测到需要手机号验证，但手机接码未开启。URL: ${pageState?.url || ''}`.trim());
+        throw new Error(`Step ${visibleStep}: phone-number verification is required, but SMS verification is not enabled. URL: ${pageState?.url || ''}`.trim());
       }
       if (typeof phoneVerificationHelpers?.completePhoneVerificationFlow !== 'function') {
-        throw new Error(`步骤 ${visibleStep}：手机号验证流程不可用，接码模块尚未初始化。`);
+        throw new Error(`Step ${visibleStep}: phone-number verification flow unavailable, SMS verification module not initialized.`);
       }
 
       const result = await phoneVerificationHelpers.completePhoneVerificationFlow(authTabId, pageState, {
@@ -523,12 +523,12 @@
       activeFetchLoginCodeStepKey = 'bind-email';
       await ensureAuthTabForPostLoginStep(state, visibleStep);
       const pageState = await getLoginAuthStateFromContent(visibleStep, {
-        timeoutMs: await getStep8ReadyTimeoutMs('确认添加邮箱页或 OAuth 授权页已就绪', state?.oauthUrl || '', visibleStep),
-        logMessage: `步骤 ${visibleStep}：正在确认是否需要绑定邮箱...`,
+        timeoutMs: await getStep8ReadyTimeoutMs('Confirm add-email page or OAuth authorization page is ready', state?.oauthUrl || '', visibleStep),
+        logMessage: `Step ${visibleStep}: confirming whether email binding is needed...`,
       });
 
       if (pageState?.state === 'oauth_consent_page') {
-        await addLog(`步骤 ${visibleStep}：当前认证页已进入 OAuth 授权页，跳过绑定邮箱步骤。`, 'warn', {
+        await addLog(`Step ${visibleStep}: current auth page has entered OAuth authorization page, skipping bind-email step.`, 'warn', {
           step: visibleStep,
           stepKey: 'bind-email',
         });
@@ -542,14 +542,14 @@
       }
 
       if (pageState?.state !== 'add_email_page') {
-        throw new Error(`步骤 ${visibleStep}：绑定邮箱步骤只处理添加邮箱页，当前状态：${pageState?.state || 'unknown'}。URL: ${pageState?.url || ''}`.trim());
+        throw new Error(`Step ${visibleStep}: bind-email step only handles the add-email page. Current state: ${pageState?.state || 'unknown'}. URL: ${pageState?.url || ''}`.trim());
       }
 
       const addEmailPreparation = await submitAddEmailIfNeeded(state, visibleStep, pageState);
       const preparedState = addEmailPreparation?.state || state;
       const nextPageState = addEmailPreparation?.pageState || pageState;
       if (nextPageState?.state !== 'verification_page') {
-        throw new Error(`步骤 ${visibleStep}：绑定邮箱提交后必须进入邮箱验证码页，当前状态：${nextPageState?.state || 'unknown'}。URL: ${nextPageState?.url || ''}`.trim());
+        throw new Error(`Step ${visibleStep}: after bind-email submission, must enter the email verification-code page. Current state: ${nextPageState?.state || 'unknown'}. URL: ${nextPageState?.url || ''}`.trim());
       }
 
       if (typeof completeNodeFromBackground === 'function') {
@@ -589,9 +589,9 @@
         step8VerificationTargetEmail: displayedVerificationEmail || '',
       });
 
-      await addLog(`步骤 ${visibleStep}：邮箱验证码页面已就绪，开始获取验证码。`, 'info');
+      await addLog(`Step ${visibleStep}: email verification-code page is ready, starting to fetch the verification code.`, 'info');
       if (shouldCompareVerificationEmail && displayedVerificationEmail) {
-        await addLog(`步骤 ${visibleStep}：已固定当前验证码页显示邮箱 ${displayedVerificationEmail} 作为后续匹配目标。`, 'info');
+        await addLog(`Step ${visibleStep}: locked the email ${displayedVerificationEmail} shown on the current verification-code page as the matching target.`, 'info');
       }
 
       if (shouldUseCustomRegistrationEmail(preparedState)) {
@@ -603,11 +603,11 @@
       }
 
       if (mail.source === 'icloud-mail' && typeof ensureIcloudMailSession === 'function') {
-        await addLog(`步骤 ${visibleStep}：正在确认 iCloud 邮箱登录态...`, 'info');
+        await addLog(`Step ${visibleStep}: confirming iCloud mailbox sign-in...`, 'info');
         await ensureIcloudMailSession({
           state: preparedState,
           step: 8,
-          actionLabel: `步骤 ${visibleStep}：确认 iCloud 邮箱登录态`,
+          actionLabel: `Step ${visibleStep}: confirm iCloud mailbox sign-in`,
         });
       }
 
@@ -618,9 +618,9 @@
         || mail.provider === CLOUDFLARE_TEMP_EMAIL_PROVIDER
         || mail.provider === CLOUD_MAIL_PROVIDER
       ) {
-        await addLog(`步骤 ${visibleStep}：正在通过 ${mail.label} 轮询验证码...`);
+        await addLog(`Step ${visibleStep}: polling verification code via ${mail.label}...`);
       } else {
-        await addLog(`步骤 ${visibleStep}：正在打开${mail.label}...`);
+        await addLog(`Step ${visibleStep}: opening ${mail.label}...`);
         if (mail.provider === '2925' && typeof ensureMail2925MailboxSession === 'function') {
           await ensureMail2925MailboxSession({
             accountId: preparedState.currentMail2925AccountId || null,
@@ -633,7 +633,7 @@
           await focusOrOpenMailTab(mail);
         }
         if (mail.provider === '2925') {
-          await addLog(`步骤 ${visibleStep}：将直接使用当前已登录的 ${mail.label} 轮询验证码。`, 'info');
+          await addLog(`Step ${visibleStep}: will poll verification codes directly from the currently logged-in ${mail.label}.`, 'info');
         }
       }
 
@@ -673,7 +673,7 @@
     }
 
     async function completeFetchBindEmailCodeSkippedOnOauth(visibleStep, options = {}) {
-      await addLog(`步骤 ${visibleStep}：当前认证页已进入 OAuth 授权页，跳过绑定邮箱验证码步骤。`, 'warn', {
+      await addLog(`Step ${visibleStep}: current auth page has entered OAuth authorization page, skipping bind-email verification code step.`, 'warn', {
         step: visibleStep,
         stepKey: 'fetch-bind-email-code',
       });
@@ -691,22 +691,22 @@
       activeFetchLoginCodeStepKey = 'fetch-bind-email-code';
       await ensureAuthTabForPostLoginStep(state, visibleStep);
       const pageState = await getLoginAuthStateFromContent(visibleStep, {
-        timeoutMs: await getStep8ReadyTimeoutMs('确认绑定邮箱验证码页已就绪', state?.oauthUrl || '', visibleStep),
-        logMessage: `步骤 ${visibleStep}：正在确认绑定邮箱验证码页...`,
+        timeoutMs: await getStep8ReadyTimeoutMs('Confirm bind-email verification code page is ready', state?.oauthUrl || '', visibleStep),
+        logMessage: `Step ${visibleStep}: confirming bind-email verification code page...`,
       });
 
       if (pageState?.state === 'oauth_consent_page') {
         if (state?.bindEmailSubmitted) {
-          throw new Error(`步骤 ${visibleStep}：绑定邮箱提交后不应直接进入 OAuth 授权页，必须先完成邮箱验证码。URL: ${pageState?.url || ''}`.trim());
+          throw new Error(`Step ${visibleStep}: after bind-email submission the page must not jump directly to OAuth authorization. Email verification code is required first. URL: ${pageState?.url || ''}`.trim());
         }
         await completeFetchBindEmailCodeSkippedOnOauth(visibleStep, { nodeId: state?.nodeId });
         return;
       }
       if (pageState?.state !== 'verification_page') {
-        throw new Error(`步骤 ${visibleStep}：获取绑定邮箱验证码步骤只处理邮箱验证码页，当前状态：${pageState?.state || 'unknown'}。URL: ${pageState?.url || ''}`.trim());
+        throw new Error(`Step ${visibleStep}: fetch-bind-email-code step only handles the email verification-code page. Current state: ${pageState?.state || 'unknown'}. URL: ${pageState?.url || ''}`.trim());
       }
       if (!state?.bindEmailSubmitted) {
-        throw new Error(`步骤 ${visibleStep}：尚未完成绑定邮箱提交，不能直接获取绑定邮箱验证码。`);
+        throw new Error(`Step ${visibleStep}: bind-email submission not completed, cannot fetch bind-email verification code directly.`);
       }
 
       return pollEmailVerificationCode(state, pageState, visibleStep, {
@@ -725,7 +725,7 @@
         await chrome.tabs.update(authTabId, { active: true });
       } else {
         if (!preparedState.oauthUrl) {
-          throw new Error(`步骤 ${visibleStep}：缺少登录用 OAuth 链接，请先完成绑定邮箱后刷新 OAuth 并登录。`);
+          throw new Error(`Step ${visibleStep}: missing OAuth login URL. Please complete bind-email first, then refresh OAuth and sign in.`);
         }
         await reuseOrCreateTab('openai-auth', preparedState.oauthUrl);
       }
@@ -736,7 +736,7 @@
         authLoginStep: Math.max(1, visibleStep - 1),
         allowPhoneVerificationPage: true,
         allowAddEmailPage: false,
-        timeoutMs: await getStep8ReadyTimeoutMs('确认绑定邮箱登录验证码页已就绪', preparedState?.oauthUrl || '', visibleStep),
+        timeoutMs: await getStep8ReadyTimeoutMs('Confirm bound-email login verification code page is ready', preparedState?.oauthUrl || '', visibleStep),
       });
 
       if (pageState?.state === 'oauth_consent_page') {
@@ -754,10 +754,10 @@
         return;
       }
       if (pageState?.state === 'add_email_page') {
-        throw new Error(`步骤 ${visibleStep}：绑定邮箱后邮箱模式登录不应再进入添加邮箱页。URL: ${pageState?.url || ''}`.trim());
+        throw new Error(`Step ${visibleStep}: after binding email, email-mode login should no longer enter the add-email page. URL: ${pageState?.url || ''}`.trim());
       }
       if (pageState?.state !== 'verification_page') {
-        throw new Error(`步骤 ${visibleStep}：绑定邮箱后获取登录验证码只处理邮箱登录验证码页，当前状态：${pageState?.state || 'unknown'}。URL: ${pageState?.url || ''}`.trim());
+        throw new Error(`Step ${visibleStep}: post-bind-email login verification code only handles the email login verification-code page. Current state: ${pageState?.state || 'unknown'}. URL: ${pageState?.url || ''}`.trim());
       }
 
       return pollEmailVerificationCode(preparedState, pageState, visibleStep, {
@@ -782,7 +782,7 @@
         await chrome.tabs.update(authTabId, { active: true });
       } else {
         if (!state.oauthUrl) {
-          throw new Error(`缺少登录用 OAuth 链接，请先完成步骤 ${getAuthLoginStepForState(state, visibleStep)}。`);
+          throw new Error(`Missing OAuth login URL, please complete step ${getAuthLoginStepForState(state, visibleStep)} first.`);
         }
         await reuseOrCreateTab('openai-auth', state.oauthUrl);
       }
@@ -793,7 +793,7 @@
         authLoginStep: getAuthLoginStepForState(state, visibleStep),
         allowPhoneVerificationPage: true,
         allowAddEmailPage: true,
-        timeoutMs: await getStep8ReadyTimeoutMs('确认登录验证码页已就绪', state?.oauthUrl || '', visibleStep),
+        timeoutMs: await getStep8ReadyTimeoutMs('Confirm login verification code page is ready', state?.oauthUrl || '', visibleStep),
       });
       if (pageState?.state === 'oauth_consent_page') {
         await completeStep8WhenAuthAlreadyOnOauthConsent(visibleStep, { nodeId: state?.nodeId });
@@ -809,12 +809,12 @@
           return;
         }
         if (pageState?.state === 'verification_page') {
-          throw new Error(`步骤 ${visibleStep}：手机号注册模式只允许处理手机登录验证码，当前进入了普通邮箱登录验证码页，不会回落到邮箱 provider。URL: ${pageState?.url || ''}`.trim());
+          throw new Error(`Step ${visibleStep}: in phone-number registration mode, only phone login verification codes are processed, but the page entered the email login verification-code page. It will not fall back to an email provider. URL: ${pageState?.url || ''}`.trim());
         }
         if (pageState?.state === 'add_phone_page') {
-          throw new Error(`步骤 ${visibleStep}：手机号注册模式不应进入添加手机号页。URL: ${pageState?.url || ''}`.trim());
+          throw new Error(`Step ${visibleStep}: phone-number registration mode should not enter the add-phone page. URL: ${pageState?.url || ''}`.trim());
         }
-        throw new Error(`步骤 ${visibleStep}：手机号注册模式登录验证码步骤进入了不允许的页面：${pageState?.state || 'unknown'}。URL: ${pageState?.url || ''}`.trim());
+        throw new Error(`Step ${visibleStep}: in phone-number registration mode, the login verification code step entered a disallowed page: ${pageState?.state || 'unknown'}. URL: ${pageState?.url || ''}`.trim());
       }
 
       if (pageState?.state === 'add_phone_page' || pageState?.state === 'phone_verification_page') {
@@ -822,7 +822,7 @@
         return;
       }
       if (pageState?.state === 'add_email_page') {
-        throw new Error(`步骤 ${visibleStep}：邮箱注册模式不应进入添加邮箱页。URL: ${pageState?.url || ''}`.trim());
+        throw new Error(`Step ${visibleStep}: email registration mode should not enter the add-email page. URL: ${pageState?.url || ''}`.trim());
       }
 
       return pollEmailVerificationCode(state, pageState, visibleStep, runtime);
@@ -890,11 +890,11 @@
             retryWithoutStep7Streak += 1;
             if (retryWithoutStep7Streak > maxRetryWithoutStep7Streak) {
               await addLog(
-                `步骤 ${visibleStep}：邮箱通信异常在当前链路已连续重试 ${retryWithoutStep7Streak} 次，改为回到步骤 ${authLoginStep} 重新发起授权链路，避免空轮询循环。`,
+                `Step ${visibleStep}: mailbox communication anomaly retried ${retryWithoutStep7Streak} times on the current path. Going back to step ${authLoginStep} to reissue the auth flow to avoid an empty polling loop.`,
                 'warn'
               );
               await rerunStep7ForStep8Recovery({
-                logMessage: `邮箱通信异常持续未恢复，正在回到步骤 ${authLoginStep} 重新发起登录流程...`,
+                logMessage: `Mailbox communication anomaly persisting, going back to step ${authLoginStep} to restart the login flow...`,
                 logStep: visibleStep,
                 logStepKey: 'fetch-login-code',
               });
@@ -903,7 +903,7 @@
               continue;
             }
             await addLog(
-              `步骤 ${visibleStep}：认证页仍保持在验证码页，将在当前链路直接重试（${mailPollingAttempt}/${STEP7_MAIL_POLLING_RECOVERY_MAX_ATTEMPTS}），不回到步骤 ${authLoginStep}（连续同链路重试 ${retryWithoutStep7Streak}/${maxRetryWithoutStep7Streak}）。`,
+              `Step ${visibleStep}: auth page is still on the verification-code page. Retrying on the current path (${mailPollingAttempt}/${STEP7_MAIL_POLLING_RECOVERY_MAX_ATTEMPTS}) without going back to step ${authLoginStep} (consecutive same-path retries ${retryWithoutStep7Streak}/${maxRetryWithoutStep7Streak}).`,
               'warn'
             );
             const latestState = await getState();
@@ -924,7 +924,7 @@
               : 0;
             if (remainingBeforeRetryMs > 0 && typeof sleepWithStop === 'function') {
               await addLog(
-                `步骤 ${visibleStep}：上轮已触发重发验证码，为避免重复重发，先等待 ${Math.ceil(remainingBeforeRetryMs / 1000)} 秒后继续当前链路重试。`,
+                `Step ${visibleStep}: previous round already triggered a verification-code resend. To avoid duplicate resends, waiting ${Math.ceil(remainingBeforeRetryMs / 1000)} seconds before retrying on the current path.`,
                 'info'
               );
               await sleepWithStop(Math.min(remainingBeforeRetryMs, 3000));
@@ -934,14 +934,14 @@
           retryWithoutStep7Streak = 0;
           await addLog(
             isStep8RestartStep7Error(currentError)
-              ? `步骤 ${visibleStep}：检测到认证页进入重试/超时报错状态，准备从步骤 ${authLoginStep} 重新开始（${mailPollingAttempt}/${STEP7_MAIL_POLLING_RECOVERY_MAX_ATTEMPTS}）...`
-              : `步骤 ${visibleStep}：检测到邮箱轮询类失败，准备从步骤 ${authLoginStep} 重新开始（${mailPollingAttempt}/${STEP7_MAIL_POLLING_RECOVERY_MAX_ATTEMPTS}）...`,
+              ? `Step ${visibleStep}: detected auth page entered a retry/timeout error state. Restarting from step ${authLoginStep} (${mailPollingAttempt}/${STEP7_MAIL_POLLING_RECOVERY_MAX_ATTEMPTS})...`
+              : `Step ${visibleStep}: detected mail polling failure. Restarting from step ${authLoginStep} (${mailPollingAttempt}/${STEP7_MAIL_POLLING_RECOVERY_MAX_ATTEMPTS})...`,
             'warn'
           );
           await rerunStep7ForStep8Recovery({
             logMessage: isStep8RestartStep7Error(currentError)
-              ? `认证页进入重试/超时报错状态，正在回到步骤 ${authLoginStep} 重新发起登录流程...`
-              : `正在回到步骤 ${authLoginStep}，重新发起登录验证码流程...`,
+              ? `Auth page entered a retry/timeout error state, going back to step ${authLoginStep} to restart the login flow...`
+              : `Going back to step ${authLoginStep} to restart the login verification code flow...`,
             logStep: visibleStep,
             logStepKey: 'fetch-login-code',
           });
@@ -952,11 +952,11 @@
       const visibleStep = getVisibleStep(currentState, 8);
       if (lastMailPollingError) {
         throw new Error(
-          `步骤 ${visibleStep}：登录验证码流程在 ${STEP7_MAIL_POLLING_RECOVERY_MAX_ATTEMPTS} 轮邮箱轮询恢复后仍未成功。最后一次原因：${lastMailPollingError.message}`
+          `Step ${visibleStep}: login verification code flow did not succeed after ${STEP7_MAIL_POLLING_RECOVERY_MAX_ATTEMPTS} rounds of mailbox polling recovery. Last reason: ${lastMailPollingError.message}`
         );
       }
 
-      throw new Error(`步骤 ${visibleStep}：登录验证码流程未成功完成。`);
+      throw new Error(`Step ${visibleStep}: login verification code flow did not complete successfully.`);
     }
 
     return {
