@@ -18659,6 +18659,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             displayLocalhostUrl.textContent = state.localhostUrl;
             displayLocalhostUrl.classList.add('has-value');
           }
+          renderReauthResultAccount(state.reauthResultAccount);
         }
       }
       ).catch(() => { });
