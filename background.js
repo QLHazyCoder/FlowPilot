@@ -84,6 +84,7 @@ importScripts(
   'flows/openai/background/steps/platform-verify.js',
   'flows/openai-reauth/background/oauth-client.js',
   'flows/openai-reauth/background/cookie-cleanup.js',
+  'flows/openai-reauth/background/batch-runner.js',
   'flows/openai-reauth/background/steps/prepare-reauth.js',
   'flows/openai-reauth/background/steps/submit-reauth-email.js',
   'flows/openai-reauth/background/steps/fetch-reauth-code.js',
@@ -14092,6 +14093,7 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   fetchGeneratedEmail,
   refreshGpcCardBalance,
   finalizePhoneActivationAfterSuccessfulFlow,
+  getReauthBatchRunner: () => reauthBatchRunner,
   testKiroRsConnection: async (baseUrl, apiKey) => {
     if (typeof self.MultiPageBackgroundKiroPublisherKiroRs?.checkKiroRsConnection !== 'function') {
       throw new Error('kiro.rs 连接测试能力尚未接入。');
@@ -16032,6 +16034,16 @@ const captureReauthCallbackExecutor = self.MultiPageOpenAiReauthCaptureCallbackS
   STEP8_MAX_ROUNDS,
   STEP8_CLICK_RETRY_DELAY_MS,
   STEP8_READY_WAIT_TIMEOUT_MS,
+});
+
+const reauthBatchRunner = self.MultiPageOpenAiReauthBatchRunner?.createReauthBatchRunner({
+  addLog,
+  executeNode,
+  getNodeIdsForState,
+  getState,
+  setState,
+  sleepWithStop,
+  throwIfStopped,
 });
 
 async function executeStep9(state) {
