@@ -50,6 +50,7 @@
       "js": [
         "content/activation-utils.js",
         "flows/openai/index.js",
+        "flows/openai-reauth/index.js",
         "flows/kiro/index.js",
         "flows/grok/index.js",
         "flows/index.js",
@@ -72,6 +73,7 @@
       "js": [
         "content/activation-utils.js",
         "flows/openai/index.js",
+        "flows/openai-reauth/index.js",
         "flows/kiro/index.js",
         "flows/grok/index.js",
         "flows/index.js",
@@ -94,6 +96,7 @@
       "js": [
         "content/activation-utils.js",
         "flows/openai/index.js",
+        "flows/openai-reauth/index.js",
         "flows/kiro/index.js",
         "flows/grok/index.js",
         "flows/index.js",
@@ -113,6 +116,7 @@
       "js": [
         "content/activation-utils.js",
         "flows/openai/index.js",
+        "flows/openai-reauth/index.js",
         "flows/kiro/index.js",
         "flows/grok/index.js",
         "flows/index.js",
@@ -131,6 +135,7 @@
       "js": [
         "content/activation-utils.js",
         "flows/openai/index.js",
+        "flows/openai-reauth/index.js",
         "flows/kiro/index.js",
         "flows/grok/index.js",
         "flows/index.js",
