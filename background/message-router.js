@@ -1314,6 +1314,9 @@
           if (Object.keys(autoRunFlowStateUpdates).length > 0 && typeof setState === 'function') {
             await setState(autoRunFlowStateUpdates);
           }
+          if (message.payload?.reauthInputAccount !== undefined && typeof setState === 'function') {
+            await setState({ reauthInputAccount: message.payload.reauthInputAccount });
+          }
           const state = await getState();
           const autoRunStartValidation = validateAutoRunStart(state, {
             activeFlowId: autoRunFlowStateUpdates.activeFlowId ?? state?.activeFlowId,

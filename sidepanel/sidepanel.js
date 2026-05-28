@@ -15140,20 +15140,32 @@ async function startAutoRunFromCurrentSettings() {
     ? getSelectedTargetId(activeFlowId)
     : normalizeTargetIdForFlow(activeFlowId, latestState?.targetId || '', getDefaultTargetIdForFlow(activeFlowId));
   btnAutoRun.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> 运行中...';
+  const autoRunPayload = {
+    totalRuns,
+    activeFlowId,
+    targetId,
+    autoRunSkipFailures,
+    accountContributionEnabled: Boolean(latestState?.accountContributionEnabled),
+    contributionAdapterId: latestState?.contributionAdapterId || '',
+    contributionNickname,
+    contributionQq,
+    mode,
+  };
+  if (activeFlowId === 'openai-reauth') {
+    const reauthAccount = ensurePendingReauthAccount();
+    if (!reauthAccount) {
+      btnAutoRun.disabled = false;
+      inputRunCount.disabled = false;
+      btnAutoRun.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> 自动';
+      clearPendingAutoRunStartRunCount();
+      return false;
+    }
+    autoRunPayload.reauthInputAccount = reauthAccount;
+  }
   const response = await sendSidepanelMessage({
     type: 'AUTO_RUN',
     source: 'sidepanel',
-    payload: {
-      totalRuns,
-      activeFlowId,
-      targetId,
-      autoRunSkipFailures,
-      accountContributionEnabled: Boolean(latestState?.accountContributionEnabled),
-      contributionAdapterId: latestState?.contributionAdapterId || '',
-      contributionNickname,
-      contributionQq,
-      mode,
-    },
+    payload: autoRunPayload,
   });
   if (response?.error) {
     clearPendingAutoRunStartRunCount();
