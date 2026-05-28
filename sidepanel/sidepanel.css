@@ -3732,7 +3732,209 @@ header {
   border-radius: 4px;
   font-size: 12px;
 }
-#reauth-json-status.ok,
-#reauth-copy-status.ok { color: #198754; }
-#reauth-json-status.error,
-#reauth-copy-status.error { color: #dc3545; }
+
+/* ============================================================
+   Reauth flow UI — 文件 / 模式 / 进度 / 结果
+   ============================================================ */
+
+.reauth-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.reauth-status-chip:empty { display: none; }
+.reauth-status-chip.ok {
+  background: var(--green-soft);
+  color: var(--green);
+}
+.reauth-status-chip.error {
+  background: var(--red-soft);
+  color: var(--red);
+}
+.reauth-status-chip.warn {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.reauth-file-zone,
+.reauth-mode-zone,
+.reauth-actions-zone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.reauth-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.reauth-mode-toggle-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.reauth-account-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.reauth-account-picker label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.reauth-account-picker select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 进度条 */
+.reauth-progress-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  flex: 1 1 auto;
+}
+.reauth-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-elevated);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+.reauth-progress-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--blue), var(--cyan));
+  border-radius: 4px;
+  transition: width 0.35s ease;
+}
+.reauth-progress-fill.is-success {
+  background: linear-gradient(90deg, var(--green), var(--cyan));
+}
+.reauth-progress-fill.is-stopped,
+.reauth-progress-fill.is-aborted {
+  background: linear-gradient(90deg, var(--amber), var(--orange));
+}
+.reauth-progress-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.reauth-progress-counter {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.reauth-progress-current {
+  color: var(--text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reauth-progress-current:empty { display: none; }
+.reauth-progress-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* 状态徽标 */
+.reauth-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.reauth-status-badge:empty { display: none; }
+.reauth-status-badge.pending {
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+}
+.reauth-status-badge.running {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+.reauth-status-badge.success {
+  background: var(--green-soft);
+  color: var(--green);
+}
+.reauth-status-badge.failed {
+  background: var(--red-soft);
+  color: var(--red);
+}
+.reauth-status-badge.completed {
+  background: var(--green-soft);
+  color: var(--green);
+}
+.reauth-status-badge.stopped,
+.reauth-status-badge.aborted {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+/* 结果区 */
+.reauth-result-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  flex: 1 1 auto;
+}
+.reauth-result-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-elevated);
+  border-radius: 6px;
+  border-left: 3px solid var(--border);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.reauth-result-summary.has-failure {
+  border-left-color: var(--amber);
+}
+.reauth-result-summary.all-success {
+  border-left-color: var(--green);
+}
+.reauth-result-summary.aborted {
+  border-left-color: var(--red);
+}
+.reauth-result-summary-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+.reauth-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}

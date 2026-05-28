@@ -669,61 +669,76 @@
         </div>
       </div>
       <div class="data-row module-divider-start" id="row-reauth-account-json" style="display:none;">
-        <span class="data-label">账号 JSON</span>
-        <div class="data-inline data-value-actions data-row-stack">
-          <div class="data-inline">
-            <input type="file" id="input-reauth-account-file" accept=".json,application/json" class="data-input" />
-          </div>
-          <div class="data-inline">
-            <span id="reauth-json-status" class="data-value mono"></span>
-          </div>
-          <div class="data-inline" id="row-reauth-batch-toggle" style="display:none;">
+        <span class="data-label">账号文件</span>
+        <div class="reauth-file-zone">
+          <input type="file" id="input-reauth-account-file" accept=".json,application/json" class="data-input" />
+          <span id="reauth-json-status" class="reauth-status-chip">未选择文件</span>
+        </div>
+      </div>
+      <div class="data-row" id="row-reauth-mode-picker" style="display:none;">
+        <span class="data-label">处理模式</span>
+        <div class="reauth-mode-zone">
+          <div class="reauth-mode-toggle" id="row-reauth-batch-toggle" style="display:none;">
             <label class="toggle-switch" for="input-reauth-batch-mode" title="一次性对文件里全部账号执行重新授权">
               <input type="checkbox" id="input-reauth-batch-mode" />
               <span class="toggle-switch-track" aria-hidden="true">
                 <span class="toggle-switch-thumb"></span>
               </span>
             </label>
-            <span class="data-value">批量模式（一次性处理所有账号）</span>
+            <span class="reauth-mode-toggle-text">批量模式（一次性处理全部账号）</span>
           </div>
-          <div class="data-inline" id="row-reauth-account-picker" style="display:none;">
-            <label for="select-reauth-account" class="data-value">账号</label>
+          <div class="reauth-account-picker" id="row-reauth-account-picker" style="display:none;">
+            <label for="select-reauth-account">账号</label>
             <select id="select-reauth-account" class="data-input"></select>
-          </div>
-          <div class="data-inline">
-            <label for="select-reauth-mail-provider" class="data-value">邮箱来源</label>
-            <select id="select-reauth-mail-provider" class="data-input">
-              <option value="2925">2925</option>
-              <option value="hotmail-api">Hotmail (API)</option>
-              <option value="icloud">iCloud</option>
-              <option value="luckmail-api">LuckMail (API)</option>
-              <option value="cloudmail">Cloud Mail</option>
-              <option value="yyds-mail">YYDS Mail</option>
-              <option value="cloudflare-temp-email">Cloudflare Temp Email</option>
-            </select>
-          </div>
-          <div class="data-inline" id="row-reauth-batch-actions" style="display:none;">
-            <button id="btn-reauth-start-batch" class="btn btn-primary btn-sm" type="button">开始批量授权</button>
-            <button id="btn-reauth-stop-batch" class="btn btn-outline btn-sm" type="button" style="display:none;">停止</button>
           </div>
         </div>
       </div>
+      <div class="data-row" id="row-reauth-provider-picker" style="display:none;">
+        <span class="data-label">邮箱来源</span>
+        <select id="select-reauth-mail-provider" class="data-input">
+          <option value="2925">2925</option>
+          <option value="hotmail-api">Hotmail (API)</option>
+          <option value="icloud">iCloud</option>
+          <option value="luckmail-api">LuckMail (API)</option>
+          <option value="cloudmail">Cloud Mail</option>
+          <option value="yyds-mail">YYDS Mail</option>
+          <option value="cloudflare-temp-email">Cloudflare Temp Email</option>
+        </select>
+      </div>
+      <div class="data-row" id="row-reauth-batch-actions" style="display:none;">
+        <span class="data-label">批量操作</span>
+        <div class="reauth-actions-zone">
+          <button id="btn-reauth-start-batch" class="btn btn-primary btn-sm" type="button">开始批量授权</button>
+          <button id="btn-reauth-stop-batch" class="btn btn-outline btn-sm" type="button" style="display:none;">停止</button>
+        </div>
+      </div>
       <div class="data-row" id="row-reauth-batch-progress" style="display:none;">
-        <span class="data-label">批量进度</span>
-        <div class="data-inline data-value-actions data-row-stack">
-          <span id="display-reauth-batch-progress" class="data-value mono">尚未开始</span>
-          <span id="display-reauth-batch-summary" class="data-value mono"></span>
+        <span class="data-label">进度</span>
+        <div class="reauth-progress-zone">
+          <div class="reauth-progress-bar">
+            <div class="reauth-progress-fill" id="reauth-progress-fill" style="width:0%"></div>
+          </div>
+          <div class="reauth-progress-meta">
+            <span id="reauth-progress-counter" class="reauth-progress-counter">0 / 0</span>
+            <span id="reauth-progress-current" class="reauth-progress-current"></span>
+            <span id="reauth-progress-status-badge" class="reauth-status-badge"></span>
+          </div>
+          <span id="display-reauth-batch-progress" class="reauth-progress-text">尚未开始</span>
         </div>
       </div>
       <div class="data-row" id="row-reauth-result" style="display:none;">
         <span class="data-label">授权结果</span>
-        <div class="data-inline data-value-actions data-row-stack">
-          <pre id="display-reauth-result-account" class="data-value mono data-readonly-reauth">等待重新授权完成...</pre>
-          <div class="data-inline">
-            <button id="btn-reauth-copy-result" class="btn btn-outline btn-sm" type="button" disabled>复制到剪贴板</button>
-            <button id="btn-reauth-download-result" class="btn btn-outline btn-sm" type="button" disabled style="display:none;">下载文件</button>
-            <span id="reauth-copy-status" class="data-value mono"></span>
+        <div class="reauth-result-zone">
+          <div id="reauth-result-summary" class="reauth-result-summary">
+            <span id="display-reauth-batch-summary" class="reauth-result-summary-text">等待重新授权完成...</span>
           </div>
+          <div class="reauth-result-actions">
+            <button id="btn-reauth-download-result" class="btn btn-primary btn-sm" type="button" disabled style="display:none;">下载完整 JSON 文件</button>
+            <button id="btn-reauth-copy-result" class="btn btn-outline btn-sm" type="button" disabled>复制</button>
+            <button id="btn-reauth-toggle-details" class="btn btn-ghost btn-xs" type="button" style="display:none;" aria-expanded="false">展开详情</button>
+            <span id="reauth-copy-status" class="reauth-status-chip"></span>
+          </div>
+          <pre id="display-reauth-result-account" class="data-value mono data-readonly-reauth" style="display:none;">等待重新授权完成...</pre>
         </div>
       </div>
       <div class="data-row module-divider-start" id="row-settings-actions">
