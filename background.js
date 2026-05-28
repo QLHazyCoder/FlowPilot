@@ -16003,6 +16003,7 @@ const fetchReauthCodeExecutor = self.MultiPageOpenAiReauthFetchCodeStep?.createF
   completeNodeFromBackground,
   pollFlowVerificationCode: flowMailPollingService?.pollFlowVerificationCode,
   sendToContentScriptResilient,
+  sleepWithStop,
   throwIfStopped,
 });
 
