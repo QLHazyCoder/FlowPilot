@@ -767,6 +767,15 @@
           <div class="data-inline">
             <span id="reauth-json-status" class="data-value mono"></span>
           </div>
+          <div class="data-inline" id="row-reauth-batch-toggle" style="display:none;">
+            <label class="toggle-switch" for="input-reauth-batch-mode" title="一次性对文件里全部账号执行重新授权">
+              <input type="checkbox" id="input-reauth-batch-mode" />
+              <span class="toggle-switch-track" aria-hidden="true">
+                <span class="toggle-switch-thumb"></span>
+              </span>
+            </label>
+            <span class="data-value">批量模式（一次性处理所有账号）</span>
+          </div>
           <div class="data-inline" id="row-reauth-account-picker" style="display:none;">
             <label for="select-reauth-account" class="data-value">账号</label>
             <select id="select-reauth-account" class="data-input"></select>
@@ -783,6 +792,17 @@
               <option value="cloudflare-temp-email">Cloudflare Temp Email</option>
             </select>
           </div>
+          <div class="data-inline" id="row-reauth-batch-actions" style="display:none;">
+            <button id="btn-reauth-start-batch" class="btn btn-primary btn-sm" type="button">开始批量授权</button>
+            <button id="btn-reauth-stop-batch" class="btn btn-outline btn-sm" type="button" style="display:none;">停止</button>
+          </div>
+        </div>
+      </div>
+      <div class="data-row" id="row-reauth-batch-progress" style="display:none;">
+        <span class="data-label">批量进度</span>
+        <div class="data-inline data-value-actions data-row-stack">
+          <span id="display-reauth-batch-progress" class="data-value mono">尚未开始</span>
+          <span id="display-reauth-batch-summary" class="data-value mono"></span>
         </div>
       </div>
       <div class="data-row" id="row-reauth-result" style="display:none;">
@@ -791,6 +811,7 @@
           <pre id="display-reauth-result-account" class="data-value mono data-readonly-reauth">等待重新授权完成...</pre>
           <div class="data-inline">
             <button id="btn-reauth-copy-result" class="btn btn-outline btn-sm" type="button" disabled>复制到剪贴板</button>
+            <button id="btn-reauth-download-result" class="btn btn-outline btn-sm" type="button" disabled style="display:none;">下载文件</button>
             <span id="reauth-copy-status" class="data-value mono"></span>
           </div>
         </div>
