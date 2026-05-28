@@ -14,7 +14,7 @@
   const VALUE = freezeDeep({
     id: 'openai-reauth',
     label: 'OpenAI 重新授权',
-    services: ['account', 'email'],
+    services: [],
     capabilities: {
       stepDefinitionMode: 'openai-reauth-static',
       canSwitchFlow: false,
