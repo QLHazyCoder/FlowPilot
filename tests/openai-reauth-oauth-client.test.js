@@ -5,6 +5,7 @@ const test = require('node:test');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { webcrypto } = require('node:crypto');
 
 const OAUTH_CLIENT_PATH = path.join(__dirname, '..', 'flows', 'openai-reauth', 'background', 'oauth-client.js');
 
@@ -13,7 +14,7 @@ function loadOAuthClientModule() {
   const sandbox = {
     self: {},
     globalThis: {},
-    crypto: globalThis.crypto,
+    crypto: webcrypto,
     TextEncoder,
     TextDecoder,
     fetch: globalThis.fetch,
@@ -25,7 +26,7 @@ function loadOAuthClientModule() {
     atob: (str) => Buffer.from(str, 'base64').toString('binary'),
     console,
   };
-  sandbox.self.crypto = globalThis.crypto;
+  sandbox.self.crypto = webcrypto;
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox);
   return sandbox.self.MultiPageOpenAiReauthOAuthClient;

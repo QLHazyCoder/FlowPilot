@@ -25,11 +25,17 @@
       supportsAccountContribution: false,
       supportedTargetIds: [],
     },
-    baseGroups: ['openai-oauth'],
+    baseGroups: ['openai-oauth', 'reauth-input'],
     targets: {},
     defaultTargetId: null,
     settingsDefaults: {},
-    settingsGroups: {},
+    settingsGroups: {
+      'reauth-input': {
+        id: 'reauth-input',
+        label: 'OAuth 重新授权',
+        rowIds: ['row-reauth-account-json', 'row-reauth-result'],
+      },
+    },
     targetCapabilities: {},
     runtimeSources: {
       'openai-auth': {

@@ -668,6 +668,33 @@
           <span id="display-localhost-url" class="data-value data-value-fill mono truncate">等待中...</span>
         </div>
       </div>
+      <div class="data-row module-divider-start" id="row-reauth-account-json" hidden>
+        <span class="data-label">账号 JSON</span>
+        <div class="data-inline data-value-actions data-row-stack">
+          <textarea id="input-reauth-account-json" class="data-input data-textarea-reauth" rows="6"
+                    placeholder='粘贴单个 account 对象 JSON，必须含 mailProvider 字段'></textarea>
+          <div class="data-inline">
+            <button id="btn-reauth-validate-json" class="btn btn-outline btn-sm" type="button">校验</button>
+            <span id="reauth-json-status" class="data-value mono"></span>
+          </div>
+        </div>
+      </div>
+      <div class="data-row" id="row-reauth-result" hidden>
+        <span class="data-label">授权结果</span>
+        <div class="data-inline data-value-actions data-row-stack">
+          <pre id="display-reauth-result-account" class="data-value mono data-readonly-reauth">等待重新授权完成...</pre>
+          <div class="data-inline">
+            <button id="btn-reauth-copy-result" class="btn btn-outline btn-sm" type="button" disabled>复制到剪贴板</button>
+            <span id="reauth-copy-status" class="data-value mono"></span>
+          </div>
+        </div>
+      </div>
+      <div class="data-row module-divider-start" id="row-settings-actions">
+        <span class="data-label">设置</span>
+        <div class="data-inline data-value-actions">
+          <button id="btn-save-settings" class="btn btn-outline btn-sm data-inline-btn" type="button">保存</button>
+        </div>
+      </div>
     </div>
     <div id="cloudflare-temp-email-section" class="data-card hotmail-card" style="display:none;">
       <div class="section-mini-header">
@@ -1903,6 +1930,9 @@
   <script src="../yyds-mail-utils.js"></script>
   <script src="../flows/openai/index.js"></script>
   <script src="../flows/openai/workflow.js"></script>
+  <script src="../flows/openai-reauth/index.js"></script>
+  <script src="../flows/openai-reauth/workflow.js"></script>
+  <script src="../flows/openai-reauth/reauth-account-validator.js"></script>
   <script src="../flows/kiro/index.js"></script>
   <script src="../flows/kiro/workflow.js"></script>
   <script src="../flows/grok/index.js"></script>
