@@ -8,6 +8,10 @@
       id: 'openai',
       path: 'flows/openai/',
     },
+    'openai-reauth': {
+      id: 'openai-reauth',
+      path: 'flows/openai-reauth/',
+    },
     kiro: {
       id: 'kiro',
       path: 'flows/kiro/',
@@ -32,18 +36,28 @@
     if (!baseEntry) {
       return null;
     }
+    function pickDefinition() {
+      switch (normalized) {
+        case 'openai': return rootScope.MultiPageOpenAiFlowDefinition || null;
+        case 'openai-reauth': return rootScope.MultiPageOpenAiReauthFlowDefinition || null;
+        case 'kiro': return rootScope.MultiPageKiroFlowDefinition || null;
+        case 'grok': return rootScope.MultiPageGrokFlowDefinition || null;
+        default: return null;
+      }
+    }
+    function pickWorkflow() {
+      switch (normalized) {
+        case 'openai': return rootScope.MultiPageOpenAiWorkflow || null;
+        case 'openai-reauth': return rootScope.MultiPageOpenAiReauthWorkflow || null;
+        case 'kiro': return rootScope.MultiPageKiroWorkflow || null;
+        case 'grok': return rootScope.MultiPageGrokWorkflow || null;
+        default: return null;
+      }
+    }
     return {
       ...baseEntry,
-      definition: normalized === 'openai'
-        ? (rootScope.MultiPageOpenAiFlowDefinition || null)
-        : (normalized === 'kiro'
-          ? (rootScope.MultiPageKiroFlowDefinition || null)
-          : (rootScope.MultiPageGrokFlowDefinition || null)),
-      workflow: normalized === 'openai'
-        ? (rootScope.MultiPageOpenAiWorkflow || null)
-        : (normalized === 'kiro'
-          ? (rootScope.MultiPageKiroWorkflow || null)
-          : (rootScope.MultiPageGrokWorkflow || null)),
+      definition: pickDefinition(),
+      workflow: pickWorkflow(),
     };
   }
 

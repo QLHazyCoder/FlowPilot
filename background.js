@@ -3,6 +3,8 @@
 importScripts(
   'flows/openai/index.js',
   'flows/openai/workflow.js',
+  'flows/openai-reauth/index.js',
+  'flows/openai-reauth/workflow.js',
   'flows/kiro/index.js',
   'flows/kiro/workflow.js',
   'flows/grok/index.js',
@@ -52,6 +54,7 @@ importScripts(
   'background/signup-flow-helpers.js',
   'background/mail-rule-registry.js',
   'flows/openai/mail-rules.js',
+  'flows/openai-reauth/mail-rules.js',
   'flows/kiro/mail-rules.js',
   'flows/grok/mail-rules.js',
   'background/flow-mail-polling.js',
@@ -82,6 +85,12 @@ importScripts(
   'flows/openai/background/steps/fetch-login-code.js',
   'flows/openai/background/steps/confirm-oauth.js',
   'flows/openai/background/steps/platform-verify.js',
+  'flows/openai-reauth/background/oauth-client.js',
+  'flows/openai-reauth/background/cookie-cleanup.js',
+  'flows/openai-reauth/background/steps/prepare-reauth.js',
+  'flows/openai-reauth/background/steps/submit-reauth-email.js',
+  'flows/openai-reauth/background/steps/fetch-reauth-code.js',
+  'flows/openai-reauth/background/steps/capture-reauth-callback.js',
   'data/names.js',
   'hotmail-utils.js',
   'microsoft-email.js',
@@ -13743,6 +13752,11 @@ const openAiMailRules = self.MultiPageOpenAiMailRules?.createOpenAiMailRules({
   MAIL_2925_VERIFICATION_INTERVAL_MS,
   MAIL_2925_VERIFICATION_MAX_ATTEMPTS,
 });
+const openAiReauthMailRules = self.MultiPageOpenAiReauthMailRules?.createOpenAiReauthMailRules({
+  getHotmailVerificationRequestTimestamp,
+  MAIL_2925_VERIFICATION_INTERVAL_MS,
+  MAIL_2925_VERIFICATION_MAX_ATTEMPTS,
+});
 const kiroMailRules = self.MultiPageKiroMailRules?.createKiroMailRules({
   LUCKMAIL_PROVIDER,
   MAIL_2925_VERIFICATION_INTERVAL_MS,
@@ -13757,6 +13771,7 @@ const mailRuleRegistry = self.MultiPageBackgroundMailRuleRegistry?.createMailRul
   defaultFlowId: DEFAULT_ACTIVE_FLOW_ID,
   flowBuilders: {
     openai: openAiMailRules,
+    'openai-reauth': openAiReauthMailRules,
     kiro: kiroMailRules,
     grok: grokMailRules,
   },
@@ -14351,6 +14366,10 @@ const stepExecutorsByKey = {
   'post-bound-email-phone-verification': (state) => step8Executor.executeBoundEmailPostLoginPhoneVerification(state),
   'confirm-oauth': (state) => step9Executor.executeStep9(state),
   'platform-verify': (state) => executeStep10(state),
+  'prepare-reauth': (state) => prepareReauthExecutor.executePrepareReauth(state),
+  'submit-reauth-email': (state) => submitReauthEmailExecutor.executeSubmitReauthEmail(state),
+  'fetch-reauth-code': (state) => fetchReauthCodeExecutor.executeFetchReauthCode(state),
+  'capture-reauth-callback': (state) => captureReauthCallbackExecutor.executeCaptureReauthCallback(state),
   'kiro-open-register-page': (state) => kiroRegisterRunner.executeKiroOpenRegisterPage(state),
   'kiro-submit-email': (state) => kiroRegisterRunner.executeKiroSubmitEmail(state),
   'kiro-submit-name': (state) => kiroRegisterRunner.executeKiroSubmitName(state),
@@ -16292,6 +16311,48 @@ const step9Executor = self.MultiPageBackgroundStep9?.createStep9Executor({
   triggerStep8ContentStrategy,
   waitForStep8ClickEffect,
   waitForStep8Ready,
+});
+
+const openAiReauthOAuthClient = self.MultiPageOpenAiReauthOAuthClient || null;
+const openAiReauthCookieCleanup = self.MultiPageOpenAiReauthCookieCleanup || null;
+
+const prepareReauthExecutor = self.MultiPageOpenAiReauthPrepareStep?.createPrepareReauthExecutor({
+  addLog,
+  chrome,
+  clearOpenAiAuthCookies: openAiReauthCookieCleanup?.clearOpenAiAuthCookies,
+  completeNodeFromBackground,
+  generatePkcePair: openAiReauthOAuthClient?.generatePkcePair,
+  generateState: openAiReauthOAuthClient?.generateState,
+  buildAuthorizeUrl: openAiReauthOAuthClient?.buildAuthorizeUrl,
+  registerTab,
+  reuseOrCreateTab,
+  setState,
+});
+
+const submitReauthEmailExecutor = self.MultiPageOpenAiReauthSubmitEmailStep?.createSubmitReauthEmailExecutor({
+  addLog,
+  completeNodeFromBackground,
+  reuseOrCreateTab,
+  sendToContentScriptResilient,
+  throwIfStopped,
+});
+
+const fetchReauthCodeExecutor = self.MultiPageOpenAiReauthFetchCodeStep?.createFetchReauthCodeExecutor({
+  addLog,
+  completeNodeFromBackground,
+  pollFlowVerificationCode: flowMailPollingService?.pollFlowVerificationCode,
+  sendToContentScriptResilient,
+  throwIfStopped,
+});
+
+const captureReauthCallbackExecutor = self.MultiPageOpenAiReauthCaptureCallbackStep?.createCaptureReauthCallbackExecutor({
+  addLog,
+  chrome,
+  completeNodeFromBackground,
+  exchangeAuthorizationCode: openAiReauthOAuthClient?.exchangeAuthorizationCode,
+  parseCallbackUrl: openAiReauthOAuthClient?.parseCallbackUrl,
+  buildUpdatedAccount: openAiReauthOAuthClient?.buildUpdatedAccount,
+  setState,
 });
 
 async function executeStep9(state) {
