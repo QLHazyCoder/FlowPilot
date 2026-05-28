@@ -14574,7 +14574,13 @@ function updatePanelModeUI() {
   applyOpenAiReauthRowVisibility(activeFlowId);
 }
 
-const REAUTH_HIDDEN_ROW_IDS = ['row-source-selector', 'row-custom-password'];
+const REAUTH_HIDDEN_ROW_IDS = [
+  'row-source-selector',
+  'row-custom-password',
+  'row-mail-provider',
+  'row-email-generator',
+  'row-auto-run-controls',
+];
 
 function applyOpenAiReauthRowVisibility(activeFlowId) {
   const isReauthFlow = String(activeFlowId || '').trim().toLowerCase() === 'openai-reauth';
@@ -14589,6 +14595,10 @@ function applyOpenAiReauthRowVisibility(activeFlowId) {
       delete element.dataset.reauthHidden;
     }
   });
+  if (isReauthFlow && typeof syncReauthMailProviderToGlobal === 'function') {
+    // 仅同步显示，不写 storage —— 否则与 background SAVE_SETTING → STATE_CHANGED 广播形成死循环
+    syncReauthMailProviderToGlobal({ persist: false });
+  }
 }
 
 // ============================================================
@@ -19865,4 +19875,25 @@ btnReauthCopyResult?.addEventListener('click', async () => {
   } catch (error) {
     setReauthCopyStatus(`复制失败：${error?.message || error}`, 'error');
   }
+});
+
+// reauth 流程：让「邮箱来源」选择同步到全局 mailProvider，
+// 复用注册流程的 provider section 可见性逻辑（cloudflare / icloud / hotmail 等配置卡片）
+// 参数 persist 控制是否写回 storage：
+//   - 用户主动 change 时 persist=true，会触发 saveSettings
+//   - UI 刷新（如 applyOpenAiReauthRowVisibility）触发时 persist=false，仅同步显示，避免 SAVE_SETTING ↔ STATE_CHANGED 死循环
+function syncReauthMailProviderToGlobal({ persist = false } = {}) {
+  const provider = String(selectReauthMailProvider?.value || '').trim();
+  if (!provider) return;
+  if (selectMailProvider && selectMailProvider.value !== provider) {
+    selectMailProvider.value = provider;
+  }
+  if (typeof updateMailProviderUI === 'function') updateMailProviderUI();
+  if (!persist) return;
+  if (typeof markSettingsDirty === 'function') markSettingsDirty(true);
+  if (typeof saveSettings === 'function') saveSettings({ silent: true }).catch(() => { });
+}
+
+selectReauthMailProvider?.addEventListener('change', () => {
+  syncReauthMailProviderToGlobal({ persist: true });
 });
