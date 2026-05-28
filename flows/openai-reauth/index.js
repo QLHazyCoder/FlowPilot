@@ -33,7 +33,14 @@
       'reauth-input': {
         id: 'reauth-input',
         label: 'OAuth 重新授权',
-        rowIds: ['row-reauth-account-json', 'row-reauth-batch-progress', 'row-reauth-result'],
+        rowIds: [
+          'row-reauth-account-json',
+          'row-reauth-mode-picker',
+          'row-reauth-provider-picker',
+          'row-reauth-batch-actions',
+          'row-reauth-batch-progress',
+          'row-reauth-result',
+        ],
       },
     },
     targetCapabilities: {},
