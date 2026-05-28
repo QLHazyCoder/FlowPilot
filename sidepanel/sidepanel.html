@@ -672,10 +672,26 @@
         <span class="data-label">账号 JSON</span>
         <div class="data-inline data-value-actions data-row-stack">
           <textarea id="input-reauth-account-json" class="data-input data-textarea-reauth" rows="6"
-                    placeholder='粘贴单个 account 对象 JSON，必须含 mailProvider 字段'></textarea>
+                    placeholder='粘贴单个 account 对象或 sub2api 整文件（{accounts: [...]}）'></textarea>
           <div class="data-inline">
             <button id="btn-reauth-validate-json" class="btn btn-outline btn-sm" type="button">校验</button>
             <span id="reauth-json-status" class="data-value mono"></span>
+          </div>
+          <div class="data-inline" id="row-reauth-account-picker" style="display:none;">
+            <label for="select-reauth-account" class="data-value">账号</label>
+            <select id="select-reauth-account" class="data-input"></select>
+          </div>
+          <div class="data-inline">
+            <label for="select-reauth-mail-provider" class="data-value">邮箱来源</label>
+            <select id="select-reauth-mail-provider" class="data-input">
+              <option value="2925">2925</option>
+              <option value="hotmail-api">Hotmail (API)</option>
+              <option value="icloud">iCloud</option>
+              <option value="luckmail-api">LuckMail (API)</option>
+              <option value="cloudmail">Cloud Mail</option>
+              <option value="yyds-mail">YYDS Mail</option>
+              <option value="cloudflare-temp-email">Cloudflare Temp Email</option>
+            </select>
           </div>
         </div>
       </div>

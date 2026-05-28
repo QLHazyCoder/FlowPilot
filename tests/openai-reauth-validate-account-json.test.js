@@ -16,127 +16,147 @@ function loadValidatorModule() {
   return sandbox.self.MultiPageOpenAiReauthAccountValidator;
 }
 
-test('空文本返回错误', () => {
+test('SUPPORTED_MAIL_PROVIDERS 暴露 7 个 provider', () => {
   const mod = loadValidatorModule();
-  const result = mod.validateReauthAccountJson('');
-  assert.equal(result.ok, false);
-  assert.match(result.error, /请粘贴/);
+  assert.deepEqual([...mod.SUPPORTED_MAIL_PROVIDERS].sort(), [
+    '2925',
+    'cloudflare-temp-email',
+    'cloudmail',
+    'hotmail-api',
+    'icloud',
+    'luckmail-api',
+    'yyds-mail',
+  ]);
 });
 
-test('空白字符返回错误', () => {
+test('parseAccountsFromJson 空文本返回错误', () => {
   const mod = loadValidatorModule();
-  const result = mod.validateReauthAccountJson('   \n\t  ');
-  assert.equal(result.ok, false);
+  const r = mod.parseAccountsFromJson('');
+  assert.equal(r.ok, false);
+  assert.match(r.error, /请粘贴/);
 });
 
-test('非法 JSON 返回错误', () => {
+test('parseAccountsFromJson 非法 JSON', () => {
   const mod = loadValidatorModule();
-  const result = mod.validateReauthAccountJson('{not json');
-  assert.equal(result.ok, false);
-  assert.match(result.error, /JSON 解析失败/);
+  assert.equal(mod.parseAccountsFromJson('{not json').ok, false);
 });
 
-test('非对象 JSON 返回错误', () => {
+test('parseAccountsFromJson 非对象/数组拒绝', () => {
   const mod = loadValidatorModule();
-  assert.equal(mod.validateReauthAccountJson('[1,2,3]').ok, false);
-  assert.equal(mod.validateReauthAccountJson('"a string"').ok, false);
-  assert.equal(mod.validateReauthAccountJson('null').ok, false);
-  assert.equal(mod.validateReauthAccountJson('42').ok, false);
+  assert.equal(mod.parseAccountsFromJson('"str"').ok, false);
+  assert.equal(mod.parseAccountsFromJson('42').ok, false);
+  assert.equal(mod.parseAccountsFromJson('null').ok, false);
 });
 
-test('缺少 email 返回错误', () => {
+test('parseAccountsFromJson 单账号对象', () => {
   const mod = loadValidatorModule();
-  const result = mod.validateReauthAccountJson(JSON.stringify({
-    mailProvider: '2925',
-    credentials: {},
-  }));
-  assert.equal(result.ok, false);
-  assert.match(result.error, /email/);
-});
-
-test('email 格式不合法返回错误', () => {
-  const mod = loadValidatorModule();
-  const result = mod.validateReauthAccountJson(JSON.stringify({
-    mailProvider: '2925',
-    credentials: { email: 'not-an-email' },
-  }));
-  assert.equal(result.ok, false);
-  assert.match(result.error, /合法地址/);
-});
-
-test('缺少 mailProvider 返回错误', () => {
-  const mod = loadValidatorModule();
-  const result = mod.validateReauthAccountJson(JSON.stringify({
+  const r = mod.parseAccountsFromJson(JSON.stringify({
     credentials: { email: 'a@b.com' },
   }));
-  assert.equal(result.ok, false);
-  assert.match(result.error, /mailProvider/);
+  assert.equal(r.ok, true);
+  assert.equal(r.accounts.length, 1);
+  assert.equal(r.accounts[0].email, 'a@b.com');
+  assert.equal(r.accounts[0].index, 0);
 });
 
-test('mailProvider 是空字符串返回错误', () => {
+test('parseAccountsFromJson sub2api 整文件 - 3 个账号', () => {
   const mod = loadValidatorModule();
-  const result = mod.validateReauthAccountJson(JSON.stringify({
-    mailProvider: '   ',
-    credentials: { email: 'a@b.com' },
+  const r = mod.parseAccountsFromJson(JSON.stringify({
+    exported_at: '2026-05-28T07:52:21Z',
+    proxies: [],
+    accounts: [
+      { name: 'a@2925.com', credentials: { email: 'a@2925.com' } },
+      { name: 'b@2925.com', credentials: { email: 'b@2925.com' } },
+      { name: 'c@2925.com', credentials: { email: 'c@2925.com' } },
+    ],
   }));
-  assert.equal(result.ok, false);
+  assert.equal(r.ok, true);
+  assert.equal(r.accounts.length, 3);
+  assert.equal(r.accounts[0].email, 'a@2925.com');
+  assert.equal(r.accounts[1].email, 'b@2925.com');
+  assert.equal(r.accounts[2].email, 'c@2925.com');
 });
 
-test('credentials.email 路径成功', () => {
+test('parseAccountsFromJson accounts 是数组（无 wrapper）', () => {
   const mod = loadValidatorModule();
-  const result = mod.validateReauthAccountJson(JSON.stringify({
-    mailProvider: '2925',
-    credentials: { email: 'foo@2925.com' },
-    name: 'foo@2925.com',
-  }));
-  assert.equal(result.ok, true);
-  assert.equal(result.email, 'foo@2925.com');
-  assert.equal(result.mailProvider, '2925');
+  const r = mod.parseAccountsFromJson(JSON.stringify([
+    { credentials: { email: 'x@y.com' } },
+  ]));
+  assert.equal(r.ok, true);
+  assert.equal(r.accounts.length, 1);
 });
 
-test('email 字段在顶层时也能识别', () => {
+test('parseAccountsFromJson accounts 数组为空时拒绝', () => {
   const mod = loadValidatorModule();
-  const result = mod.validateReauthAccountJson(JSON.stringify({
-    mailProvider: 'hotmail-api',
-    email: 'top@hotmail.com',
-  }));
-  assert.equal(result.ok, true);
-  assert.equal(result.email, 'top@hotmail.com');
-  assert.equal(result.mailProvider, 'hotmail-api');
+  const r = mod.parseAccountsFromJson(JSON.stringify({ accounts: [] }));
+  assert.equal(r.ok, false);
+  assert.match(r.error, /列表为空/);
 });
 
-test('name 字段作为 fallback 邮箱', () => {
+test('parseAccountsFromJson 某个 account 缺 email 时报错并指明 index', () => {
   const mod = loadValidatorModule();
-  const result = mod.validateReauthAccountJson(JSON.stringify({
-    mailProvider: 'icloud',
-    name: 'fallback@icloud.com',
+  const r = mod.parseAccountsFromJson(JSON.stringify({
+    accounts: [
+      { credentials: { email: 'a@b.com' } },
+      { credentials: {} },
+    ],
   }));
-  assert.equal(result.ok, true);
-  assert.equal(result.email, 'fallback@icloud.com');
+  assert.equal(r.ok, false);
+  assert.match(r.error, /accounts\[1\]/);
+  assert.match(r.error, /email/);
 });
 
-test('保留原始 account 对象供后续使用', () => {
+test('parseAccountsFromJson email 格式非法时报错', () => {
+  const mod = loadValidatorModule();
+  const r = mod.parseAccountsFromJson(JSON.stringify({
+    accounts: [{ credentials: { email: 'not-email' } }],
+  }));
+  assert.equal(r.ok, false);
+  assert.match(r.error, /格式无效/);
+});
+
+test('parseAccountsFromJson 兼容 email 在顶层 / name 字段', () => {
+  const mod = loadValidatorModule();
+  const r1 = mod.parseAccountsFromJson(JSON.stringify({ accounts: [{ email: 'top@x.com' }] }));
+  assert.equal(r1.accounts[0].email, 'top@x.com');
+  const r2 = mod.parseAccountsFromJson(JSON.stringify({ accounts: [{ name: 'name@x.com' }] }));
+  assert.equal(r2.accounts[0].email, 'name@x.com');
+});
+
+test('buildResolvedAccount 注入 mailProvider', () => {
   const mod = loadValidatorModule();
   const original = {
-    mailProvider: '2925',
     name: 'a@2925.com',
     platform: 'openai',
-    type: 'oauth',
     credentials: { email: 'a@2925.com', refresh_token: 'old' },
-    extra: { email: 'a@2925.com' },
     concurrency: 3,
   };
-  const result = mod.validateReauthAccountJson(JSON.stringify(original));
-  assert.equal(result.ok, true);
-  assert.deepEqual(result.account, original);
+  const resolved = mod.buildResolvedAccount(original, '2925');
+  assert.equal(resolved.mailProvider, '2925');
+  assert.equal(resolved.concurrency, 3);
+  assert.equal(resolved.credentials.refresh_token, 'old');
 });
 
-test('email 大小写按原样保留（不强制小写）', () => {
+test('buildResolvedAccount 拒绝空 provider', () => {
   const mod = loadValidatorModule();
-  const result = mod.validateReauthAccountJson(JSON.stringify({
-    mailProvider: '2925',
-    credentials: { email: 'Mixed.Case@Example.Com' },
-  }));
-  assert.equal(result.ok, true);
-  assert.equal(result.email, 'Mixed.Case@Example.Com');
+  assert.throws(
+    () => mod.buildResolvedAccount({ credentials: { email: 'a@b.com' } }, ''),
+    /mailProvider/
+  );
+});
+
+test('buildResolvedAccount 不修改原对象（不可变）', () => {
+  const mod = loadValidatorModule();
+  const original = { credentials: { email: 'a@b.com' } };
+  const resolved = mod.buildResolvedAccount(original, 'hotmail-api');
+  assert.equal(original.mailProvider, undefined);
+  assert.equal(resolved.mailProvider, 'hotmail-api');
+});
+
+test('extractAccountEmail 优先级：credentials.email > email > name', () => {
+  const mod = loadValidatorModule();
+  assert.equal(mod.extractAccountEmail({ credentials: { email: 'c@x.com' }, email: 'e@x.com', name: 'n@x.com' }), 'c@x.com');
+  assert.equal(mod.extractAccountEmail({ email: 'e@x.com', name: 'n@x.com' }), 'e@x.com');
+  assert.equal(mod.extractAccountEmail({ name: 'n@x.com' }), 'n@x.com');
+  assert.equal(mod.extractAccountEmail({}), '');
 });

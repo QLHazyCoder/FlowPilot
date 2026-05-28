@@ -54,6 +54,9 @@ const displayLocalhostUrl = document.getElementById('display-localhost-url');
 const inputReauthAccountJson = document.getElementById('input-reauth-account-json');
 const btnReauthValidateJson = document.getElementById('btn-reauth-validate-json');
 const reauthJsonStatus = document.getElementById('reauth-json-status');
+const rowReauthAccountPicker = document.getElementById('row-reauth-account-picker');
+const selectReauthAccount = document.getElementById('select-reauth-account');
+const selectReauthMailProvider = document.getElementById('select-reauth-mail-provider');
 const displayReauthResultAccount = document.getElementById('display-reauth-result-account');
 const btnReauthCopyResult = document.getElementById('btn-reauth-copy-result');
 const reauthCopyStatus = document.getElementById('reauth-copy-status');
@@ -19684,7 +19687,7 @@ Promise.allSettled([
   });
 });
 
-let pendingReauthAccount = null;
+let pendingReauthAccounts = null;
 
 function setReauthJsonStatus(text, level = '') {
   if (!reauthJsonStatus) return;
@@ -19700,28 +19703,85 @@ function setReauthCopyStatus(text, level = '') {
   if (level) reauthCopyStatus.classList.add(level);
 }
 
-function runReauthAccountValidation(rawText) {
-  const validator = (typeof self !== 'undefined' ? self : window).MultiPageOpenAiReauthAccountValidator;
-  if (!validator || typeof validator.validateReauthAccountJson !== 'function') {
-    return { ok: false, error: '校验器未加载，请检查扩展安装。' };
-  }
-  return validator.validateReauthAccountJson(rawText);
+function getReauthValidatorApi() {
+  return (typeof self !== 'undefined' ? self : window).MultiPageOpenAiReauthAccountValidator || null;
 }
 
-function ensurePendingReauthAccount() {
-  const rawText = inputReauthAccountJson?.value || '';
-  const result = runReauthAccountValidation(rawText);
+function renderReauthAccountPicker(accounts) {
+  if (!selectReauthAccount || !rowReauthAccountPicker) return;
+  selectReauthAccount.innerHTML = '';
+  accounts.forEach((entry) => {
+    const option = document.createElement('option');
+    option.value = String(entry.index);
+    option.textContent = `${entry.index + 1}. ${entry.email}`;
+    selectReauthAccount.appendChild(option);
+  });
+  selectReauthAccount.value = '0';
+  rowReauthAccountPicker.style.display = accounts.length > 1 ? '' : 'none';
+}
+
+function clearReauthAccountPicker() {
+  if (selectReauthAccount) selectReauthAccount.innerHTML = '';
+  if (rowReauthAccountPicker) rowReauthAccountPicker.style.display = 'none';
+}
+
+function parsePendingReauthAccountsFromInput() {
+  const validator = getReauthValidatorApi();
+  if (!validator || typeof validator.parseAccountsFromJson !== 'function') {
+    setReauthJsonStatus('校验器未加载，请检查扩展安装。', 'error');
+    pendingReauthAccounts = null;
+    clearReauthAccountPicker();
+    return null;
+  }
+  const result = validator.parseAccountsFromJson(inputReauthAccountJson?.value || '');
   if (!result.ok) {
     setReauthJsonStatus(result.error, 'error');
     if (typeof showToast === 'function') {
       showToast(`账号 JSON 校验失败：${result.error}`, 'error');
     }
-    pendingReauthAccount = null;
+    pendingReauthAccounts = null;
+    clearReauthAccountPicker();
     return null;
   }
-  setReauthJsonStatus(`✅ 已识别 ${result.email}（${result.mailProvider}）`, 'ok');
-  pendingReauthAccount = result.account;
-  return result.account;
+  pendingReauthAccounts = result.accounts;
+  renderReauthAccountPicker(result.accounts);
+  setReauthJsonStatus(
+    result.accounts.length === 1
+      ? `✅ 已识别 1 个账号：${result.accounts[0].email}`
+      : `✅ 已识别 ${result.accounts.length} 个账号，请在下拉框选择本次要重新授权的账号`,
+    'ok'
+  );
+  return result.accounts;
+}
+
+function ensurePendingReauthAccount() {
+  const accounts = pendingReauthAccounts || parsePendingReauthAccountsFromInput();
+  if (!accounts) return null;
+
+  const selectedIndex = selectReauthAccount && accounts.length > 1
+    ? Number(selectReauthAccount.value)
+    : 0;
+  const entry = accounts[Number.isInteger(selectedIndex) ? selectedIndex : 0] || accounts[0];
+  if (!entry) {
+    setReauthJsonStatus('未选择账号。', 'error');
+    return null;
+  }
+
+  const provider = String(selectReauthMailProvider?.value || '').trim();
+  if (!provider) {
+    setReauthJsonStatus('请先选择「邮箱来源」。', 'error');
+    if (typeof showToast === 'function') {
+      showToast('请先在「邮箱来源」下拉框选择 mailProvider。', 'error');
+    }
+    return null;
+  }
+
+  const validator = getReauthValidatorApi();
+  if (!validator || typeof validator.buildResolvedAccount !== 'function') {
+    setReauthJsonStatus('校验器未加载。', 'error');
+    return null;
+  }
+  return validator.buildResolvedAccount(entry.account, provider);
 }
 
 function renderReauthResultAccount(account) {
@@ -19738,11 +19798,12 @@ function renderReauthResultAccount(account) {
 }
 
 btnReauthValidateJson?.addEventListener('click', () => {
-  ensurePendingReauthAccount();
+  parsePendingReauthAccountsFromInput();
 });
 
 inputReauthAccountJson?.addEventListener('input', () => {
-  pendingReauthAccount = null;
+  pendingReauthAccounts = null;
+  clearReauthAccountPicker();
   setReauthJsonStatus('');
 });
 

@@ -1,6 +1,16 @@
 (function attachOpenAiReauthAccountValidator(root, factory) {
   root.MultiPageOpenAiReauthAccountValidator = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createOpenAiReauthAccountValidatorModule() {
+  const SUPPORTED_MAIL_PROVIDERS = Object.freeze([
+    '2925',
+    'hotmail-api',
+    'icloud',
+    'luckmail-api',
+    'cloudmail',
+    'yyds-mail',
+    'cloudflare-temp-email',
+  ]);
+
   function isPlainObject(value) {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
   }
@@ -9,10 +19,21 @@
     return String(value ?? '').trim();
   }
 
-  function validateReauthAccountJson(rawText) {
+  function extractAccountEmail(account) {
+    const credentials = isPlainObject(account?.credentials) ? account.credentials : {};
+    return cleanString(credentials.email)
+      || cleanString(account?.email)
+      || cleanString(account?.name);
+  }
+
+  function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  function parseAccountsFromJson(rawText) {
     const trimmed = cleanString(rawText);
     if (!trimmed) {
-      return { ok: false, error: '请粘贴 account 对象 JSON。' };
+      return { ok: false, error: '请粘贴账号 JSON（单账号对象或 sub2api 导出整文件）。' };
     }
 
     let parsed;
@@ -22,36 +43,59 @@
       return { ok: false, error: `JSON 解析失败：${error.message}` };
     }
 
-    if (!isPlainObject(parsed)) {
-      return { ok: false, error: 'JSON 必须是对象（不是数组或基本类型）。' };
+    let accounts = null;
+    if (Array.isArray(parsed?.accounts)) {
+      accounts = parsed.accounts;
+    } else if (Array.isArray(parsed)) {
+      accounts = parsed;
+    } else if (isPlainObject(parsed)) {
+      accounts = [parsed];
+    } else {
+      return { ok: false, error: 'JSON 必须是单账号对象、accounts 数组，或含 accounts 字段的对象。' };
     }
 
-    const credentialsObject = isPlainObject(parsed.credentials) ? parsed.credentials : {};
-    const email = cleanString(credentialsObject.email)
-      || cleanString(parsed.email)
-      || cleanString(parsed.name);
-    if (!email) {
-      return { ok: false, error: 'JSON 缺少 email：请检查 credentials.email / email / name 任一字段。' };
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return { ok: false, error: `识别到的 email 不是合法地址：${email}` };
+    if (!accounts.length) {
+      return { ok: false, error: 'accounts 列表为空。' };
     }
 
-    const mailProvider = cleanString(parsed.mailProvider);
-    if (!mailProvider) {
-      return {
-        ok: false,
-        error: '缺少顶层 mailProvider 字段（必须显式声明邮箱来源，如 "2925" / "hotmail-api" / "icloud" / "luckmail-api" / "cloudmail" / "yyds-mail" / "cloudflare-temp-email"）。',
-      };
+    const normalized = [];
+    for (let index = 0; index < accounts.length; index += 1) {
+      const account = accounts[index];
+      if (!isPlainObject(account)) {
+        return { ok: false, error: `accounts[${index}] 不是对象。` };
+      }
+      const email = extractAccountEmail(account);
+      if (!email) {
+        return { ok: false, error: `accounts[${index}] 缺少 email（credentials.email / email / name）。` };
+      }
+      if (!isValidEmail(email)) {
+        return { ok: false, error: `accounts[${index}] 的 email 格式无效：${email}` };
+      }
+      normalized.push({ index, email, account });
     }
 
     return {
       ok: true,
-      email,
-      mailProvider,
-      account: parsed,
+      accounts: normalized,
     };
   }
 
-  return { validateReauthAccountJson };
+  function buildResolvedAccount(account, mailProvider) {
+    const normalizedProvider = cleanString(mailProvider);
+    if (!normalizedProvider) {
+      throw new Error('未提供 mailProvider，无法注入到账号对象。');
+    }
+    return {
+      ...account,
+      mailProvider: normalizedProvider,
+    };
+  }
+
+  return {
+    SUPPORTED_MAIL_PROVIDERS,
+    parseAccountsFromJson,
+    buildResolvedAccount,
+    extractAccountEmail,
+    isValidEmail,
+  };
 });
