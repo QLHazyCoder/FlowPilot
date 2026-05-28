@@ -322,6 +322,9 @@ function updatePlusModeUI() {
 function updatePhoneVerificationSettingsUI() {
   calls.push({ type: 'phone' });
 }
+function applyOpenAiReauthRowVisibility(activeFlowId) {
+  calls.push({ type: 'reauth-visibility', flowId: activeFlowId });
+}
 function resolveCurrentSidepanelCapabilities() {
   return {
     visibleGroupIds: ['service-account', 'openai-plus', 'openai-phone'],
@@ -346,7 +349,7 @@ return {
 
   assert.deepEqual(
     api.calls.map((entry) => entry.type),
-    ['render-flow', 'render-target', 'groups', 'plus', 'phone']
+    ['render-flow', 'render-target', 'groups', 'plus', 'phone', 'reauth-visibility']
   );
   assert.equal(api.selectFlow.value, 'openai');
   assert.equal(api.selectPanelMode.value, 'cpa');
