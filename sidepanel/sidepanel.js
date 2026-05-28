@@ -51,6 +51,12 @@ const btnOpenContributionUpload = document.getElementById('btn-open-contribution
 const btnExitContributionMode = document.getElementById('btn-exit-contribution-mode');
 const displayOauthUrl = document.getElementById('display-oauth-url');
 const displayLocalhostUrl = document.getElementById('display-localhost-url');
+const inputReauthAccountJson = document.getElementById('input-reauth-account-json');
+const btnReauthValidateJson = document.getElementById('btn-reauth-validate-json');
+const reauthJsonStatus = document.getElementById('reauth-json-status');
+const displayReauthResultAccount = document.getElementById('display-reauth-result-account');
+const btnReauthCopyResult = document.getElementById('btn-reauth-copy-result');
+const reauthCopyStatus = document.getElementById('reauth-copy-status');
 const displayStatus = document.getElementById('display-status');
 const statusBar = document.getElementById('status-bar');
 const inputEmail = document.getElementById('input-email');
@@ -11629,6 +11635,7 @@ async function restoreState() {
       displayLocalhostUrl.textContent = state.localhostUrl;
       displayLocalhostUrl.classList.add('has-value');
     }
+    renderReauthResultAccount(state.reauthResultAccount);
     if (state.nodeStatuses) {
       for (const [nodeId, status] of Object.entries(state.nodeStatuses)) {
         updateNodeUI(nodeId, status);
@@ -14817,7 +14824,13 @@ stepsList?.addEventListener('click', async (event) => {
         }
       }
     } else {
-      const response = await sendSidepanelMessage({ type: 'EXECUTE_NODE', source: 'sidepanel', payload: { nodeId } });
+      const reauthPayload = { nodeId };
+      if (nodeId === 'prepare-reauth') {
+        const account = ensurePendingReauthAccount();
+        if (!account) return;
+        reauthPayload.reauthInputAccount = account;
+      }
+      const response = await sendSidepanelMessage({ type: 'EXECUTE_NODE', source: 'sidepanel', payload: reauthPayload });
       if (response?.error) {
         throw new Error(response.error);
       }
@@ -18342,4 +18355,77 @@ Promise.allSettled([
   }).catch((err) => {
     console.error('Failed to initialize sidepanel state:', err);
   });
+});
+
+let pendingReauthAccount = null;
+
+function setReauthJsonStatus(text, level = '') {
+  if (!reauthJsonStatus) return;
+  reauthJsonStatus.textContent = text || '';
+  reauthJsonStatus.classList.remove('ok', 'error');
+  if (level) reauthJsonStatus.classList.add(level);
+}
+
+function setReauthCopyStatus(text, level = '') {
+  if (!reauthCopyStatus) return;
+  reauthCopyStatus.textContent = text || '';
+  reauthCopyStatus.classList.remove('ok', 'error');
+  if (level) reauthCopyStatus.classList.add(level);
+}
+
+function runReauthAccountValidation(rawText) {
+  const validator = (typeof self !== 'undefined' ? self : window).MultiPageOpenAiReauthAccountValidator;
+  if (!validator || typeof validator.validateReauthAccountJson !== 'function') {
+    return { ok: false, error: '校验器未加载，请检查扩展安装。' };
+  }
+  return validator.validateReauthAccountJson(rawText);
+}
+
+function ensurePendingReauthAccount() {
+  const rawText = inputReauthAccountJson?.value || '';
+  const result = runReauthAccountValidation(rawText);
+  if (!result.ok) {
+    setReauthJsonStatus(result.error, 'error');
+    if (typeof showToast === 'function') {
+      showToast(`账号 JSON 校验失败：${result.error}`, 'error');
+    }
+    pendingReauthAccount = null;
+    return null;
+  }
+  setReauthJsonStatus(`✅ 已识别 ${result.email}（${result.mailProvider}）`, 'ok');
+  pendingReauthAccount = result.account;
+  return result.account;
+}
+
+function renderReauthResultAccount(account) {
+  if (!displayReauthResultAccount || !btnReauthCopyResult) return;
+  if (account && typeof account === 'object') {
+    displayReauthResultAccount.textContent = JSON.stringify(account, null, 2);
+    displayReauthResultAccount.classList.add('has-value');
+    btnReauthCopyResult.disabled = false;
+  } else {
+    displayReauthResultAccount.textContent = '等待重新授权完成...';
+    displayReauthResultAccount.classList.remove('has-value');
+    btnReauthCopyResult.disabled = true;
+  }
+}
+
+btnReauthValidateJson?.addEventListener('click', () => {
+  ensurePendingReauthAccount();
+});
+
+inputReauthAccountJson?.addEventListener('input', () => {
+  pendingReauthAccount = null;
+  setReauthJsonStatus('');
+});
+
+btnReauthCopyResult?.addEventListener('click', async () => {
+  const text = displayReauthResultAccount?.textContent || '';
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    setReauthCopyStatus('✅ 已复制', 'ok');
+  } catch (error) {
+    setReauthCopyStatus(`复制失败：${error?.message || error}`, 'error');
+  }
 });

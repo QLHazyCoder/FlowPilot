@@ -1276,6 +1276,9 @@
             await setPersistentSettings({ emailPrefix: message.payload.emailPrefix });
             await setState({ emailPrefix: message.payload.emailPrefix });
           }
+          if (message.payload.reauthInputAccount !== undefined) {
+            await setState({ reauthInputAccount: message.payload.reauthInputAccount });
+          }
           const executionState = await getState();
           if (doesNodeUseCompletionSignal(nodeId, executionState)) {
             const completionPayload = await executeNodeViaCompletionSignal(nodeId);
