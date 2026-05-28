@@ -4480,6 +4480,91 @@ function isPhoneActivationForNumber(activation, phoneNumber) {
   return Boolean(activationDigits && targetDigits && activationDigits === targetDigits);
 }
 
+function getSignupPhoneIdentityValue(state = {}) {
+  const accountIdentifierType = String(state?.accountIdentifierType || '').trim().toLowerCase();
+  return String(
+    state?.signupPhoneNumber
+    || getPhoneActivationPhoneNumber(state?.signupPhoneCompletedActivation)
+    || getPhoneActivationPhoneNumber(state?.signupPhoneActivation)
+    || (accountIdentifierType === 'phone' ? state?.accountIdentifier : '')
+    || ''
+  ).trim();
+}
+
+function isPhoneSignupCompletionState(state = {}) {
+  const signupMethod = String(state?.resolvedSignupMethod || state?.signupMethod || '').trim().toLowerCase();
+  return signupMethod === 'phone';
+}
+
+function signupPhoneIdentityValuesMatch(left = '', right = '') {
+  const leftRaw = String(left || '').trim();
+  const rightRaw = String(right || '').trim();
+  if (!leftRaw || !rightRaw) {
+    return false;
+  }
+  if (leftRaw === rightRaw) {
+    return true;
+  }
+  const leftDigits = normalizePhoneIdentityDigits(leftRaw);
+  const rightDigits = normalizePhoneIdentityDigits(rightRaw);
+  return Boolean(leftDigits && rightDigits && leftDigits === rightDigits);
+}
+
+async function clearSignupPhoneIdentityBeforeFinalNodeNotify(completionState = {}, options = {}) {
+  if (!isPhoneSignupCompletionState(completionState)) {
+    return { cleared: false, reason: 'not_phone_signup' };
+  }
+
+  const completedPhone = getSignupPhoneIdentityValue(completionState);
+  if (!completedPhone) {
+    return { cleared: false, reason: 'missing_completed_phone' };
+  }
+
+  const latestState = await getState();
+  const currentPhone = getSignupPhoneIdentityValue(latestState);
+  if (!currentPhone) {
+    return { cleared: false, reason: 'missing_current_phone' };
+  }
+
+  const currentPhoneCandidates = [
+    latestState?.signupPhoneNumber,
+    getPhoneActivationPhoneNumber(latestState?.signupPhoneCompletedActivation),
+    getPhoneActivationPhoneNumber(latestState?.signupPhoneActivation),
+    String(latestState?.accountIdentifierType || '').trim().toLowerCase() === 'phone'
+      ? latestState?.accountIdentifier
+      : '',
+  ]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+
+  if (
+    !signupPhoneIdentityValuesMatch(completedPhone, currentPhone)
+    || currentPhoneCandidates.some((candidate) => !signupPhoneIdentityValuesMatch(completedPhone, candidate))
+  ) {
+    return { cleared: false, reason: 'changed' };
+  }
+
+  const updates = {
+    phoneNumber: '',
+    signupPhoneNumber: '',
+    signupPhoneActivation: null,
+    signupPhoneCompletedActivation: null,
+    signupPhoneVerificationRequestedAt: null,
+    signupPhoneVerificationPurpose: '',
+  };
+  if (String(latestState?.accountIdentifierType || '').trim().toLowerCase() === 'phone') {
+    updates.accountIdentifierType = null;
+    updates.accountIdentifier = '';
+  }
+
+  await setState(updates);
+  broadcastDataUpdate(updates);
+  await addLog('手机号注册：最终节点完成前已清空本轮注册手机号，避免下一轮复用。', 'ok', {
+    nodeId: options?.nodeId || '',
+  });
+  return { cleared: true, phoneNumber: currentPhone };
+}
+
 async function setEmailStateSilently(email, options = {}) {
   const currentState = await getState();
   const preserveAccountIdentity = Boolean(options?.preserveAccountIdentity);
@@ -11157,6 +11242,15 @@ async function completeNodeFromBackground(nodeId, payload = {}) {
   await addLog('已完成', 'ok', { nodeId: normalizedNodeId });
 
   if (normalizedNodeId === lastNodeId) {
+    try {
+      await clearSignupPhoneIdentityBeforeFinalNodeNotify(completionState, {
+        nodeId: normalizedNodeId,
+      });
+    } catch (error) {
+      await addLog(`手机号注册：最终节点完成前清理手机号身份失败：${getErrorMessage(error)}`, 'warn', {
+        nodeId: normalizedNodeId,
+      });
+    }
     notifyNodeComplete(normalizedNodeId, payload);
     void runCompletedNodeSideEffects(normalizedNodeId, payload, completionState, lastNodeId)
       .catch((error) => reportCompletedNodeSideEffectError(normalizedNodeId, error));

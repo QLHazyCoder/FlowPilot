@@ -51,23 +51,44 @@ function extractFunction(name) {
   return source.slice(start, end);
 }
 
-function createApi(events, lastNodeId = 'platform-verify') {
-  return new Function('events', 'lastNodeId', `
+function createApi(events, lastNodeId = 'platform-verify', initialState = {}, options = {}) {
+  return new Function('events', 'lastNodeId', 'initialState', 'options', `
 let stopRequested = false;
 const LOG_PREFIX = '[test]';
+let currentState = { nodeStatuses: {}, accountContributionEnabled: true, ...initialState };
 const STOP_ERROR_MESSAGE = '流程已被用户停止。';
 function getErrorMessage(error) {
   return error?.message || String(error || '');
 }
 async function getState() {
   events.push({ type: 'getState' });
-  return { nodeStatuses: {}, accountContributionEnabled: true };
+  if (typeof options.beforeGetState === 'function') {
+    const patch = options.beforeGetState(currentState);
+    if (patch && typeof patch === 'object') {
+      currentState = { ...currentState, ...patch };
+    }
+  }
+  return currentState;
 }
 function getLastNodeIdForState() {
   return lastNodeId;
 }
 async function setNodeStatus(nodeId, status) {
   events.push({ type: 'status', nodeId, status });
+  currentState = {
+    ...currentState,
+    nodeStatuses: {
+      ...(currentState.nodeStatuses || {}),
+      [nodeId]: status,
+    },
+  };
+}
+async function setState(updates) {
+  currentState = { ...currentState, ...updates };
+  events.push({ type: 'setState', updates });
+}
+function broadcastDataUpdate(updates) {
+  events.push({ type: 'broadcast', updates });
 }
 async function addLog(message, level, options = {}) {
   events.push({ type: 'log', message, level, options });
@@ -89,11 +110,17 @@ async function handleNodeData(nodeId, payload) {
 async function appendAndBroadcastAccountRunRecord(status, state) {
   events.push({ type: 'record', status, state });
 }
+${extractFunction('normalizePhoneIdentityDigits')}
+${extractFunction('getPhoneActivationPhoneNumber')}
+${extractFunction('getSignupPhoneIdentityValue')}
+${extractFunction('isPhoneSignupCompletionState')}
+${extractFunction('signupPhoneIdentityValuesMatch')}
+${extractFunction('clearSignupPhoneIdentityBeforeFinalNodeNotify')}
 ${extractFunction('runCompletedNodeSideEffects')}
 ${extractFunction('reportCompletedNodeSideEffectError')}
 ${extractFunction('completeNodeFromBackground')}
-return { completeNodeFromBackground };
-`)(events, lastNodeId);
+return { completeNodeFromBackground, getCurrentState: () => currentState };
+`)(events, lastNodeId, initialState, options);
 }
 
 test('completeNodeFromBackground releases final node before slow post-completion side effects', async () => {
@@ -123,4 +150,64 @@ test('completeNodeFromBackground keeps non-final node data handling before compl
   const types = events.map((event) => event.type);
   assert.equal(types.indexOf('handle-done') < types.indexOf('notify'), true);
   assert.equal(types.includes('record'), false);
+});
+
+test('completeNodeFromBackground clears matching signup phone identity before final completion signal', async () => {
+  const events = [];
+  const api = createApi(events, 'platform-verify', {
+    signupMethod: 'phone',
+    accountIdentifierType: 'phone',
+    accountIdentifier: '+56 979206303',
+    phoneNumber: '+56 979206303',
+    signupPhoneNumber: '+56979206303',
+    signupPhoneActivation: { activationId: 'active', phoneNumber: '+56979206303' },
+    signupPhoneCompletedActivation: { activationId: 'done', phoneNumber: '+56 979206303' },
+    signupPhoneVerificationRequestedAt: 123,
+    signupPhoneVerificationPurpose: 'login',
+  });
+
+  await api.completeNodeFromBackground('platform-verify', { localhostUrl: 'http://localhost:1455/auth/callback?code=ok' });
+
+  const types = events.map((event) => event.type);
+  assert.equal(types.indexOf('setState') < types.indexOf('notify'), true);
+  assert.equal(types.indexOf('broadcast') < types.indexOf('notify'), true);
+  assert.equal(api.getCurrentState().phoneNumber, '');
+  assert.equal(api.getCurrentState().signupPhoneNumber, '');
+  assert.equal(api.getCurrentState().signupPhoneActivation, null);
+  assert.equal(api.getCurrentState().signupPhoneCompletedActivation, null);
+  assert.equal(api.getCurrentState().signupPhoneVerificationRequestedAt, null);
+  assert.equal(api.getCurrentState().signupPhoneVerificationPurpose, '');
+  assert.equal(api.getCurrentState().accountIdentifierType, null);
+  assert.equal(api.getCurrentState().accountIdentifier, '');
+});
+
+test('completeNodeFromBackground keeps latest signup phone identity when it changed before final signal', async () => {
+  const events = [];
+  let mutated = false;
+  const api = createApi(events, 'platform-verify', {
+    signupMethod: 'phone',
+    accountIdentifierType: 'phone',
+    accountIdentifier: '+56979206303',
+    signupPhoneNumber: '+56979206303',
+    signupPhoneActivation: { activationId: 'old', phoneNumber: '+56979206303' },
+  }, {
+    beforeGetState: (state) => {
+      if (!mutated && state.nodeStatuses?.['platform-verify'] === 'completed') {
+        mutated = true;
+        return {
+          accountIdentifier: '+84901122334',
+          signupPhoneNumber: '+84901122334',
+          signupPhoneActivation: { activationId: 'new', phoneNumber: '+84901122334' },
+        };
+      }
+      return null;
+    },
+  });
+
+  await api.completeNodeFromBackground('platform-verify', { localhostUrl: 'http://localhost:1455/auth/callback?code=ok' });
+
+  assert.equal(events.some((event) => event.type === 'setState'), false);
+  assert.equal(api.getCurrentState().accountIdentifier, '+84901122334');
+  assert.equal(api.getCurrentState().signupPhoneNumber, '+84901122334');
+  assert.deepEqual(api.getCurrentState().signupPhoneActivation, { activationId: 'new', phoneNumber: '+84901122334' });
 });
