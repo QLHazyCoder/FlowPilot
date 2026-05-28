@@ -4030,6 +4030,9 @@ function buildFreshAutoRunKeepState(prevState = {}) {
   if (typeof grokStateHelpers?.buildFreshKeepState === 'function') {
     Object.assign(keepState, grokStateHelpers.buildFreshKeepState(sourceState));
   }
+  if (activeFlowId === 'openai-reauth' && isPlainObjectValue(sourceState.reauthInputAccount)) {
+    keepState.reauthInputAccount = sourceState.reauthInputAccount;
+  }
   if (Object.prototype.hasOwnProperty.call(sourceState, 'settingsSchemaVersion')) {
     keepState.settingsSchemaVersion = Number(sourceState.settingsSchemaVersion) || 0;
   }
@@ -16011,6 +16014,23 @@ const captureReauthCallbackExecutor = self.MultiPageOpenAiReauthCaptureCallbackS
   parseCallbackUrl: openAiReauthOAuthClient?.parseCallbackUrl,
   buildUpdatedAccount: openAiReauthOAuthClient?.buildUpdatedAccount,
   setState,
+  // 复用注册流程 step9 的 OAuth 同意页点击编排
+  getTabId,
+  isTabAlive,
+  ensureStep8SignupPageReady,
+  waitForStep8Ready,
+  prepareStep8DebuggerClick,
+  clickWithDebugger,
+  triggerStep8ContentStrategy,
+  waitForStep8ClickEffect,
+  getStep8EffectLabel,
+  reloadStep8ConsentPage,
+  sleepWithStop,
+  throwIfStopped,
+  STEP8_STRATEGIES,
+  STEP8_MAX_ROUNDS,
+  STEP8_CLICK_RETRY_DELAY_MS,
+  STEP8_READY_WAIT_TIMEOUT_MS,
 });
 
 async function executeStep9(state) {

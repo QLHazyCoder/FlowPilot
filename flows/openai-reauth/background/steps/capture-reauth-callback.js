@@ -21,6 +21,23 @@
       buildUpdatedAccount,
       fetchImpl = (typeof fetch === 'function' ? fetch.bind(globalThis) : null),
       setState,
+      // step9 辅助函数（复用注册流程的 OAuth 同意页点击编排）
+      getTabId = null,
+      isTabAlive = null,
+      ensureStep8SignupPageReady = null,
+      waitForStep8Ready = null,
+      prepareStep8DebuggerClick = null,
+      clickWithDebugger = null,
+      triggerStep8ContentStrategy = null,
+      waitForStep8ClickEffect = null,
+      getStep8EffectLabel = null,
+      reloadStep8ConsentPage = null,
+      sleepWithStop = null,
+      throwIfStopped = () => {},
+      STEP8_STRATEGIES = null,
+      STEP8_MAX_ROUNDS = 3,
+      STEP8_CLICK_RETRY_DELAY_MS = 1500,
+      STEP8_READY_WAIT_TIMEOUT_MS = 30000,
     } = deps;
 
     if (typeof completeNodeFromBackground !== 'function') {
@@ -41,6 +58,21 @@
     if (!chromeApi?.webNavigation || !chromeApi?.tabs) {
       throw new Error('capture-reauth-callback executor 需要 chrome.webNavigation / chrome.tabs。');
     }
+
+    const consentClickEnabled = (
+      typeof getTabId === 'function'
+      && typeof isTabAlive === 'function'
+      && typeof ensureStep8SignupPageReady === 'function'
+      && typeof waitForStep8Ready === 'function'
+      && typeof prepareStep8DebuggerClick === 'function'
+      && typeof clickWithDebugger === 'function'
+      && typeof triggerStep8ContentStrategy === 'function'
+      && typeof waitForStep8ClickEffect === 'function'
+      && typeof getStep8EffectLabel === 'function'
+      && typeof reloadStep8ConsentPage === 'function'
+      && typeof sleepWithStop === 'function'
+      && Array.isArray(STEP8_STRATEGIES) && STEP8_STRATEGIES.length > 0
+    );
 
     function logStep(message, level = 'info') {
       return addLog(message, level, { step: VISIBLE_STEP, stepKey: STEP_KEY });
@@ -168,6 +200,97 @@
         chromeApi.webNavigation.onBeforeNavigate.addListener(onBeforeNavigate);
         chromeApi.webNavigation.onCommitted.addListener(onCommitted);
         chromeApi.tabs.onUpdated.addListener(onTabUpdated);
+
+        function isResolved() {
+          return resolved;
+        }
+
+        async function drivePrimaryContinueClick() {
+          if (!consentClickEnabled) {
+            await logStep('OAuth 同意页主动点击能力未注入，仅依赖 localhost 监听等待回调。', 'warn');
+            return;
+          }
+          let tabId = null;
+          try {
+            tabId = await getTabId('openai-auth');
+            if (!Number.isInteger(tabId) || !(await isTabAlive('openai-auth'))) {
+              await logStep('OAuth 认证页 tab 不存在或已关闭，跳过主动点击「继续」按钮。', 'warn');
+              return;
+            }
+
+            try {
+              await chromeApi.tabs.update(tabId, { active: true });
+            } catch (_focusError) {}
+
+            await ensureStep8SignupPageReady(tabId, {
+              timeoutMs: 15000,
+              visibleStep: VISIBLE_STEP,
+              logStepKey: STEP_KEY,
+              logMessage: '认证页内容脚本尚未就绪，正在等待页面恢复...',
+            });
+
+            for (let round = 1; round <= STEP8_MAX_ROUNDS && !isResolved(); round++) {
+              throwIfStopped();
+              const pageState = await waitForStep8Ready(
+                tabId,
+                STEP8_READY_WAIT_TIMEOUT_MS,
+                { visibleStep: VISIBLE_STEP }
+              );
+              if (isResolved()) return;
+              if (!pageState?.consentReady) {
+                await sleepWithStop(STEP8_CLICK_RETRY_DELAY_MS);
+                continue;
+              }
+
+              const strategy = STEP8_STRATEGIES[Math.min(round - 1, STEP8_STRATEGIES.length - 1)];
+              await logStep(`第 ${round}/${STEP8_MAX_ROUNDS} 轮尝试点击 OAuth 同意页「继续」（${strategy.label}）...`);
+
+              if (strategy.mode === 'debugger') {
+                const clickTarget = await prepareStep8DebuggerClick(tabId, {
+                  timeoutMs: 15000,
+                  responseTimeoutMs: 15000,
+                  visibleStep: VISIBLE_STEP,
+                });
+                if (isResolved()) return;
+                await clickWithDebugger(tabId, clickTarget?.rect, { visibleStep: VISIBLE_STEP });
+              } else {
+                await triggerStep8ContentStrategy(tabId, strategy.strategy, {
+                  timeoutMs: 15000,
+                  responseTimeoutMs: 15000,
+                  visibleStep: VISIBLE_STEP,
+                });
+              }
+              if (isResolved()) return;
+
+              const effect = await waitForStep8ClickEffect(
+                tabId,
+                pageState.url,
+                15000,
+                { visibleStep: VISIBLE_STEP }
+              );
+              if (isResolved()) return;
+
+              if (effect.progressed) {
+                await logStep(`已点击「继续」，${getStep8EffectLabel(effect)}，继续等待 localhost 回调...`, 'ok');
+                return;
+              }
+
+              if (round >= STEP8_MAX_ROUNDS) {
+                throw new Error(`连续 ${STEP8_MAX_ROUNDS} 轮点击「继续」后页面仍无反应。`);
+              }
+
+              await logStep(`${strategy.label} 本轮点击后页面无反应，正在刷新认证页后重试（下一轮 ${round + 1}/${STEP8_MAX_ROUNDS}）...`, 'warn');
+              await reloadStep8ConsentPage(tabId, 30000, { visibleStep: VISIBLE_STEP });
+              await sleepWithStop(STEP8_CLICK_RETRY_DELAY_MS);
+            }
+          } catch (clickError) {
+            if (isResolved()) return;
+            const message = getErrorMessage(clickError);
+            await logStep(`主动点击 OAuth 同意页失败：${message}（继续等待 localhost 回调，可能由用户手动完成同意）`, 'warn');
+          }
+        }
+
+        drivePrimaryContinueClick().catch(() => {});
 
         function checkTimeout() {
           if (resolved) return;
