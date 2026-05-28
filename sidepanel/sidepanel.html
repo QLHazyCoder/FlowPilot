@@ -671,10 +671,10 @@
       <div class="data-row module-divider-start" id="row-reauth-account-json" style="display:none;">
         <span class="data-label">账号 JSON</span>
         <div class="data-inline data-value-actions data-row-stack">
-          <textarea id="input-reauth-account-json" class="data-input data-textarea-reauth" rows="6"
-                    placeholder='粘贴单个 account 对象或 sub2api 整文件（{accounts: [...]}）'></textarea>
           <div class="data-inline">
-            <button id="btn-reauth-validate-json" class="btn btn-outline btn-sm" type="button">校验</button>
+            <input type="file" id="input-reauth-account-file" accept=".json,application/json" class="data-input" />
+          </div>
+          <div class="data-inline">
             <span id="reauth-json-status" class="data-value mono"></span>
           </div>
           <div class="data-inline" id="row-reauth-account-picker" style="display:none;">
