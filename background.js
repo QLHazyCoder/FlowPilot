@@ -4154,6 +4154,14 @@ async function setState(updates) {
       ...currentSessionState,
     }, updates);
     await chrome.storage.session.set(sessionUpdates);
+
+    // 广播 STATE_PATCH：让 sidepanel 等监听方即时同步增量。
+    // payload 用 sessionUpdates（真实生效的最终值，而非 raw updates）。
+    // 无接收方时 sendMessage 会 reject，吞掉避免污染日志；不可影响主流程。
+    try {
+      chrome.runtime.sendMessage({ type: 'STATE_PATCH', payload: sessionUpdates }).catch(() => { });
+    } catch (_) { }
+
     const persistentAliasUpdates = {};
     if (Object.prototype.hasOwnProperty.call(sessionUpdates, 'manualAliasUsage')) {
       persistentAliasUpdates.manualAliasUsage = normalizeBooleanMap(sessionUpdates.manualAliasUsage);
