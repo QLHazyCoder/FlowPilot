@@ -1074,6 +1074,28 @@ test('GPC billing restarts when start button returns without subscription done',
   assert.equal(events.completed.length, 1);
 });
 
+test('GPC billing collapses repeated running status logs with a multiplier', async () => {
+  const { events, executor, pageHarness } = createGpcPageExecutorHarness([
+    { startButtonText: '开始 Plus 充值', logText: 'SYSTEM 页面已就绪' },
+    { startButtonText: '任务进行中', logText: '处理中 1' },
+    { startButtonText: '任务进行中', logText: '处理中 2' },
+    { startButtonText: '任务进行中', logText: '处理中 3' },
+    { startButtonText: '开始 Plus 充值', logText: '订阅完成', hasSubscriptionDone: true },
+  ]);
+
+  await executor.executePlusCheckoutBilling({
+    plusPaymentMethod: 'gpc-helper',
+    plusCheckoutSource: 'gpc-helper',
+    plusCheckoutTabId: 77,
+  });
+
+  const runningStatusLogs = events.logs.filter((entry) => /GPC 页面状态：任务进行中/.test(entry.message));
+  assert.equal(pageHarness.clicks.length, 1);
+  assert.equal(runningStatusLogs.length, 1);
+  assert.match(runningStatusLogs[0].message, /任务进行中 ×3/);
+  assert.equal(events.completed.length, 1);
+});
+
 test('GPC billing fails current round without restart when account has no trial eligibility', async () => {
   const { events, executor, pageHarness } = createGpcPageExecutorHarness([
     { startButtonText: '开始 Plus 充值', logText: '该账户没有试用资格', noTrial: true },

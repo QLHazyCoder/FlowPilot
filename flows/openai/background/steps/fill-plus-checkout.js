@@ -408,29 +408,58 @@
 
       const deadline = Date.now() + getGpcPageTimeoutMs(state);
       let startAttempts = 0;
-      let lastSignature = '';
       let hasClickedStart = false;
+      let pendingStatusKey = '';
+      let pendingStatusLabel = '';
+      let pendingStatusLevel = 'info';
+      let pendingStatusCount = 0;
+
+      const flushPendingStatusLog = async () => {
+        if (!pendingStatusKey || !pendingStatusCount) {
+          return;
+        }
+        const countSuffix = pendingStatusCount > 1 ? ` ×${pendingStatusCount}` : '';
+        await addLog(`步骤 7：GPC 页面状态：${pendingStatusLabel}${countSuffix}`, pendingStatusLevel);
+        pendingStatusKey = '';
+        pendingStatusLabel = '';
+        pendingStatusLevel = 'info';
+        pendingStatusCount = 0;
+      };
+
+      const collectStatusLog = async (pageState, currentButtonText) => {
+        const statusLabel = `${currentButtonText || '未识别按钮'}${pageState.hasSubscriptionDone ? ' / 订阅完成' : ''}`;
+        const statusKey = [
+          currentButtonText || '',
+          pageState.hasSubscriptionDone ? 'done' : '',
+          pageState.noTrial ? 'no-trial' : '',
+          pageState.isCardModeActive ? 'card' : 'not-card',
+          pageState.startButtonDisabled ? 'disabled' : '',
+        ].join('|');
+        const statusLevel = pageState.hasSubscriptionDone ? 'ok' : 'info';
+        if (statusKey === pendingStatusKey) {
+          pendingStatusCount += 1;
+          return;
+        }
+        await flushPendingStatusLog();
+        pendingStatusKey = statusKey;
+        pendingStatusLabel = statusLabel;
+        pendingStatusLevel = statusLevel;
+        pendingStatusCount = 1;
+      };
 
       while (Date.now() <= deadline) {
         throwIfStopped();
         const pageState = await inspectGpcPortalPage(tabId);
         const buttonText = normalizeText(pageState.startButtonText);
-        const logText = String(pageState.logText || pageState.bodyText || '');
-        const signature = `${buttonText}|${pageState.hasSubscriptionDone ? 'done' : ''}|${pageState.noTrial ? 'no-trial' : ''}|${logText.slice(-300)}`;
-
-        if (signature && signature !== lastSignature) {
-          lastSignature = signature;
-          await addLog(
-            `步骤 7：GPC 页面状态：${buttonText || '未识别按钮'}${pageState.hasSubscriptionDone ? ' / 订阅完成' : ''}`,
-            pageState.hasSubscriptionDone ? 'ok' : 'info'
-          );
-        }
+        await collectStatusLog(pageState, buttonText);
 
         if (pageState.noTrial) {
+          await flushPendingStatusLog();
           throw new Error('PLUS_CHECKOUT_NON_FREE_TRIAL::步骤 7：该账户没有试用资格，当前轮 GPC 充值失败。');
         }
 
         if (pageState.hasSubscriptionDone && /开始\s*Plus\s*充值/.test(buttonText)) {
+          await flushPendingStatusLog();
           await setState({
             plusCheckoutSource: PLUS_PAYMENT_METHOD_GPC_HELPER,
             gpcPageStatus: 'completed',
@@ -449,6 +478,7 @@
         }
 
         if (!pageState.isCardModeActive) {
+          await flushPendingStatusLog();
           let modeResult = null;
           for (let attempt = 1; attempt <= 8; attempt += 1) {
             modeResult = await ensureGpcCardMode(tabId);
@@ -474,6 +504,7 @@
         }
 
         if (/开始\s*Plus\s*充值/.test(buttonText) && !pageState.startButtonDisabled) {
+          await flushPendingStatusLog();
           if (startAttempts >= GPC_PAGE_MAX_START_ATTEMPTS) {
             throw new Error(`GPC_PAGE_FLOW_ENDED::步骤 7：GPC 页面已尝试启动 ${startAttempts} 次仍未显示订阅完成。`);
           }
@@ -502,6 +533,7 @@
         await sleepWithStop(GPC_PAGE_POLL_INTERVAL_MS);
       }
 
+      await flushPendingStatusLog();
       throw new Error('GPC_PAGE_FLOW_ENDED::步骤 7：GPC 页面等待超时，未检测到订阅完成。');
     }
 
