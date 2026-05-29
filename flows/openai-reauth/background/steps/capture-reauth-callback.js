@@ -6,6 +6,33 @@
   const STEP_KEY = NODE_ID;
   const CALLBACK_TIMEOUT_MS = 5 * 60 * 1000;
   const CALLBACK_CHECK_INTERVAL_MS = 1000;
+  const ACCOUNT_FATAL_PREFIX = 'ACCOUNT_FATAL::';
+
+  const ACCOUNT_BANNED_TEXT_PATTERNS = Object.freeze([
+    'account_deactivated',
+    'account suspended',
+    'account deactivated',
+    'account banned',
+    'account has been',
+    'account locked',
+    'account disabled',
+    'not authorized',
+    'account compromised',
+    'violation of our',
+    'account flagged',
+    // 中文封禁/停用页面对应的关键词（覆盖 OpenAI 各种中文 UI）
+    '身份验证错误',
+    '你没有账户',
+    '已被删除',
+    '已停用',
+    '停用',
+    '已封禁',
+    '封禁',
+    '已被禁用',
+    '账号已被',
+    '账号异常',
+    'your account',
+  ]);
 
   function getErrorMessage(error) {
     return error instanceof Error ? error.message : String(error ?? '未知错误');
@@ -80,6 +107,53 @@
 
     function logStep(message, level = 'info') {
       return addLog(message, level, { step: VISIBLE_STEP, stepKey: STEP_KEY });
+    }
+
+    /**
+     * 检测认证页是否显示账号封禁/停用文案。
+     * 主路径走 content script 的 DETECT_ACCOUNT_BANNED 消息（已注入到页面，最可靠）；
+     * 降级路径走 chrome.scripting.executeScript 直接注入检测。
+     */
+    async function checkTabForBannedAccount(tabId) {
+      if (!Number.isInteger(tabId)) return false;
+
+      const lowerPatterns = ACCOUNT_BANNED_TEXT_PATTERNS.map((p) => p.toLowerCase());
+
+      // 主路径：通过已注入的 content script 检测（不受 host_permissions 限制）
+      if (chromeApi?.tabs?.sendMessage) {
+        try {
+          const response = await chromeApi.tabs.sendMessage(tabId, {
+            type: 'DETECT_ACCOUNT_BANNED',
+            payload: { patterns: lowerPatterns },
+          });
+          if (response?.accountBanned) return true;
+        } catch {
+          // content script 可能未就绪，降级到 executeScript
+        }
+      }
+
+      // 降级路径：chrome.scripting 直接注入
+      if (chromeApi?.scripting?.executeScript) {
+        try {
+          const results = await chromeApi.scripting.executeScript({
+            target: { tabId },
+            func: (patterns) => {
+              const text = (document.body?.innerText || document.title || '').toLowerCase();
+              return patterns.some((p) => text.includes(p));
+            },
+            args: [lowerPatterns],
+          });
+          return results?.[0]?.result === true;
+        } catch {
+          return false;
+        }
+      }
+
+      return false;
+    }
+
+    function buildAccountBannedError() {
+      return new Error(`${ACCOUNT_FATAL_PREFIX}account_banned::该账号已被 OpenAI 封禁/停用，无法继续重新授权。`);
     }
 
     function executeCaptureReauthCallback(state = {}) {
@@ -226,6 +300,11 @@
               await chromeApi.tabs.update(tabId, { active: true });
             } catch (_focusError) {}
 
+            // 立即预检：若页面已显示封禁/停用文案，直接抛出 fatal 错误，不等 waitForStep8Ready 超时。
+            if (await checkTabForBannedAccount(tabId)) {
+              throw buildAccountBannedError();
+            }
+
             await ensureStep8SignupPageReady(tabId, {
               timeoutMs: 15000,
               visibleStep: VISIBLE_STEP,
@@ -235,6 +314,12 @@
 
             for (let round = 1; round <= STEP8_MAX_ROUNDS && !isResolved(); round++) {
               throwIfStopped();
+
+              // 每轮先快速检测封禁/停用页面，避免 waitForStep8Ready 的 30s 超时白等。
+              if (await checkTabForBannedAccount(tabId)) {
+                throw buildAccountBannedError();
+              }
+
               const pageState = await waitForStep8Ready(
                 tabId,
                 STEP8_READY_WAIT_TIMEOUT_MS,
@@ -289,12 +374,26 @@
             }
           } catch (clickError) {
             if (isResolved()) return;
+
+            // 同意页点击失败后做一次封号页面检测：若确认是封禁/停用，立即抛出 fatal 错误终止等待。
+            const banned = await checkTabForBannedAccount(tabId);
+            if (banned) {
+              rejectStep(buildAccountBannedError());
+              return;
+            }
+
             const message = getErrorMessage(clickError);
             await logStep(`主动点击 OAuth 同意页失败：${message}（继续等待 localhost 回调，可能由用户手动完成同意）`, 'warn');
           }
         }
 
-        drivePrimaryContinueClick().catch(() => {});
+        // 封号等 fatal 错误需穿透静默 catch 传播给 rejectStep，避免被吞掉后继续干等 callback timeout。
+        drivePrimaryContinueClick().catch((err) => {
+          if (resolved) return;
+          if (/ACCOUNT_FATAL::/i.test(String(err?.message || ''))) {
+            rejectStep(err);
+          }
+        });
 
         function checkTimeout() {
           if (resolved) return;
