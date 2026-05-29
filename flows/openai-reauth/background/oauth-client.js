@@ -126,9 +126,10 @@
     try {
       const segment = parts[1].replace(/-/g, '+').replace(/_/g, '/');
       const padded = segment + '='.repeat((4 - segment.length % 4) % 4);
-      const decoded = typeof atob === 'function'
-        ? atob(padded)
-        : Buffer.from(padded, 'base64').toString('binary');
+      if (typeof atob !== 'function') {
+        return null;
+      }
+      const decoded = atob(padded);
       const bytes = new Uint8Array(decoded.length);
       for (let index = 0; index < decoded.length; index += 1) {
         bytes[index] = decoded.charCodeAt(index);

@@ -390,6 +390,54 @@ test('executeReauthBatch：runSingleAccount 把 mailProvider 注入到 state.rea
   assert.equal(inputAccountUpdate.reauthInputAccount.mailProvider, '2925');
 });
 
+test('executeReauthBatch：优先使用注入的 extractAccountEmail，避免依赖全局 validator', async () => {
+  const mod = loadRunnerModule();
+  const { deps } = buildDeps();
+  deps.extractAccountEmail = (account) => account?.aliasEmail || '';
+  const { executeReauthBatch } = mod.createReauthBatchRunner(deps);
+
+  const accounts = [
+    { aliasEmail: 'Injected@Example.com', credentials: { access_token: 'old' }, priority: 5 },
+  ];
+  const result = await executeReauthBatch({
+    accounts,
+    mailProvider: '2925',
+    originalFileText: JSON.stringify({ accounts }),
+  });
+
+  assert.equal(result.success[0].email, 'injected@example.com');
+  const merged = JSON.parse(result.updatedFileJson);
+  assert.equal(merged.accounts[0].credentials.access_token, 'new_access_1');
+  assert.equal(merged.accounts[0].priority, 5);
+});
+
+test('executeReauthBatch：终止状态写入失败时仍抛出原始错误', async () => {
+  const mod = loadRunnerModule();
+  const { deps, calls } = buildDeps({
+    executeNodeHandler: async () => {
+      throw new Error('original batch failure');
+    },
+  });
+  const originalSetState = deps.setState;
+  deps.setState = async (updates) => {
+    if (updates?.reauthBatchResult) {
+      throw new Error('secondary state failure');
+    }
+    return originalSetState(updates);
+  };
+  const { executeReauthBatch } = mod.createReauthBatchRunner(deps);
+
+  await assert.rejects(
+    () => executeReauthBatch({
+      accounts: [{ credentials: { email: 'a@2925.com' } }],
+      mailProvider: '2925',
+      skipOnFailure: false,
+    }),
+    /original batch failure/
+  );
+  assert.ok(calls.log.some((entry) => /状态写入失败/.test(entry.message)));
+});
+
 test('executeReauthBatch：每账号开始前清空 reauthResultAccount / nodeStatuses 避免污染', async () => {
   const mod = loadRunnerModule();
   const { deps, calls } = buildDeps();
