@@ -7,6 +7,23 @@
   const CALLBACK_TIMEOUT_MS = 5 * 60 * 1000;
   const CALLBACK_CHECK_INTERVAL_MS = 1000;
   const ACCOUNT_FATAL_PREFIX = 'ACCOUNT_FATAL::';
+  const PHONE_VERIFICATION_TEXT_PATTERNS = Object.freeze([
+    'phone-verification',
+    'phone verification',
+    'verify your phone',
+    'phone number verification',
+    'add phone',
+    'add a phone number',
+    '验证您的手机号码',
+    '验证手机号码',
+    '手机验证码页',
+    '手机验证',
+    '添加手机号页',
+    '添加手机号',
+    '手机号',
+    '一次性验证码',
+    'whatsapp',
+  ]);
 
   const ACCOUNT_BANNED_TEXT_PATTERNS = Object.freeze([
     'account_deactivated',
@@ -40,14 +57,7 @@
 
   function isPhoneVerificationRequiredError(error) {
     const message = getErrorMessage(error).toLowerCase();
-    return /phone-verification/i.test(message)
-      || message.includes('手机验证码页')
-      || message.includes('手机验证')
-      || message.includes('手机号')
-      || message.includes('验证您的手机号码')
-      || message.includes('verify your phone')
-      || message.includes('phone number verification')
-      || message.includes('add phone');
+    return PHONE_VERIFICATION_TEXT_PATTERNS.some((pattern) => message.includes(pattern.toLowerCase()));
   }
 
   function createCaptureReauthCallbackExecutor(deps = {}) {
@@ -157,6 +167,75 @@
             args: [lowerPatterns],
           });
           return results?.[0]?.result === true;
+        } catch {
+          return false;
+        }
+      }
+
+      return false;
+    }
+
+    function isPhoneVerificationState(pageState) {
+      if (!pageState || typeof pageState !== 'object') return false;
+      return Boolean(pageState.phoneVerificationPage)
+        || Boolean(pageState.addPhonePage)
+        || pageState.state === 'phone_verification_page'
+        || pageState.state === 'add_phone_page'
+        || isPhoneVerificationRequiredError(pageState.url || pageState.path || '');
+    }
+
+    function isPhoneVerificationSnapshot(snapshot) {
+      if (!snapshot || typeof snapshot !== 'object') return false;
+      const combined = [
+        snapshot.url,
+        snapshot.title,
+        snapshot.text,
+      ]
+        .filter(Boolean)
+        .join('\n');
+      return isPhoneVerificationRequiredError(combined);
+    }
+
+    /**
+     * 步骤 3 邮箱验证码通过后，OpenAI 可能不会进入 OAuth 同意页，而是立即要求手机验证。
+     * 这里在步骤 4 刚开始就做一次轻量预检，避免等待 OAuth ready/点击超时才跳过账号。
+     */
+    async function checkTabForPhoneVerificationRequired(tabId) {
+      if (!Number.isInteger(tabId)) return false;
+
+      if (chromeApi?.tabs?.get) {
+        try {
+          const tab = await chromeApi.tabs.get(tabId);
+          if (isPhoneVerificationSnapshot(tab)) return true;
+        } catch {
+          // 标签页可能正在跳转，继续尝试 content / executeScript 路径。
+        }
+      }
+
+      if (chromeApi?.tabs?.sendMessage) {
+        try {
+          const response = await chromeApi.tabs.sendMessage(tabId, {
+            type: 'GET_LOGIN_AUTH_STATE',
+            source: 'background',
+            payload: {},
+          });
+          if (isPhoneVerificationState(response)) return true;
+        } catch {
+          // content script 可能未就绪，降级到 executeScript。
+        }
+      }
+
+      if (chromeApi?.scripting?.executeScript) {
+        try {
+          const results = await chromeApi.scripting.executeScript({
+            target: { tabId },
+            func: () => ({
+              url: String(location.href || ''),
+              title: String(document.title || ''),
+              text: String(document.body?.innerText || document.documentElement?.innerText || '').trim(),
+            }),
+          });
+          return isPhoneVerificationSnapshot(results?.[0]?.result);
         } catch {
           return false;
         }
@@ -323,9 +402,12 @@
               await chromeApi.tabs.update(tabId, { active: true });
             } catch (_focusError) {}
 
-            // 立即预检：若页面已显示封禁/停用文案，直接抛出 fatal 错误，不等 waitForStep8Ready 超时。
+            // 步骤 3 验证码通过后先立即预检账号级阻断：封禁/停用或手机验证都直接跳过当前账号。
             if (await checkTabForBannedAccount(tabId)) {
               throw buildAccountBannedError();
+            }
+            if (await checkTabForPhoneVerificationRequired(tabId)) {
+              throw buildPhoneVerificationRequiredError('认证页要求手机验证。');
             }
 
             await ensureStep8SignupPageReady(tabId, {
@@ -335,12 +417,22 @@
               logMessage: '认证页内容脚本尚未就绪，正在等待页面恢复...',
             });
 
+            if (await checkTabForBannedAccount(tabId)) {
+              throw buildAccountBannedError();
+            }
+            if (await checkTabForPhoneVerificationRequired(tabId)) {
+              throw buildPhoneVerificationRequiredError('认证页要求手机验证。');
+            }
+
             for (let round = 1; round <= STEP8_MAX_ROUNDS && !isResolved(); round++) {
               throwIfStopped();
 
-              // 每轮先快速检测封禁/停用页面，避免 waitForStep8Ready 的 30s 超时白等。
+              // 每轮先快速检测账号级阻断页面，避免 waitForStep8Ready 的 30s 超时白等。
               if (await checkTabForBannedAccount(tabId)) {
                 throw buildAccountBannedError();
+              }
+              if (await checkTabForPhoneVerificationRequired(tabId)) {
+                throw buildPhoneVerificationRequiredError('认证页要求手机验证。');
               }
 
               const pageState = await waitForStep8Ready(
