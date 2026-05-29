@@ -157,14 +157,18 @@ test('sidepanel html exposes phone verification toggle and multi-provider SMS ro
   assert.match(html, /id="select-madao-mode"/);
   assert.match(html, /id="row-madao-routing-plan-id"/);
   assert.match(html, /id="input-madao-routing-plan-id"/);
-  assert.match(html, /id="row-madao-provider-id"/);
-  assert.match(html, /id="input-madao-provider-id"/);
-  assert.match(html, /id="row-madao-country"/);
-  assert.match(html, /id="input-madao-country"/);
-  assert.match(html, /id="row-madao-auto-pick-country"/);
-  assert.match(html, /id="input-madao-auto-pick-country"/);
-  assert.match(html, /id="row-madao-reuse-phone"/);
-  assert.match(html, /id="input-madao-reuse-phone"/);
+  assert.doesNotMatch(html, /id="row-madao-provider-id"/);
+  assert.doesNotMatch(html, /id="input-madao-provider-id"/);
+  assert.doesNotMatch(html, /id="row-madao-country"/);
+  assert.doesNotMatch(html, /id="input-madao-country"/);
+  assert.doesNotMatch(html, /id="row-madao-auto-pick-country"/);
+  assert.doesNotMatch(html, /id="input-madao-auto-pick-country"/);
+  assert.doesNotMatch(html, /id="row-madao-reuse-phone"/);
+  assert.doesNotMatch(html, /id="input-madao-reuse-phone"/);
+  assert.doesNotMatch(html, /直连平台/);
+  assert.doesNotMatch(html, /直连国家/);
+  assert.doesNotMatch(html, /自动选国家/);
+  assert.doesNotMatch(html, /MaDao 复用/);
   assert.match(html, /id="row-madao-price-range"/);
   assert.match(html, /id="input-madao-min-price"/);
   assert.match(html, /id="input-madao-max-price"/);
@@ -783,10 +787,6 @@ const PHONE_SMS_PROVIDER_UI_DESCRIPTORS = ${JSON.stringify({
       'rowMaDaoRoutingPlanId',
     ],
     directRowKeys: [
-      'rowMaDaoProviderId',
-      'rowMaDaoCountry',
-      'rowMaDaoAutoPickCountry',
-      'rowMaDaoReusePhone',
       'rowMaDaoPriceRange',
     ],
   },
@@ -1067,10 +1067,10 @@ return {
   assert.equal(api.rowMaDaoHttpSecret.style.display, '');
   assert.equal(api.rowMaDaoMode.style.display, '');
   assert.equal(api.rowMaDaoRoutingPlanId.style.display, 'none');
-  assert.equal(api.rowMaDaoProviderId.style.display, '');
-  assert.equal(api.rowMaDaoCountry.style.display, '');
-  assert.equal(api.rowMaDaoAutoPickCountry.style.display, '');
-  assert.equal(api.rowMaDaoReusePhone.style.display, '');
+  assert.equal(api.rowMaDaoProviderId.style.display, 'none');
+  assert.equal(api.rowMaDaoCountry.style.display, 'none');
+  assert.equal(api.rowMaDaoAutoPickCountry.style.display, 'none');
+  assert.equal(api.rowMaDaoReusePhone.style.display, 'none');
   assert.equal(api.rowMaDaoPriceRange.style.display, '');
 });
 

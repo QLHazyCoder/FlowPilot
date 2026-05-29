@@ -732,10 +732,6 @@ const PHONE_SMS_PROVIDER_UI_DESCRIPTORS = Object.freeze({
       'rowMaDaoRoutingPlanId',
     ]),
     directRowKeys: Object.freeze([
-      'rowMaDaoProviderId',
-      'rowMaDaoCountry',
-      'rowMaDaoAutoPickCountry',
-      'rowMaDaoReusePhone',
       'rowMaDaoPriceRange',
     ]),
   }),
