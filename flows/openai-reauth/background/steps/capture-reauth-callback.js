@@ -102,7 +102,8 @@
     );
     // 建设性日志：标记 consent 主动点击能力是否就绪，方便排查步骤 4 行为差异。
     if (!consentClickEnabled) {
-      logStep('OAuth 同意页主动点击能力未注入（部分 step9 辅助函数缺失），步骤 4 将仅依赖 localhost 回调监听。', 'warn');
+      logStep('OAuth 同意页主动点击能力未注入（部分 step9 辅助函数缺失），步骤 4 将仅依赖 localhost 回调监听。', 'warn')
+        .catch(() => {});
     }
 
     function logStep(message, level = 'info') {
@@ -272,6 +273,8 @@
           }
         }
 
+        // 同一 localhost 回调可能被 onBeforeNavigate / onCommitted 同时观察到；
+        // finalize 内部用 resolved guard 保证幂等，保留双监听以提高捕获率。
         onBeforeNavigate = handleNavigation;
         onCommitted = handleNavigation;
         onTabUpdated = handleTabUpdated;

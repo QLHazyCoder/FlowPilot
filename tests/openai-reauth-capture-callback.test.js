@@ -269,8 +269,55 @@ test('tabUpdated 路径同样能捕获回调', async () => {
 test('createExecutor 在 deps 缺失时直接抛错（不允许半成品）', () => {
   const mod = loadStepModule();
   const chromeMock = buildMockChromeApi();
-  assert.throws(
-    () => mod.createCaptureReauthCallbackExecutor({ chrome: chromeMock.api }),
-    /completeNodeFromBackground/
-  );
+  const baseDeps = {
+    ...buildBaseDeps().deps,
+    chrome: chromeMock.api,
+  };
+  const cases = [
+    {
+      name: 'completeNodeFromBackground',
+      expected: /completeNodeFromBackground/,
+      mutate: (deps) => { delete deps.completeNodeFromBackground; },
+    },
+    {
+      name: 'exchangeAuthorizationCode',
+      expected: /exchangeAuthorizationCode/,
+      mutate: (deps) => { delete deps.exchangeAuthorizationCode; },
+    },
+    {
+      name: 'parseCallbackUrl',
+      expected: /parseCallbackUrl/,
+      mutate: (deps) => { delete deps.parseCallbackUrl; },
+    },
+    {
+      name: 'buildUpdatedAccount',
+      expected: /buildUpdatedAccount/,
+      mutate: (deps) => { delete deps.buildUpdatedAccount; },
+    },
+    {
+      name: 'setState',
+      expected: /setState/,
+      mutate: (deps) => { delete deps.setState; },
+    },
+    {
+      name: 'chrome.webNavigation',
+      expected: /webNavigation \/ chrome\.tabs/,
+      mutate: (deps) => { deps.chrome = { tabs: chromeMock.api.tabs }; },
+    },
+    {
+      name: 'chrome.tabs',
+      expected: /webNavigation \/ chrome\.tabs/,
+      mutate: (deps) => { deps.chrome = { webNavigation: chromeMock.api.webNavigation }; },
+    },
+  ];
+
+  for (const entry of cases) {
+    const deps = { ...baseDeps };
+    entry.mutate(deps);
+    assert.throws(
+      () => mod.createCaptureReauthCallbackExecutor(deps),
+      entry.expected,
+      `missing ${entry.name} should throw`
+    );
+  }
 });

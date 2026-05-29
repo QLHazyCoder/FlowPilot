@@ -61,7 +61,7 @@
    * - 失败账号保留原 entry，不丢数据。
    * - 原始文本不可用时退化为输出 success 数组。
    */
-  function mergeBatchResultsIntoFile(originalFileText, successAccounts = []) {
+  function mergeBatchResultsIntoFile(originalFileText, successAccounts = [], extractEmail = extractAccountEmail) {
     const safeAccounts = Array.isArray(successAccounts) ? successAccounts.filter(Boolean) : [];
     const trimmedText = cleanString(originalFileText);
 
@@ -78,7 +78,7 @@
 
     const successByEmail = new Map();
     for (const account of safeAccounts) {
-      const email = extractAccountEmail(account);
+      const email = extractEmail(account);
       if (email) {
         successByEmail.set(email, account);
       }
@@ -86,7 +86,7 @@
 
     function mergeEntry(entry) {
       if (!entry || typeof entry !== 'object') return entry;
-      const email = extractAccountEmail(entry);
+      const email = extractEmail(entry);
       if (!email || !successByEmail.has(email)) {
         return entry;
       }
@@ -124,6 +124,7 @@
       throwIfStopped = () => {},
       sleepWithStop = null,
       interAccountDelayMs = DEFAULT_INTER_ACCOUNT_DELAY_MS,
+      extractAccountEmail: injectedExtractAccountEmail = null,
     } = deps;
 
     if (typeof executeNode !== 'function') {
@@ -154,6 +155,18 @@
       throwIfStopped();
     }
 
+    function getAccountEmail(account) {
+      if (typeof injectedExtractAccountEmail === 'function') {
+        try {
+          const injectedEmail = cleanString(injectedExtractAccountEmail(account));
+          if (injectedEmail) return injectedEmail.toLowerCase();
+        } catch {
+          // 注入的提取器异常时回退到模块内置逻辑，避免批量流程因日志/测试替身中断。
+        }
+      }
+      return extractAccountEmail(account);
+    }
+
     async function resolveOrderedNodeIds() {
       if (typeof getNodeIdsForState !== 'function') {
         return [...REAUTH_NODE_IDS];
@@ -168,7 +181,7 @@
     }
 
     async function runSingleAccount(account, options = {}) {
-      const email = extractAccountEmail(account);
+      const email = getAccountEmail(account);
       const accountForState = buildResolvedAccountForState(account, options.mailProvider);
 
       await setState({
@@ -221,7 +234,7 @@
         for (let index = 0; index < total; index += 1) {
           throwIfStopped();
           const account = accounts[index];
-          const email = extractAccountEmail(account) || `账号 #${index + 1}`;
+          const email = getAccountEmail(account) || `账号 #${index + 1}`;
           const current = index + 1;
 
           await setState({
@@ -277,33 +290,41 @@
         }
       } catch (error) {
         const stopped = isLikelyStopError(error);
-        await setState({
-          reauthBatchRunning: false,
-          reauthBatchProgress: {
-            current: success.length + failed.length,
-            total,
-            currentEmail: '',
-            currentStatus: stopped ? 'stopped' : 'aborted',
-          },
-          reauthBatchResult: {
-            success: success.map((account) => ({ account, email: extractAccountEmail(account) })),
-            failed,
-            updatedFileJson: mergeBatchResultsIntoFile(originalFileText, success),
-            successCount: success.length,
-            failedCount: failed.length,
-            total,
-            startedAt,
-            finalizedAt: Date.now(),
-            aborted: true,
-            stopReason: stopped ? 'user_stop' : getErrorMessage(error),
-          },
-        });
+        try {
+          await setState({
+            reauthBatchRunning: false,
+            reauthBatchProgress: {
+              current: success.length + failed.length,
+              total,
+              currentEmail: '',
+              currentStatus: stopped ? 'stopped' : 'aborted',
+            },
+            reauthBatchResult: {
+              success: success.map((account) => ({ account, email: getAccountEmail(account) })),
+              failed,
+              updatedFileJson: mergeBatchResultsIntoFile(originalFileText, success, getAccountEmail),
+              successCount: success.length,
+              failedCount: failed.length,
+              total,
+              startedAt,
+              finalizedAt: Date.now(),
+              aborted: true,
+              stopReason: stopped ? 'user_stop' : getErrorMessage(error),
+            },
+          });
+        } catch (stateError) {
+          try {
+            await log(`批量终止状态写入失败：${getErrorMessage(stateError)}`, 'warn');
+          } catch {
+            // 保留原始错误，状态写入/日志失败不应覆盖真正的批量终止原因。
+          }
+        }
         throw error;
       }
 
-      const updatedFileJson = mergeBatchResultsIntoFile(originalFileText, success);
+      const updatedFileJson = mergeBatchResultsIntoFile(originalFileText, success, getAccountEmail);
       const finalResult = {
-        success: success.map((account) => ({ account, email: extractAccountEmail(account) })),
+        success: success.map((account) => ({ account, email: getAccountEmail(account) })),
         failed,
         updatedFileJson,
         successCount: success.length,

@@ -19770,15 +19770,15 @@ let lastReauthFileText = '';
 function setReauthJsonStatus(text, level = '') {
   if (!reauthJsonStatus) return;
   reauthJsonStatus.textContent = text || '';
-  reauthJsonStatus.classList.remove('ok', 'error');
-  if (level) reauthJsonStatus.classList.add(level);
+  reauthJsonStatus.classList.remove('ok', 'error', 'warn');
+  if (['ok', 'error', 'warn'].includes(level)) reauthJsonStatus.classList.add(level);
 }
 
 function setReauthCopyStatus(text, level = '') {
   if (!reauthCopyStatus) return;
   reauthCopyStatus.textContent = text || '';
-  reauthCopyStatus.classList.remove('ok', 'error');
-  if (level) reauthCopyStatus.classList.add(level);
+  reauthCopyStatus.classList.remove('ok', 'error', 'warn');
+  if (['ok', 'error', 'warn'].includes(level)) reauthCopyStatus.classList.add(level);
 }
 
 function getReauthValidatorApi() {
@@ -20122,9 +20122,39 @@ async function handleReauthBatchDownload() {
     if (chrome?.downloads?.download) {
       const blob = new Blob([text], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      await chrome.downloads.download({ url, filename, saveAs: true });
-      // 让浏览器自己处理 url 生命周期；保险起见 30 秒后 revoke
-      setTimeout(() => { try { URL.revokeObjectURL(url); } catch {} }, 30000);
+      let revoked = false;
+      const revokeUrl = () => {
+        if (revoked) return;
+        revoked = true;
+        try { URL.revokeObjectURL(url); } catch {}
+      };
+      let downloadId;
+      try {
+        downloadId = await chrome.downloads.download({ url, filename, saveAs: true });
+      } catch (downloadError) {
+        revokeUrl();
+        throw downloadError;
+      }
+      let cleanupDownloadListener = () => {};
+      if (Number.isInteger(downloadId) && chrome.downloads?.onChanged?.addListener) {
+        const onDownloadChanged = (delta = {}) => {
+          if (delta.id !== downloadId) return;
+          const state = delta.state?.current;
+          if (state === 'complete' || state === 'interrupted') {
+            cleanupDownloadListener();
+            revokeUrl();
+          }
+        };
+        cleanupDownloadListener = () => {
+          try { chrome.downloads.onChanged.removeListener(onDownloadChanged); } catch {}
+        };
+        chrome.downloads.onChanged.addListener(onDownloadChanged);
+      }
+      // saveAs 对话框可能停留较久；监听不到最终状态时以长兜底释放 object URL。
+      setTimeout(() => {
+        cleanupDownloadListener();
+        revokeUrl();
+      }, 10 * 60 * 1000);
       setReauthCopyStatus(`已触发下载：${filename}`, 'ok');
       return;
     }
