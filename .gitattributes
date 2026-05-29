@@ -1,0 +1,13 @@
+# 强制所有文本文件使用 LF，避免 Windows 下 CRLF 重写整文件造成 git diff stat 虚高。
+* text=auto eol=lf
+
+# 二进制资源不动。
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.zip binary
+*.crx binary
+*.pdf binary

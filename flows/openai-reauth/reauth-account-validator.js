@@ -11,6 +11,16 @@
     'cloudflare-temp-email',
   ]);
 
+  const MAIL_PROVIDER_OPTIONS = Object.freeze([
+    Object.freeze({ value: '2925', label: '2925' }),
+    Object.freeze({ value: 'hotmail-api', label: 'Hotmail (API)' }),
+    Object.freeze({ value: 'icloud', label: 'iCloud' }),
+    Object.freeze({ value: 'luckmail-api', label: 'LuckMail (API)' }),
+    Object.freeze({ value: 'cloudmail', label: 'Cloud Mail' }),
+    Object.freeze({ value: 'yyds-mail', label: 'YYDS Mail' }),
+    Object.freeze({ value: 'cloudflare-temp-email', label: 'Cloudflare Temp Email' }),
+  ]);
+
   function isPlainObject(value) {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
   }
@@ -93,6 +103,7 @@
 
   return {
     SUPPORTED_MAIL_PROVIDERS,
+    MAIL_PROVIDER_OPTIONS,
     parseAccountsFromJson,
     buildResolvedAccount,
     extractAccountEmail,
