@@ -19,12 +19,22 @@
     return String(value ?? '').trim();
   }
 
+  function isPlainObject(value) {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  }
+
   function extractAccountEmail(account = {}) {
-    if (!account || typeof account !== 'object') return '';
-    const credentials = account.credentials && typeof account.credentials === 'object'
-      ? account.credentials
-      : {};
-    return cleanString(credentials.email || account.email || account.name).toLowerCase();
+    // 优先走 validator 的统一实现，保持双端 email 提取逻辑一致。
+    const validator = (typeof self !== 'undefined' ? self : globalThis)
+      .MultiPageOpenAiReauthAccountValidator;
+    const base = (validator && typeof validator.extractAccountEmail === 'function')
+      ? (validator.extractAccountEmail(account) || '')
+      : (function fallbackExtractAccountEmail() {
+          if (!account || typeof account !== 'object') return '';
+          const credentials = isPlainObject(account.credentials) ? account.credentials : {};
+          return cleanString(credentials.email || account.email || account.name);
+        })();
+    return base.toLowerCase();
   }
 
   function isLikelyStopError(error) {
