@@ -82,6 +82,7 @@ importScripts(
   'flows/openai/background/steps/fetch-login-code.js',
   'flows/openai/background/steps/confirm-oauth.js',
   'flows/openai/background/steps/platform-verify.js',
+  'flows/openai-reauth/reauth-account-validator.js',
   'flows/openai-reauth/background/oauth-client.js',
   'flows/openai-reauth/background/cookie-cleanup.js',
   'flows/openai-reauth/background/batch-runner.js',
@@ -4157,9 +4158,14 @@ async function setState(updates) {
 
     // 广播 STATE_PATCH：让 sidepanel 等监听方即时同步增量。
     // payload 用 sessionUpdates（真实生效的最终值，而非 raw updates）。
-    // 无接收方时 sendMessage 会 reject，吞掉避免污染日志；不可影响主流程。
+    // 无接收方时 sendMessage 会 reject，只吞「无接收方」错误，其余 warn 输出方便排查。
     try {
-      chrome.runtime.sendMessage({ type: 'STATE_PATCH', payload: sessionUpdates }).catch(() => { });
+      chrome.runtime.sendMessage({ type: 'STATE_PATCH', payload: sessionUpdates }).catch((err) => {
+        const msg = err?.message || '';
+        if (!msg.includes('Could not establish connection') && !msg.includes('receiving end does not exist')) {
+          console.warn('[setState] STATE_PATCH broadcast failed:', msg);
+        }
+      });
     } catch (_) { }
 
     const persistentAliasUpdates = {};
@@ -16052,6 +16058,7 @@ const reauthBatchRunner = self.MultiPageOpenAiReauthBatchRunner?.createReauthBat
   setState,
   sleepWithStop,
   throwIfStopped,
+  extractAccountEmail: self.MultiPageOpenAiReauthAccountValidator?.extractAccountEmail,
 });
 
 async function executeStep9(state) {

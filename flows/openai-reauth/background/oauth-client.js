@@ -54,6 +54,7 @@
   function buildAuthorizeUrl(params = {}) {
     const codeChallenge = cleanString(params.codeChallenge);
     const stateToken = cleanString(params.state);
+    const clientId = cleanString(params.clientId) || CLIENT_ID;
     if (!codeChallenge) {
       throw new Error('buildAuthorizeUrl 缺少 codeChallenge。');
     }
@@ -61,7 +62,7 @@
       throw new Error('buildAuthorizeUrl 缺少 state。');
     }
     const search = new URLSearchParams();
-    search.set('client_id', CLIENT_ID);
+    search.set('client_id', clientId);
     search.set('code_challenge', codeChallenge);
     search.set('code_challenge_method', 'S256');
     search.set('codex_cli_simplified_flow', 'true');
@@ -148,12 +149,13 @@
     }
     const code = cleanString(params.code);
     const codeVerifier = cleanString(params.codeVerifier);
+    const clientId = cleanString(params.clientId) || CLIENT_ID;
     if (!code) throw new Error('exchangeAuthorizationCode 缺少 code。');
     if (!codeVerifier) throw new Error('exchangeAuthorizationCode 缺少 codeVerifier。');
 
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
-      client_id: CLIENT_ID,
+      client_id: clientId,
       code,
       redirect_uri: REDIRECT_URI,
       code_verifier: codeVerifier,
@@ -195,6 +197,7 @@
     const accessPayload = decodeJwtPayload(tokens.accessToken) || {};
     const authClaims = idPayload['https://api.openai.com/auth'] || {};
     const profileClaims = idPayload['https://api.openai.com/profile'] || {};
+    const clientId = cleanString(tokens.clientId) || CLIENT_ID;
     const expiresAt = tokens.expiresIn
       ? Math.floor(Date.now() / 1000) + Number(tokens.expiresIn)
       : Number(accessPayload.exp || 0) || 0;
@@ -210,7 +213,7 @@
       access_token: tokens.accessToken,
       refresh_token: tokens.refreshToken,
       id_token: tokens.idToken || baseCredentials.id_token || '',
-      client_id: CLIENT_ID,
+      client_id: clientId,
       expires_at: expiresAt,
       email: cleanString(profileClaims.email || idPayload.email || baseCredentials.email),
       chatgpt_account_id: cleanString(authClaims.chatgpt_account_id || baseCredentials.chatgpt_account_id),
