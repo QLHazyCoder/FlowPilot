@@ -40,6 +40,7 @@ if (document.documentElement.getAttribute(OPENAI_AUTH_LISTENER_SENTINEL) !== '1'
       || message.type === 'ENSURE_SIGNUP_ENTRY_READY'
       || message.type === 'ENSURE_SIGNUP_PHONE_ENTRY_READY'
       || message.type === 'ENSURE_SIGNUP_PASSWORD_PAGE_READY'
+      || message.type === 'DETECT_ACCOUNT_BANNED'
     ) {
       resetStopState();
       handleCommand(message).then((result) => {
@@ -165,6 +166,12 @@ async function handleCommand(message) {
       return await ensureSignupPhoneEntryReady();
     case 'ENSURE_SIGNUP_PASSWORD_PAGE_READY':
       return await ensureSignupPasswordPageReady();
+    case 'DETECT_ACCOUNT_BANNED': {
+      const text = (document.body?.innerText || document.title || '').toLowerCase();
+      const patterns = (message.payload?.patterns || []).map((p) => String(p || '').toLowerCase()).filter(Boolean);
+      const matched = patterns.some((p) => text.includes(p));
+      return { accountBanned: matched };
+    }
     case 'STEP8_FIND_AND_CLICK':
       return await step8_findAndClick(message.payload);
     case 'STEP8_GET_STATE':

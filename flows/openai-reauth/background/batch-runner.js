@@ -42,6 +42,11 @@
     return /已被用户停止|user_stop|operation_aborted|stop signal|stopped by user/i.test(message);
   }
 
+  function isLikelyAccountFatalError(error) {
+    const message = String(error?.message || error || '');
+    return /ACCOUNT_FATAL::/i.test(message);
+  }
+
   function buildResolvedAccountForState(account, mailProvider) {
     if (!account || typeof account !== 'object') return account;
     if (cleanString(account.mailProvider)) return account;
@@ -249,8 +254,10 @@
               throw error;
             }
             const message = getErrorMessage(error);
-            failed.push({ account, email, error: message });
-            await log(`[${current}/${total}] ${email} 失败：${message}`, 'error');
+            const fatal = isLikelyAccountFatalError(error);
+            failed.push({ account, email, error: message, fatal });
+            const fatalLabel = fatal ? '（账号异常，已跳过）' : '';
+            await log(`[${current}/${total}] ${email} ${fatal ? '账号不可用' : '失败'}：${message}${fatalLabel}`, fatal ? 'warn' : 'error');
             await setState({
               reauthBatchProgress: {
                 current,
@@ -339,6 +346,7 @@
     extractAccountEmail,
     mergeBatchResultsIntoFile,
     isLikelyStopError,
+    isLikelyAccountFatalError,
     createReauthBatchRunner,
   };
 });
