@@ -1058,7 +1058,10 @@ test('GPC billing restarts when start button returns without subscription done',
   const { events, executor, pageHarness } = createGpcPageExecutorHarness([
     { startButtonText: '开始 Plus 充值', logText: 'SYSTEM 页面已就绪' },
     { startButtonText: '任务进行中', logText: '处理中' },
-    { startButtonText: '开始 Plus 充值', logText: 'SYSTEM\n卡密次数不足，任务已停止' },
+    {
+      startButtonText: '开始 Plus 充值',
+      logText: '[02:17:28] ACTION 任务已提交 [02:17:28] SYSTEM 排队中，等待 worker 调度... [02:17:31] SUCCESS [02/09] 购买短信号码：+6283******846 [02:17:59] ERROR 卡密次数不足，任务已停止',
+    },
     { startButtonText: '任务进行中', logText: '第二次处理中' },
     { startButtonText: '开始 Plus 充值', logText: '订阅完成', hasSubscriptionDone: true },
   ]);
@@ -1071,7 +1074,8 @@ test('GPC billing restarts when start button returns without subscription done',
 
   assert.equal(pageHarness.clicks.length, 2);
   assert.equal(events.logs.some((entry) => /准备再次启动/.test(entry.message)), true);
-  assert.equal(events.logs.some((entry) => /准备再次启动.*最近日志：卡密次数不足，任务已停止/.test(entry.message)), true);
+  assert.equal(events.logs.some((entry) => /准备再次启动.*最近日志：\[02:17:59\] ERROR 卡密次数不足，任务已停止/.test(entry.message)), true);
+  assert.equal(events.logs.some((entry) => /最近日志：\[02:17:28\] ACTION/.test(entry.message)), false);
   assert.equal(events.completed.length, 1);
 });
 
@@ -1099,7 +1103,7 @@ test('GPC billing collapses repeated running status logs with a multiplier', asy
 
 test('GPC billing fails current round without restart when account has no trial eligibility', async () => {
   const { events, executor, pageHarness } = createGpcPageExecutorHarness([
-    { startButtonText: '开始 Plus 充值', logText: 'SYSTEM\n该账户没有试用资格', noTrial: true },
+    { startButtonText: '开始 Plus 充值', logText: '[02:20:00] ACTION 任务开始执行... [02:20:09] ERROR 该账户没有试用资格', noTrial: true },
   ]);
 
   await assert.rejects(
@@ -1108,10 +1112,35 @@ test('GPC billing fails current round without restart when account has no trial 
       plusCheckoutSource: 'gpc-helper',
       plusCheckoutTabId: 77,
     }),
-    /PLUS_CHECKOUT_NON_FREE_TRIAL::.*该账户没有试用资格.*最近日志：该账户没有试用资格/
+    /PLUS_CHECKOUT_NON_FREE_TRIAL::.*该账户没有试用资格.*最近日志：\[02:20:09\] ERROR 该账户没有试用资格/
   );
 
   assert.equal(pageHarness.clicks.length, 0);
+  assert.equal(events.completed.length, 0);
+});
+
+test('GPC billing treats no-trial log text as terminal even when page flag is missing', async () => {
+  const { events, executor, pageHarness } = createGpcPageExecutorHarness([
+    { startButtonText: '开始 Plus 充值', logText: 'SYSTEM 页面已就绪' },
+    { startButtonText: '任务进行中', logText: '处理中' },
+    {
+      startButtonText: '开始 Plus 充值',
+      logText: '[02:30:00] ACTION 任务开始执行... [02:30:18] ERROR 该账号没有试用资格',
+      noTrial: false,
+    },
+  ]);
+
+  await assert.rejects(
+    () => executor.executePlusCheckoutBilling({
+      plusPaymentMethod: 'gpc-helper',
+      plusCheckoutSource: 'gpc-helper',
+      plusCheckoutTabId: 77,
+    }),
+    /PLUS_CHECKOUT_NON_FREE_TRIAL::.*该账户没有试用资格.*最近日志：\[02:30:18\] ERROR 该账号没有试用资格/
+  );
+
+  assert.equal(pageHarness.clicks.length, 1);
+  assert.equal(events.logs.some((entry) => /准备再次启动/.test(entry.message)), false);
   assert.equal(events.completed.length, 0);
 });
 
