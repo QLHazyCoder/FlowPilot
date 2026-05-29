@@ -173,6 +173,7 @@
       }
 
       const normalizedMaxResend = Math.max(0, Math.floor(Number(maxResendRequests) || 0));
+      // 第 1 轮直接轮询首封邮件；第 2 轮起每轮先点「重新发送」再轮询，因此 totalRounds = maxResend + 1。
       const totalRounds = normalizedMaxResend + 1;
       const cooldownMs = Math.max(0, Number(resendIntervalMs) || 0);
       let filterAfterTimestamp = resolveFilterAfterTimestamp(state);

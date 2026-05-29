@@ -18459,6 +18459,25 @@ function getReauthValidatorApi() {
   return (typeof self !== 'undefined' ? self : window).MultiPageOpenAiReauthAccountValidator || null;
 }
 
+function populateReauthMailProviderOptions() {
+  if (!selectReauthMailProvider) return;
+  const validator = getReauthValidatorApi();
+  const options = Array.isArray(validator?.MAIL_PROVIDER_OPTIONS) ? validator.MAIL_PROVIDER_OPTIONS : [];
+  if (!options.length) return;
+  const previousValue = selectReauthMailProvider.value;
+  selectReauthMailProvider.innerHTML = '';
+  for (const entry of options) {
+    const option = document.createElement('option');
+    option.value = String(entry?.value || '');
+    option.textContent = String(entry?.label || entry?.value || '');
+    selectReauthMailProvider.appendChild(option);
+  }
+  if (previousValue && options.some((entry) => entry?.value === previousValue)) {
+    selectReauthMailProvider.value = previousValue;
+  }
+}
+populateReauthMailProviderOptions();
+
 function renderReauthAccountPicker(accounts) {
   if (!selectReauthAccount || !rowReauthAccountPicker) return;
   selectReauthAccount.innerHTML = '';
