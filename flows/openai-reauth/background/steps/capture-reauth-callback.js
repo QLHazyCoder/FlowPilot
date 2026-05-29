@@ -38,6 +38,18 @@
     return error instanceof Error ? error.message : String(error ?? '未知错误');
   }
 
+  function isPhoneVerificationRequiredError(error) {
+    const message = getErrorMessage(error).toLowerCase();
+    return /phone-verification/i.test(message)
+      || message.includes('手机验证码页')
+      || message.includes('手机验证')
+      || message.includes('手机号')
+      || message.includes('验证您的手机号码')
+      || message.includes('verify your phone')
+      || message.includes('phone number verification')
+      || message.includes('add phone');
+  }
+
   function createCaptureReauthCallbackExecutor(deps = {}) {
     const {
       addLog = async () => {},
@@ -155,6 +167,14 @@
 
     function buildAccountBannedError() {
       return new Error(`${ACCOUNT_FATAL_PREFIX}account_banned::该账号已被 OpenAI 封禁/停用，无法继续重新授权。`);
+    }
+
+    function buildPhoneVerificationRequiredError(error) {
+      const reason = getErrorMessage(error);
+      return new Error(
+        `${ACCOUNT_FATAL_PREFIX}phone_verification_required::该账号重新授权触发手机验证，当前 reauth 流程不处理手机验证，已跳过该账号。`
+        + (reason ? ` 原因：${reason}` : '')
+      );
     }
 
     function executeCaptureReauthCallback(state = {}) {
@@ -329,6 +349,9 @@
                 { visibleStep: VISIBLE_STEP }
               );
               if (isResolved()) return;
+              if (pageState?.phoneVerificationPage || pageState?.addPhonePage) {
+                throw buildPhoneVerificationRequiredError(pageState?.url || '认证页要求手机验证。');
+              }
               if (!pageState?.consentReady) {
                 await sleepWithStop(STEP8_CLICK_RETRY_DELAY_MS);
                 continue;
@@ -382,6 +405,11 @@
             const banned = await checkTabForBannedAccount(tabId);
             if (banned) {
               rejectStep(buildAccountBannedError());
+              return;
+            }
+
+            if (isPhoneVerificationRequiredError(clickError)) {
+              rejectStep(buildPhoneVerificationRequiredError(clickError));
               return;
             }
 

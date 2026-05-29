@@ -266,6 +266,46 @@ test('tabUpdated 路径同样能捕获回调', async () => {
   assert.equal(chromeMock.removedTabs[0], 42);
 });
 
+test('进入手机验证页时抛出账号级 fatal，批量可跳过当前账号', async () => {
+  const mod = loadStepModule();
+  const chromeMock = buildMockChromeApi();
+  const harness = buildBaseDeps({
+    getTabId: async () => 99,
+    isTabAlive: async () => true,
+    ensureStep8SignupPageReady: async () => {},
+    waitForStep8Ready: async () => {
+      throw new Error('步骤 4：自动确认 OAuth 只处理 OAuth 授权页，当前仍在手机验证码页。 URL: https://auth.openai.com/phone-verification');
+    },
+    prepareStep8DebuggerClick: async () => {},
+    clickWithDebugger: async () => {},
+    triggerStep8ContentStrategy: async () => {},
+    waitForStep8ClickEffect: async () => ({}),
+    getStep8EffectLabel: () => '无跳转',
+    reloadStep8ConsentPage: async () => {},
+    sleepWithStop: async () => {},
+    STEP8_STRATEGIES: [{ id: 'primary', label: '主按钮' }],
+  });
+  const { executeCaptureReauthCallback } = mod.createCaptureReauthCallbackExecutor({
+    ...harness.deps,
+    chrome: chromeMock.api,
+  });
+
+  const promise = executeCaptureReauthCallback({
+    reauthState: 'S',
+    reauthCodeVerifier: 'V',
+    reauthInputAccount: { name: 'phone-check@example.com' },
+  });
+
+  await assert.rejects(
+    promise,
+    /ACCOUNT_FATAL::phone_verification_required::.*手机验证/
+  );
+  assert.equal(harness.completeCalls.length, 0);
+  assert.equal(chromeMock.navListeners.length, 0, 'fatal 后应清理 onBeforeNavigate');
+  assert.equal(chromeMock.committedListeners.length, 0, 'fatal 后应清理 onCommitted');
+  assert.equal(chromeMock.tabUpdatedListeners.length, 0, 'fatal 后应清理 tabs.onUpdated');
+});
+
 test('createExecutor 在 deps 缺失时直接抛错（不允许半成品）', () => {
   const mod = loadStepModule();
   const chromeMock = buildMockChromeApi();
