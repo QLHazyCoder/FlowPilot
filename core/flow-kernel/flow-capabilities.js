@@ -266,16 +266,14 @@
       const apiKey = cleanString(hasOwn(state, 'openaiWebchatAdminKey')
         ? state.openaiWebchatAdminKey
         : (hasOwn(state, 'grokWebchat2ApiAdminKey') ? state.grokWebchat2ApiAdminKey : (targetConfig.apiKey || grokTargetConfig.apiKey)));
-      const uploadEnabled = Boolean(hasOwn(state, 'openaiWebchatUploadEnabled')
-        ? state.openaiWebchatUploadEnabled
-        : openAiFlow?.webchatUpload?.enabled);
+      const uploadEnabled = false;
       const normalizedTargetId = String(targetId || '').trim().toLowerCase();
       const targetIsWebchat = normalizedTargetId === 'webchat';
       const missingFields = [];
       if (!baseUrl) missingFields.push('baseUrl');
       if (!apiKey) missingFields.push('apiKey');
       const configComplete = missingFields.length === 0;
-      const additionalUploadEnabled = uploadEnabled && !targetIsWebchat;
+      const additionalUploadEnabled = false;
       return {
         additionalUploadEnabled,
         configComplete,

@@ -5,6 +5,10 @@ const fs = require('node:fs');
 const sidepanelSource = fs.readFileSync('sidepanel/sidepanel.js', 'utf8');
 const sidepanelHtml = fs.readFileSync('sidepanel/sidepanel.html', 'utf8');
 
+function stripHtmlComments(html) {
+  return String(html || '').replace(/<!--[\s\S]*?-->/g, '');
+}
+
 function extractFunction(source, name) {
   const asyncStart = source.indexOf(`async function ${name}`);
   const normalStart = source.indexOf(`function ${name}`);
@@ -34,6 +38,7 @@ function extractFunction(source, name) {
 }
 
 test('sidepanel html exposes flow selector and kiro source fields', () => {
+  const visibleHtml = stripHtmlComments(sidepanelHtml);
   [
     'id="select-flow"',
     '<option value="grok">Grok</option>',
@@ -61,16 +66,16 @@ test('sidepanel html exposes flow selector and kiro source fields', () => {
     'id="input-openai-webchat-url"',
     'id="row-openai-webchat-key"',
     'id="input-openai-webchat-key"',
-    'id="row-openai-webchat-upload-toggle"',
-    'id="input-openai-webchat-upload-enabled"',
-    'id="display-openai-webchat-upload-hint"',
     'id="row-openai-webchat-upload-status"',
     'id="display-openai-webchat-upload-status"',
     '<script src="../flows/grok/index.js"></script>',
     '<script src="../flows/grok/workflow.js"></script>',
   ].forEach((snippet) => {
-    assert.match(sidepanelHtml, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(visibleHtml, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   });
+  assert.doesNotMatch(visibleHtml, /id="row-openai-webchat-upload-toggle"/);
+  assert.doesNotMatch(visibleHtml, /id="input-openai-webchat-upload-enabled"/);
+  assert.doesNotMatch(visibleHtml, /id="display-openai-webchat-upload-hint"/);
   assert.doesNotMatch(sidepanelHtml, /id="btn-export-grok-sso"/);
   assert.match(
     sidepanelHtml,

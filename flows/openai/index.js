@@ -48,8 +48,7 @@
     "openai-phone",
     "shared-auto-run",
     "openai-oauth",
-    "openai-step6",
-    "openai-webchat-upload"
+    "openai-step6"
   ],
   "targets": {
     "cpa": {
@@ -447,11 +446,8 @@
     },
     "openai-webchat-upload": {
       "id": "openai-webchat-upload",
-      "label": "webchat 同步",
-      "rowIds": [
-        "row-openai-webchat-upload-toggle",
-        "row-openai-webchat-upload-status"
-      ]
+      "label": "webchat",
+      "rowIds": []
     },
     "openai-plus": {
       "id": "openai-plus",

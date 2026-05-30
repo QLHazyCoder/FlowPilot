@@ -3148,10 +3148,7 @@
     if (String(options?.targetId || '').trim().toLowerCase() === OPENAI_WEBCHAT_TARGET_ID) {
       return true;
     }
-    if (Object.prototype.hasOwnProperty.call(options || {}, 'openaiWebchatUploadEnabled')) {
-      return Boolean(options.openaiWebchatUploadEnabled);
-    }
-    return Boolean(options?.settingsState?.flows?.openai?.webchatUpload?.enabled);
+    return false;
   }
 
   function normalizePlusAccountAccessStrategy(value = '') {

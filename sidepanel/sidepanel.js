@@ -3069,7 +3069,7 @@ function renderOpenAiWebchatState(state = latestState) {
   const isOpenAiFlow = activeFlowId === DEFAULT_ACTIVE_FLOW_ID;
   const targetIsWebchat = isOpenAiFlow && targetId === 'webchat';
   const configComplete = isOpenAiWebchatConfigComplete(state);
-  const uploadEnabled = targetIsWebchat ? true : Boolean(state?.openaiWebchatUploadEnabled);
+  const uploadEnabled = targetIsWebchat;
   const shouldDisableToggle = targetIsWebchat || !configComplete;
   const uploadStatus = String(state?.openaiWebchatUploadStatus || '').trim();
   const uploadMessage = String(state?.openaiWebchatUploadMessage || '').trim();
@@ -3077,7 +3077,7 @@ function renderOpenAiWebchatState(state = latestState) {
   const uploadedAt = Number(state?.openaiWebchatUploadedAt) || 0;
 
   if (rowOpenAiWebchatUploadToggle) {
-    rowOpenAiWebchatUploadToggle.style.display = (!isOpenAiFlow || targetIsWebchat) ? 'none' : '';
+    rowOpenAiWebchatUploadToggle.style.display = 'none';
   }
   if (inputOpenAiWebchatUploadEnabled) {
     inputOpenAiWebchatUploadEnabled.checked = uploadEnabled;
@@ -5303,14 +5303,7 @@ function collectSettingsPayload() {
     sharedWebchatUrl
     && sharedWebchatAdminKey
   );
-  const openAiWebchatUploadEnabled = effectiveOpenAiTargetId === 'webchat'
-    ? false
-    : Boolean(
-      openAiWebchatConfigComplete
-      && (typeof inputOpenAiWebchatUploadEnabled !== 'undefined' && inputOpenAiWebchatUploadEnabled
-        ? inputOpenAiWebchatUploadEnabled.checked
-        : latestState?.openaiWebchatUploadEnabled)
-    );
+  const openAiWebchatUploadEnabled = false;
   const normalizeHostedCheckoutDelaySecondsSafe = typeof normalizePlusHostedCheckoutOauthDelaySeconds === 'function'
     ? normalizePlusHostedCheckoutOauthDelaySeconds
     : ((value) => {
@@ -10502,11 +10495,9 @@ function resolveStepDefinitionCapabilityState(state = latestState, options = {})
     phoneVerificationEnabled: capabilityState
       ? Boolean(capabilityState.runtimeLocks?.phoneVerificationEnabled)
       : Boolean(nextState?.phoneVerificationEnabled),
-    openaiWebchatUploadEnabled: Boolean(
-      capabilityState?.stepDefinitionOptions?.openaiWebchatUploadEnabled
-      || nextState?.openaiWebchatUploadEnabled
-      || nextState?.settingsState?.flows?.openai?.webchatUpload?.enabled
-    ),
+    openaiWebchatUploadEnabled: capabilityState
+      ? Boolean(capabilityState.stepDefinitionOptions?.openaiWebchatUploadEnabled)
+      : false,
   };
 }
 

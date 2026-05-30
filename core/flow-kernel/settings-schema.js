@@ -413,9 +413,6 @@
       const defaultOpenAiPlus = isPlainObject(defaultOpenAiFlow.plus)
         ? defaultOpenAiFlow.plus
         : {};
-      const defaultOpenAiWebchatUpload = isPlainObject(defaultOpenAiFlow.webchatUpload)
-        ? defaultOpenAiFlow.webchatUpload
-        : {};
       const cpaSource = {
         ...currentFlow.targets.cpa,
         ...getTargetValue(
@@ -539,12 +536,7 @@
           })(),
         },
         webchatUpload: {
-          enabled: Boolean(
-            input?.openaiWebchatUploadEnabled
-            ?? currentFlow.webchatUpload?.enabled
-            ?? defaultOpenAiWebchatUpload.enabled
-            ?? false
-          ),
+          enabled: false,
         },
       };
     }

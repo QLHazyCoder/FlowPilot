@@ -471,7 +471,7 @@ test('OpenAI OAuth workflow removes post-login phone verification when phone ver
   });
 });
 
-test('OpenAI webchat upload is appended only for webchat target or explicit sync toggle', () => {
+test('OpenAI webchat upload is appended only for webchat target', () => {
   const globalScope = {};
   const api = new Function('self', `${readStepDefinitionsBundle()}; return self.MultiPageStepDefinitions;`)(globalScope);
 
@@ -493,7 +493,7 @@ test('OpenAI webchat upload is appended only for webchat target or explicit sync
     targetId: 'cpa',
     openaiWebchatUploadEnabled: true,
   });
-  assert.equal(cpaSyncSteps.at(-1)?.key, 'openai-upload-session-to-webchat');
+  assert.equal(cpaSyncSteps.some((step) => step.key === 'openai-upload-session-to-webchat'), false);
 
   const schemaSyncSteps = api.getSteps({
     targetId: 'sub2api',
@@ -505,7 +505,7 @@ test('OpenAI webchat upload is appended only for webchat target or explicit sync
       },
     },
   });
-  assert.equal(schemaSyncSteps.at(-1)?.key, 'openai-upload-session-to-webchat');
+  assert.equal(schemaSyncSteps.some((step) => step.key === 'openai-upload-session-to-webchat'), false);
 });
 
 test('Plus session strategy swaps the OAuth tail for a single SUB2API import node', () => {

@@ -376,7 +376,7 @@ test('flow capability registry validates OpenAI webchat target configuration wit
   assert.equal(configuredState.effectivePlusAccountAccessStrategy, 'oauth');
 });
 
-test('flow capability registry rejects OpenAI webchat add-on upload until webchat config is complete', () => {
+test('flow capability registry ignores hidden OpenAI webchat add-on upload outside webchat target', () => {
   const api = loadApi();
   const registry = api.createFlowCapabilityRegistry();
 
@@ -391,11 +391,12 @@ test('flow capability registry rejects OpenAI webchat add-on upload until webcha
     changedKeys: ['openaiWebchatUploadEnabled'],
   });
 
-  assert.equal(validation.ok, false);
-  assert.deepEqual(validation.normalizedUpdates, {
-    openaiWebchatUploadEnabled: false,
-  });
-  assert.equal(validation.errors[0].code, 'openai_webchat_upload_config_required');
+  assert.equal(validation.ok, true);
+  assert.deepEqual(validation.normalizedUpdates, {});
+  assert.deepEqual(validation.errors, []);
+  assert.equal(validation.capabilityState.openaiWebchat.additionalUploadEnabled, false);
+  assert.equal(validation.capabilityState.openaiWebchat.uploadRequired, false);
+  assert.equal(validation.capabilityState.stepDefinitionOptions.openaiWebchatUploadEnabled, false);
 
   const configuredState = registry.resolveSidepanelCapabilities({
     state: {
@@ -407,7 +408,7 @@ test('flow capability registry rejects OpenAI webchat add-on upload until webcha
     },
   });
 
-  assert.equal(configuredState.openaiWebchat.additionalUploadEnabled, true);
-  assert.equal(configuredState.openaiWebchat.uploadRequired, true);
-  assert.equal(configuredState.stepDefinitionOptions.openaiWebchatUploadEnabled, true);
+  assert.equal(configuredState.openaiWebchat.additionalUploadEnabled, false);
+  assert.equal(configuredState.openaiWebchat.uploadRequired, false);
+  assert.equal(configuredState.stepDefinitionOptions.openaiWebchatUploadEnabled, false);
 });

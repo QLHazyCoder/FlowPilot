@@ -46,11 +46,11 @@ test('flow registry exposes canonical flow and target metadata', () => {
   assert.equal(flowRegistry.normalizeTargetId('grok', 'anything-else'), 'webchat2api');
   assert.deepEqual(
     flowRegistry.getVisibleGroupIds('openai', 'cpa'),
-    ['openai-plus', 'openai-phone', 'shared-auto-run', 'openai-oauth', 'openai-step6', 'openai-webchat-upload', 'openai-target-cpa', 'service-account', 'service-email', 'service-proxy']
+    ['openai-plus', 'openai-phone', 'shared-auto-run', 'openai-oauth', 'openai-step6', 'openai-target-cpa', 'service-account', 'service-email', 'service-proxy']
   );
   assert.deepEqual(
     flowRegistry.getVisibleGroupIds('openai', 'webchat'),
-    ['openai-plus', 'openai-phone', 'shared-auto-run', 'openai-oauth', 'openai-step6', 'openai-webchat-upload', 'openai-target-webchat', 'service-account', 'service-email', 'service-proxy']
+    ['openai-plus', 'openai-phone', 'shared-auto-run', 'openai-oauth', 'openai-step6', 'openai-target-webchat', 'service-account', 'service-email', 'service-proxy']
   );
   assert.deepEqual(
     flowRegistry.getVisibleGroupIds('kiro', 'kiro-rs'),
@@ -78,7 +78,7 @@ test('flow registry exposes canonical flow and target metadata', () => {
   );
   assert.deepEqual(
     flowRegistry.getSettingsGroupDefinition('openai-webchat-upload')?.rowIds,
-    ['row-openai-webchat-upload-toggle', 'row-openai-webchat-upload-status']
+    []
   );
   assert.equal(flowRegistry.getPublicationTargetDefinition('kiro', 'kiro-rs')?.label, 'kiro.rs');
   assert.equal(flowRegistry.getFlowCapabilities('openai').supportsAccountContribution, true);
@@ -130,7 +130,7 @@ test('settings schema normalizes view input into canonical nested namespaces', (
   assert.equal(normalized.flows.openai.targets.webchat.apiKey, 'webchat-key');
   assert.equal(normalized.flows.grok.targets.webchat2api.baseUrl, 'https://webchat.example.com/admin');
   assert.equal(normalized.flows.grok.targets.webchat2api.apiKey, 'webchat-key');
-  assert.equal(normalized.flows.openai.webchatUpload.enabled, true);
+  assert.equal(normalized.flows.openai.webchatUpload.enabled, false);
   assert.equal(normalized.flows.kiro.selectedTargetId, 'kiro-rs');
   assert.equal(normalized.flows.grok.selectedTargetId, 'webchat2api');
   assert.equal(normalized.flows.kiro.targets['kiro-rs'].baseUrl, 'https://kiro.example.com/admin');
@@ -228,7 +228,7 @@ test('settings schema can project canonical state into a read view without legac
   assert.equal(view.kiroRsKey, 'key-123');
   assert.equal(view.openaiWebchatUrl, 'https://webchat.example.com/admin');
   assert.equal(view.openaiWebchatAdminKey, 'key-webchat');
-  assert.equal(view.openaiWebchatUploadEnabled, true);
+  assert.equal(view.openaiWebchatUploadEnabled, false);
   assert.equal(view.plusAccountAccessStrategy, 'sub2api_codex_session');
   assert.equal(view.settingsSchemaVersion, 5);
   assert.equal(view.settingsState.activeFlowId, 'kiro');

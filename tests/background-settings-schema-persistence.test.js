@@ -320,7 +320,7 @@ test('buildPersistentSettingsPayload writes canonical settings schema into persi
   assert.equal(payload.kiroRsKey, 'secret-key');
   assert.equal(payload.openaiWebchatUrl, 'https://webchat.example.com/admin');
   assert.equal(payload.openaiWebchatAdminKey, 'webchat-key');
-  assert.equal(payload.openaiWebchatUploadEnabled, true);
+  assert.equal(payload.openaiWebchatUploadEnabled, false);
   assert.equal(payload.phoneSmsProvider, 'hero-sms');
   assert.equal(payload.madaoBaseUrl, DEFAULT_MADAO_BASE_URL_FOR_TEST);
   assert.equal(payload.madaoMode, DEFAULT_MADAO_MODE_FOR_TEST);
@@ -333,7 +333,7 @@ test('buildPersistentSettingsPayload writes canonical settings schema into persi
   assert.equal(payload.settingsState.flows.kiro.selectedTargetId, 'kiro-rs');
   assert.equal(payload.settingsState.flows.openai.targets.webchat.baseUrl, 'https://webchat.example.com/admin');
   assert.equal(payload.settingsState.flows.openai.targets.webchat.apiKey, 'webchat-key');
-  assert.equal(payload.settingsState.flows.openai.webchatUpload.enabled, true);
+  assert.equal(payload.settingsState.flows.openai.webchatUpload.enabled, false);
   assert.equal(
     payload.settingsState.flows.kiro.targets['kiro-rs'].baseUrl,
     'https://kiro.example.com/admin'
