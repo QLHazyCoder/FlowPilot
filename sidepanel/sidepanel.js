@@ -472,12 +472,15 @@ const rowHeroSmsPriceTiers = document.getElementById('row-hero-sms-price-tiers')
 const rowHeroSmsCurrentCode = document.getElementById('row-hero-sms-current-code');
 const rowHeroSmsPreferredActivation = document.getElementById('row-hero-sms-preferred-activation');
 const rowPhoneCodeSettingsGroup = document.getElementById('row-phone-code-settings-group');
+const rowPhoneCodeFailureTopic = document.getElementById('row-phone-code-failure-topic');
 const rowPhoneVerificationResendCount = document.getElementById('row-phone-verification-resend-count');
 const rowPhoneReplacementLimit = document.getElementById('row-phone-replacement-limit');
+const rowPhoneCodeWaitTopic = document.getElementById('row-phone-code-wait-topic');
 const rowPhoneCodeWaitSeconds = document.getElementById('row-phone-code-wait-seconds');
 const rowPhoneCodeTimeoutWindows = document.getElementById('row-phone-code-timeout-windows');
 const rowPhoneCodePollIntervalSeconds = document.getElementById('row-phone-code-poll-interval-seconds');
 const rowPhoneCodePollMaxRounds = document.getElementById('row-phone-code-poll-max-rounds');
+const rowFreePhoneReuseTopic = document.getElementById('row-free-phone-reuse-topic');
 const rowFreePhoneReuseEnabled = document.getElementById('row-free-phone-reuse-enabled');
 const rowFreePhoneReuseAutoEnabled = document.getElementById('row-free-phone-reuse-auto-enabled');
 const rowFreeReusablePhone = document.getElementById('row-free-reusable-phone');
@@ -10623,18 +10626,22 @@ function updatePhoneVerificationSettingsUI() {
     typeof rowPhoneSmsProviderOrder !== 'undefined' ? rowPhoneSmsProviderOrder : null,
     typeof rowPhoneSmsProviderOrderActions !== 'undefined' ? rowPhoneSmsProviderOrderActions : null,
     typeof rowPhoneCodeSettingsGroup !== 'undefined' ? rowPhoneCodeSettingsGroup : null,
+    typeof rowPhoneCodeFailureTopic !== 'undefined' ? rowPhoneCodeFailureTopic : null,
     typeof rowPhoneVerificationResendCount !== 'undefined' ? rowPhoneVerificationResendCount : null,
     typeof rowPhoneReplacementLimit !== 'undefined' ? rowPhoneReplacementLimit : null,
+    typeof rowPhoneCodeWaitTopic !== 'undefined' ? rowPhoneCodeWaitTopic : null,
     typeof rowPhoneCodeWaitSeconds !== 'undefined' ? rowPhoneCodeWaitSeconds : null,
     typeof rowPhoneCodeTimeoutWindows !== 'undefined' ? rowPhoneCodeTimeoutWindows : null,
     typeof rowPhoneCodePollIntervalSeconds !== 'undefined' ? rowPhoneCodePollIntervalSeconds : null,
-    typeof rowPhoneCodePollMaxRounds !== 'undefined' ? rowPhoneCodePollMaxRounds : null,
   ];
   sharedPhoneVerificationRows.forEach((row) => {
     if (row) {
       row.style.display = showSettings ? '' : 'none';
     }
   });
+  if (typeof rowPhoneCodePollMaxRounds !== 'undefined' && rowPhoneCodePollMaxRounds) {
+    rowPhoneCodePollMaxRounds.style.display = 'none';
+  }
   getAllProviderUiRows().forEach((row) => {
     row.style.display = 'none';
   });
@@ -10650,6 +10657,12 @@ function updatePhoneVerificationSettingsUI() {
   }
   if (typeof rowFreePhoneReuseAutoEnabled !== 'undefined' && rowFreePhoneReuseAutoEnabled) {
     rowFreePhoneReuseAutoEnabled.style.display = showSettings && providerSupportsAutomaticFreeReuse ? '' : 'none';
+  }
+  if (typeof rowFreePhoneReuseTopic !== 'undefined' && rowFreePhoneReuseTopic) {
+    rowFreePhoneReuseTopic.style.display = showSettings && (
+      providerSupportsFreeReusePreservation
+      || providerSupportsAutomaticFreeReuse
+    ) ? '' : 'none';
   }
   const phoneSignupReuseLocked = typeof isPhoneSignupReuseLocked === 'function'
     ? isPhoneSignupReuseLocked(latestState, {
@@ -18145,13 +18158,13 @@ inputFreePhoneReuseAutoEnabled?.addEventListener('change', () => {
 
 btnSaveFreeReusablePhone?.addEventListener('click', async () => {
   if (isPhoneSignupReuseLocked(latestState)) {
-    showToast?.('手机号注册流程不能记录白嫖复用号码，请切回邮箱注册后再使用。', 'warn', 2600);
+    showToast?.('手机号注册流程不能记录保存复用号码，请切回邮箱注册后再使用。', 'warn', 2600);
     updatePhoneVerificationSettingsUI();
     return;
   }
   const phoneNumber = String(inputFreeReusablePhone?.value || '').trim();
   if (!phoneNumber) {
-    showToast?.('请先填写白嫖复用手机号。', 'warn', 2200);
+    showToast?.('请先填写要保存复用的手机号。', 'warn', 2200);
     inputFreeReusablePhone?.focus?.();
     return;
   }
@@ -18167,10 +18180,10 @@ btnSaveFreeReusablePhone?.addEventListener('click', async () => {
       throw new Error(response.error);
     }
     await refreshFreeReusablePhoneStateFallback(response || {});
-    showToast?.('已记录白嫖复用手机号。', 'success', 1800);
+    showToast?.('已记录保存复用手机号。', 'success', 1800);
   } catch (error) {
     console.error('Failed to save free reusable phone:', error);
-    showToast?.(`记录白嫖复用手机号失败：${error?.message || error}`, 'error', 4000);
+    showToast?.(`记录保存复用手机号失败：${error?.message || error}`, 'error', 4000);
   }
 });
 
@@ -18183,10 +18196,10 @@ btnClearFreeReusablePhone?.addEventListener('click', async () => {
       throw new Error(response.error);
     }
     await refreshFreeReusablePhoneStateFallback(response || {}, { clear: true });
-    showToast?.('已清除白嫖复用手机号。', 'info', 1800);
+    showToast?.('已清除保存复用手机号。', 'info', 1800);
   } catch (error) {
     console.error('Failed to clear free reusable phone:', error);
-    showToast?.(`清除白嫖复用手机号失败：${error?.message || error}`, 'error', 4000);
+    showToast?.(`清除保存复用手机号失败：${error?.message || error}`, 'error', 4000);
   }
 });
 

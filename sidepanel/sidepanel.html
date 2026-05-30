@@ -1595,23 +1595,27 @@
               <span class="data-label">MaDao 价格</span>
               <div class="data-inline hero-sms-price-preview-stack">
                 <div class="hero-sms-price-controls-grid">
+                  <div class="hero-sms-settings-topic hero-sms-price-topic">
+                    <span class="hero-sms-settings-topic-title">买号价格</span>
+                    <span class="hero-sms-settings-topic-note">空值表示不限制；最低价不能高于上限。</span>
+                  </div>
                   <div class="hero-sms-price-control">
                     <span class="hero-sms-settings-caption">最低购买价</span>
                     <div class="setting-controls">
-                      <input type="number" id="input-madao-min-price" class="data-input auto-delay-input mono hero-sms-max-price-input" placeholder="可空" min="0" step="0.0001" />
+                      <input type="number" id="input-madao-min-price" class="data-input auto-delay-input mono hero-sms-max-price-input" placeholder="可空" min="0" step="0.0001" title="接码最低购买价；可空（空=不设下限）" />
                     </div>
                   </div>
                   <div class="hero-sms-price-control">
                     <span class="hero-sms-settings-caption">价格上限</span>
                     <div class="setting-controls">
-                      <input type="number" id="input-madao-max-price" class="data-input auto-delay-input mono hero-sms-max-price-input" placeholder="可空" min="0" step="0.0001" />
+                      <input type="number" id="input-madao-max-price" class="data-input auto-delay-input mono hero-sms-max-price-input" placeholder="可空" min="0" step="0.0001" title="接码价格上限；可空（空=不设上限）" />
                     </div>
                   </div>
                 </div>
               </div>
             </div>
             <div class="data-row" id="row-hero-sms-max-price" style="display:none;">
-              <span class="data-label">价格区间</span>
+              <span class="data-label">买号价格</span>
               <div class="data-inline hero-sms-price-preview-stack">
                 <div class="hero-sms-price-preview-head">
                   <button id="btn-hero-sms-price-preview" class="btn btn-outline btn-xs data-inline-btn" type="button">查询价格</button>
@@ -1622,6 +1626,10 @@
                   <span id="display-phone-sms-balance" class="data-value mono hero-sms-price-preview-text">余额未获取</span>
                 </div>
                 <div class="hero-sms-price-controls-grid">
+                  <div class="hero-sms-settings-topic hero-sms-price-topic">
+                    <span class="hero-sms-settings-topic-title">买号筛选</span>
+                    <span class="hero-sms-settings-topic-note">先按国家/价格策略选档位，再按价格限制购买。</span>
+                  </div>
                   <div class="hero-sms-price-control">
                     <span class="hero-sms-settings-caption">最低购买价</span>
                     <div class="setting-controls">
@@ -1635,13 +1643,13 @@
                     </div>
                   </div>
                   <div id="row-phone-sms-preferred-price-control" class="hero-sms-price-control">
-                    <span class="hero-sms-settings-caption">指定档位</span>
+                    <span class="hero-sms-settings-caption">优先档位</span>
                     <div class="setting-controls">
                       <input type="number" id="input-hero-sms-preferred-price" class="data-input auto-delay-input mono hero-sms-max-price-input" placeholder="例如 0.0512（可空）" min="0" step="0.0001" title="优先尝试该价格档位；可空（空=按优先级策略）" />
                     </div>
                   </div>
                   <div id="row-phone-sms-reuse-control" class="hero-sms-price-control hero-sms-price-control-reuse">
-                    <span class="hero-sms-settings-caption">号码复用</span>
+                    <span class="hero-sms-settings-caption">优先复用号</span>
                     <div class="setting-controls hero-sms-toggle-controls">
                       <label class="toggle-switch hero-sms-price-reuse-toggle" for="input-hero-sms-reuse-enabled" title="开启后会优先复用未超次数的可用号码">
                         <input type="checkbox" id="input-hero-sms-reuse-enabled" />
@@ -1655,53 +1663,65 @@
               </div>
             </div>
             <div class="data-row" id="row-phone-code-settings-group" style="display:none;">
-              <span class="data-label">接码参数</span>
+              <span class="data-label">收码处理</span>
               <div class="data-inline hero-sms-settings-grid">
+                <div id="row-phone-code-failure-topic" class="hero-sms-settings-topic" style="display:none;">
+                  <span class="hero-sms-settings-topic-title">失败处理</span>
+                  <span class="hero-sms-settings-topic-note">控制错码重发和当前号码失败后的换号次数。</span>
+                </div>
                 <div id="row-phone-verification-resend-count" class="hero-sms-settings-cell" style="display:none;">
-                  <span class="hero-sms-settings-caption">验证码重发</span>
+                  <span class="hero-sms-settings-caption">错码后重发</span>
                   <div class="setting-controls">
                     <input type="number" id="input-verification-resend-count" class="data-input auto-delay-input" value="4"
-                      min="0" max="20" step="1" title="自动点击重新发送验证码的次数" />
+                      min="0" max="20" step="1" title="验证码已收到但被 OpenAI 判定错误时，最多重新请求短信的次数；等待短信超时不消耗这个次数" />
                     <span class="data-unit">次</span>
                   </div>
                 </div>
                 <div id="row-phone-replacement-limit" class="hero-sms-settings-cell" style="display:none;">
                   <span class="hero-sms-settings-caption">换号上限</span>
                   <div class="setting-controls">
-                    <input type="number" id="input-phone-replacement-limit" class="data-input auto-delay-input" value="3" min="1" max="20" step="1" title="步骤 9 内部允许更换号码的最大次数" />
+                    <input type="number" id="input-phone-replacement-limit" class="data-input auto-delay-input" value="3" min="1" max="20" step="1" title="当前号码失败后，步骤 9 内部最多更换几个新号码" />
                     <span class="data-unit">次</span>
                   </div>
                 </div>
+                <div id="row-phone-code-wait-topic" class="hero-sms-settings-topic" style="display:none;">
+                  <span class="hero-sms-settings-topic-title">短信等待</span>
+                  <span class="hero-sms-settings-topic-note">控制每个号码等多久、等几轮、多久查一次平台。</span>
+                </div>
                 <div id="row-phone-code-wait-seconds" class="hero-sms-settings-cell" style="display:none;">
-                  <span class="hero-sms-settings-caption">验证码限时</span>
+                  <span class="hero-sms-settings-caption">每轮等待</span>
                   <div class="setting-controls">
-                    <input type="number" id="input-phone-code-wait-seconds" class="data-input auto-delay-input" value="60" min="15" max="300" step="1" title="每轮等待验证码的秒数" />
+                    <input type="number" id="input-phone-code-wait-seconds" class="data-input auto-delay-input" value="60" min="15" max="300" step="1" title="单轮等待短信到达的最长秒数" />
                     <span class="data-unit">秒</span>
                   </div>
                 </div>
                 <div id="row-phone-code-timeout-windows" class="hero-sms-settings-cell" style="display:none;">
-                  <span class="hero-sms-settings-caption">超时次数</span>
+                  <span class="hero-sms-settings-caption">等待轮数</span>
                   <div class="setting-controls">
-                    <input type="number" id="input-phone-code-timeout-windows" class="data-input auto-delay-input" value="2" min="1" max="10" step="1" title="验证码超时后，最多继续等待几轮再换号" />
+                    <input type="number" id="input-phone-code-timeout-windows" class="data-input auto-delay-input" value="2" min="1" max="10" step="1" title="同一号码最多等待几轮；未到最后一轮时可能触发页面重发或平台追加短信" />
                     <span class="data-unit">轮</span>
                   </div>
                 </div>
                 <div id="row-phone-code-poll-interval-seconds" class="hero-sms-settings-cell" style="display:none;">
-                  <span class="hero-sms-settings-caption">轮询间隔</span>
+                  <span class="hero-sms-settings-caption">查询间隔</span>
                   <div class="setting-controls">
-                    <input type="number" id="input-phone-code-poll-interval-seconds" class="data-input auto-delay-input" value="5" min="1" max="30" step="1" title="向 HeroSMS 查询验证码状态的间隔秒数" />
+                    <input type="number" id="input-phone-code-poll-interval-seconds" class="data-input auto-delay-input" value="5" min="1" max="30" step="1" title="向接码平台查询短信状态的间隔秒数" />
                     <span class="data-unit">秒</span>
                   </div>
                 </div>
                 <div id="row-phone-code-poll-max-rounds" class="hero-sms-settings-cell" style="display:none;">
-                  <span class="hero-sms-settings-caption">轮询次数</span>
+                  <span class="hero-sms-settings-caption">内部轮询下限</span>
                   <div class="setting-controls">
                     <input type="number" id="input-phone-code-poll-max-rounds" class="data-input auto-delay-input" value="4" min="1" max="120" step="1" title="每个验证码等待窗口的基础轮询次数；如果低于等待时长和轮询间隔所需次数，会自动补足，避免提前结束" />
                     <span class="data-unit">次</span>
                   </div>
                 </div>
+                <div id="row-free-phone-reuse-topic" class="hero-sms-settings-topic" style="display:none;">
+                  <span class="hero-sms-settings-topic-title">复用保存</span>
+                  <span class="hero-sms-settings-topic-note">保存成功收码的号码，下次可手动或自动复用。</span>
+                </div>
                 <div id="row-free-phone-reuse-enabled" class="hero-sms-settings-cell hero-sms-reuse-cell" style="display:none;">
-                  <span class="hero-sms-settings-caption">白嫖复用</span>
+                  <span class="hero-sms-settings-caption">保存复用号</span>
                   <div class="setting-controls hero-sms-toggle-controls">
                     <label class="toggle-switch" for="input-free-phone-reuse-enabled" title="开启后保存首个成功接码手机号；自动复用关闭时，下次只填号码、不提交，并停止自动流程">
                       <input type="checkbox" id="input-free-phone-reuse-enabled" />
@@ -1712,7 +1732,7 @@
                   </div>
                 </div>
                 <div id="row-free-phone-reuse-auto-enabled" class="hero-sms-settings-cell hero-sms-reuse-cell" style="display:none;">
-                  <span class="hero-sms-settings-caption">自动白嫖复用</span>
+                  <span class="hero-sms-settings-caption">自动用保存号</span>
                   <div class="setting-controls hero-sms-toggle-controls">
                     <label class="toggle-switch" for="input-free-phone-reuse-auto-enabled" title="开启后自动将已记录手机号设为等待短信状态，自动提交并轮询验证码；最多复用 3 次">
                       <input type="checkbox" id="input-free-phone-reuse-auto-enabled" />
@@ -1744,7 +1764,7 @@
           </div>
           <div id="row-free-reusable-phone" class="hero-sms-runtime-cell hero-sms-runtime-cell-span2 hero-sms-free-phone-cell" style="display:none;">
             <div class="hero-sms-free-phone-input-row">
-              <span class="hero-sms-runtime-key">白嫖号码</span>
+              <span class="hero-sms-runtime-key">保存号码</span>
               <input type="text" id="input-free-reusable-phone" class="data-input mono hero-sms-manual-phone-input" placeholder="复用手机号" title="已记录号码会自动显示；未记录时可手动填写并记录" />
             </div>
             <div class="hero-sms-free-phone-status-row">

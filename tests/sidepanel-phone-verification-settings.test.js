@@ -124,8 +124,12 @@ test('sidepanel html exposes phone verification toggle and multi-provider SMS ro
   assert.match(html, /id="input-free-reusable-phone"/);
   assert.match(html, /id="btn-save-free-reusable-phone"/);
   assert.match(html, /id="btn-clear-free-reusable-phone"/);
-  assert.match(html, /白嫖复用/);
-  assert.match(html, /自动白嫖复用/);
+  assert.match(html, /保存复用号/);
+  assert.match(html, /自动用保存号/);
+  assert.match(html, /收码处理/);
+  assert.match(html, /失败处理/);
+  assert.match(html, /短信等待/);
+  assert.match(html, /复用保存/);
   assert.match(html, /id="row-phone-replacement-limit"/);
   assert.match(html, /id="row-phone-verification-resend-count"/);
   assert.match(html, /id="row-phone-code-wait-seconds"/);
@@ -493,7 +497,7 @@ test('sidepanel free reusable phone paths avoid stale identifiers and empty-save
   );
   assert.match(
     sidepanelSource,
-    /if \(!phoneNumber\) \{[\s\S]*请先填写白嫖复用手机号[\s\S]*return;[\s\S]*chrome\.runtime\.sendMessage\(\{\s*type:\s*'SET_FREE_REUSABLE_PHONE'/
+    /if \(!phoneNumber\) \{[\s\S]*请先填写要保存复用的手机号[\s\S]*return;[\s\S]*chrome\.runtime\.sendMessage\(\{\s*type:\s*'SET_FREE_REUSABLE_PHONE'/
   );
 });
 
@@ -963,6 +967,9 @@ const rowFreeReusablePhone = createMockRow();
 const rowPhoneSmsPreferredPriceControl = { style: { display: 'none' } };
 const rowPhoneSmsReuseControl = { style: { display: 'none' } };
 const heroSmsReuseRow = createMockRow();
+const rowPhoneCodeFailureTopic = { style: { display: 'none' } };
+const rowPhoneCodeWaitTopic = { style: { display: 'none' } };
+const rowFreePhoneReuseTopic = { style: { display: 'none' } };
 const inputHeroSmsReuseEnabled = { checked: true, disabled: false, closest: () => heroSmsReuseRow };
 const inputFreePhoneReuseEnabled = { checked: true, disabled: false };
 const inputFreePhoneReuseAutoEnabled = { checked: true, disabled: false };
@@ -1146,6 +1153,9 @@ return {
   rowMaDaoPriceRange,
   rowPhoneSmsPreferredPriceControl,
   rowPhoneSmsReuseControl,
+  rowPhoneCodeFailureTopic,
+  rowPhoneCodeWaitTopic,
+  rowFreePhoneReuseTopic,
   selectMaDaoMode,
   rowHeroSmsRuntimePair,
   rowHeroSmsCurrentNumber,
@@ -1201,6 +1211,9 @@ return {
   assert.equal(api.rowHeroSmsPreferredActivation.style.display, 'none');
   assert.equal(api.rowPhoneVerificationResendCount.style.display, 'none');
   assert.equal(api.rowPhoneReplacementLimit.style.display, 'none');
+  assert.equal(api.rowPhoneCodeFailureTopic.style.display, 'none');
+  assert.equal(api.rowPhoneCodeWaitTopic.style.display, 'none');
+  assert.equal(api.rowFreePhoneReuseTopic.style.display, 'none');
   assert.equal(api.rowPhoneCodeWaitSeconds.style.display, 'none');
   assert.equal(api.rowPhoneCodeTimeoutWindows.style.display, 'none');
   assert.equal(api.rowPhoneCodePollIntervalSeconds.style.display, 'none');
@@ -1264,10 +1277,12 @@ return {
   assert.equal(api.rowHeroSmsPreferredActivation.style.display, '');
   assert.equal(api.rowPhoneVerificationResendCount.style.display, '');
   assert.equal(api.rowPhoneReplacementLimit.style.display, '');
+  assert.equal(api.rowPhoneCodeFailureTopic.style.display, '');
+  assert.equal(api.rowPhoneCodeWaitTopic.style.display, '');
   assert.equal(api.rowPhoneCodeWaitSeconds.style.display, '');
   assert.equal(api.rowPhoneCodeTimeoutWindows.style.display, '');
   assert.equal(api.rowPhoneCodePollIntervalSeconds.style.display, '');
-  assert.equal(api.rowPhoneCodePollMaxRounds.style.display, '');
+  assert.equal(api.rowPhoneCodePollMaxRounds.style.display, 'none');
 
   api.setLatestState({
     signupMethod: 'phone',
@@ -1308,6 +1323,7 @@ return {
   assert.equal(api.inputFreeReusablePhone.disabled, false);
   assert.equal(api.btnSaveFreeReusablePhone.disabled, false);
   assert.equal(api.btnClearFreeReusablePhone.disabled, false);
+  assert.equal(api.rowFreePhoneReuseTopic.style.display, '');
 
   api.setSelectedPhoneSmsProvider('5sim');
   api.updatePhoneVerificationSettingsUI();
@@ -1340,6 +1356,7 @@ return {
   assert.equal(api.rowPhoneSmsReuseControl.style.display, 'none');
   assert.equal(api.rowFreePhoneReuseEnabled.style.display, 'none');
   assert.equal(api.rowFreePhoneReuseAutoEnabled.style.display, 'none');
+  assert.equal(api.rowFreePhoneReuseTopic.style.display, 'none');
   assert.equal(api.rowFreeReusablePhone.style.display, 'none');
   assert.equal(api.rowHeroSmsPreferredActivation.style.display, 'none');
   assert.equal(api.inputHeroSmsReuseEnabled.checked, false);
@@ -1369,6 +1386,7 @@ return {
   assert.equal(api.rowPhoneSmsReuseControl.style.display, 'none');
   assert.equal(api.rowFreePhoneReuseEnabled.style.display, 'none');
   assert.equal(api.rowFreePhoneReuseAutoEnabled.style.display, 'none');
+  assert.equal(api.rowFreePhoneReuseTopic.style.display, 'none');
   assert.equal(api.rowFreeReusablePhone.style.display, 'none');
   assert.equal(api.rowHeroSmsPreferredActivation.style.display, 'none');
 

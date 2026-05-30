@@ -2613,6 +2613,43 @@ header {
   gap: 6px 12px;
 }
 
+.hero-sms-settings-topic {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 2px 0 1px;
+}
+
+.hero-sms-settings-topic-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.hero-sms-settings-topic-note {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: right;
+}
+
+@media (max-width: 540px) {
+  .hero-sms-settings-topic {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .hero-sms-settings-topic-note {
+    text-align: left;
+  }
+}
+
 .hero-sms-price-control {
   display: flex;
   align-items: center;
