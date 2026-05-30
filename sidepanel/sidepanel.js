@@ -51,6 +51,32 @@ const btnOpenContributionUpload = document.getElementById('btn-open-contribution
 const btnExitContributionMode = document.getElementById('btn-exit-contribution-mode');
 const displayOauthUrl = document.getElementById('display-oauth-url');
 const displayLocalhostUrl = document.getElementById('display-localhost-url');
+const inputReauthAccountFile = document.getElementById('input-reauth-account-file');
+const reauthJsonStatus = document.getElementById('reauth-json-status');
+const rowReauthAccountPicker = document.getElementById('row-reauth-account-picker');
+const selectReauthAccount = document.getElementById('select-reauth-account');
+const selectReauthMailProvider = document.getElementById('select-reauth-mail-provider');
+const displayReauthResultAccount = document.getElementById('display-reauth-result-account');
+const btnReauthCopyResult = document.getElementById('btn-reauth-copy-result');
+const reauthCopyStatus = document.getElementById('reauth-copy-status');
+const rowReauthBatchToggle = document.getElementById('row-reauth-batch-toggle');
+const inputReauthBatchMode = document.getElementById('input-reauth-batch-mode');
+const rowReauthBatchActions = document.getElementById('row-reauth-batch-actions');
+const btnReauthStartBatch = document.getElementById('btn-reauth-start-batch');
+const btnReauthStopBatch = document.getElementById('btn-reauth-stop-batch');
+const rowReauthBatchProgress = document.getElementById('row-reauth-batch-progress');
+const displayReauthBatchProgress = document.getElementById('display-reauth-batch-progress');
+const displayReauthBatchSummary = document.getElementById('display-reauth-batch-summary');
+const btnReauthDownloadResult = document.getElementById('btn-reauth-download-result');
+const btnReauthDownloadSuccessResult = document.getElementById('btn-reauth-download-success-result');
+const rowReauthModePicker = document.getElementById('row-reauth-mode-picker');
+const rowReauthProviderPicker = document.getElementById('row-reauth-provider-picker');
+const reauthProgressFill = document.getElementById('reauth-progress-fill');
+const reauthProgressCounter = document.getElementById('reauth-progress-counter');
+const reauthProgressCurrent = document.getElementById('reauth-progress-current');
+const reauthProgressStatusBadge = document.getElementById('reauth-progress-status-badge');
+const reauthResultSummary = document.getElementById('reauth-result-summary');
+const btnReauthToggleDetails = document.getElementById('btn-reauth-toggle-details');
 const displayStatus = document.getElementById('display-status');
 const statusBar = document.getElementById('status-bar');
 const inputEmail = document.getElementById('input-email');
@@ -12588,6 +12614,9 @@ async function restoreState() {
       displayLocalhostUrl.textContent = state.localhostUrl;
       displayLocalhostUrl.classList.add('has-value');
     }
+    renderReauthResultAccount(state.reauthResultAccount);
+    applyReauthBatchProgress(state.reauthBatchProgress || null);
+    applyReauthBatchResult(state.reauthBatchResult || null);
     if (state.nodeStatuses) {
       for (const [nodeId, status] of Object.entries(state.nodeStatuses)) {
         updateNodeUI(nodeId, status);
@@ -14561,6 +14590,35 @@ function updatePanelModeUI() {
       ? 'SUB2API 回调验证'
       : (useCodex2Api ? 'Codex2API 回调验证' : 'CPA 回调验证');
   }
+
+  applyOpenAiReauthRowVisibility(activeFlowId);
+}
+
+const REAUTH_HIDDEN_ROW_IDS = [
+  'row-source-selector',
+  'row-custom-password',
+  'row-mail-provider',
+  'row-email-generator',
+  'row-auto-run-controls',
+];
+
+function applyOpenAiReauthRowVisibility(activeFlowId) {
+  const isReauthFlow = String(activeFlowId || '').trim().toLowerCase() === 'openai-reauth';
+  REAUTH_HIDDEN_ROW_IDS.forEach((rowId) => {
+    const element = document.getElementById(rowId);
+    if (!element) return;
+    if (isReauthFlow) {
+      element.dataset.reauthHidden = '1';
+      element.style.display = 'none';
+    } else if (element.dataset.reauthHidden === '1') {
+      element.style.display = '';
+      delete element.dataset.reauthHidden;
+    }
+  });
+  if (isReauthFlow && typeof syncReauthMailProviderToGlobal === 'function') {
+    // 仅同步显示，不写 storage —— 否则与 background SAVE_SETTING → STATE_CHANGED 广播形成死循环
+    syncReauthMailProviderToGlobal({ persist: false });
+  }
 }
 
 // ============================================================
@@ -15839,7 +15897,13 @@ stepsList?.addEventListener('click', async (event) => {
         }
       }
     } else {
-      const response = await sendSidepanelMessage({ type: 'EXECUTE_NODE', source: 'sidepanel', payload: { nodeId } });
+      const reauthPayload = { nodeId };
+      if (nodeId === 'prepare-reauth') {
+        const account = ensurePendingReauthAccount();
+        if (!account) return;
+        reauthPayload.reauthInputAccount = account;
+      }
+      const response = await sendSidepanelMessage({ type: 'EXECUTE_NODE', source: 'sidepanel', payload: reauthPayload });
       if (response?.error) {
         throw new Error(response.error);
       }
@@ -16138,21 +16202,33 @@ async function startAutoRunFromCurrentSettings() {
   const targetId = typeof getSelectedTargetId === 'function'
     ? getSelectedTargetId(activeFlowId)
     : normalizeTargetIdForFlow(activeFlowId, latestState?.targetId || '', getDefaultTargetIdForFlow(activeFlowId));
-  btnAutoRun.textContent = '运行中...';
+  btnAutoRun.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> 运行中...';
+  const autoRunPayload = {
+    totalRuns,
+    activeFlowId,
+    targetId,
+    autoRunSkipFailures,
+    accountContributionEnabled: Boolean(latestState?.accountContributionEnabled),
+    contributionAdapterId: latestState?.contributionAdapterId || '',
+    contributionNickname,
+    contributionQq,
+    mode,
+  };
+  if (activeFlowId === 'openai-reauth') {
+    const reauthAccount = ensurePendingReauthAccount();
+    if (!reauthAccount) {
+      btnAutoRun.disabled = false;
+      inputRunCount.disabled = false;
+      btnAutoRun.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> 自动';
+      clearPendingAutoRunStartRunCount();
+      return false;
+    }
+    autoRunPayload.reauthInputAccount = reauthAccount;
+  }
   const response = await sendSidepanelMessage({
     type: 'AUTO_RUN',
     source: 'sidepanel',
-    payload: {
-      totalRuns,
-      activeFlowId,
-      targetId,
-      autoRunSkipFailures,
-      accountContributionEnabled: Boolean(latestState?.accountContributionEnabled),
-      contributionAdapterId: latestState?.contributionAdapterId || '',
-      contributionNickname,
-      contributionQq,
-      mode,
-    },
+    payload: autoRunPayload,
   });
   if (response?.error) {
     clearPendingAutoRunStartRunCount();
@@ -18588,6 +18664,22 @@ btnPhoneSmsProviderOrderReset?.addEventListener('click', () => {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   switch (message.type) {
+    case 'STATE_PATCH': {
+      // background setState 写完 chrome.storage.session 后会广播此消息，
+      // payload 为 sessionUpdates（实际生效的增量）。这里按需把关心字段
+      // dispatch 到对应渲染函数；其它字段交给原有 NODE_STATUS_CHANGED / GET_STATE
+      // 通道（不在此处覆盖既有渲染逻辑）。
+      const patch = message?.payload;
+      if (!patch || typeof patch !== 'object') break;
+      if (Object.prototype.hasOwnProperty.call(patch, 'reauthBatchProgress')) {
+        try { applyReauthBatchProgress(patch.reauthBatchProgress || null); } catch (_) { }
+      }
+      if (Object.prototype.hasOwnProperty.call(patch, 'reauthBatchResult')) {
+        try { applyReauthBatchResult(patch.reauthBatchResult || null); } catch (_) { }
+      }
+      break;
+    }
+
     case 'REQUEST_CUSTOM_VERIFICATION_BYPASS_CONFIRMATION': {
       (async () => {
         const step = Number(message.payload?.step);
@@ -18646,6 +18738,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             displayLocalhostUrl.textContent = state.localhostUrl;
             displayLocalhostUrl.classList.add('has-value');
           }
+          renderReauthResultAccount(state.reauthResultAccount);
+          applyReauthBatchProgress(state.reauthBatchProgress || null);
+          applyReauthBatchResult(state.reauthBatchResult || null);
         }
       }
       ).catch(() => { });
@@ -19668,4 +19763,640 @@ Promise.allSettled([
   }).catch((err) => {
     console.error('Failed to initialize sidepanel state:', err);
   });
+});
+
+let pendingReauthAccounts = null;
+let lastReauthFileText = '';
+
+function setReauthJsonStatus(text, level = '') {
+  if (!reauthJsonStatus) return;
+  reauthJsonStatus.textContent = text || '';
+  reauthJsonStatus.classList.remove('ok', 'error', 'warn');
+  if (['ok', 'error', 'warn'].includes(level)) reauthJsonStatus.classList.add(level);
+}
+
+function setReauthCopyStatus(text, level = '') {
+  if (!reauthCopyStatus) return;
+  reauthCopyStatus.textContent = text || '';
+  reauthCopyStatus.classList.remove('ok', 'error', 'warn');
+  if (['ok', 'error', 'warn'].includes(level)) reauthCopyStatus.classList.add(level);
+}
+
+function getReauthValidatorApi() {
+  return (typeof self !== 'undefined' ? self : window).MultiPageOpenAiReauthAccountValidator || null;
+}
+
+function populateReauthMailProviderOptions() {
+  if (!selectReauthMailProvider) return;
+  const validator = getReauthValidatorApi();
+  const options = Array.isArray(validator?.MAIL_PROVIDER_OPTIONS) ? validator.MAIL_PROVIDER_OPTIONS : [];
+  if (!options.length) return;
+  const previousValue = selectReauthMailProvider.value;
+  selectReauthMailProvider.innerHTML = '';
+  for (const entry of options) {
+    const option = document.createElement('option');
+    option.value = String(entry?.value || '');
+    option.textContent = String(entry?.label || entry?.value || '');
+    selectReauthMailProvider.appendChild(option);
+  }
+  if (previousValue && options.some((entry) => entry?.value === previousValue)) {
+    selectReauthMailProvider.value = previousValue;
+  }
+}
+populateReauthMailProviderOptions();
+
+function renderReauthAccountPicker(accounts) {
+  if (!selectReauthAccount || !rowReauthAccountPicker) return;
+  selectReauthAccount.innerHTML = '';
+  accounts.forEach((entry) => {
+    const option = document.createElement('option');
+    option.value = String(entry.index);
+    option.textContent = `${entry.index + 1}. ${entry.email}`;
+    selectReauthAccount.appendChild(option);
+  });
+  selectReauthAccount.value = '0';
+  rowReauthAccountPicker.style.display = accounts.length > 1 ? '' : 'none';
+}
+
+function clearReauthAccountPicker() {
+  if (selectReauthAccount) selectReauthAccount.innerHTML = '';
+  if (rowReauthAccountPicker) rowReauthAccountPicker.style.display = 'none';
+}
+
+function parsePendingReauthAccounts(rawText, fileLabel = '') {
+  const validator = getReauthValidatorApi();
+  if (!validator || typeof validator.parseAccountsFromJson !== 'function') {
+    setReauthJsonStatus('校验器未加载，请检查扩展安装。', 'error');
+    pendingReauthAccounts = null;
+    clearReauthAccountPicker();
+    applyReauthBatchUiVisibility();
+    return null;
+  }
+  const result = validator.parseAccountsFromJson(rawText || '');
+  if (!result.ok) {
+    setReauthJsonStatus(result.error, 'error');
+    if (typeof showToast === 'function') {
+      showToast(`账号 JSON 校验失败：${result.error}`, 'error');
+    }
+    pendingReauthAccounts = null;
+    clearReauthAccountPicker();
+    applyReauthBatchUiVisibility();
+    return null;
+  }
+  pendingReauthAccounts = result.accounts;
+  renderReauthAccountPicker(result.accounts);
+  const prefix = fileLabel ? `从「${fileLabel}」` : '';
+  setReauthJsonStatus(
+    result.accounts.length === 1
+      ? `${prefix}已识别 1 个账号：${result.accounts[0].email}`
+      : `${prefix}已识别 ${result.accounts.length} 个账号，可选单个账号或开启「批量模式」一次性处理全部`,
+    'ok'
+  );
+  applyReauthBatchUiVisibility();
+  return result.accounts;
+}
+
+// ============================================================
+// Reauth 批量模式 UI 控制
+// ============================================================
+
+let lastReauthBatchProgress = null;
+let lastReauthBatchResult = null;
+let reauthBatchRunningLocal = false;
+
+function isReauthBatchModeEnabled() {
+  return Boolean(inputReauthBatchMode?.checked);
+}
+
+function hasMultipleReauthAccounts() {
+  return Array.isArray(pendingReauthAccounts) && pendingReauthAccounts.length > 1;
+}
+
+function hasActiveReauthBatchMode() {
+  return hasMultipleReauthAccounts() && isReauthBatchModeEnabled();
+}
+
+function hasRenderedReauthResultValue() {
+  return Boolean(displayReauthResultAccount?.classList?.contains('has-value'));
+}
+
+function hasReauthBatchResultJson() {
+  return Boolean(lastReauthBatchResult?.updatedFileJson);
+}
+
+function hasReauthSuccessOnlyBatchResultJson() {
+  return Boolean(
+    hasReauthBatchResultJson()
+    && lastReauthBatchResult?.successOnlyFileJson
+    && Number(lastReauthBatchResult?.successCount || 0) > 0
+  );
+}
+
+function isReauthFullDownloadActionVisible() {
+  return Boolean(btnReauthDownloadResult && btnReauthDownloadResult.style.display !== 'none');
+}
+
+function syncReauthResultActionButtons() {
+  // 以「下载完整 JSON 文件」按钮的状态规则为主闸门：
+  // 只要完整下载按钮处于批量结果区可见状态，复制也必须等待 updatedFileJson 存在。
+  const hasBatchJson = hasReauthBatchResultJson();
+  const usesBatchResultActions = isReauthFullDownloadActionVisible() || hasBatchJson;
+  const canCopy = usesBatchResultActions
+    ? hasBatchJson
+    : hasRenderedReauthResultValue();
+
+  if (btnReauthDownloadResult) {
+    btnReauthDownloadResult.disabled = !hasBatchJson;
+  }
+  if (btnReauthDownloadSuccessResult) {
+    btnReauthDownloadSuccessResult.disabled = !hasReauthSuccessOnlyBatchResultJson();
+  }
+  if (btnReauthCopyResult) {
+    btnReauthCopyResult.disabled = !canCopy;
+  }
+}
+
+function applyReauthBatchUiVisibility() {
+  const accountsCount = Array.isArray(pendingReauthAccounts) ? pendingReauthAccounts.length : 0;
+  const hasAccounts = accountsCount > 0;
+  const showBatchToggle = accountsCount > 1;
+
+  if (rowReauthBatchToggle) {
+    rowReauthBatchToggle.style.display = showBatchToggle ? '' : 'none';
+  }
+  if (!showBatchToggle && inputReauthBatchMode) {
+    inputReauthBatchMode.checked = false;
+  }
+
+  const batchMode = showBatchToggle && isReauthBatchModeEnabled();
+
+  // 模式行：账号数 ≥ 2 时显示（用于切换 toggle 和单账号下拉）
+  if (rowReauthModePicker) {
+    rowReauthModePicker.style.display = showBatchToggle ? '' : 'none';
+  }
+  // 单账号下拉：账号数 ≥ 2 且非批量模式时显示
+  if (rowReauthAccountPicker) {
+    rowReauthAccountPicker.style.display = (showBatchToggle && !batchMode) ? '' : 'none';
+  }
+  // 邮箱来源：有账号时显示
+  if (rowReauthProviderPicker) {
+    rowReauthProviderPicker.style.display = hasAccounts ? '' : 'none';
+  }
+  // 批量操作行：批量模式时显示
+  if (rowReauthBatchActions) {
+    rowReauthBatchActions.style.display = batchMode ? '' : 'none';
+  }
+  // 进度行：批量模式时显示
+  if (rowReauthBatchProgress) {
+    rowReauthBatchProgress.style.display = batchMode ? '' : 'none';
+  }
+  // 下载文件按钮：只要有批量结果就显示（不依赖 batchMode toggle），保证 sidepanel 重开后仍可下载
+  const hasBatchJson = hasReauthBatchResultJson();
+  if (btnReauthDownloadResult) {
+    btnReauthDownloadResult.style.display = (batchMode || hasBatchJson) ? '' : 'none';
+  }
+  if (btnReauthDownloadSuccessResult) {
+    const fullDownloadDisplay = btnReauthDownloadResult
+      ? btnReauthDownloadResult.style.display
+      : ((batchMode || hasBatchJson) ? '' : 'none');
+    btnReauthDownloadSuccessResult.style.display = fullDownloadDisplay;
+  }
+  // 启动按钮：批量模式且未运行时可点
+  if (btnReauthStartBatch) {
+    btnReauthStartBatch.disabled = !batchMode || reauthBatchRunningLocal;
+  }
+  // 停止按钮：批量模式且运行中时显示
+  if (btnReauthStopBatch) {
+    btnReauthStopBatch.style.display = (batchMode && reauthBatchRunningLocal) ? '' : 'none';
+  }
+  // 折叠详情按钮：有批量结果 JSON 时显示（同样不依赖 toggle）
+  if (btnReauthToggleDetails) {
+    const hasJson = Boolean(lastReauthBatchResult?.updatedFileJson);
+    btnReauthToggleDetails.style.display = hasJson ? '' : 'none';
+  }
+  syncReauthResultActionButtons();
+}
+
+function getProgressStatusLabel(status) {
+  return ({
+    pending: '准备中',
+    running: '处理中',
+    success: '成功',
+    failed: '失败',
+    completed: '已完成',
+    stopped: '已停止',
+    aborted: '已中断',
+  })[status] || '';
+}
+
+function formatBatchProgressText(progress) {
+  if (!progress || typeof progress !== 'object') return '尚未开始';
+  const { current = 0, total = 0, currentEmail = '', currentStatus = '' } = progress;
+  if (currentStatus === 'completed') return `批量已完成（共 ${total} 个账号）`;
+  if (currentStatus === 'stopped') return `已被用户停止（${current}/${total}）`;
+  if (currentStatus === 'aborted') return `批量中断（${current}/${total}）`;
+  if (currentStatus === 'pending') return total > 0 ? `准备中，共 ${total} 个账号` : '尚未开始';
+  return `当前：${currentEmail || `账号 #${current}`}`;
+}
+
+function applyReauthBatchProgress(progress) {
+  lastReauthBatchProgress = progress || null;
+  const running = Boolean(progress) && ['pending', 'running'].includes(String(progress?.currentStatus || ''));
+  reauthBatchRunningLocal = running;
+
+  const total = Math.max(0, Number(progress?.total) || 0);
+  const current = Math.max(0, Math.min(total, Number(progress?.current) || 0));
+  const status = String(progress?.currentStatus || '');
+  const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+
+  if (reauthProgressFill) {
+    reauthProgressFill.style.width = `${percent}%`;
+    reauthProgressFill.classList.remove('is-success', 'is-stopped', 'is-aborted');
+    if (status === 'completed') reauthProgressFill.classList.add('is-success');
+    if (status === 'stopped') reauthProgressFill.classList.add('is-stopped');
+    if (status === 'aborted') reauthProgressFill.classList.add('is-aborted');
+  }
+  if (reauthProgressCounter) {
+    reauthProgressCounter.textContent = total > 0 ? `${current} / ${total}` : '0 / 0';
+  }
+  if (reauthProgressCurrent) {
+    reauthProgressCurrent.textContent = progress?.currentEmail || '';
+  }
+  if (reauthProgressStatusBadge) {
+    const label = getProgressStatusLabel(status);
+    reauthProgressStatusBadge.textContent = label;
+    reauthProgressStatusBadge.className = `reauth-status-badge ${status || ''}`.trim();
+  }
+  if (displayReauthBatchProgress) {
+    displayReauthBatchProgress.textContent = formatBatchProgressText(progress);
+  }
+  applyReauthBatchUiVisibility();
+}
+
+function applyReauthBatchResult(result) {
+  lastReauthBatchResult = result || null;
+  reauthBatchRunningLocal = false;
+
+  if (displayReauthBatchSummary && reauthResultSummary) {
+    reauthResultSummary.classList.remove('all-success', 'has-failure', 'aborted');
+    if (!result || typeof result !== 'object') {
+      displayReauthBatchSummary.textContent = '等待重新授权完成...';
+    } else {
+      const { successCount = 0, failedCount = 0, total = 0, aborted = false } = result;
+      const failedEmails = Array.isArray(result.failed)
+        ? result.failed.map((f) => f?.email).filter(Boolean)
+        : [];
+      const parts = [`成功 ${successCount} / 总计 ${total}`];
+      if (failedCount > 0) {
+        const preview = failedEmails.slice(0, 3).join(', ');
+        const more = failedEmails.length > 3 ? ` … +${failedEmails.length - 3}` : '';
+        parts.push(`失败 ${failedCount}（${preview}${more}）`);
+      }
+      if (aborted) {
+        parts.push('已中断');
+        reauthResultSummary.classList.add('aborted');
+      } else if (failedCount > 0) {
+        reauthResultSummary.classList.add('has-failure');
+      } else if (successCount === total && total > 0) {
+        reauthResultSummary.classList.add('all-success');
+      }
+      displayReauthBatchSummary.textContent = parts.join('  ·  ');
+    }
+  }
+
+  if (displayReauthResultAccount && result?.updatedFileJson) {
+    displayReauthResultAccount.textContent = result.updatedFileJson;
+    displayReauthResultAccount.classList.add('has-value');
+  } else if (displayReauthResultAccount && !result) {
+    displayReauthResultAccount.textContent = '等待重新授权完成...';
+    displayReauthResultAccount.classList.remove('has-value');
+  }
+  // 重置折叠状态：每次新结果默认折叠
+  if (displayReauthResultAccount && result?.updatedFileJson) {
+    displayReauthResultAccount.style.display = 'none';
+  }
+  if (btnReauthToggleDetails) {
+    btnReauthToggleDetails.textContent = '▼ 展开详情';
+    btnReauthToggleDetails.setAttribute('aria-expanded', 'false');
+  }
+  applyReauthBatchUiVisibility();
+}
+
+function buildReauthBatchAccounts(provider) {
+  const accounts = Array.isArray(pendingReauthAccounts) ? pendingReauthAccounts : [];
+  if (!accounts.length) return [];
+  const validator = getReauthValidatorApi();
+  if (!validator || typeof validator.buildResolvedAccount !== 'function') return [];
+  return accounts
+    .map((entry) => {
+      try {
+        return validator.buildResolvedAccount(entry.account, provider);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
+async function handleReauthBatchStart() {
+  if (!hasMultipleReauthAccounts()) {
+    setReauthJsonStatus('批量模式至少需要 2 个账号。', 'error');
+    return;
+  }
+  const provider = String(selectReauthMailProvider?.value || '').trim();
+  if (!provider) {
+    setReauthJsonStatus('请先选择「邮箱来源」。', 'error');
+    return;
+  }
+  const accounts = buildReauthBatchAccounts(provider);
+  if (accounts.length === 0) {
+    setReauthJsonStatus('未能构造可用账号列表。', 'error');
+    return;
+  }
+
+  reauthBatchRunningLocal = true;
+  applyReauthBatchResult(null);
+  applyReauthBatchProgress({ current: 0, total: accounts.length, currentEmail: '', currentStatus: 'pending' });
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: 'START_REAUTH_BATCH',
+      source: 'sidepanel',
+      payload: {
+        accounts,
+        mailProvider: provider,
+        originalFileText: lastReauthFileText || '',
+        skipOnFailure: true,
+      },
+    });
+    if (response?.error) {
+      throw new Error(response.error);
+    }
+    setReauthJsonStatus(`已启动批量授权（${accounts.length} 个账号）。`, 'ok');
+  } catch (error) {
+    reauthBatchRunningLocal = false;
+    applyReauthBatchUiVisibility();
+    const message = error?.message || String(error || '');
+    setReauthJsonStatus(`批量启动失败：${message}`, 'error');
+    if (typeof showToast === 'function') {
+      showToast(`批量启动失败：${message}`, 'error');
+    }
+  }
+}
+
+async function handleReauthBatchStop() {
+  try {
+    await chrome.runtime.sendMessage({ type: 'STOP_FLOW', source: 'sidepanel', payload: {} });
+    setReauthJsonStatus('已请求停止批量授权...', 'warn');
+  } catch (error) {
+    const message = error?.message || String(error || '');
+    setReauthJsonStatus(`停止请求失败：${message}`, 'error');
+  }
+}
+
+function generateBatchDownloadFileName(suffix = '') {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const normalizedSuffix = String(suffix || '').trim();
+  return `sub2api-reauth${normalizedSuffix ? `-${normalizedSuffix}` : ''}-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
+}
+
+async function downloadReauthBatchJson(text, filename, emptyMessage) {
+  if (!text) {
+    setReauthCopyStatus(emptyMessage || '暂无可下载的批量结果。', 'error');
+    return;
+  }
+  try {
+    if (chrome?.downloads?.download) {
+      const blob = new Blob([text], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      let revoked = false;
+      const revokeUrl = () => {
+        if (revoked) return;
+        revoked = true;
+        try { URL.revokeObjectURL(url); } catch {}
+      };
+      let downloadId;
+      try {
+        downloadId = await chrome.downloads.download({ url, filename, saveAs: true });
+      } catch (downloadError) {
+        revokeUrl();
+        throw downloadError;
+      }
+      let cleanupDownloadListener = () => {};
+      if (Number.isInteger(downloadId) && chrome.downloads?.onChanged?.addListener) {
+        const onDownloadChanged = (delta = {}) => {
+          if (delta.id !== downloadId) return;
+          const state = delta.state?.current;
+          if (state === 'complete' || state === 'interrupted') {
+            cleanupDownloadListener();
+            revokeUrl();
+          }
+        };
+        cleanupDownloadListener = () => {
+          try { chrome.downloads.onChanged.removeListener(onDownloadChanged); } catch {}
+        };
+        chrome.downloads.onChanged.addListener(onDownloadChanged);
+      }
+      // saveAs 对话框可能停留较久；监听不到最终状态时以长兜底释放 object URL。
+      setTimeout(() => {
+        cleanupDownloadListener();
+        revokeUrl();
+      }, 10 * 60 * 1000);
+      setReauthCopyStatus(`已触发下载：${filename}`, 'ok');
+      return;
+    }
+  } catch (error) {
+    console.warn('[reauth] download failed, fallback to clipboard:', error);
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    setReauthCopyStatus('下载不可用，已复制到剪贴板', 'ok');
+  } catch (error) {
+    setReauthCopyStatus(`下载与复制均失败：${error?.message || error}`, 'error');
+  }
+}
+
+async function handleReauthBatchDownload() {
+  const text = lastReauthBatchResult?.updatedFileJson || '';
+  await downloadReauthBatchJson(
+    text,
+    generateBatchDownloadFileName(),
+    '暂无可下载的批量结果。'
+  );
+}
+
+async function handleReauthBatchSuccessDownload() {
+  if (!hasReauthBatchResultJson()) {
+    setReauthCopyStatus('暂无可下载的批量结果。', 'warn');
+    syncReauthResultActionButtons();
+    return;
+  }
+  if (!hasReauthSuccessOnlyBatchResultJson()) {
+    setReauthCopyStatus('暂无成功账号可下载。', 'warn');
+    syncReauthResultActionButtons();
+    return;
+  }
+  await downloadReauthBatchJson(
+    lastReauthBatchResult?.successOnlyFileJson || '',
+    generateBatchDownloadFileName('success-only'),
+    '暂无成功账号可下载。'
+  );
+}
+
+inputReauthBatchMode?.addEventListener('change', () => {
+  applyReauthBatchUiVisibility();
+});
+btnReauthStartBatch?.addEventListener('click', () => {
+  handleReauthBatchStart();
+});
+btnReauthStopBatch?.addEventListener('click', () => {
+  handleReauthBatchStop();
+});
+btnReauthDownloadResult?.addEventListener('click', () => {
+  handleReauthBatchDownload();
+});
+btnReauthDownloadSuccessResult?.addEventListener('click', () => {
+  handleReauthBatchSuccessDownload();
+});
+btnReauthToggleDetails?.addEventListener('click', () => {
+  if (!displayReauthResultAccount) return;
+  const isHidden = displayReauthResultAccount.style.display === 'none';
+  displayReauthResultAccount.style.display = isHidden ? '' : 'none';
+  if (btnReauthToggleDetails) {
+    btnReauthToggleDetails.textContent = isHidden ? '▲ 收起详情' : '▼ 展开详情';
+    btnReauthToggleDetails.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+  }
+});
+
+function ensurePendingReauthAccount() {
+  if (!pendingReauthAccounts && lastReauthFileText) {
+    parsePendingReauthAccounts(lastReauthFileText);
+  }
+  const accounts = pendingReauthAccounts;
+  if (!accounts || !accounts.length) {
+    setReauthJsonStatus('请先选择账号 JSON 文件。', 'error');
+    if (typeof showToast === 'function') {
+      showToast('请先选择账号 JSON 文件。', 'error');
+    }
+    return null;
+  }
+
+  const selectedIndex = selectReauthAccount && accounts.length > 1
+    ? Number(selectReauthAccount.value)
+    : 0;
+  const entry = accounts[Number.isInteger(selectedIndex) ? selectedIndex : 0] || accounts[0];
+  if (!entry) {
+    setReauthJsonStatus('未选择账号。', 'error');
+    return null;
+  }
+
+  const provider = String(selectReauthMailProvider?.value || '').trim();
+  if (!provider) {
+    setReauthJsonStatus('请先选择「邮箱来源」。', 'error');
+    if (typeof showToast === 'function') {
+      showToast('请先在「邮箱来源」下拉框选择 mailProvider。', 'error');
+    }
+    return null;
+  }
+
+  const validator = getReauthValidatorApi();
+  if (!validator || typeof validator.buildResolvedAccount !== 'function') {
+    setReauthJsonStatus('校验器未加载。', 'error');
+    return null;
+  }
+  return validator.buildResolvedAccount(entry.account, provider);
+}
+
+function renderReauthResultAccount(account) {
+  if (!displayReauthResultAccount || !btnReauthCopyResult) return;
+  const batchMode = hasActiveReauthBatchMode();
+  if (account && typeof account === 'object') {
+    displayReauthResultAccount.textContent = JSON.stringify(account, null, 2);
+    displayReauthResultAccount.classList.add('has-value');
+    // 单账号模式下直接展示完整 JSON；批量模式下默认折叠（由 applyReauthBatchResult 控制）
+    if (!batchMode) {
+      displayReauthResultAccount.style.display = '';
+    }
+    // 单账号模式下也填充 summary 区，给师兄一个简短确认
+    if (!batchMode && reauthResultSummary && displayReauthBatchSummary) {
+      const email = account?.credentials?.email || account?.email || account?.name || '';
+      reauthResultSummary.classList.remove('has-failure', 'aborted');
+      reauthResultSummary.classList.add('all-success');
+      displayReauthBatchSummary.textContent = `已重新授权：${email}`;
+    }
+  } else {
+    displayReauthResultAccount.textContent = '等待重新授权完成...';
+    displayReauthResultAccount.classList.remove('has-value');
+    if (!batchMode) {
+      displayReauthResultAccount.style.display = '';
+      if (reauthResultSummary && displayReauthBatchSummary) {
+        reauthResultSummary.classList.remove('has-failure', 'aborted', 'all-success');
+        displayReauthBatchSummary.textContent = '等待重新授权完成...';
+      }
+    }
+  }
+  syncReauthResultActionButtons();
+}
+
+inputReauthAccountFile?.addEventListener('change', async (event) => {
+  const file = event.target?.files?.[0];
+  pendingReauthAccounts = null;
+  lastReauthFileText = '';
+  lastReauthBatchResult = null;
+  lastReauthBatchProgress = null;
+  reauthBatchRunningLocal = false;
+  clearReauthAccountPicker();
+  applyReauthBatchResult(null);
+  renderReauthResultAccount(null);
+  if (!file) {
+    setReauthJsonStatus('未选择文件');
+    return;
+  }
+  try {
+    const text = await file.text();
+    lastReauthFileText = text;
+    parsePendingReauthAccounts(text, file.name);
+  } catch (error) {
+    setReauthJsonStatus(`文件读取失败：${error?.message || error}`, 'error');
+  }
+});
+
+btnReauthCopyResult?.addEventListener('click', async () => {
+  const usesBatchResultActions = isReauthFullDownloadActionVisible() || hasReauthBatchResultJson();
+  const text = usesBatchResultActions
+    ? (lastReauthBatchResult?.updatedFileJson || '')
+    : (hasRenderedReauthResultValue() ? (displayReauthResultAccount?.textContent || '') : '');
+  if (!text) {
+    setReauthCopyStatus('暂无可复制的授权结果。', 'warn');
+    syncReauthResultActionButtons();
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    setReauthCopyStatus('已复制', 'ok');
+  } catch (error) {
+    setReauthCopyStatus(`复制失败：${error?.message || error}`, 'error');
+  }
+});
+
+// reauth 流程：让「邮箱来源」选择同步到全局 mailProvider，
+// 复用注册流程的 provider section 可见性逻辑（cloudflare / icloud / hotmail 等配置卡片）
+// 参数 persist 控制是否写回 storage：
+//   - 用户主动 change 时 persist=true，会触发 saveSettings
+//   - UI 刷新（如 applyOpenAiReauthRowVisibility）触发时 persist=false，仅同步显示，避免 SAVE_SETTING ↔ STATE_CHANGED 死循环
+function syncReauthMailProviderToGlobal({ persist = false } = {}) {
+  const provider = String(selectReauthMailProvider?.value || '').trim();
+  if (!provider) return;
+  if (selectMailProvider && selectMailProvider.value !== provider) {
+    selectMailProvider.value = provider;
+  }
+  if (typeof updateMailProviderUI === 'function') updateMailProviderUI();
+  if (!persist) return;
+  if (typeof markSettingsDirty === 'function') markSettingsDirty(true);
+  if (typeof saveSettings === 'function') saveSettings({ silent: true }).catch(() => { });
+}
+
+selectReauthMailProvider?.addEventListener('change', () => {
+  syncReauthMailProviderToGlobal({ persist: true });
 });

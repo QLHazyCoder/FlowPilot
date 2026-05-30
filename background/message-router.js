@@ -49,6 +49,7 @@
       getCurrentPayPalAccount,
       getCurrentMail2925Account,
       getPendingAutoRunTimerPlan,
+      getReauthBatchRunner = () => null,
       getSourceLabel,
       getState,
       getNodeDefinitionForState,
@@ -1375,6 +1376,9 @@
             await setPersistentSettings({ emailPrefix: message.payload.emailPrefix });
             await setState({ emailPrefix: message.payload.emailPrefix });
           }
+          if (message.payload.reauthInputAccount !== undefined) {
+            await setState({ reauthInputAccount: message.payload.reauthInputAccount });
+          }
           const executionState = await getState();
           if (doesNodeUseCompletionSignal(nodeId, executionState)) {
             const completionPayload = await executeNodeViaCompletionSignal(nodeId);
@@ -1410,6 +1414,9 @@
           if (Object.keys(autoRunFlowStateUpdates).length > 0 && typeof setState === 'function') {
             await setState(autoRunFlowStateUpdates);
           }
+          if (message.payload?.reauthInputAccount !== undefined && typeof setState === 'function') {
+            await setState({ reauthInputAccount: message.payload.reauthInputAccount });
+          }
           const state = await getState();
           const autoRunStartValidation = validateAutoRunStart(state, {
             activeFlowId: autoRunFlowStateUpdates.activeFlowId ?? state?.activeFlowId,
@@ -1427,6 +1434,49 @@
           const mode = message.payload?.mode === 'continue' ? 'continue' : 'restart';
           await setState({ autoRunSkipFailures });
           startAutoRunLoop(totalRuns, { autoRunSkipFailures, mode });
+          return { ok: true };
+        }
+
+        case 'START_REAUTH_BATCH': {
+          clearStopRequest();
+          if (message.source === 'sidepanel') {
+            await lockAutomationWindowFromMessage(message, sender);
+          }
+          const runner = getReauthBatchRunner();
+          if (!runner || typeof runner.executeReauthBatch !== 'function') {
+            throw new Error('reauth 批量处理器尚未初始化。');
+          }
+          const payload = message.payload || {};
+          const accounts = Array.isArray(payload.accounts) ? payload.accounts : [];
+          if (accounts.length === 0) {
+            throw new Error('未选择任何待批量处理的账号。');
+          }
+          const mailProvider = String(payload.mailProvider || '').trim();
+          if (!mailProvider) {
+            throw new Error('未指定 mailProvider，请先在 sidepanel 选择邮箱来源。');
+          }
+          if (typeof setState === 'function') {
+            await setState({
+              activeFlowId: 'openai-reauth',
+              flowId: 'openai-reauth',
+              mailProvider,
+            });
+          }
+          // fire-and-forget：后台执行，进度通过 setState 广播
+          runner.executeReauthBatch({
+            accounts,
+            mailProvider,
+            originalFileText: String(payload.originalFileText || ''),
+            skipOnFailure: payload.skipOnFailure !== false,
+          }).catch(async (error) => {
+            const message = error instanceof Error ? error.message : String(error || 'reauth 批量处理失败');
+            console.warn('[MessageRouter] reauth batch failed:', message);
+            if (typeof addLog === 'function') {
+              try {
+                await addLog(`reauth 批量处理终止：${message}`, 'error', { stepKey: 'reauth-batch' });
+              } catch (_) {}
+            }
+          });
           return { ok: true };
         }
 

@@ -3,6 +3,8 @@
 importScripts(
   'flows/openai/index.js',
   'flows/openai/workflow.js',
+  'flows/openai-reauth/index.js',
+  'flows/openai-reauth/workflow.js',
   'flows/kiro/index.js',
   'flows/kiro/workflow.js',
   'flows/grok/index.js',
@@ -52,6 +54,7 @@ importScripts(
   'background/signup-flow-helpers.js',
   'background/mail-rule-registry.js',
   'flows/openai/mail-rules.js',
+  'flows/openai-reauth/mail-rules.js',
   'flows/kiro/mail-rules.js',
   'flows/grok/mail-rules.js',
   'background/flow-mail-polling.js',
@@ -82,6 +85,14 @@ importScripts(
   'flows/openai/background/steps/fetch-login-code.js',
   'flows/openai/background/steps/confirm-oauth.js',
   'flows/openai/background/steps/platform-verify.js',
+  'flows/openai-reauth/reauth-account-validator.js',
+  'flows/openai-reauth/background/oauth-client.js',
+  'flows/openai-reauth/background/cookie-cleanup.js',
+  'flows/openai-reauth/background/batch-runner.js',
+  'flows/openai-reauth/background/steps/prepare-reauth.js',
+  'flows/openai-reauth/background/steps/submit-reauth-email.js',
+  'flows/openai-reauth/background/steps/fetch-reauth-code.js',
+  'flows/openai-reauth/background/steps/capture-reauth-callback.js',
   'data/names.js',
   'hotmail-utils.js',
   'microsoft-email.js',
@@ -4108,6 +4119,9 @@ function buildFreshAutoRunKeepState(prevState = {}) {
   if (typeof grokStateHelpers?.buildFreshKeepState === 'function') {
     Object.assign(keepState, grokStateHelpers.buildFreshKeepState(sourceState));
   }
+  if (activeFlowId === 'openai-reauth' && isPlainObjectValue(sourceState.reauthInputAccount)) {
+    keepState.reauthInputAccount = sourceState.reauthInputAccount;
+  }
   if (Object.prototype.hasOwnProperty.call(sourceState, 'settingsSchemaVersion')) {
     keepState.settingsSchemaVersion = Number(sourceState.settingsSchemaVersion) || 0;
   }
@@ -4228,6 +4242,19 @@ async function setState(updates) {
       ...currentSessionState,
     }, updates);
     await chrome.storage.session.set(sessionUpdates);
+
+    // 广播 STATE_PATCH：让 sidepanel 等监听方即时同步增量。
+    // payload 用 sessionUpdates（真实生效的最终值，而非 raw updates）。
+    // 无接收方时 sendMessage 会 reject，只吞「无接收方」错误，其余 warn 输出方便排查。
+    try {
+      chrome.runtime.sendMessage({ type: 'STATE_PATCH', payload: sessionUpdates }).catch((err) => {
+        const msg = err?.message || '';
+        if (!msg.includes('Could not establish connection') && !msg.includes('receiving end does not exist')) {
+          console.warn('[setState] STATE_PATCH broadcast failed:', msg);
+        }
+      });
+    } catch (_) { }
+
     const persistentAliasUpdates = {};
     if (Object.prototype.hasOwnProperty.call(sessionUpdates, 'manualAliasUsage')) {
       persistentAliasUpdates.manualAliasUsage = normalizeBooleanMap(sessionUpdates.manualAliasUsage);
@@ -13743,6 +13770,11 @@ const openAiMailRules = self.MultiPageOpenAiMailRules?.createOpenAiMailRules({
   MAIL_2925_VERIFICATION_INTERVAL_MS,
   MAIL_2925_VERIFICATION_MAX_ATTEMPTS,
 });
+const openAiReauthMailRules = self.MultiPageOpenAiReauthMailRules?.createOpenAiReauthMailRules({
+  getHotmailVerificationRequestTimestamp,
+  MAIL_2925_VERIFICATION_INTERVAL_MS,
+  MAIL_2925_VERIFICATION_MAX_ATTEMPTS,
+});
 const kiroMailRules = self.MultiPageKiroMailRules?.createKiroMailRules({
   LUCKMAIL_PROVIDER,
   MAIL_2925_VERIFICATION_INTERVAL_MS,
@@ -13757,6 +13789,7 @@ const mailRuleRegistry = self.MultiPageBackgroundMailRuleRegistry?.createMailRul
   defaultFlowId: DEFAULT_ACTIVE_FLOW_ID,
   flowBuilders: {
     openai: openAiMailRules,
+    'openai-reauth': openAiReauthMailRules,
     kiro: kiroMailRules,
     grok: grokMailRules,
   },
@@ -14351,6 +14384,10 @@ const stepExecutorsByKey = {
   'post-bound-email-phone-verification': (state) => step8Executor.executeBoundEmailPostLoginPhoneVerification(state),
   'confirm-oauth': (state) => step9Executor.executeStep9(state),
   'platform-verify': (state) => executeStep10(state),
+  'prepare-reauth': (state) => prepareReauthExecutor.executePrepareReauth(state),
+  'submit-reauth-email': (state) => submitReauthEmailExecutor.executeSubmitReauthEmail(state),
+  'fetch-reauth-code': (state) => fetchReauthCodeExecutor.executeFetchReauthCode(state),
+  'capture-reauth-callback': (state) => captureReauthCallbackExecutor.executeCaptureReauthCallback(state),
   'kiro-open-register-page': (state) => kiroRegisterRunner.executeKiroOpenRegisterPage(state),
   'kiro-submit-email': (state) => kiroRegisterRunner.executeKiroSubmitEmail(state),
   'kiro-submit-name': (state) => kiroRegisterRunner.executeKiroSubmitName(state),
@@ -14404,6 +14441,7 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   fetchGeneratedEmail,
   refreshGpcCardBalance,
   finalizePhoneActivationAfterSuccessfulFlow,
+  getReauthBatchRunner: () => reauthBatchRunner,
   testKiroRsConnection: async (baseUrl, apiKey) => {
     if (typeof self.MultiPageBackgroundKiroPublisherKiroRs?.checkKiroRsConnection !== 'function') {
       throw new Error('kiro.rs 连接测试能力尚未接入。');
@@ -16292,6 +16330,77 @@ const step9Executor = self.MultiPageBackgroundStep9?.createStep9Executor({
   triggerStep8ContentStrategy,
   waitForStep8ClickEffect,
   waitForStep8Ready,
+});
+
+const openAiReauthOAuthClient = self.MultiPageOpenAiReauthOAuthClient || null;
+const openAiReauthCookieCleanup = self.MultiPageOpenAiReauthCookieCleanup || null;
+
+const prepareReauthExecutor = self.MultiPageOpenAiReauthPrepareStep?.createPrepareReauthExecutor({
+  addLog,
+  chrome,
+  clearOpenAiAuthCookies: openAiReauthCookieCleanup?.clearOpenAiAuthCookies,
+  completeNodeFromBackground,
+  generatePkcePair: openAiReauthOAuthClient?.generatePkcePair,
+  generateState: openAiReauthOAuthClient?.generateState,
+  buildAuthorizeUrl: openAiReauthOAuthClient?.buildAuthorizeUrl,
+  registerTab,
+  reuseOrCreateTab,
+  setState,
+});
+
+const submitReauthEmailExecutor = self.MultiPageOpenAiReauthSubmitEmailStep?.createSubmitReauthEmailExecutor({
+  addLog,
+  completeNodeFromBackground,
+  reuseOrCreateTab,
+  sendToContentScriptResilient,
+  throwIfStopped,
+});
+
+const fetchReauthCodeExecutor = self.MultiPageOpenAiReauthFetchCodeStep?.createFetchReauthCodeExecutor({
+  addLog,
+  completeNodeFromBackground,
+  pollFlowVerificationCode: flowMailPollingService?.pollFlowVerificationCode,
+  sendToContentScriptResilient,
+  sleepWithStop,
+  throwIfStopped,
+});
+
+const captureReauthCallbackExecutor = self.MultiPageOpenAiReauthCaptureCallbackStep?.createCaptureReauthCallbackExecutor({
+  addLog,
+  chrome,
+  completeNodeFromBackground,
+  exchangeAuthorizationCode: openAiReauthOAuthClient?.exchangeAuthorizationCode,
+  parseCallbackUrl: openAiReauthOAuthClient?.parseCallbackUrl,
+  buildUpdatedAccount: openAiReauthOAuthClient?.buildUpdatedAccount,
+  setState,
+  // 复用注册流程 step9 的 OAuth 同意页点击编排
+  getTabId,
+  isTabAlive,
+  ensureStep8SignupPageReady,
+  waitForStep8Ready,
+  prepareStep8DebuggerClick,
+  clickWithDebugger,
+  triggerStep8ContentStrategy,
+  waitForStep8ClickEffect,
+  getStep8EffectLabel,
+  reloadStep8ConsentPage,
+  sleepWithStop,
+  throwIfStopped,
+  STEP8_STRATEGIES,
+  STEP8_MAX_ROUNDS,
+  STEP8_CLICK_RETRY_DELAY_MS,
+  STEP8_READY_WAIT_TIMEOUT_MS,
+});
+
+const reauthBatchRunner = self.MultiPageOpenAiReauthBatchRunner?.createReauthBatchRunner({
+  addLog,
+  executeNode,
+  getNodeIdsForState,
+  getState,
+  setState,
+  sleepWithStop,
+  throwIfStopped,
+  extractAccountEmail: self.MultiPageOpenAiReauthAccountValidator?.extractAccountEmail,
 });
 
 async function executeStep9(state) {

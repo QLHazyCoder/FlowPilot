@@ -8,6 +8,8 @@
 /data/account-run-history.json
 .npm-test.log
 .omx/
+.omc/
+/tmp/
 /node_modules
 /.runtime
 /docs/新步骤顺序
