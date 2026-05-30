@@ -224,6 +224,69 @@
       return cloneValue(resolvedValue);
     }
 
+    function cleanSharedWebchatField(value = '') {
+      return String(value ?? '').trim();
+    }
+
+    function getOwnCleanField(source = {}, key = '') {
+      return isPlainObject(source) && Object.prototype.hasOwnProperty.call(source, key)
+        ? cleanSharedWebchatField(source[key])
+        : undefined;
+    }
+
+    function getNonEmptyCleanField(source = {}, key = '') {
+      const value = cleanSharedWebchatField(isPlainObject(source) ? source[key] : '');
+      return value ? value : undefined;
+    }
+
+    function resolveSharedWebchatConfig(input = {}, nested = {}, openAiFlow = {}, grokFlow = {}) {
+      const activeFlowId = normalizeFlowId(
+        input?.activeFlowId ?? nested?.activeFlowId ?? defaultFlowId,
+        defaultFlowId
+      );
+      const preferGrokInput = activeFlowId === 'grok';
+      const openAiTarget = isPlainObject(openAiFlow?.targets?.webchat)
+        ? openAiFlow.targets.webchat
+        : {};
+      const grokTarget = isPlainObject(grokFlow?.targets?.webchat2api)
+        ? grokFlow.targets.webchat2api
+        : {};
+      const openAiLegacyTarget = getTargetValue(
+        nested,
+        (state) => state.flows?.openai?.integrationTargets?.webchat,
+        null,
+        {}
+      );
+      const grokLegacyTarget = getTargetValue(
+        nested,
+        (state) => state.flows?.grok?.integrationTargets?.webchat2api,
+        null,
+        {}
+      );
+      const pick = (openAiInputKey, grokInputKey, targetKey) => {
+        const explicitValues = preferGrokInput
+          ? [
+            getOwnCleanField(input, grokInputKey),
+            getOwnCleanField(input, openAiInputKey),
+          ]
+          : [
+            getOwnCleanField(input, openAiInputKey),
+            getOwnCleanField(input, grokInputKey),
+          ];
+        return [
+          ...explicitValues,
+          getNonEmptyCleanField(openAiTarget, targetKey),
+          getNonEmptyCleanField(grokTarget, targetKey),
+          getNonEmptyCleanField(openAiLegacyTarget, targetKey),
+          getNonEmptyCleanField(grokLegacyTarget, targetKey),
+        ].find((value) => value !== undefined) || '';
+      };
+      return {
+        baseUrl: pick('openaiWebchatUrl', 'grokWebchat2ApiUrl', 'baseUrl'),
+        apiKey: pick('openaiWebchatAdminKey', 'grokWebchat2ApiAdminKey', 'apiKey'),
+      };
+    }
+
     function normalizeFlowTargetState(flowId, targetId, nested = {}, defaults = {}) {
       const targetState = mergePlainObjects(defaults, nested);
       if (flowId === 'openai' && targetId === 'cpa') {
@@ -337,7 +400,7 @@
       };
     }
 
-    function normalizeOpenAiSettings(input = {}, nested = {}, defaults = {}, currentFlow = {}) {
+    function normalizeOpenAiSettings(input = {}, nested = {}, defaults = {}, currentFlow = {}, grokFlow = {}) {
       const defaultOpenAiFlow = isPlainObject(defaults?.flows?.openai)
         ? defaults.flows.openai
         : {};
@@ -392,6 +455,7 @@
         codex2apiUrl: input?.codex2apiUrl ?? currentFlow.targets.codex2api.codex2apiUrl,
         codex2apiAdminKey: input?.codex2apiAdminKey ?? currentFlow.targets.codex2api.codex2apiAdminKey,
       };
+      const sharedWebchatConfig = resolveSharedWebchatConfig(input, nested, currentFlow, grokFlow);
       const webchatSource = {
         ...currentFlow.targets.webchat,
         ...getTargetValue(
@@ -400,8 +464,8 @@
           null,
           {}
         ),
-        baseUrl: input?.openaiWebchatUrl ?? currentFlow.targets.webchat?.baseUrl,
-        apiKey: input?.openaiWebchatAdminKey ?? currentFlow.targets.webchat?.apiKey,
+        baseUrl: sharedWebchatConfig.baseUrl,
+        apiKey: sharedWebchatConfig.apiKey,
       };
       return {
         ...currentFlow,
@@ -506,6 +570,34 @@
       };
     }
 
+    function normalizeGrokSettings(input = {}, nested = {}, defaults = {}, currentFlow = {}, openAiFlow = {}) {
+      const defaultGrokFlow = isPlainObject(defaults?.flows?.grok)
+        ? defaults.flows.grok
+        : {};
+      const defaultGrokTargets = isPlainObject(defaultGrokFlow.targets)
+        ? defaultGrokFlow.targets
+        : {};
+      const sharedWebchatConfig = resolveSharedWebchatConfig(input, nested, openAiFlow, currentFlow);
+      const targetSource = {
+        ...currentFlow.targets.webchat2api,
+        ...getTargetValue(
+          nested,
+          (state) => state.flows?.grok?.integrationTargets?.webchat2api,
+          null,
+          {}
+        ),
+        baseUrl: sharedWebchatConfig.baseUrl,
+        apiKey: sharedWebchatConfig.apiKey,
+      };
+      return {
+        ...currentFlow,
+        targets: {
+          ...currentFlow.targets,
+          webchat2api: normalizeFlowTargetState('grok', 'webchat2api', targetSource, defaultGrokTargets.webchat2api || {}),
+        },
+      };
+    }
+
     function normalizeSettingsState(input = {}, options = {}) {
       const defaults = buildDefaultSettingsState();
       const nested = isPlainObject(input?.settingsState)
@@ -574,10 +666,13 @@
         }, nested, defaults);
       });
       if (normalized.flows.openai) {
-        normalized.flows.openai = normalizeOpenAiSettings(input, nested, defaults, normalized.flows.openai);
+        normalized.flows.openai = normalizeOpenAiSettings(input, nested, defaults, normalized.flows.openai, normalized.flows.grok);
       }
       if (normalized.flows.kiro) {
         normalized.flows.kiro = normalizeKiroSettings(input, defaults, normalized.flows.kiro);
+      }
+      if (normalized.flows.grok) {
+        normalized.flows.grok = normalizeGrokSettings(input, nested, defaults, normalized.flows.grok, normalized.flows.openai);
       }
       return normalized;
     }

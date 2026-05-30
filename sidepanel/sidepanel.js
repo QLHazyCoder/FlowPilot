@@ -2991,6 +2991,8 @@ function getGrokWebchat2ApiUploadStatusLabel(value = '') {
 function getOpenAiWebchatUploadStatusLabel(value = '') {
   const normalized = String(value || '').trim().toLowerCase();
   switch (normalized) {
+    case 'reading_session':
+      return '正在读取会话';
     case 'uploading':
       return '正在上传';
     case 'uploaded':
@@ -3002,10 +3004,58 @@ function getOpenAiWebchatUploadStatusLabel(value = '') {
   }
 }
 
+function getSharedWebchatUrlFromState(state = latestState) {
+  return String(
+    state?.openaiWebchatUrl
+    || state?.grokWebchat2ApiUrl
+    || state?.settingsState?.flows?.openai?.targets?.webchat?.baseUrl
+    || state?.settingsState?.flows?.grok?.targets?.webchat2api?.baseUrl
+    || ''
+  ).trim();
+}
+
+function getSharedWebchatAdminKeyFromState(state = latestState) {
+  return String(
+    state?.openaiWebchatAdminKey
+    || state?.grokWebchat2ApiAdminKey
+    || state?.settingsState?.flows?.openai?.targets?.webchat?.apiKey
+    || state?.settingsState?.flows?.grok?.targets?.webchat2api?.apiKey
+    || ''
+  );
+}
+
+function buildSharedWebchatConfigPatch(urlValue = '', adminKeyValue = '') {
+  const url = String(urlValue || '').trim();
+  const adminKey = String(adminKeyValue || '');
+  return {
+    openaiWebchatUrl: url,
+    openaiWebchatAdminKey: adminKey,
+    grokWebchat2ApiUrl: url,
+    grokWebchat2ApiAdminKey: adminKey,
+  };
+}
+
+function syncSharedWebchatInputsFromState(state = latestState) {
+  const url = getSharedWebchatUrlFromState(state);
+  const adminKey = getSharedWebchatAdminKeyFromState(state);
+  if (typeof inputGrokWebchat2ApiUrl !== 'undefined' && inputGrokWebchat2ApiUrl) {
+    inputGrokWebchat2ApiUrl.value = url;
+  }
+  if (typeof inputGrokWebchat2ApiKey !== 'undefined' && inputGrokWebchat2ApiKey) {
+    inputGrokWebchat2ApiKey.value = adminKey;
+  }
+  if (typeof inputOpenAiWebchatUrl !== 'undefined' && inputOpenAiWebchatUrl) {
+    inputOpenAiWebchatUrl.value = url;
+  }
+  if (typeof inputOpenAiWebchatKey !== 'undefined' && inputOpenAiWebchatKey) {
+    inputOpenAiWebchatKey.value = adminKey;
+  }
+}
+
 function isOpenAiWebchatConfigComplete(state = latestState) {
   return Boolean(
-    String(state?.openaiWebchatUrl || '').trim()
-    && String(state?.openaiWebchatAdminKey || '').trim()
+    getSharedWebchatUrlFromState(state)
+    && getSharedWebchatAdminKeyFromState(state).trim()
   );
 }
 
@@ -5201,21 +5251,57 @@ function collectSettingsPayload() {
   const currentKiroRsKeyValue = typeof inputKiroRsKey !== 'undefined' && inputKiroRsKey
     ? String(inputKiroRsKey.value ?? '').trim()
     : null;
-  const currentGrokWebchat2ApiUrlValue = typeof inputGrokWebchat2ApiUrl !== 'undefined' && inputGrokWebchat2ApiUrl
-    ? String(inputGrokWebchat2ApiUrl.value ?? '').trim()
-    : null;
-  const currentGrokWebchat2ApiKeyValue = typeof inputGrokWebchat2ApiKey !== 'undefined' && inputGrokWebchat2ApiKey
-    ? String(inputGrokWebchat2ApiKey.value ?? '').trim()
-    : null;
   const currentOpenAiWebchatUrlValue = typeof inputOpenAiWebchatUrl !== 'undefined' && inputOpenAiWebchatUrl
     ? String(inputOpenAiWebchatUrl.value ?? '').trim()
-    : null;
+    : '';
   const currentOpenAiWebchatKeyValue = typeof inputOpenAiWebchatKey !== 'undefined' && inputOpenAiWebchatKey
     ? String(inputOpenAiWebchatKey.value ?? '').trim()
-    : null;
+    : '';
+  const currentGrokWebchat2ApiUrlValue = typeof inputGrokWebchat2ApiUrl !== 'undefined' && inputGrokWebchat2ApiUrl
+    ? String(inputGrokWebchat2ApiUrl.value ?? '').trim()
+    : '';
+  const currentGrokWebchat2ApiKeyValue = typeof inputGrokWebchat2ApiKey !== 'undefined' && inputGrokWebchat2ApiKey
+    ? String(inputGrokWebchat2ApiKey.value ?? '').trim()
+    : '';
+  const readSharedWebchatUrlFromState = typeof getSharedWebchatUrlFromState === 'function'
+    ? getSharedWebchatUrlFromState
+    : ((state = {}) => String(
+      state?.openaiWebchatUrl
+      || state?.grokWebchat2ApiUrl
+      || state?.settingsState?.flows?.openai?.targets?.webchat?.baseUrl
+      || state?.settingsState?.flows?.grok?.targets?.webchat2api?.baseUrl
+      || ''
+    ).trim());
+  const readSharedWebchatAdminKeyFromState = typeof getSharedWebchatAdminKeyFromState === 'function'
+    ? getSharedWebchatAdminKeyFromState
+    : ((state = {}) => String(
+      state?.openaiWebchatAdminKey
+      || state?.grokWebchat2ApiAdminKey
+      || state?.settingsState?.flows?.openai?.targets?.webchat?.apiKey
+      || state?.settingsState?.flows?.grok?.targets?.webchat2api?.apiKey
+      || ''
+    ));
+  const createSharedWebchatConfigPatch = typeof buildSharedWebchatConfigPatch === 'function'
+    ? buildSharedWebchatConfigPatch
+    : ((urlValue = '', adminKeyValue = '') => {
+      const url = String(urlValue || '').trim();
+      const adminKey = String(adminKeyValue || '');
+      return {
+        openaiWebchatUrl: url,
+        openaiWebchatAdminKey: adminKey,
+        grokWebchat2ApiUrl: url,
+        grokWebchat2ApiAdminKey: adminKey,
+      };
+    });
+  const sharedWebchatUrl = currentOpenAiWebchatUrlValue
+    || currentGrokWebchat2ApiUrlValue
+    || readSharedWebchatUrlFromState(latestState);
+  const sharedWebchatAdminKey = currentOpenAiWebchatKeyValue
+    || currentGrokWebchat2ApiKeyValue
+    || readSharedWebchatAdminKeyFromState(latestState);
   const openAiWebchatConfigComplete = Boolean(
-    (currentOpenAiWebchatUrlValue !== null ? currentOpenAiWebchatUrlValue : String(latestState?.openaiWebchatUrl || '').trim())
-    && (currentOpenAiWebchatKeyValue !== null ? currentOpenAiWebchatKeyValue : String(latestState?.openaiWebchatAdminKey || '').trim())
+    sharedWebchatUrl
+    && sharedWebchatAdminKey
   );
   const openAiWebchatUploadEnabled = effectiveOpenAiTargetId === 'webchat'
     ? false
@@ -5243,18 +5329,7 @@ function collectSettingsPayload() {
     kiroRsKey: currentKiroRsKeyValue !== null
       ? currentKiroRsKeyValue
       : String(latestState?.kiroRsKey || '').trim(),
-    grokWebchat2ApiUrl: currentGrokWebchat2ApiUrlValue !== null
-      ? currentGrokWebchat2ApiUrlValue
-      : String(latestState?.grokWebchat2ApiUrl || '').trim(),
-    grokWebchat2ApiAdminKey: currentGrokWebchat2ApiKeyValue !== null
-      ? currentGrokWebchat2ApiKeyValue
-      : String(latestState?.grokWebchat2ApiAdminKey || '').trim(),
-    openaiWebchatUrl: currentOpenAiWebchatUrlValue !== null
-      ? currentOpenAiWebchatUrlValue
-      : String(latestState?.openaiWebchatUrl || '').trim(),
-    openaiWebchatAdminKey: currentOpenAiWebchatKeyValue !== null
-      ? currentOpenAiWebchatKeyValue
-      : String(latestState?.openaiWebchatAdminKey || '').trim(),
+    ...createSharedWebchatConfigPatch(sharedWebchatUrl, sharedWebchatAdminKey),
     openaiWebchatUploadEnabled: openAiWebchatUploadEnabled,
     vpsUrl: inputVpsUrl.value.trim(),
     vpsPassword: inputVpsPassword.value,
@@ -12249,16 +12324,16 @@ function applySettingsState(state) {
     inputKiroRsKey.value = String(state?.kiroRsKey || '');
   }
   if (typeof inputGrokWebchat2ApiUrl !== 'undefined' && inputGrokWebchat2ApiUrl) {
-    inputGrokWebchat2ApiUrl.value = String(state?.grokWebchat2ApiUrl || '').trim();
+    inputGrokWebchat2ApiUrl.value = String(getSharedWebchatUrlFromState(state) || '').trim();
   }
   if (typeof inputGrokWebchat2ApiKey !== 'undefined' && inputGrokWebchat2ApiKey) {
-    inputGrokWebchat2ApiKey.value = String(state?.grokWebchat2ApiAdminKey || '');
+    inputGrokWebchat2ApiKey.value = String(getSharedWebchatAdminKeyFromState(state) || '');
   }
   if (typeof inputOpenAiWebchatUrl !== 'undefined' && inputOpenAiWebchatUrl) {
-    inputOpenAiWebchatUrl.value = String(state?.openaiWebchatUrl || '').trim();
+    inputOpenAiWebchatUrl.value = String(getSharedWebchatUrlFromState(state) || '').trim();
   }
   if (typeof inputOpenAiWebchatKey !== 'undefined' && inputOpenAiWebchatKey) {
-    inputOpenAiWebchatKey.value = String(state?.openaiWebchatAdminKey || '');
+    inputOpenAiWebchatKey.value = String(getSharedWebchatAdminKeyFromState(state) || '');
   }
   if (typeof renderOpenAiWebchatState === 'function') {
     renderOpenAiWebchatState(state);
@@ -16967,6 +17042,13 @@ selectPlusAccountAccessStrategy?.addEventListener('change', () => {
 
 [inputGrokWebchat2ApiUrl, inputGrokWebchat2ApiKey].forEach((input) => {
   input?.addEventListener('input', () => {
+    syncLatestState(buildSharedWebchatConfigPatch(
+      inputGrokWebchat2ApiUrl ? inputGrokWebchat2ApiUrl.value : getSharedWebchatUrlFromState(latestState),
+      inputGrokWebchat2ApiKey ? inputGrokWebchat2ApiKey.value : getSharedWebchatAdminKeyFromState(latestState)
+    ));
+    syncSharedWebchatInputsFromState(latestState);
+    renderOpenAiWebchatState(latestState);
+    syncStepDefinitionsFromUiState(latestState);
     markSettingsDirty(true);
     scheduleSettingsAutoSave();
   });
@@ -16977,10 +17059,11 @@ selectPlusAccountAccessStrategy?.addEventListener('change', () => {
 
 [inputOpenAiWebchatUrl, inputOpenAiWebchatKey].forEach((input) => {
   input?.addEventListener('input', () => {
-    syncLatestState({
-      openaiWebchatUrl: inputOpenAiWebchatUrl ? String(inputOpenAiWebchatUrl.value || '').trim() : latestState?.openaiWebchatUrl,
-      openaiWebchatAdminKey: inputOpenAiWebchatKey ? String(inputOpenAiWebchatKey.value || '') : latestState?.openaiWebchatAdminKey,
-    });
+    syncLatestState(buildSharedWebchatConfigPatch(
+      inputOpenAiWebchatUrl ? inputOpenAiWebchatUrl.value : getSharedWebchatUrlFromState(latestState),
+      inputOpenAiWebchatKey ? inputOpenAiWebchatKey.value : getSharedWebchatAdminKeyFromState(latestState)
+    ));
+    syncSharedWebchatInputsFromState(latestState);
     if (!isOpenAiWebchatConfigComplete(latestState) && inputOpenAiWebchatUploadEnabled?.checked) {
       inputOpenAiWebchatUploadEnabled.checked = false;
       syncLatestState({ openaiWebchatUploadEnabled: false });
@@ -19010,7 +19093,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         updatePanelModeUI();
       }
       if (
-        message.payload.openaiWebchatUrl !== undefined
+        message.payload.grokWebchat2ApiUrl !== undefined
+        || message.payload.grokWebchat2ApiAdminKey !== undefined
+        || message.payload.openaiWebchatUrl !== undefined
         || message.payload.openaiWebchatAdminKey !== undefined
         || message.payload.openaiWebchatUploadEnabled !== undefined
         || message.payload.openaiWebchatUploadStatus !== undefined
@@ -19018,12 +19103,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         || message.payload.openaiWebchatUploadMessage !== undefined
         || message.payload.openaiWebchatTargetUrl !== undefined
       ) {
-        if (message.payload.openaiWebchatUrl !== undefined && inputOpenAiWebchatUrl) {
-          inputOpenAiWebchatUrl.value = String(message.payload.openaiWebchatUrl || '').trim();
-        }
-        if (message.payload.openaiWebchatAdminKey !== undefined && inputOpenAiWebchatKey) {
-          inputOpenAiWebchatKey.value = String(message.payload.openaiWebchatAdminKey || '');
-        }
+        syncSharedWebchatInputsFromState(latestState);
         renderOpenAiWebchatState(latestState);
         syncStepDefinitionsFromUiState(latestState);
       }

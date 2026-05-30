@@ -250,15 +250,22 @@
 
     function resolveOpenAiWebchatState(state = {}, targetId = '') {
       const openAiFlow = getOpenAiFlowSettingsFromState(state);
+      const normalizedState = getNormalizedSettingsState(state);
+      const grokFlow = isPlainObject(normalizedState?.flows?.grok)
+        ? normalizedState.flows.grok
+        : (isPlainObject(state?.settingsState?.flows?.grok) ? state.settingsState.flows.grok : {});
       const targetConfig = isPlainObject(openAiFlow?.targets?.webchat)
         ? openAiFlow.targets.webchat
         : {};
+      const grokTargetConfig = isPlainObject(grokFlow?.targets?.webchat2api)
+        ? grokFlow.targets.webchat2api
+        : {};
       const baseUrl = cleanString(hasOwn(state, 'openaiWebchatUrl')
         ? state.openaiWebchatUrl
-        : targetConfig.baseUrl);
+        : (hasOwn(state, 'grokWebchat2ApiUrl') ? state.grokWebchat2ApiUrl : (targetConfig.baseUrl || grokTargetConfig.baseUrl)));
       const apiKey = cleanString(hasOwn(state, 'openaiWebchatAdminKey')
         ? state.openaiWebchatAdminKey
-        : targetConfig.apiKey);
+        : (hasOwn(state, 'grokWebchat2ApiAdminKey') ? state.grokWebchat2ApiAdminKey : (targetConfig.apiKey || grokTargetConfig.apiKey)));
       const uploadEnabled = Boolean(hasOwn(state, 'openaiWebchatUploadEnabled')
         ? state.openaiWebchatUploadEnabled
         : openAiFlow?.webchatUpload?.enabled);

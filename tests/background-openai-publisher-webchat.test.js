@@ -173,6 +173,53 @@ test('OpenAI webchat executor reads latest state and writes upload status withou
   assert.equal(logs.some(({ message }) => message.includes('live-session-token') || message.includes('live-admin-key')), false);
 });
 
+test('OpenAI webchat executor can use shared Grok webchat2api config', async () => {
+  const api = loadPublisherApi();
+  const requests = [];
+  let liveState = {
+    settingsState: {
+      flows: {
+        grok: {
+          targets: {
+            webchat2api: {
+              baseUrl: 'https://shared.example.com/admin',
+              apiKey: 'shared-admin-key',
+            },
+          },
+        },
+      },
+    },
+  };
+  const publisher = api.createOpenAiWebchatPublisher({
+    completeNodeFromBackground: async () => {},
+    createOpenAiSessionReader: () => ({
+      readCurrentSessionFromState: async () => ({
+        accessToken: 'shared-session-token',
+      }),
+    }),
+    fetchImpl: async (url, options = {}) => {
+      requests.push({
+        url,
+        authorization: options.headers?.Authorization,
+        body: JSON.parse(options.body),
+      });
+      return createJsonResponse({ code: 0, message: 'uploaded' });
+    },
+    getState: async () => ({ ...liveState }),
+    setState: async (updates = {}) => {
+      liveState = { ...liveState, ...updates };
+    },
+  });
+
+  await publisher.executeOpenAiUploadSessionToWebchat({ nodeId: 'openai-upload-session-to-webchat' });
+
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, 'https://shared.example.com/api/remote-account/inject');
+  assert.equal(requests[0].authorization, 'Bearer shared-admin-key');
+  assert.equal(requests[0].body.accounts[0].token, 'shared-session-token');
+  assert.equal(liveState.openaiWebchatUploadStatus, 'uploaded');
+});
+
 test('OpenAI webchat executor persists failure state without completing or leaking secrets', async () => {
   const api = loadPublisherApi();
   const logs = [];

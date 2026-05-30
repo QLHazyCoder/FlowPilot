@@ -3913,10 +3913,18 @@ function buildSettingsStatePatchFromFlatUpdates(updates = {}) {
   assignIfUpdated('ipProxyMode', ['services', 'proxy', 'mode']);
   assignIfUpdated('kiroRsUrl', ['flows', 'kiro', 'targets', 'kiro-rs', 'baseUrl']);
   assignIfUpdated('kiroRsKey', ['flows', 'kiro', 'targets', 'kiro-rs', 'apiKey']);
-  assignIfUpdated('grokWebchat2ApiUrl', ['flows', 'grok', 'targets', 'webchat2api', 'baseUrl']);
-  assignIfUpdated('grokWebchat2ApiAdminKey', ['flows', 'grok', 'targets', 'webchat2api', 'apiKey']);
-  assignIfUpdated('openaiWebchatUrl', ['flows', 'openai', 'targets', 'webchat', 'baseUrl']);
-  assignIfUpdated('openaiWebchatAdminKey', ['flows', 'openai', 'targets', 'webchat', 'apiKey']);
+  if (hasUpdate('grokWebchat2ApiUrl') || hasUpdate('openaiWebchatUrl')) {
+    const sharedWebchatUrl = hasUpdate('openaiWebchatUrl') ? updates.openaiWebchatUrl : updates.grokWebchat2ApiUrl;
+    setSettingsStatePatchValue(patch, ['flows', 'openai', 'targets', 'webchat', 'baseUrl'], sharedWebchatUrl);
+    setSettingsStatePatchValue(patch, ['flows', 'grok', 'targets', 'webchat2api', 'baseUrl'], sharedWebchatUrl);
+  }
+  if (hasUpdate('grokWebchat2ApiAdminKey') || hasUpdate('openaiWebchatAdminKey')) {
+    const sharedWebchatAdminKey = hasUpdate('openaiWebchatAdminKey')
+      ? updates.openaiWebchatAdminKey
+      : updates.grokWebchat2ApiAdminKey;
+    setSettingsStatePatchValue(patch, ['flows', 'openai', 'targets', 'webchat', 'apiKey'], sharedWebchatAdminKey);
+    setSettingsStatePatchValue(patch, ['flows', 'grok', 'targets', 'webchat2api', 'apiKey'], sharedWebchatAdminKey);
+  }
   assignIfUpdated('openaiWebchatUploadEnabled', ['flows', 'openai', 'webchatUpload', 'enabled']);
 
   if (hasUpdate('stepExecutionRangeByFlow') && isPlainObjectValue(updates.stepExecutionRangeByFlow)) {

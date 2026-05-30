@@ -65,9 +65,21 @@
 
   function resolveOpenAiWebchatConfig(state = {}) {
     const nestedConfig = state?.settingsState?.flows?.openai?.targets?.webchat || {};
+    const grokNestedConfig = state?.settingsState?.flows?.grok?.targets?.webchat2api || {};
     return {
-      baseUrl: cleanString(nestedConfig.baseUrl || state?.openaiWebchatUrl),
-      apiKey: normalizeWebchatAdminKey(nestedConfig.apiKey ?? state?.openaiWebchatAdminKey ?? ''),
+      baseUrl: cleanString(
+        nestedConfig.baseUrl
+        || grokNestedConfig.baseUrl
+        || state?.openaiWebchatUrl
+        || state?.grokWebchat2ApiUrl
+      ),
+      apiKey: normalizeWebchatAdminKey(
+        nestedConfig.apiKey
+        ?? grokNestedConfig.apiKey
+        ?? state?.openaiWebchatAdminKey
+        ?? state?.grokWebchat2ApiAdminKey
+        ?? ''
+      ),
     };
   }
 

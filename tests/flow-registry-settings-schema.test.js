@@ -128,6 +128,8 @@ test('settings schema normalizes view input into canonical nested namespaces', (
   assert.equal(normalized.flows.openai.plus.plusAccountAccessStrategy, 'sub2api_codex_session');
   assert.equal(normalized.flows.openai.targets.webchat.baseUrl, 'https://webchat.example.com/admin');
   assert.equal(normalized.flows.openai.targets.webchat.apiKey, 'webchat-key');
+  assert.equal(normalized.flows.grok.targets.webchat2api.baseUrl, 'https://webchat.example.com/admin');
+  assert.equal(normalized.flows.grok.targets.webchat2api.apiKey, 'webchat-key');
   assert.equal(normalized.flows.openai.webchatUpload.enabled, true);
   assert.equal(normalized.flows.kiro.selectedTargetId, 'kiro-rs');
   assert.equal(normalized.flows.grok.selectedTargetId, 'webchat2api');
@@ -143,6 +145,42 @@ test('settings schema normalizes view input into canonical nested namespaces', (
     fromStep: 2,
     toStep: 4,
   });
+});
+
+test('settings schema shares webchat connection config between OpenAI and Grok targets', () => {
+  const { settingsSchema } = loadApis();
+  const schema = settingsSchema.createSettingsSchema();
+
+  const fromGrokFlat = schema.normalizeSettingsState({
+    activeFlowId: 'grok',
+    grokWebchat2ApiUrl: ' https://shared.example.com/grok ',
+    grokWebchat2ApiAdminKey: ' shared-key ',
+  });
+
+  assert.equal(fromGrokFlat.flows.openai.targets.webchat.baseUrl, 'https://shared.example.com/grok');
+  assert.equal(fromGrokFlat.flows.openai.targets.webchat.apiKey, 'shared-key');
+  assert.equal(fromGrokFlat.flows.grok.targets.webchat2api.baseUrl, 'https://shared.example.com/grok');
+  assert.equal(fromGrokFlat.flows.grok.targets.webchat2api.apiKey, 'shared-key');
+
+  const fromOpenAiNested = schema.normalizeSettingsState({
+    settingsState: {
+      flows: {
+        openai: {
+          targets: {
+            webchat: {
+              baseUrl: 'https://nested-openai.example.com/admin',
+              apiKey: 'nested-openai-key',
+            },
+          },
+        },
+      },
+    },
+  });
+
+  assert.equal(fromOpenAiNested.flows.openai.targets.webchat.baseUrl, 'https://nested-openai.example.com/admin');
+  assert.equal(fromOpenAiNested.flows.grok.targets.webchat2api.baseUrl, 'https://nested-openai.example.com/admin');
+  assert.equal(fromOpenAiNested.flows.openai.targets.webchat.apiKey, 'nested-openai-key');
+  assert.equal(fromOpenAiNested.flows.grok.targets.webchat2api.apiKey, 'nested-openai-key');
 });
 
 test('settings schema lets explicit flat step range override stale canonical range', () => {

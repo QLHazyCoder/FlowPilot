@@ -450,6 +450,55 @@ return {
   assert.equal(api.getCalls()[0].targetId, 'kiro-rs');
 });
 
+test('sidepanel shares webchat config values between OpenAI and Grok inputs', () => {
+  const bundle = [
+    extractFunction(sidepanelSource, 'getSharedWebchatUrlFromState'),
+    extractFunction(sidepanelSource, 'getSharedWebchatAdminKeyFromState'),
+    extractFunction(sidepanelSource, 'buildSharedWebchatConfigPatch'),
+    extractFunction(sidepanelSource, 'syncSharedWebchatInputsFromState'),
+  ].join('\n');
+
+  const api = new Function(`
+let latestState = {};
+const inputGrokWebchat2ApiUrl = { value: '' };
+const inputGrokWebchat2ApiKey = { value: '' };
+const inputOpenAiWebchatUrl = { value: '' };
+const inputOpenAiWebchatKey = { value: '' };
+${bundle}
+return {
+  inputGrokWebchat2ApiUrl,
+  inputGrokWebchat2ApiKey,
+  inputOpenAiWebchatUrl,
+  inputOpenAiWebchatKey,
+  getSharedWebchatUrlFromState,
+  getSharedWebchatAdminKeyFromState,
+  buildSharedWebchatConfigPatch,
+  syncSharedWebchatInputsFromState,
+};
+`)();
+
+  const state = {
+    grokWebchat2ApiUrl: 'https://shared.example.com/admin',
+    grokWebchat2ApiAdminKey: 'shared-key',
+  };
+
+  assert.equal(api.getSharedWebchatUrlFromState(state), 'https://shared.example.com/admin');
+  assert.equal(api.getSharedWebchatAdminKeyFromState(state), 'shared-key');
+  assert.deepEqual(api.buildSharedWebchatConfigPatch(' https://next.example.com/admin ', 'next-key'), {
+    openaiWebchatUrl: 'https://next.example.com/admin',
+    openaiWebchatAdminKey: 'next-key',
+    grokWebchat2ApiUrl: 'https://next.example.com/admin',
+    grokWebchat2ApiAdminKey: 'next-key',
+  });
+
+  api.syncSharedWebchatInputsFromState(state);
+
+  assert.equal(api.inputOpenAiWebchatUrl.value, 'https://shared.example.com/admin');
+  assert.equal(api.inputOpenAiWebchatKey.value, 'shared-key');
+  assert.equal(api.inputGrokWebchat2ApiUrl.value, 'https://shared.example.com/admin');
+  assert.equal(api.inputGrokWebchat2ApiKey.value, 'shared-key');
+});
+
 test('updatePanelModeUI reapplies dynamic Plus and phone visibility after flow group visibility', () => {
   const bundle = [
     extractFunction(sidepanelSource, 'updatePanelModeUI'),
