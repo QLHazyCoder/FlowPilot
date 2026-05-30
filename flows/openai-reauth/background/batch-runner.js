@@ -114,6 +114,69 @@
     return JSON.stringify(updated, null, 2);
   }
 
+  /**
+   * 将原始文件 JSON 裁剪为“仅成功账号”的同结构 JSON。
+   * - 顶层数组：只保留成功账号 entry。
+   * - { accounts: [] }：保留顶层 metadata，只裁剪 accounts。
+   * - 单账号对象：成功时输出合并后的对象；未匹配时输出成功账号兜底。
+   * - 原始文本不可用/不可解析时退化为 success 数组。
+   */
+  function buildSuccessOnlyBatchFileJson(originalFileText, successAccounts = [], extractEmail = extractAccountEmail) {
+    const safeAccounts = Array.isArray(successAccounts) ? successAccounts.filter(Boolean) : [];
+    const trimmedText = cleanString(originalFileText);
+
+    if (!trimmedText) {
+      return JSON.stringify(safeAccounts, null, 2);
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(trimmedText);
+    } catch {
+      return JSON.stringify(safeAccounts, null, 2);
+    }
+
+    const successByEmail = new Map();
+    for (const account of safeAccounts) {
+      const email = extractEmail(account);
+      if (email) {
+        successByEmail.set(email, account);
+      }
+    }
+
+    function mergeSuccessfulEntry(entry) {
+      if (!entry || typeof entry !== 'object') return null;
+      const email = extractEmail(entry);
+      if (!email || !successByEmail.has(email)) {
+        return null;
+      }
+      const next = { ...entry };
+      const updated = successByEmail.get(email);
+      if (updated && typeof updated === 'object') {
+        for (const [key, value] of Object.entries(updated)) {
+          next[key] = value;
+        }
+      }
+      return next;
+    }
+
+    let updated;
+    if (Array.isArray(parsed)) {
+      updated = parsed.map(mergeSuccessfulEntry).filter(Boolean);
+    } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.accounts)) {
+      updated = {
+        ...parsed,
+        accounts: parsed.accounts.map(mergeSuccessfulEntry).filter(Boolean),
+      };
+    } else if (parsed && typeof parsed === 'object') {
+      updated = mergeSuccessfulEntry(parsed) || safeAccounts[0] || null;
+    } else {
+      updated = safeAccounts;
+    }
+
+    return JSON.stringify(updated, null, 2);
+  }
+
   function createReauthBatchRunner(deps = {}) {
     const {
       addLog = async () => {},
@@ -303,6 +366,7 @@
               success: success.map((account) => ({ account, email: getAccountEmail(account) })),
               failed,
               updatedFileJson: mergeBatchResultsIntoFile(originalFileText, success, getAccountEmail),
+              successOnlyFileJson: buildSuccessOnlyBatchFileJson(originalFileText, success, getAccountEmail),
               successCount: success.length,
               failedCount: failed.length,
               total,
@@ -323,10 +387,12 @@
       }
 
       const updatedFileJson = mergeBatchResultsIntoFile(originalFileText, success, getAccountEmail);
+      const successOnlyFileJson = buildSuccessOnlyBatchFileJson(originalFileText, success, getAccountEmail);
       const finalResult = {
         success: success.map((account) => ({ account, email: getAccountEmail(account) })),
         failed,
         updatedFileJson,
+        successOnlyFileJson,
         successCount: success.length,
         failedCount: failed.length,
         total,
@@ -366,6 +432,7 @@
     BATCH_LOG_STEP_KEY,
     extractAccountEmail,
     mergeBatchResultsIntoFile,
+    buildSuccessOnlyBatchFileJson,
     isLikelyStopError,
     isLikelyAccountFatalError,
     createReauthBatchRunner,

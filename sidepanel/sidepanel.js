@@ -68,6 +68,7 @@ const rowReauthBatchProgress = document.getElementById('row-reauth-batch-progres
 const displayReauthBatchProgress = document.getElementById('display-reauth-batch-progress');
 const displayReauthBatchSummary = document.getElementById('display-reauth-batch-summary');
 const btnReauthDownloadResult = document.getElementById('btn-reauth-download-result');
+const btnReauthDownloadSuccessResult = document.getElementById('btn-reauth-download-success-result');
 const rowReauthModePicker = document.getElementById('row-reauth-mode-picker');
 const rowReauthProviderPicker = document.getElementById('row-reauth-provider-picker');
 const reauthProgressFill = document.getElementById('reauth-progress-fill');
@@ -19871,6 +19872,50 @@ function hasMultipleReauthAccounts() {
   return Array.isArray(pendingReauthAccounts) && pendingReauthAccounts.length > 1;
 }
 
+function hasActiveReauthBatchMode() {
+  return hasMultipleReauthAccounts() && isReauthBatchModeEnabled();
+}
+
+function hasRenderedReauthResultValue() {
+  return Boolean(displayReauthResultAccount?.classList?.contains('has-value'));
+}
+
+function hasReauthBatchResultJson() {
+  return Boolean(lastReauthBatchResult?.updatedFileJson);
+}
+
+function hasReauthSuccessOnlyBatchResultJson() {
+  return Boolean(
+    hasReauthBatchResultJson()
+    && lastReauthBatchResult?.successOnlyFileJson
+    && Number(lastReauthBatchResult?.successCount || 0) > 0
+  );
+}
+
+function isReauthFullDownloadActionVisible() {
+  return Boolean(btnReauthDownloadResult && btnReauthDownloadResult.style.display !== 'none');
+}
+
+function syncReauthResultActionButtons() {
+  // 以「下载完整 JSON 文件」按钮的状态规则为主闸门：
+  // 只要完整下载按钮处于批量结果区可见状态，复制也必须等待 updatedFileJson 存在。
+  const hasBatchJson = hasReauthBatchResultJson();
+  const usesBatchResultActions = isReauthFullDownloadActionVisible() || hasBatchJson;
+  const canCopy = usesBatchResultActions
+    ? hasBatchJson
+    : hasRenderedReauthResultValue();
+
+  if (btnReauthDownloadResult) {
+    btnReauthDownloadResult.disabled = !hasBatchJson;
+  }
+  if (btnReauthDownloadSuccessResult) {
+    btnReauthDownloadSuccessResult.disabled = !hasReauthSuccessOnlyBatchResultJson();
+  }
+  if (btnReauthCopyResult) {
+    btnReauthCopyResult.disabled = !canCopy;
+  }
+}
+
 function applyReauthBatchUiVisibility() {
   const accountsCount = Array.isArray(pendingReauthAccounts) ? pendingReauthAccounts.length : 0;
   const hasAccounts = accountsCount > 0;
@@ -19906,9 +19951,15 @@ function applyReauthBatchUiVisibility() {
     rowReauthBatchProgress.style.display = batchMode ? '' : 'none';
   }
   // 下载文件按钮：只要有批量结果就显示（不依赖 batchMode toggle），保证 sidepanel 重开后仍可下载
+  const hasBatchJson = hasReauthBatchResultJson();
   if (btnReauthDownloadResult) {
-    const hasBatchJson = Boolean(lastReauthBatchResult?.updatedFileJson);
     btnReauthDownloadResult.style.display = (batchMode || hasBatchJson) ? '' : 'none';
+  }
+  if (btnReauthDownloadSuccessResult) {
+    const fullDownloadDisplay = btnReauthDownloadResult
+      ? btnReauthDownloadResult.style.display
+      : ((batchMode || hasBatchJson) ? '' : 'none');
+    btnReauthDownloadSuccessResult.style.display = fullDownloadDisplay;
   }
   // 启动按钮：批量模式且未运行时可点
   if (btnReauthStartBatch) {
@@ -19923,6 +19974,7 @@ function applyReauthBatchUiVisibility() {
     const hasJson = Boolean(lastReauthBatchResult?.updatedFileJson);
     btnReauthToggleDetails.style.display = hasJson ? '' : 'none';
   }
+  syncReauthResultActionButtons();
 }
 
 function getProgressStatusLabel(status) {
@@ -20015,12 +20067,9 @@ function applyReauthBatchResult(result) {
   if (displayReauthResultAccount && result?.updatedFileJson) {
     displayReauthResultAccount.textContent = result.updatedFileJson;
     displayReauthResultAccount.classList.add('has-value');
-  }
-  if (btnReauthCopyResult) {
-    btnReauthCopyResult.disabled = !result?.updatedFileJson;
-  }
-  if (btnReauthDownloadResult) {
-    btnReauthDownloadResult.disabled = !result?.updatedFileJson;
+  } else if (displayReauthResultAccount && !result) {
+    displayReauthResultAccount.textContent = '等待重新授权完成...';
+    displayReauthResultAccount.classList.remove('has-value');
   }
   // 重置折叠状态：每次新结果默认折叠
   if (displayReauthResultAccount && result?.updatedFileJson) {
@@ -20066,6 +20115,7 @@ async function handleReauthBatchStart() {
   }
 
   reauthBatchRunningLocal = true;
+  applyReauthBatchResult(null);
   applyReauthBatchProgress({ current: 0, total: accounts.length, currentEmail: '', currentStatus: 'pending' });
 
   try {
@@ -20104,20 +20154,18 @@ async function handleReauthBatchStop() {
   }
 }
 
-function generateBatchDownloadFileName() {
+function generateBatchDownloadFileName(suffix = '') {
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
-  return `sub2api-reauth-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
+  const normalizedSuffix = String(suffix || '').trim();
+  return `sub2api-reauth${normalizedSuffix ? `-${normalizedSuffix}` : ''}-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
 }
 
-async function handleReauthBatchDownload() {
-  const text = lastReauthBatchResult?.updatedFileJson
-    || (displayReauthResultAccount?.textContent || '');
+async function downloadReauthBatchJson(text, filename, emptyMessage) {
   if (!text) {
-    setReauthCopyStatus('暂无可下载的批量结果。', 'error');
+    setReauthCopyStatus(emptyMessage || '暂无可下载的批量结果。', 'error');
     return;
   }
-  const filename = generateBatchDownloadFileName();
   try {
     if (chrome?.downloads?.download) {
       const blob = new Blob([text], { type: 'application/json' });
@@ -20169,6 +20217,33 @@ async function handleReauthBatchDownload() {
   }
 }
 
+async function handleReauthBatchDownload() {
+  const text = lastReauthBatchResult?.updatedFileJson || '';
+  await downloadReauthBatchJson(
+    text,
+    generateBatchDownloadFileName(),
+    '暂无可下载的批量结果。'
+  );
+}
+
+async function handleReauthBatchSuccessDownload() {
+  if (!hasReauthBatchResultJson()) {
+    setReauthCopyStatus('暂无可下载的批量结果。', 'warn');
+    syncReauthResultActionButtons();
+    return;
+  }
+  if (!hasReauthSuccessOnlyBatchResultJson()) {
+    setReauthCopyStatus('暂无成功账号可下载。', 'warn');
+    syncReauthResultActionButtons();
+    return;
+  }
+  await downloadReauthBatchJson(
+    lastReauthBatchResult?.successOnlyFileJson || '',
+    generateBatchDownloadFileName('success-only'),
+    '暂无成功账号可下载。'
+  );
+}
+
 inputReauthBatchMode?.addEventListener('change', () => {
   applyReauthBatchUiVisibility();
 });
@@ -20180,6 +20255,9 @@ btnReauthStopBatch?.addEventListener('click', () => {
 });
 btnReauthDownloadResult?.addEventListener('click', () => {
   handleReauthBatchDownload();
+});
+btnReauthDownloadSuccessResult?.addEventListener('click', () => {
+  handleReauthBatchSuccessDownload();
 });
 btnReauthToggleDetails?.addEventListener('click', () => {
   if (!displayReauthResultAccount) return;
@@ -20232,11 +20310,10 @@ function ensurePendingReauthAccount() {
 
 function renderReauthResultAccount(account) {
   if (!displayReauthResultAccount || !btnReauthCopyResult) return;
-  const batchMode = isReauthBatchModeEnabled();
+  const batchMode = hasActiveReauthBatchMode();
   if (account && typeof account === 'object') {
     displayReauthResultAccount.textContent = JSON.stringify(account, null, 2);
     displayReauthResultAccount.classList.add('has-value');
-    btnReauthCopyResult.disabled = false;
     // 单账号模式下直接展示完整 JSON；批量模式下默认折叠（由 applyReauthBatchResult 控制）
     if (!batchMode) {
       displayReauthResultAccount.style.display = '';
@@ -20251,7 +20328,6 @@ function renderReauthResultAccount(account) {
   } else {
     displayReauthResultAccount.textContent = '等待重新授权完成...';
     displayReauthResultAccount.classList.remove('has-value');
-    btnReauthCopyResult.disabled = true;
     if (!batchMode) {
       displayReauthResultAccount.style.display = '';
       if (reauthResultSummary && displayReauthBatchSummary) {
@@ -20260,14 +20336,19 @@ function renderReauthResultAccount(account) {
       }
     }
   }
+  syncReauthResultActionButtons();
 }
 
 inputReauthAccountFile?.addEventListener('change', async (event) => {
   const file = event.target?.files?.[0];
   pendingReauthAccounts = null;
   lastReauthFileText = '';
+  lastReauthBatchResult = null;
+  lastReauthBatchProgress = null;
+  reauthBatchRunningLocal = false;
   clearReauthAccountPicker();
-  applyReauthBatchUiVisibility();
+  applyReauthBatchResult(null);
+  renderReauthResultAccount(null);
   if (!file) {
     setReauthJsonStatus('未选择文件');
     return;
@@ -20282,8 +20363,15 @@ inputReauthAccountFile?.addEventListener('change', async (event) => {
 });
 
 btnReauthCopyResult?.addEventListener('click', async () => {
-  const text = displayReauthResultAccount?.textContent || '';
-  if (!text) return;
+  const usesBatchResultActions = isReauthFullDownloadActionVisible() || hasReauthBatchResultJson();
+  const text = usesBatchResultActions
+    ? (lastReauthBatchResult?.updatedFileJson || '')
+    : (hasRenderedReauthResultValue() ? (displayReauthResultAccount?.textContent || '') : '');
+  if (!text) {
+    setReauthCopyStatus('暂无可复制的授权结果。', 'warn');
+    syncReauthResultActionButtons();
+    return;
+  }
   try {
     await navigator.clipboard.writeText(text);
     setReauthCopyStatus('已复制', 'ok');
