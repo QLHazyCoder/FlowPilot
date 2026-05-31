@@ -82,6 +82,8 @@
         'registrationEmailState',
         'email',
         'password',
+        'step5ProfilePayload',
+        'step5ProfileRecoveryCount',
         'lastEmailTimestamp',
         'lastSignupCode',
         'lastLoginCode',

@@ -18,6 +18,10 @@
       clearFreeReusablePhoneActivation,
       clearGrokSsoCookies,
       clearLuckmailRuntimeState,
+      clearStep5ProfileStatePatch = () => ({
+        step5ProfilePayload: null,
+        step5ProfileRecoveryCount: 0,
+      }),
       clearYydsMailRuntimeState,
       clearStopRequest,
       closeLocalhostCallbackTabs,
@@ -1171,6 +1175,9 @@
           const currentState = await getState();
           const currentNodeStatus = currentState?.nodeStatuses?.[nodeId] || '';
           const isSignupPhonePasswordMismatch = /SIGNUP_PHONE_PASSWORD_MISMATCH::/i.test(String(message.error || ''));
+          if (nodeId === 'fill-profile' && typeof setState === 'function') {
+            await setState(clearStep5ProfileStatePatch());
+          }
           if (isStopError(message.error)) {
             await setNodeStatus(nodeId, 'stopped');
             await addLog('已被用户停止', 'warn', { nodeId });

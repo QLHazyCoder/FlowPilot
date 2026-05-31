@@ -488,6 +488,26 @@ function statePatchHasChanges(state = {}, patch = {}) {
   return Object.keys(patch).some((key) => JSON.stringify(state?.[key] ?? null) !== JSON.stringify(patch[key] ?? null));
 }
 
+function buildStep5ProfileStatePatch(payload = null, recoveryCount = 0) {
+  if (typeof self.MultiPageBackgroundStep5?.buildStep5ProfileStatePatch === 'function') {
+    return self.MultiPageBackgroundStep5.buildStep5ProfileStatePatch(payload, recoveryCount);
+  }
+  return {
+    step5ProfilePayload: payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : null,
+    step5ProfileRecoveryCount: Math.max(0, Number(recoveryCount) || 0),
+  };
+}
+
+function clearStep5ProfileStatePatch() {
+  if (typeof self.MultiPageBackgroundStep5?.clearStep5ProfileStatePatch === 'function') {
+    return self.MultiPageBackgroundStep5.clearStep5ProfileStatePatch();
+  }
+  return {
+    step5ProfilePayload: null,
+    step5ProfileRecoveryCount: 0,
+  };
+}
+
 const LOG_PREFIX = '[MultiPage:bg]';
 const DUCK_AUTOFILL_URL = 'https://duckduckgo.com/email/settings/autofill';
 const ICLOUD_SETUP_URLS = [
@@ -5075,6 +5095,7 @@ async function resetState() {
     yydsMailApiKey: normalizeYydsMailApiKey(prev.yydsMailApiKey ?? persistedSettings.yydsMailApiKey),
     yydsMailBaseUrl: normalizeYydsMailBaseUrl(prev.yydsMailBaseUrl ?? persistedSettings.yydsMailBaseUrl),
     currentYydsMailInbox: null,
+    ...clearStep5ProfileStatePatch(),
     // Keep reusable phone activation across round resets so the same number can be reactivated up to maxUses.
     reusablePhoneActivation,
     // Keep free reuse phone activation until the user clears or the flow retires it.
@@ -11739,6 +11760,7 @@ async function requestStop(options = {}) {
   rejectPendingStep8(new Error(STOP_ERROR_MESSAGE));
 
   await addLog(logMessage, 'warn');
+  await setState(clearStep5ProfileStatePatch());
   await broadcastStopToContentScripts();
 
   if (!runningNodes.length && inferredStopNode) {
@@ -11965,6 +11987,7 @@ async function executeNodeAndWait(nodeId, delayAfter = 2000) {
       });
       try {
         await validateStep5PostCompletion(signupTabId, completionPayload || {});
+        await setState(clearStep5ProfileStatePatch());
         await setNodeStatus(normalizedNodeId, 'completed');
         await addLog('已完成', 'ok', { nodeId: normalizedNodeId });
         await addLog('步骤 5 [调试] 资料页完成信号已通过后台复核。', 'ok', {
@@ -11972,6 +11995,7 @@ async function executeNodeAndWait(nodeId, delayAfter = 2000) {
           stepKey: 'fill-profile',
         });
       } catch (step5ValidationError) {
+        await setState(clearStep5ProfileStatePatch());
         await setNodeStatus(normalizedNodeId, 'failed');
         await addLog(`失败：${getErrorMessage(step5ValidationError)}`, 'error', { nodeId: normalizedNodeId });
         throw step5ValidationError;
@@ -13986,6 +14010,7 @@ const step5Executor = self.MultiPageBackgroundStep5?.createStep5Executor({
   generateRandomBirthday,
   generateRandomName,
   sendToContentScript,
+  setState,
 });
 const step6Executor = self.MultiPageBackgroundStep6?.createStep6Executor({
   addLog,
@@ -14384,6 +14409,7 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   clearFreeReusablePhoneActivation,
   clearGrokSsoCookies,
   clearLuckmailRuntimeState,
+  clearStep5ProfileStatePatch,
   clearYydsMailRuntimeState,
   clearStopRequest,
   closeLocalhostCallbackTabs,
@@ -14436,6 +14462,7 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
       initialDelayMs: 800,
     });
     await validateStep5PostCompletion(signupTabId, completionPayload || {});
+    await setState(clearStep5ProfileStatePatch());
     await setNodeStatus('fill-profile', 'completed');
     await addLog('已完成', 'ok', { nodeId: 'fill-profile' });
   },
@@ -15334,6 +15361,37 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
 
   const maxAuthRetryRecoveries = Math.max(1, Number(completionPayload?.maxAuthRetryRecoveries) || 2);
   let authRetryRecoveryCount = 0;
+  let profileReplayCount = 0;
+  const replayStep5ProfileIfNeeded = async (reason = '') => {
+    const latestState = await getState();
+    const payload = latestState?.step5ProfilePayload;
+    if (!payload || typeof payload !== 'object') {
+      return false;
+    }
+    const nextReplayCount = Math.max(
+      profileReplayCount,
+      Math.max(0, Number(latestState?.step5ProfileRecoveryCount) || 0)
+    ) + 1;
+    profileReplayCount = nextReplayCount;
+    const replayPatch = buildStep5ProfileStatePatch(payload, nextReplayCount);
+    const replayState = {
+      ...latestState,
+      ...replayPatch,
+    };
+    await setState(replayPatch);
+    await debugLog(`步骤 5 [调试] 后台检测到资料页恢复现场，准备重放 step 5（第 ${nextReplayCount} 次）。`, {
+      completionOutcome: String(completionPayload?.outcome || '').trim(),
+      completionUrl: String(completionPayload?.url || '').trim(),
+      navigationStarted: Boolean(completionPayload?.navigationStarted),
+      level: 'warn',
+    });
+    await addLog(`步骤 5：资料页恢复后仍停留在 about-you，正在自动重提第 ${nextReplayCount} 次...${reason ? ` 原因：${reason}` : ''}`, 'warn', {
+      step: 5,
+      stepKey: 'fill-profile',
+    });
+    await stepExecutorsByKey['fill-profile'](replayState);
+    return true;
+  };
   await debugLog('后台已收到资料页完成信号，准备开始最终状态复核。', {
     completionOutcome: String(completionPayload?.outcome || '').trim(),
     completionUrl: String(completionPayload?.url || '').trim(),
@@ -15446,6 +15504,16 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
     }
 
     if (pageState.profileVisible) {
+      const replayed = await replayStep5ProfileIfNeeded('post_retry_profile_visible');
+      if (replayed) {
+        await waitForTabStableComplete(tabId, {
+          timeoutMs: 120000,
+          retryDelayMs: 300,
+          stableMs: 1000,
+          initialDelayMs: 500,
+        }).catch(() => null);
+        continue;
+      }
       await debugLog('后台复核发现页面仍停留在资料页，准备按失败结束。', {
         completionOutcome: String(completionPayload?.outcome || '').trim(),
         completionUrl: String(completionPayload?.url || '').trim(),

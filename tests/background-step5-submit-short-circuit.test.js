@@ -10,6 +10,7 @@ test('step 5 forwards generated profile data and relies on completion signal flo
   const events = {
     logs: [],
     messages: [],
+    states: [],
   };
 
   const executor = api.createStep5Executor({
@@ -18,6 +19,9 @@ test('step 5 forwards generated profile data and relies on completion signal flo
     },
     generateRandomBirthday: () => ({ year: 2003, month: 6, day: 19 }),
     generateRandomName: () => ({ firstName: 'Test', lastName: 'User' }),
+    setState: async (patch) => {
+      events.states.push(patch);
+    },
     sendToContentScript: async (source, message) => {
       events.messages.push({ source, message });
       return { accepted: true };
@@ -44,5 +48,17 @@ test('step 5 forwards generated profile data and relies on completion signal flo
       },
     },
   ]);
-  assert.ok(events.logs.some(({ message }) => /已生成姓名 Test User/.test(message)));
+  assert.deepStrictEqual(events.states, [
+    {
+      step5ProfilePayload: {
+        firstName: 'Test',
+        lastName: 'User',
+        year: 2003,
+        month: 6,
+        day: 19,
+      },
+      step5ProfileRecoveryCount: 0,
+    },
+  ]);
+  assert.ok(events.logs.some(({ message }) => /Test User/.test(message)));
 });
