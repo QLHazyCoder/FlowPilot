@@ -245,8 +245,6 @@ async function submitGrokVerificationCode(payload = {}) {
     });
   }
   await sleep(200);
-  const button = findGrokSubmitButton();
-  if (button) simulateGrokClick(button);
   const settledState = await waitForGrok(() => {
     const errorText = getGrokVerificationErrorText();
     if (errorText) return { state: 'verification_error', error: errorText };

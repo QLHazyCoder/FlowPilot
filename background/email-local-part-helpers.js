@@ -17,6 +17,12 @@
   ];
 
   const RANDOM_SUFFIX_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const FAMILY_NAME_PARTS = [
+    'smith', 'johnson', 'brown', 'miller', 'wilson', 'moore', 'taylor',
+    'anderson', 'thomas', 'jackson', 'white', 'harris', 'martin', 'lee',
+    'walker', 'young', 'allen', 'king', 'wright', 'scott', 'green', 'baker',
+    'adams', 'nelson', 'carter', 'mitchell', 'perez', 'roberts', 'turner',
+  ];
 
   function getRandomInt(maxExclusive) {
     const max = Math.floor(Number(maxExclusive));
@@ -32,6 +38,10 @@
 
   function pickRandomEnglishNamePrefix() {
     return ENGLISH_NAME_PREFIXES[getRandomInt(ENGLISH_NAME_PREFIXES.length)] || 'james';
+  }
+
+  function pickRandomFamilyNamePart() {
+    return FAMILY_NAME_PARTS[getRandomInt(FAMILY_NAME_PARTS.length)] || 'smith';
   }
 
   function formatDateTimeDigits(date = new Date()) {
@@ -69,10 +79,24 @@
     return `${pickRandomEnglishNamePrefix()}${dateTimeDigits}${buildRandomAlphaNumericSuffix(suffixLength)}`;
   }
 
+  function buildNaturalEmailLocalPart(options = {}) {
+    const first = pickRandomEnglishNamePrefix();
+    const last = pickRandomFamilyNamePart();
+    const separators = ['', '.', '_'];
+    const separator = separators[getRandomInt(separators.length)] || '';
+    const suffixLength = Number.isFinite(Number(options.suffixLength))
+      ? Math.max(0, Math.floor(Number(options.suffixLength)))
+      : 3;
+    const suffix = buildRandomAlphaNumericSuffix(suffixLength);
+    return `${first}${separator}${last}${suffix}`;
+  }
+
   return {
+    buildNaturalEmailLocalPart,
     buildRandomAlphaNumericSuffix,
     buildRandomNameDateTimeLocalPart,
     formatDateTimeDigits,
+    pickRandomFamilyNamePart,
     pickRandomEnglishNamePrefix,
   };
 });

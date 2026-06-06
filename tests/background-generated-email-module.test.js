@@ -33,6 +33,8 @@ test('email local-part helper builds english name, date-time, and random suffix'
   assert.equal(api.buildRandomAlphaNumericSuffix(4), 'abcd');
   randomValues = [0, 0, 1, 2, 3];
   assert.equal(api.buildRandomNameDateTimeLocalPart('2026-05-17T08:09:10.123'), 'james20260517080910123abcd');
+  randomValues = [0, 1, 1, 0, 1, 2];
+  assert.equal(api.buildNaturalEmailLocalPart(), 'james.johnsonabc');
 });
 
 test('generated email helper module exposes a factory', () => {
@@ -498,12 +500,13 @@ test('generated email helper uses the regular temp email domain when random subd
   assert.equal(requests[0].url, 'https://temp.example.com/admin/new_address');
   assert.equal(requests[0].method, 'POST');
   assert.deepEqual(requests[0].body, {
-    enablePrefix: true,
+    enablePrefix: false,
     enableRandomSubdomain: false,
     name: requests[0].body.name,
     domain: 'mail.example.com',
   });
-  assert.match(requests[0].body.name, /^[a-z]+[0-9]{17}[a-z0-9]{4}$/);
+  assert.match(requests[0].body.name, /^[a-z]+[._]?[a-z]+[a-z0-9]{3}$/);
+  assert.doesNotMatch(requests[0].body.name, /\d{14,}/);
 });
 
 test('generated email helper requests random subdomain creation while preserving the returned address', async () => {
@@ -576,7 +579,7 @@ test('generated email helper requests random subdomain creation while preserving
   assert.equal(requests[0].url, 'https://temp.example.com/admin/new_address');
   assert.equal(requests[0].method, 'POST');
   assert.deepEqual(requests[0].body, {
-    enablePrefix: true,
+    enablePrefix: false,
     enableRandomSubdomain: true,
     name: 'user',
     domain: 'mail.example.com',
@@ -654,14 +657,14 @@ test('generated email helper uses fixed subdomain as the effective temp email do
   assert.deepEqual(savedEmails, ['user@team.mail.example.com']);
   assert.equal(requests.length, 1);
   assert.deepEqual(requests[0].body, {
-    enablePrefix: true,
+    enablePrefix: false,
     enableRandomSubdomain: false,
     name: 'user',
     domain: 'team.mail.example.com',
   });
 });
 
-test('generated email helper combines default name format with fixed subdomain payload', async () => {
+test('generated email helper combines natural name format with fixed subdomain payload', async () => {
   const api = loadGeneratedEmailHelpersApi();
   const requests = [];
   const savedEmails = [];
@@ -726,19 +729,19 @@ test('generated email helper combines default name format with fixed subdomain p
     emailGenerator: 'cloudflare-temp-email',
   }, {
     generator: 'cloudflare-temp-email',
-    date: '2026-05-17T08:09:10.123',
   });
 
-  assert.match(email, /^[a-z]+20260517080910123[a-z0-9]{4}@team\.mail\.example\.com$/);
+  assert.match(email, /^[a-z]+[._]?[a-z]+[a-z0-9]{3}@team\.mail\.example\.com$/);
   assert.deepEqual(savedEmails, [email]);
   assert.equal(requests.length, 1);
   assert.deepEqual(requests[0].body, {
-    enablePrefix: true,
+    enablePrefix: false,
     enableRandomSubdomain: false,
     name: requests[0].body.name,
     domain: 'team.mail.example.com',
   });
-  assert.match(requests[0].body.name, /^[a-z]+20260517080910123[a-z0-9]{4}$/);
+  assert.match(requests[0].body.name, /^[a-z]+[._]?[a-z]+[a-z0-9]{3}$/);
+  assert.doesNotMatch(requests[0].body.name, /\d{14,}/);
 });
 
 test('generated email helper honors iCloud always-new fetch mode', async () => {

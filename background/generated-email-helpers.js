@@ -24,6 +24,7 @@
       normalizeEmailGenerator,
       isGeneratedAliasProvider,
       persistRegistrationEmailState = null,
+      buildNaturalEmailLocalPart = root.MultiPageEmailLocalPartHelpers?.buildNaturalEmailLocalPart,
       buildRandomNameDateTimeLocalPart = root.MultiPageEmailLocalPartHelpers?.buildRandomNameDateTimeLocalPart,
       reuseOrCreateTab,
       sendToContentScript,
@@ -64,6 +65,12 @@
       return typeof buildRandomNameDateTimeLocalPart === 'function'
         ? buildRandomNameDateTimeLocalPart(date)
         : '';
+    }
+
+    function buildDefaultCloudflareTempEmailLocalPart() {
+      return typeof buildNaturalEmailLocalPart === 'function'
+        ? buildNaturalEmailLocalPart()
+        : generateCloudflareAliasLocalPart();
     }
 
     async function fetchCloudflareEmail(state, options = {}) {
@@ -173,7 +180,7 @@
         requireDomain: true,
       });
       const requestedName = String(options.localPart || options.name || '').trim().toLowerCase()
-        || buildDefaultGeneratedEmailLocalPart(options.date)
+        || buildDefaultCloudflareTempEmailLocalPart()
         || generateCloudflareAliasLocalPart();
       const effectiveDomain = config.effectiveDomain || (
         typeof buildCloudflareTempEmailEffectiveDomain === 'function'
@@ -181,7 +188,7 @@
           : config.domain
       );
       const payload = {
-        enablePrefix: true,
+        enablePrefix: false,
         enableRandomSubdomain: config.useFixedSubdomain ? false : Boolean(config.useRandomSubdomain),
         name: requestedName,
         domain: effectiveDomain,
@@ -386,7 +393,9 @@
       fetchCloudflareTempEmailAddress,
       fetchDuckEmail,
       fetchGeneratedEmail,
+      buildDefaultCloudflareTempEmailLocalPart,
       buildDefaultGeneratedEmailLocalPart,
+      buildNaturalEmailLocalPart,
       buildRandomNameDateTimeLocalPart,
       generateCloudflareAliasLocalPart,
       requestCloudflareTempEmailJson,
