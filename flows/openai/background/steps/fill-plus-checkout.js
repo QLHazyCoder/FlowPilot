@@ -9,6 +9,13 @@
   const PLUS_CHECKOUT_PAYPAL_REDIRECT_TIMEOUT_MS = 10000;
   const PLUS_PAYMENT_METHOD_PAYPAL = 'paypal';
   const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
+  const PLUS_PAYMENT_METHOD_PIX = 'plus-pix';
+  const DEFAULT_PIX_BASE_URL = 'https://pixplus.1iiu.com';
+  const PIX_ORDER_PATH = '/api/v1/orders';
+  const PIX_POLL_INTERVAL_MS = 3000;
+  const PIX_REQUEST_TIMEOUT_MS = 30000;
+  const PIX_DEFAULT_TIMEOUT_SECONDS = 900;
+  const PIX_SUCCESS_PAYMENT_STATUSES = ['paid', 'pix_ready', 'already_plus'];
   const GPC_PORTAL_URL = 'https://gpc.qlhazycoder.top/';
   const GPC_PAGE_POLL_INTERVAL_MS = 3000;
   const GPC_PAGE_DEFAULT_TIMEOUT_SECONDS = 900;
@@ -104,6 +111,11 @@
         || normalizeText(state?.plusCheckoutSource) === PLUS_PAYMENT_METHOD_GPC_HELPER;
     }
 
+    function isPixCheckout(state = {}) {
+      return normalizePlusPaymentMethod(state?.plusPaymentMethod) === PLUS_PAYMENT_METHOD_PIX
+        || normalizeText(state?.plusCheckoutSource) === PLUS_PAYMENT_METHOD_PIX;
+    }
+
     function compactCountryText(value = '') {
       return normalizeText(value).toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]/g, '');
     }
@@ -116,6 +128,9 @@
       const normalized = String(value || '').trim().toLowerCase();
       if (normalized === PLUS_PAYMENT_METHOD_GPC_HELPER) {
         return PLUS_PAYMENT_METHOD_GPC_HELPER;
+      }
+      if (normalized === PLUS_PAYMENT_METHOD_PIX || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus') {
+        return PLUS_PAYMENT_METHOD_PIX;
       }
       return PLUS_PAYMENT_METHOD_PAYPAL;
     }
@@ -448,6 +463,116 @@
         },
       });
       return results?.[0]?.result || {};
+    }
+
+    function resolvePixBaseUrl(state = {}) {
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      if (rootScope.GpcUtils?.normalizePixBaseUrl) {
+        return rootScope.GpcUtils.normalizePixBaseUrl(state?.pixBaseUrl || DEFAULT_PIX_BASE_URL);
+      }
+      const trimmed = String(state?.pixBaseUrl || DEFAULT_PIX_BASE_URL).trim().replace(/\/+$/g, '');
+      return trimmed || DEFAULT_PIX_BASE_URL;
+    }
+
+    function getPixTimeoutMs(state = {}) {
+      const seconds = Math.floor(Number(state?.pixTimeoutSeconds));
+      const normalized = Number.isFinite(seconds) && seconds > 0
+        ? Math.min(3600, Math.max(30, seconds))
+        : PIX_DEFAULT_TIMEOUT_SECONDS;
+      return normalized * 1000;
+    }
+
+    async function fetchPixOrder(baseUrl, orderId) {
+      const fetcher = typeof fetchImpl === 'function'
+        ? fetchImpl
+        : (typeof fetch === 'function' ? fetch.bind(globalThis) : null);
+      if (typeof fetcher !== 'function') {
+        throw new Error('步骤 7：当前运行环境不支持 fetch，无法查询 Pix 订单状态。');
+      }
+      const url = `${baseUrl}${PIX_ORDER_PATH}/${encodeURIComponent(orderId)}`;
+      const controller = typeof AbortController === 'function' ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => controller.abort(), PIX_REQUEST_TIMEOUT_MS) : null;
+      try {
+        const response = await fetcher(`${url}?t=${Date.now()}`, {
+          method: 'GET',
+          cache: 'no-store',
+          headers: { Accept: 'application/json' },
+          ...(controller ? { signal: controller.signal } : {}),
+        });
+        const text = await response.text().catch(() => '');
+        let payload = text;
+        try {
+          payload = text ? JSON.parse(text) : {};
+        } catch {
+          payload = text;
+        }
+        return { response, payload };
+      } finally {
+        if (timer) {
+          clearTimeout(timer);
+        }
+      }
+    }
+
+    async function resolvePixOrderId(state = {}) {
+      const direct = String(state?.pixOrderId || '').trim();
+      if (direct) {
+        return direct;
+      }
+      const latestState = typeof getState === 'function' ? await getState().catch(() => ({})) : {};
+      return String(latestState?.pixOrderId || '').trim();
+    }
+
+    async function executePixBilling(state = {}) {
+      const orderId = await resolvePixOrderId(state);
+      if (!orderId) {
+        throw new Error('步骤 7：缺少 Pix 订单号，请先执行步骤 6 发起 Pix 充值。');
+      }
+      const baseUrl = resolvePixBaseUrl(state);
+      const deadline = Date.now() + getPixTimeoutMs(state);
+      await addLog(`步骤 7：正在轮询 Pix 充值订单状态（order_id=${orderId}）...`, 'info');
+
+      let lastState = '';
+      let lastPaymentStatus = '';
+      while (Date.now() <= deadline) {
+        throwIfStopped();
+        const { response, payload } = await fetchPixOrder(baseUrl, orderId);
+        if (!response?.ok) {
+          const detail = String(payload?.error || payload?.message || `HTTP ${response?.status || 0}`).trim();
+          throw new Error(`步骤 7：查询 Pix 订单状态失败：${detail}`);
+        }
+        const orderState = String(payload?.state || '').trim().toLowerCase();
+        const paymentStatus = String(payload?.payment_status || payload?.paymentStatus || '').trim().toLowerCase();
+        if (orderState !== lastState || paymentStatus !== lastPaymentStatus) {
+          lastState = orderState;
+          lastPaymentStatus = paymentStatus;
+          await setState({
+            plusCheckoutSource: PLUS_PAYMENT_METHOD_PIX,
+            pixOrderState: orderState,
+            pixPaymentStatus: paymentStatus,
+          });
+          await addLog(`步骤 7：Pix 订单状态：${orderState || '未知'}${paymentStatus ? `（${paymentStatus}）` : ''}。`, 'info');
+        }
+
+        if (orderState === 'done') {
+          if (PIX_SUCCESS_PAYMENT_STATUSES.includes(paymentStatus)) {
+            await addLog(`步骤 7：Pix 充值已完成（${paymentStatus}），准备继续下一步。`, 'ok');
+            await completeNodeFromBackground('plus-checkout-billing', {
+              plusCheckoutSource: PLUS_PAYMENT_METHOD_PIX,
+              pixOrderState: orderState,
+              pixPaymentStatus: paymentStatus,
+            });
+            return;
+          }
+          throw new Error(`步骤 7：Pix 充值结束但支付状态异常：${paymentStatus || '未知'}。`);
+        }
+        if (orderState === 'failed') {
+          throw new Error(`步骤 7：Pix 充值失败${paymentStatus ? `（${paymentStatus}）` : ''}。`);
+        }
+        await sleepWithStop(PIX_POLL_INTERVAL_MS);
+      }
+
+      throw new Error(`步骤 7：Pix 充值等待超时，未在限定时间内完成（最后状态：${lastState || '未知'}）。`);
     }
 
     async function executeGpcHelperBilling(state = {}) {
@@ -1116,6 +1241,10 @@
     async function executePlusCheckoutBilling(state = {}) {
       if (isGpcHelperCheckout(state)) {
         await executeGpcHelperBilling(state);
+        return;
+      }
+      if (isPixCheckout(state)) {
+        await executePixBilling(state);
         return;
       }
       const paymentMethod = normalizePlusPaymentMethod(state?.plusPaymentMethod);

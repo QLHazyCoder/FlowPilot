@@ -471,6 +471,63 @@ return {
   assert.equal(api.rowPayPalAccount.style.display, '');
 });
 
+test('sidepanel Plus UI shows Pix fields only for the Pix payment method', () => {
+  const bundle = [
+    extractFunction('normalizePlusPaymentMethod'),
+    extractFunction('normalizePlusAccountAccessStrategy'),
+    extractFunction('getSelectedPlusPaymentMethod'),
+    extractFunction('getRequestedPlusAccountAccessStrategy'),
+    extractFunction('updatePlusModeUI'),
+  ].join('\n');
+
+  const api = new Function(`
+let latestState = { plusPaymentMethod: 'plus-pix' };
+let currentPlusPaymentMethod = 'paypal';
+let currentPlusAccountAccessStrategy = 'oauth';
+const inputPlusModeEnabled = { checked: true };
+const selectPlusPaymentMethod = { value: 'plus-pix', style: { display: 'none' } };
+const PLUS_PAYMENT_METHOD_PIX = 'plus-pix';
+const PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH = 'oauth';
+const PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION = 'sub2api_codex_session';
+const PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION = 'cpa_codex_session';
+const DEFAULT_PLUS_ACCOUNT_ACCESS_STRATEGY = PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH;
+const plusPaymentMethodCaption = { textContent: '' };
+const rowPayPalAccount = { style: { display: '' } };
+const rowGpcCardKey = { style: { display: '' } };
+const rowPixCdk = { style: { display: 'none' } };
+const rowPixBaseUrl = { style: { display: 'none' } };
+${bundle}
+return {
+  updatePlusModeUI,
+  selectPlusPaymentMethod,
+  plusPaymentMethodCaption,
+  rows: { rowGpcCardKey, rowPixCdk, rowPixBaseUrl, rowPayPalAccount },
+};
+`)();
+
+  api.updatePlusModeUI();
+
+  assert.equal(api.rows.rowPixCdk.style.display, '');
+  assert.equal(api.rows.rowPixBaseUrl.style.display, '');
+  assert.equal(api.rows.rowGpcCardKey.style.display, 'none');
+  assert.equal(api.rows.rowPayPalAccount.style.display, 'none');
+  assert.match(api.plusPaymentMethodCaption.textContent, /Pix/);
+
+  api.selectPlusPaymentMethod.value = 'gpc-helper';
+  api.updatePlusModeUI();
+  assert.equal(api.rows.rowPixCdk.style.display, 'none');
+  assert.equal(api.rows.rowPixBaseUrl.style.display, 'none');
+  assert.equal(api.rows.rowGpcCardKey.style.display, '');
+});
+
+test('sidepanel HTML exposes the Pix payment option and config rows', () => {
+  assert.match(sidepanelHtml, /<option value="plus-pix">Pix 充值<\/option>/);
+  assert.match(sidepanelHtml, /id="row-pix-cdk"/);
+  assert.match(sidepanelHtml, /id="input-pix-cdk"/);
+  assert.match(sidepanelHtml, /id="row-pix-base-url"/);
+  assert.match(sidepanelHtml, /id="input-pix-base-url"/);
+});
+
 test('sidepanel start check only requires a GPC card key', async () => {
   const bundle = [
     extractFunction('normalizeGpcCardKeyInput'),

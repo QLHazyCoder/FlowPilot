@@ -728,7 +728,11 @@ const PLUS_PAYMENT_METHOD_PAYPAL = 'paypal';
 const PLUS_PAYMENT_METHOD_PAYPAL_HOSTED = 'paypal-hosted';
 const PLUS_PAYMENT_METHOD_NONE = 'none';
 const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
+const PLUS_PAYMENT_METHOD_PIX = 'plus-pix';
 const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_GPC_HELPER;
+const DEFAULT_PIX_BASE_URL = (typeof self !== 'undefined' && self.GpcUtils?.DEFAULT_PIX_BASE_URL)
+  || 'https://pixplus.1iiu.com';
+const DEFAULT_PIX_TIMEOUT_SECONDS = 900;
 const DEFAULT_PLUS_HOSTED_CHECKOUT_OAUTH_DELAY_SECONDS = 3;
 const DISPLAY_TIMEZONE = 'Asia/Shanghai';
 const MICROSOFT_TOKEN_DNR_RULE_ID = 1001;
@@ -841,6 +845,10 @@ function normalizePlusPaymentMethod(value = '') {
   }
   if (normalized === PLUS_PAYMENT_METHOD_GPC_HELPER) {
     return PLUS_PAYMENT_METHOD_GPC_HELPER;
+  }
+  const pixValue = typeof PLUS_PAYMENT_METHOD_PIX !== 'undefined' ? PLUS_PAYMENT_METHOD_PIX : 'plus-pix';
+  if (normalized === pixValue || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus') {
+    return pixValue;
   }
   return PLUS_PAYMENT_METHOD_PAYPAL;
 }
@@ -1319,6 +1327,13 @@ const PERSISTED_SETTING_DEFAULTS = {
   gpcCardStatus: '',
   gpcPageStatus: '',
   gpcPageStatusText: '',
+  pixBaseUrl: DEFAULT_PIX_BASE_URL,
+  pixCdk: '',
+  pixTimeoutSeconds: DEFAULT_PIX_TIMEOUT_SECONDS,
+  pixOrderId: '',
+  pixJobId: '',
+  pixOrderState: '',
+  pixPaymentStatus: '',
   autoRunSkipFailures: false,
   autoRunFallbackThreadIntervalMinutes: 0,
   operationDelayEnabled: true,
@@ -2052,6 +2067,10 @@ function normalizePlusPaymentMethod(value = '') {
   }
   if (normalized === PLUS_PAYMENT_METHOD_GPC_HELPER) {
     return PLUS_PAYMENT_METHOD_GPC_HELPER;
+  }
+  if (typeof PLUS_PAYMENT_METHOD_PIX !== 'undefined'
+    && (normalized === PLUS_PAYMENT_METHOD_PIX || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus')) {
+    return PLUS_PAYMENT_METHOD_PIX;
   }
   return PLUS_PAYMENT_METHOD_PAYPAL;
 }
@@ -3373,6 +3392,25 @@ function normalizePersistentSettingValue(key, value) {
     case 'gpcBalanceUpdatedAt':
     case 'gpcRemainingUses':
       return Math.max(0, Number(value) || 0);
+    case 'pixBaseUrl':
+      return self.GpcUtils?.normalizePixBaseUrl
+        ? self.GpcUtils.normalizePixBaseUrl(value)
+        : (String(value || '').trim().replace(/\/+$/g, '') || DEFAULT_PIX_BASE_URL);
+    case 'pixCdk':
+      return self.GpcUtils?.normalizePixCdk
+        ? self.GpcUtils.normalizePixCdk(value)
+        : String(value || '').trim().toUpperCase();
+    case 'pixTimeoutSeconds': {
+      const numeric = Math.floor(Number(value));
+      return Number.isFinite(numeric) && numeric > 0
+        ? Math.min(3600, Math.max(30, numeric))
+        : DEFAULT_PIX_TIMEOUT_SECONDS;
+    }
+    case 'pixOrderId':
+    case 'pixJobId':
+    case 'pixOrderState':
+    case 'pixPaymentStatus':
+      return String(value || '').trim();
     case 'autoRunSkipFailures':
       return Boolean(value);
     case 'operationDelayEnabled':

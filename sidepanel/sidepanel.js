@@ -240,6 +240,10 @@ const rowGpcCardKey = document.getElementById('row-gpc-card-key');
 const inputGpcCardKey = document.getElementById('input-gpc-card-key');
 const displayGpcCardKeyStatus = document.getElementById('display-gpc-card-key-status');
 const btnGpcCardKeyQuery = document.getElementById('btn-gpc-card-key-query');
+const rowPixCdk = document.getElementById('row-pix-cdk');
+const inputPixCdk = document.getElementById('input-pix-cdk');
+const rowPixBaseUrl = document.getElementById('row-pix-base-url');
+const inputPixBaseUrl = document.getElementById('input-pix-base-url');
 const selectMailProvider = document.getElementById('select-mail-provider');
 const btnMailLogin = document.getElementById('btn-mail-login');
 const rowCustomMailReceiveMode = document.getElementById('row-custom-mail-receive-mode');
@@ -590,7 +594,9 @@ const PLUS_PAYMENT_METHOD_PAYPAL = 'paypal';
 const PLUS_PAYMENT_METHOD_PAYPAL_HOSTED = 'paypal-hosted';
 const PLUS_PAYMENT_METHOD_NONE = 'none';
 const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
+const PLUS_PAYMENT_METHOD_PIX = 'plus-pix';
 const DEFAULT_GPC_BASE_URL = 'https://gpc.qlhazycoder.top';
+const DEFAULT_PIX_BASE_URL = 'https://pixplus.1iiu.com';
 const DEFAULT_PLUS_HOSTED_CHECKOUT_OAUTH_DELAY_SECONDS = 3;
 const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_GPC_HELPER;
 const PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH = 'oauth';
@@ -3438,6 +3444,7 @@ function normalizePlusPaymentMethod(value = '') {
   }
 
   const gpcValue = typeof PLUS_PAYMENT_METHOD_GPC_HELPER !== 'undefined' ? PLUS_PAYMENT_METHOD_GPC_HELPER : 'gpc-helper';
+  const pixValue = typeof PLUS_PAYMENT_METHOD_PIX !== 'undefined' ? PLUS_PAYMENT_METHOD_PIX : 'plus-pix';
   const paypalValue = typeof PLUS_PAYMENT_METHOD_PAYPAL !== 'undefined' ? PLUS_PAYMENT_METHOD_PAYPAL : 'paypal';
   const paypalHostedValue = typeof PLUS_PAYMENT_METHOD_PAYPAL_HOSTED !== 'undefined' ? PLUS_PAYMENT_METHOD_PAYPAL_HOSTED : 'paypal-hosted';
   const noneValue = typeof PLUS_PAYMENT_METHOD_NONE !== 'undefined' ? PLUS_PAYMENT_METHOD_NONE : 'none';
@@ -3450,6 +3457,9 @@ function normalizePlusPaymentMethod(value = '') {
   }
   if (normalized === gpcValue) {
     return gpcValue;
+  }
+  if (normalized === pixValue || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus') {
+    return pixValue;
   }
   return paypalValue;
 }
@@ -5241,6 +5251,14 @@ function collectSettingsPayload() {
     gpcCardKey: typeof inputGpcCardKey !== 'undefined' && inputGpcCardKey
       ? normalizeGpcCardKeyInput(inputGpcCardKey.value || '')
       : normalizeGpcCardKeyInput(latestState?.gpcCardKey || ''),
+    pixBaseUrl: window.GpcUtils?.normalizePixBaseUrl
+      ? window.GpcUtils.normalizePixBaseUrl(
+        (typeof inputPixBaseUrl !== 'undefined' && inputPixBaseUrl ? inputPixBaseUrl.value : '') || latestState?.pixBaseUrl || ''
+      )
+      : String((typeof inputPixBaseUrl !== 'undefined' && inputPixBaseUrl ? inputPixBaseUrl.value : '') || latestState?.pixBaseUrl || (window.GpcUtils?.DEFAULT_PIX_BASE_URL || 'https://pixplus.1iiu.com')).trim().replace(/\/+$/g, ''),
+    pixCdk: typeof inputPixCdk !== 'undefined' && inputPixCdk
+      ? String(inputPixCdk.value || '').trim().toUpperCase()
+      : String(latestState?.pixCdk || '').trim().toUpperCase(),
     ...(accountContributionEnabled ? {} : {
       customPassword: inputPassword.value,
     }),
@@ -10806,6 +10824,7 @@ function updatePlusModeUI() {
   const noneValue = typeof PLUS_PAYMENT_METHOD_NONE !== 'undefined' ? PLUS_PAYMENT_METHOD_NONE : 'none';
 
   const gpcValue = typeof PLUS_PAYMENT_METHOD_GPC_HELPER !== 'undefined' ? PLUS_PAYMENT_METHOD_GPC_HELPER : 'gpc-helper';
+  const pixValue = typeof PLUS_PAYMENT_METHOD_PIX !== 'undefined' ? PLUS_PAYMENT_METHOD_PIX : 'plus-pix';
   const oauthStrategyValue = typeof PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH !== 'undefined'
     ? PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH
     : 'oauth';
@@ -10922,6 +10941,7 @@ function updatePlusModeUI() {
     : method;
   const hostedRowsVisible = enabled && selectedMethod === paypalHostedValue;
   const gpcRowsVisible = enabled && selectedMethod === gpcValue;
+  const pixRowsVisible = enabled && selectedMethod === pixValue;
   if (typeof rowPlusMode !== 'undefined' && rowPlusMode) {
     rowPlusMode.style.display = supportsPlusMode ? '' : 'none';
   }
@@ -10935,6 +10955,8 @@ function updatePlusModeUI() {
     plusPaymentMethodCaption.textContent = method === gpcValue
       ? 'GPC 网页充值链路'
 
+      : method === pixValue
+      ? 'Pix 卡密充值链路'
       : method === noneValue
       ? '已有 Plus，无需配置支付链路'
       : method === paypalHostedValue
@@ -11049,6 +11071,12 @@ function updatePlusModeUI() {
   }
   if (typeof btnGpcCardKeyPurchase !== 'undefined' && btnGpcCardKeyPurchase) {
     btnGpcCardKeyPurchase.style.display = gpcRowsVisible ? '' : 'none';
+  }
+  if (typeof rowPixCdk !== 'undefined' && rowPixCdk) {
+    rowPixCdk.style.display = pixRowsVisible ? '' : 'none';
+  }
+  if (typeof rowPixBaseUrl !== 'undefined' && rowPixBaseUrl) {
+    rowPixBaseUrl.style.display = pixRowsVisible ? '' : 'none';
   }
 
 }
@@ -11960,6 +11988,13 @@ function applySettingsState(state) {
     } else {
       setGpcCardKeyStatus(inputGpcCardKey.value ? '等待检测' : '等待输入', '');
     }
+  }
+  if (typeof inputPixCdk !== 'undefined' && inputPixCdk) {
+    inputPixCdk.value = state?.pixCdk || '';
+  }
+  if (typeof inputPixBaseUrl !== 'undefined' && inputPixBaseUrl) {
+    const pixBaseUrl = String(state?.pixBaseUrl || '').trim();
+    inputPixBaseUrl.value = pixBaseUrl && pixBaseUrl !== DEFAULT_PIX_BASE_URL ? pixBaseUrl : '';
   }
   if (typeof inputHostedCheckoutVerificationUrl !== 'undefined' && inputHostedCheckoutVerificationUrl) {
     inputHostedCheckoutVerificationUrl.value = String(state?.hostedCheckoutVerificationUrl || '').trim();
@@ -16378,6 +16413,8 @@ selectPlusPaymentMethod?.addEventListener('change', () => {
   inputHostedCheckoutVerificationUrl,
   inputHostedCheckoutPhone,
   inputPlusHostedCheckoutOauthDelaySeconds,
+  inputPixCdk,
+  inputPixBaseUrl,
 ].forEach((input) => {
   input?.addEventListener('input', () => {
     markSettingsDirty(true);
@@ -18959,6 +18996,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       }
       if (message.payload.gpcCardKey !== undefined && inputGpcCardKey) {
         inputGpcCardKey.value = message.payload.gpcCardKey || '';
+      }
+      if (message.payload.pixCdk !== undefined && typeof inputPixCdk !== 'undefined' && inputPixCdk) {
+        inputPixCdk.value = message.payload.pixCdk || '';
+      }
+      if (message.payload.pixBaseUrl !== undefined && typeof inputPixBaseUrl !== 'undefined' && inputPixBaseUrl) {
+        const pixBaseUrl = String(message.payload.pixBaseUrl || '').trim();
+        inputPixBaseUrl.value = pixBaseUrl && pixBaseUrl !== DEFAULT_PIX_BASE_URL ? pixBaseUrl : '';
       }
       if (
         message.payload.gpcBalance !== undefined

@@ -376,6 +376,7 @@
             <option value="paypal-hosted">PayPal 无卡直绑</option>
             <option value="paypal">PayPal</option>
             <option value="gpc-helper" selected>GPC</option>
+            <option value="plus-pix">Pix 充值</option>
           </select>
           <button id="btn-gpc-card-key-purchase" class="btn btn-outline btn-sm data-inline-btn" type="button" style="display:none;">购买卡密</button>
           <span class="setting-caption" id="plus-payment-method-caption">GPC 网页充值链路</span>
@@ -427,6 +428,23 @@
           <button id="btn-gpc-card-key-query" class="btn btn-outline btn-sm data-inline-btn" type="button">查询</button>
           <span id="display-gpc-card-key-status" class="data-value mono">等待输入</span>
         </div>
+      </div>
+      <div class="data-row" id="row-pix-cdk" style="display:none;">
+        <span class="data-label">Pix 卡密</span>
+        <div class="data-inline gpc-card-key-inline">
+          <div class="input-with-icon">
+            <input type="password" id="input-pix-cdk" class="data-input data-input-with-icon"
+              placeholder="请输入 Pix 卡密（QZ-XXXXXXXXXX）" autocomplete="off" />
+            <button id="btn-toggle-pix-cdk" class="input-icon-btn" type="button"
+              data-password-toggle="input-pix-cdk" data-show-label="显示 Pix 卡密"
+              data-hide-label="隐藏 Pix 卡密" aria-label="显示 Pix 卡密" title="显示 Pix 卡密"></button>
+          </div>
+        </div>
+      </div>
+      <div class="data-row" id="row-pix-base-url" style="display:none;">
+        <span class="data-label">Pix 接口</span>
+        <input type="text" id="input-pix-base-url" class="data-input"
+          placeholder="https://pixplus.1iiu.com（留空用默认）" autocomplete="off" />
       </div>
       <div class="data-row module-divider-start" id="row-mail-provider">
         <span class="data-label">邮箱服务</span>

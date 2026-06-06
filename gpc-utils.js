@@ -5,8 +5,10 @@
   const PLUS_PAYMENT_METHOD_PAYPAL_HOSTED = 'paypal-hosted';
   const PLUS_PAYMENT_METHOD_NONE = 'none';
   const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
+  const PLUS_PAYMENT_METHOD_PIX = 'plus-pix';
   const DEFAULT_GPC_BASE_URL = 'https://gpc.qlhazycoder.top';
   const ALLOWED_GPC_REMOTE_HOST = 'gpc.qlhazycoder.top';
+  const DEFAULT_PIX_BASE_URL = 'https://pixplus.1iiu.com';
 
   function normalizePlusPaymentMethod(value = '') {
     const normalized = String(value || '').trim().toLowerCase();
@@ -19,7 +21,38 @@
     if (normalized === PLUS_PAYMENT_METHOD_GPC_HELPER) {
       return PLUS_PAYMENT_METHOD_GPC_HELPER;
     }
+    if (normalized === PLUS_PAYMENT_METHOD_PIX || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus') {
+      return PLUS_PAYMENT_METHOD_PIX;
+    }
     return PLUS_PAYMENT_METHOD_PAYPAL;
+  }
+
+  // Pix 充值渠道仅依赖固定端点 /api/v1/redeem 与 /api/v1/orders/{id}，
+  // 鉴权通过卡密(cdk)完成，因此只需归一化 baseUrl 与 cdk。
+  function normalizePixBaseUrl(value = '') {
+    const trimmed = String(value || '').trim().replace(/\/+$/g, '');
+    if (!trimmed) {
+      return DEFAULT_PIX_BASE_URL;
+    }
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return DEFAULT_PIX_BASE_URL;
+      }
+      return `${parsed.origin}${parsed.pathname.replace(/\/+$/g, '')}`;
+    } catch {
+      return DEFAULT_PIX_BASE_URL;
+    }
+  }
+
+  function normalizePixCdk(value = '') {
+    return String(value || '').trim().toUpperCase();
+  }
+
+  function buildPixApiUrl(baseUrl = '', path = '') {
+    const normalizedBase = normalizePixBaseUrl(baseUrl);
+    const normalizedPath = String(path || '').startsWith('/') ? String(path || '') : `/${String(path || '')}`;
+    return `${normalizedBase}${normalizedPath}`;
   }
 
   function normalizeGpcRemainingUses(value) {
@@ -278,11 +311,14 @@
 
   return {
     DEFAULT_GPC_BASE_URL,
+    DEFAULT_PIX_BASE_URL,
     PLUS_PAYMENT_METHOD_GPC_HELPER,
+    PLUS_PAYMENT_METHOD_PIX,
     PLUS_PAYMENT_METHOD_NONE,
     PLUS_PAYMENT_METHOD_PAYPAL,
     PLUS_PAYMENT_METHOD_PAYPAL_HOSTED,
     buildGpcApiUrl,
+    buildPixApiUrl,
     buildGpcCardBalanceUrl,
     extractGpcResponseErrorDetail,
     formatGpcBalancePayload,
@@ -293,6 +329,8 @@
     normalizeGpcBaseUrl,
     normalizeGpcCardKey,
     normalizeGpcRemainingUses,
+    normalizePixBaseUrl,
+    normalizePixCdk,
     normalizePlusPaymentMethod,
     unwrapGpcBalancePayload,
     unwrapGpcResponse,
