@@ -44,7 +44,7 @@ function createBillingHarness({ orderResponses = [], orderStatus = 200 } = {}) {
   return { executor, logs, stateUpdates, completedNodes, getPollCount: () => pollIndex };
 }
 
-const PIX_STATE = { plusPaymentMethod: 'plus-pix', pixOrderId: '12', pixBaseUrl: 'https://pixplus.1iiu.com', pixTimeoutSeconds: 60 };
+const PIX_STATE = { plusPaymentMethod: 'plus-pix', pixOrderId: '12', pixTimeoutSeconds: 60 };
 
 test('Pix 轮询：queued → running → done(paid) 判成功并完成节点', async () => {
   const { executor, completedNodes, getPollCount } = createBillingHarness({

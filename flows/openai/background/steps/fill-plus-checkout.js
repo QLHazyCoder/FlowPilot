@@ -465,15 +465,6 @@
       return results?.[0]?.result || {};
     }
 
-    function resolvePixBaseUrl(state = {}) {
-      const rootScope = typeof self !== 'undefined' ? self : globalThis;
-      if (rootScope.GpcUtils?.normalizePixBaseUrl) {
-        return rootScope.GpcUtils.normalizePixBaseUrl(state?.pixBaseUrl || DEFAULT_PIX_BASE_URL);
-      }
-      const trimmed = String(state?.pixBaseUrl || DEFAULT_PIX_BASE_URL).trim().replace(/\/+$/g, '');
-      return trimmed || DEFAULT_PIX_BASE_URL;
-    }
-
     function getPixTimeoutMs(state = {}) {
       const seconds = Math.floor(Number(state?.pixTimeoutSeconds));
       const normalized = Number.isFinite(seconds) && seconds > 0
@@ -528,7 +519,8 @@
       if (!orderId) {
         throw new Error('步骤 7：缺少 Pix 订单号，请先执行步骤 6 发起 Pix 充值。');
       }
-      const baseUrl = resolvePixBaseUrl(state);
+      // Pix 接口地址固定使用内置端点，不接受用户自定义。
+      const baseUrl = DEFAULT_PIX_BASE_URL;
       const deadline = Date.now() + getPixTimeoutMs(state);
       await addLog(`步骤 7：正在轮询 Pix 充值订单状态（order_id=${orderId}）...`, 'info');
 

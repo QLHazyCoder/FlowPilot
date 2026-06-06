@@ -242,8 +242,6 @@ const displayGpcCardKeyStatus = document.getElementById('display-gpc-card-key-st
 const btnGpcCardKeyQuery = document.getElementById('btn-gpc-card-key-query');
 const rowPixCdk = document.getElementById('row-pix-cdk');
 const inputPixCdk = document.getElementById('input-pix-cdk');
-const rowPixBaseUrl = document.getElementById('row-pix-base-url');
-const inputPixBaseUrl = document.getElementById('input-pix-base-url');
 const selectMailProvider = document.getElementById('select-mail-provider');
 const btnMailLogin = document.getElementById('btn-mail-login');
 const rowCustomMailReceiveMode = document.getElementById('row-custom-mail-receive-mode');
@@ -598,7 +596,6 @@ const PLUS_PAYMENT_METHOD_NONE = 'none';
 const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
 const PLUS_PAYMENT_METHOD_PIX = 'plus-pix';
 const DEFAULT_GPC_BASE_URL = 'https://gpc.qlhazycoder.top';
-const DEFAULT_PIX_BASE_URL = 'https://pixplus.1iiu.com';
 const DEFAULT_PLUS_HOSTED_CHECKOUT_OAUTH_DELAY_SECONDS = 3;
 const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_GPC_HELPER;
 const PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH = 'oauth';
@@ -5267,11 +5264,6 @@ function collectSettingsPayload() {
     gpcCardKey: typeof inputGpcCardKey !== 'undefined' && inputGpcCardKey
       ? normalizeGpcCardKeyInput(inputGpcCardKey.value || '')
       : normalizeGpcCardKeyInput(latestState?.gpcCardKey || ''),
-    pixBaseUrl: window.GpcUtils?.normalizePixBaseUrl
-      ? window.GpcUtils.normalizePixBaseUrl(
-        (typeof inputPixBaseUrl !== 'undefined' && inputPixBaseUrl ? inputPixBaseUrl.value : '') || latestState?.pixBaseUrl || ''
-      )
-      : String((typeof inputPixBaseUrl !== 'undefined' && inputPixBaseUrl ? inputPixBaseUrl.value : '') || latestState?.pixBaseUrl || (window.GpcUtils?.DEFAULT_PIX_BASE_URL || 'https://pixplus.1iiu.com')).trim().replace(/\/+$/g, ''),
     pixCdk: typeof inputPixCdk !== 'undefined' && inputPixCdk
       ? String(inputPixCdk.value || '').trim().toUpperCase()
       : String(latestState?.pixCdk || '').trim().toUpperCase(),
@@ -11092,9 +11084,6 @@ function updatePlusModeUI() {
   if (typeof rowPixCdk !== 'undefined' && rowPixCdk) {
     rowPixCdk.style.display = pixRowsVisible ? '' : 'none';
   }
-  if (typeof rowPixBaseUrl !== 'undefined' && rowPixBaseUrl) {
-    rowPixBaseUrl.style.display = pixRowsVisible ? '' : 'none';
-  }
 
 }
 
@@ -12008,10 +11997,6 @@ function applySettingsState(state) {
   }
   if (typeof inputPixCdk !== 'undefined' && inputPixCdk) {
     inputPixCdk.value = state?.pixCdk || '';
-  }
-  if (typeof inputPixBaseUrl !== 'undefined' && inputPixBaseUrl) {
-    const pixBaseUrl = String(state?.pixBaseUrl || '').trim();
-    inputPixBaseUrl.value = pixBaseUrl && pixBaseUrl !== DEFAULT_PIX_BASE_URL ? pixBaseUrl : '';
   }
   if (typeof inputHostedCheckoutVerificationUrl !== 'undefined' && inputHostedCheckoutVerificationUrl) {
     inputHostedCheckoutVerificationUrl.value = String(state?.hostedCheckoutVerificationUrl || '').trim();
@@ -16434,7 +16419,6 @@ selectPlusPaymentMethod?.addEventListener('change', () => {
   inputHostedCheckoutPhone,
   inputPlusHostedCheckoutOauthDelaySeconds,
   inputPixCdk,
-  inputPixBaseUrl,
 ].forEach((input) => {
   input?.addEventListener('input', () => {
     markSettingsDirty(true);
@@ -19038,10 +19022,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       }
       if (message.payload.pixCdk !== undefined && typeof inputPixCdk !== 'undefined' && inputPixCdk) {
         inputPixCdk.value = message.payload.pixCdk || '';
-      }
-      if (message.payload.pixBaseUrl !== undefined && typeof inputPixBaseUrl !== 'undefined' && inputPixBaseUrl) {
-        const pixBaseUrl = String(message.payload.pixBaseUrl || '').trim();
-        inputPixBaseUrl.value = pixBaseUrl && pixBaseUrl !== DEFAULT_PIX_BASE_URL ? pixBaseUrl : '';
       }
       if (
         message.payload.gpcBalance !== undefined

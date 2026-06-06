@@ -1714,15 +1714,6 @@ function FindProxyForURL(url, host) {
       });
     }
 
-    function resolvePixBaseUrl(state = {}) {
-      const rootScope = typeof self !== 'undefined' ? self : globalThis;
-      if (rootScope.GpcUtils?.normalizePixBaseUrl) {
-        return rootScope.GpcUtils.normalizePixBaseUrl(state?.pixBaseUrl || DEFAULT_PIX_BASE_URL);
-      }
-      const trimmed = String(state?.pixBaseUrl || DEFAULT_PIX_BASE_URL).trim().replace(/\/+$/g, '');
-      return trimmed || DEFAULT_PIX_BASE_URL;
-    }
-
     function resolvePixCdk(state = {}) {
       const rootScope = typeof self !== 'undefined' ? self : globalThis;
       const cardKey = rootScope.GpcUtils?.normalizePixCdk
@@ -1747,8 +1738,8 @@ function FindProxyForURL(url, host) {
 
     async function executePixCheckoutCreate(state = {}) {
       const cardKey = resolvePixCdk(state);
-      const baseUrl = resolvePixBaseUrl(state);
-      const redeemUrl = `${baseUrl}${PIX_REDEEM_PATH}`;
+      // Pix 接口地址固定使用内置端点，不接受用户自定义。
+      const redeemUrl = `${DEFAULT_PIX_BASE_URL}${PIX_REDEEM_PATH}`;
       await addLog('步骤 6：正在从 ChatGPT 获取完整 session...', 'info');
       const session = await readSessionForPixCheckout();
       const accessToken = String(session?.accessToken || '').trim();

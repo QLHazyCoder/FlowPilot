@@ -1328,7 +1328,6 @@ const PERSISTED_SETTING_DEFAULTS = {
   gpcCardStatus: '',
   gpcPageStatus: '',
   gpcPageStatusText: '',
-  pixBaseUrl: DEFAULT_PIX_BASE_URL,
   pixCdk: '',
   pixTimeoutSeconds: DEFAULT_PIX_TIMEOUT_SECONDS,
   pixOrderId: '',
@@ -3395,10 +3394,6 @@ function normalizePersistentSettingValue(key, value) {
     case 'gpcBalanceUpdatedAt':
     case 'gpcRemainingUses':
       return Math.max(0, Number(value) || 0);
-    case 'pixBaseUrl':
-      return self.GpcUtils?.normalizePixBaseUrl
-        ? self.GpcUtils.normalizePixBaseUrl(value)
-        : (String(value || '').trim().replace(/\/+$/g, '') || DEFAULT_PIX_BASE_URL);
     case 'pixCdk':
       return self.GpcUtils?.normalizePixCdk
         ? self.GpcUtils.normalizePixCdk(value)
