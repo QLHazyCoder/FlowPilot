@@ -23,6 +23,7 @@ importScripts(
   'phone-sms/providers/five-sim.js',
   'phone-sms/providers/nexsms.js',
   'phone-sms/providers/madao.js',
+  'phone-sms/providers/custom-url.js',
   'phone-sms/providers/registry.js',
   'background/phone-verification-flow.js',
   'background/account-run-history.js',
@@ -1444,6 +1445,8 @@ const PERSISTED_SETTING_DEFAULTS = {
   madaoReusePhone: true,
   madaoMinPrice: '',
   madaoMaxPrice: '',
+  customUrlSmsPool: '',
+  customUrlSmsPoolCursor: 0,
   phonePreferredActivation: null,
 };
 
@@ -3618,6 +3621,12 @@ function normalizePersistentSettingValue(key, value) {
     case 'madaoMinPrice':
     case 'madaoMaxPrice':
       return normalizeMaDaoPrice(value);
+    case 'customUrlSmsPool':
+      return String(value || '');
+    case 'customUrlSmsPoolCursor': {
+      const cursor = Math.floor(Number(value));
+      return Number.isFinite(cursor) && cursor > 0 ? cursor : 0;
+    }
     case 'phonePreferredActivation':
       return normalizePhonePreferredActivation(value);
     default:

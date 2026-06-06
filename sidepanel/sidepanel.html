@@ -1384,6 +1384,7 @@
                 <option value="5sim">5sim</option>
                 <option value="nexsms">NexSMS</option>
                 <option value="madao">MaDao</option>
+                <option value="custom-url">自定义 URL 接码</option>
               </select>
             </div>
             <div class="data-row" id="row-phone-sms-provider-order" style="display:none;">
@@ -1394,6 +1395,7 @@
                   <option value="5sim" selected>5sim</option>
                   <option value="nexsms" selected>NexSMS</option>
                   <option value="madao" selected>MaDao</option>
+                  <option value="custom-url" selected>自定义 URL 接码</option>
                 </select>
                 <div class="hero-sms-country-mainline">
                   <div id="phone-sms-provider-order-menu-shell" class="hero-sms-country-menu">
@@ -1630,6 +1632,14 @@
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+            <div class="data-row" id="row-custom-url-sms-pool" style="display:none;">
+              <span class="data-label">号码池</span>
+              <div class="data-inline hero-sms-country-stack">
+                <textarea id="input-custom-url-sms-pool" class="data-input mono" rows="5"
+                  placeholder="每行一条：手机号----取码URL&#10;例如 16292387346----https://app.yuntl.cc/apisms/xxxx" autocomplete="off" spellcheck="false"></textarea>
+                <span class="data-value hero-sms-country-note">每行「手机号----取码URL」，按顺序轮流使用，用完一轮从头复用。</span>
               </div>
             </div>
             <div class="data-row" id="row-hero-sms-max-price" style="display:none;">
@@ -1932,6 +1942,7 @@
   <script src="../phone-sms/providers/five-sim.js"></script>
   <script src="../phone-sms/providers/nexsms.js"></script>
   <script src="../phone-sms/providers/madao.js"></script>
+  <script src="../phone-sms/providers/custom-url.js"></script>
   <script src="../phone-sms/providers/registry.js"></script>
   <script src="../icloud-utils.js"></script>
   <script src="../mail-provider-utils.js"></script>

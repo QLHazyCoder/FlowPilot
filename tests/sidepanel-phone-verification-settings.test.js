@@ -963,6 +963,7 @@ const rowMaDaoOperator = { style: { display: 'none' } };
 const rowMaDaoAutoPickCountry = { style: { display: 'none' } };
 const rowMaDaoReusePhone = { style: { display: 'none' } };
 const rowMaDaoPriceRange = { style: { display: 'none' } };
+const rowCustomUrlSmsPool = { style: { display: 'none' } };
 const rowHeroSmsRuntimePair = { style: { display: 'none' } };
 const rowHeroSmsCurrentNumber = { style: { display: 'none' } };
 const rowHeroSmsCurrentCountdown = { style: { display: 'none' } };
@@ -1165,6 +1166,7 @@ return {
   rowMaDaoAutoPickCountry,
   rowMaDaoReusePhone,
   rowMaDaoPriceRange,
+  rowCustomUrlSmsPool,
   rowPhoneSmsPreferredPriceControl,
   rowPhoneSmsReuseControl,
   rowPhoneCodeFailureTopic,

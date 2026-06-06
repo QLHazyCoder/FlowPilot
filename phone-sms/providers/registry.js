@@ -6,12 +6,14 @@
   const PROVIDER_FIVE_SIM = '5sim';
   const PROVIDER_NEXSMS = 'nexsms';
   const PROVIDER_MADAO = 'madao';
+  const PROVIDER_CUSTOM_URL = 'custom-url';
   const DEFAULT_PROVIDER = PROVIDER_HERO_SMS;
   const DEFAULT_PROVIDER_ORDER = Object.freeze([
     PROVIDER_HERO_SMS,
     PROVIDER_FIVE_SIM,
     PROVIDER_NEXSMS,
     PROVIDER_MADAO,
+    PROVIDER_CUSTOM_URL,
   ]);
   const PROVIDER_DEFINITIONS = Object.freeze({
     [PROVIDER_HERO_SMS]: Object.freeze({
@@ -33,6 +35,11 @@
       id: PROVIDER_MADAO,
       label: 'MaDao',
       moduleKey: 'PhoneSmsMaDaoProvider',
+    }),
+    [PROVIDER_CUSTOM_URL]: Object.freeze({
+      id: PROVIDER_CUSTOM_URL,
+      label: '自定义 URL 接码',
+      moduleKey: 'PhoneSmsCustomUrlProvider',
     }),
   });
 
@@ -133,6 +140,7 @@
     PROVIDER_FIVE_SIM,
     PROVIDER_NEXSMS,
     PROVIDER_MADAO,
+    PROVIDER_CUSTOM_URL,
     DEFAULT_PROVIDER,
     DEFAULT_PROVIDER_ORDER,
     PROVIDER_DEFINITIONS,

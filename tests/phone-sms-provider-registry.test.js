@@ -24,16 +24,22 @@ test('phone sms provider registry normalizes ids, order and labels consistently'
     PhoneSmsMaDaoProvider: {
       createProvider: (deps = {}) => ({ provider: 'madao', deps }),
     },
+    PhoneSmsCustomUrlProvider: {
+      createProvider: (deps = {}) => ({ provider: 'custom-url', deps }),
+    },
   });
 
-  assert.deepStrictEqual(registry.getProviderIds(), ['hero-sms', '5sim', 'nexsms', 'madao']);
+  assert.deepStrictEqual(registry.getProviderIds(), ['hero-sms', '5sim', 'nexsms', 'madao', 'custom-url']);
   assert.equal(registry.normalizeProviderId(' NEXSMS '), 'nexsms');
   assert.equal(registry.normalizeProviderId(' MaDao '), 'madao');
+  assert.equal(registry.normalizeProviderId(' Custom-URL '), 'custom-url');
   assert.equal(registry.normalizeProviderId('unknown-provider'), 'hero-sms');
   assert.equal(registry.getProviderLabel('nexsms'), 'NexSMS');
   assert.equal(registry.getProviderLabel('madao'), 'MaDao');
+  assert.equal(registry.getProviderLabel('custom-url'), '自定义 URL 接码');
   assert.equal(registry.getProviderDefinition('nexsms').moduleKey, 'PhoneSmsNexSmsProvider');
   assert.equal(registry.getProviderDefinition('madao').moduleKey, 'PhoneSmsMaDaoProvider');
+  assert.equal(registry.getProviderDefinition('custom-url').moduleKey, 'PhoneSmsCustomUrlProvider');
   assert.deepStrictEqual(
     registry.normalizeProviderOrder([
       { provider: 'madao' },

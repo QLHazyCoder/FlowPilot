@@ -469,6 +469,8 @@ const rowMaDaoOperator = document.getElementById('row-madao-operator');
 const rowMaDaoAutoPickCountry = document.getElementById('row-madao-auto-pick-country');
 const rowMaDaoReusePhone = document.getElementById('row-madao-reuse-phone');
 const rowMaDaoPriceRange = document.getElementById('row-madao-price-range');
+const rowCustomUrlSmsPool = document.getElementById('row-custom-url-sms-pool');
+const inputCustomUrlSmsPool = document.getElementById('input-custom-url-sms-pool');
 const rowHeroSmsRuntimePair = document.getElementById('row-hero-sms-runtime-pair');
 const rowHeroSmsCurrentNumber = document.getElementById('row-hero-sms-current-number');
 const rowHeroSmsCurrentCountdown = document.getElementById('row-hero-sms-current-countdown');
@@ -690,6 +692,7 @@ const PHONE_SMS_PROVIDER_FIVE_SIM = '5sim';
 const PHONE_SMS_PROVIDER_HERO_SMS = PHONE_SMS_PROVIDER_HERO;
 const PHONE_SMS_PROVIDER_NEXSMS = 'nexsms';
 const PHONE_SMS_PROVIDER_MADAO = 'madao';
+const PHONE_SMS_PROVIDER_CUSTOM_URL = 'custom-url';
 const DEFAULT_PHONE_SMS_PROVIDER = PHONE_SMS_PROVIDER_HERO;
 const DEFAULT_PHONE_SMS_PROVIDER_ORDER = Object.freeze([
   PHONE_SMS_PROVIDER_HERO,
@@ -775,6 +778,15 @@ const PHONE_SMS_PROVIDER_UI_DESCRIPTORS = Object.freeze({
       'rowMaDaoPriceRange',
     ]),
   }),
+  [PHONE_SMS_PROVIDER_CUSTOM_URL]: Object.freeze({
+    supportsReusableActivation: false,
+    supportsManualFreeReuse: false,
+    supportsFreeReusePreservation: false,
+    supportsAutomaticFreeReuse: false,
+    rowKeys: Object.freeze([
+      'rowCustomUrlSmsPool',
+    ]),
+  }),
 });
 const HERO_SMS_COUNTRY_SELECTION_MAX = 3;
 
@@ -819,6 +831,7 @@ function getPhoneSmsProviderUiRowMap() {
     rowMaDaoAutoPickCountry,
     rowMaDaoReusePhone,
     rowMaDaoPriceRange,
+    rowCustomUrlSmsPool,
     rowPhoneSmsPreferredPriceControl,
     rowPhoneSmsReuseControl,
   };
@@ -4678,6 +4691,9 @@ function collectSettingsPayload() {
   const nexSmsApiKeyValue = typeof inputNexSmsApiKey !== 'undefined' && inputNexSmsApiKey
     ? String(inputNexSmsApiKey.value || '')
     : String(latestState?.nexSmsApiKey || '');
+  const customUrlSmsPoolValue = typeof inputCustomUrlSmsPool !== 'undefined' && inputCustomUrlSmsPool
+    ? String(inputCustomUrlSmsPool.value || '')
+    : String(latestState?.customUrlSmsPool || '');
   const maDaoBaseUrlValue = typeof inputMaDaoBaseUrl !== 'undefined' && inputMaDaoBaseUrl
     ? normalizeMaDaoBaseUrlSafe(inputMaDaoBaseUrl.value || latestState?.madaoBaseUrl)
     : normalizeMaDaoBaseUrlSafe(latestState?.madaoBaseUrl);
@@ -5354,6 +5370,7 @@ function collectSettingsPayload() {
     nexSmsApiKey: nexSmsApiKeyValue,
     nexSmsCountryOrder: nexSmsCountryOrderValue,
     nexSmsServiceCode: nexSmsServiceCodeValue,
+    customUrlSmsPool: customUrlSmsPoolValue,
     madaoBaseUrl: maDaoBaseUrlValue,
     madaoHttpSecret: maDaoHttpSecretValue,
     madaoMode: maDaoModeValue,
@@ -12357,6 +12374,9 @@ function applySettingsState(state) {
       ? normalizeNexSmsServiceCodeValue(state?.nexSmsServiceCode || defaultNexSmsServiceCode)
       : String(state?.nexSmsServiceCode || defaultNexSmsServiceCode).trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '') || defaultNexSmsServiceCode;
   }
+  if (typeof inputCustomUrlSmsPool !== 'undefined' && inputCustomUrlSmsPool) {
+    inputCustomUrlSmsPool.value = String(state?.customUrlSmsPool || '');
+  }
   if (typeof inputMaDaoBaseUrl !== 'undefined' && inputMaDaoBaseUrl) {
     inputMaDaoBaseUrl.value = normalizeMaDaoBaseUrlValue(state?.madaoBaseUrl);
   }
@@ -17715,6 +17735,17 @@ function buildPhoneSmsProviderStatePatch(provider = getSelectedPhoneSmsProvider(
     };
   }
 
+  const customUrlProviderValue = typeof PHONE_SMS_PROVIDER_CUSTOM_URL !== 'undefined'
+    ? PHONE_SMS_PROVIDER_CUSTOM_URL
+    : 'custom-url';
+  if (normalizedProvider === customUrlProviderValue) {
+    return {
+      customUrlSmsPool: typeof inputCustomUrlSmsPool !== 'undefined' && inputCustomUrlSmsPool
+        ? String(inputCustomUrlSmsPool.value || '')
+        : String(latestState?.customUrlSmsPool || ''),
+    };
+  }
+
   const currentSelection = typeof getPhoneSmsCountrySelectionForProvider === 'function'
     ? getPhoneSmsCountrySelectionForProvider(PHONE_SMS_PROVIDER_HERO_SMS, { ensureDefault: true })
     : [];
@@ -18022,6 +18053,14 @@ inputNexSmsApiKey?.addEventListener('input', () => {
   scheduleSettingsAutoSave();
 });
 inputNexSmsApiKey?.addEventListener('blur', () => {
+  saveSettings({ silent: true }).catch(() => { });
+});
+
+inputCustomUrlSmsPool?.addEventListener('input', () => {
+  markSettingsDirty(true);
+  scheduleSettingsAutoSave();
+});
+inputCustomUrlSmsPool?.addEventListener('blur', () => {
   saveSettings({ silent: true }).catch(() => { });
 });
 
