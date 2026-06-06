@@ -1014,6 +1014,13 @@
                 await addLog('步骤 4：检测到账号已直接进入已登录态，已自动跳过步骤 5。', 'warn');
               }
             }
+            if (payload.skipRegistrationWaitStep) {
+              const step6Status = getNodeStatusByStep(6, latestState);
+              if (step6Status !== 'running' && step6Status !== 'completed' && step6Status !== 'manual_completed') {
+                await setNodeStatusByStep(6, 'skipped', latestState);
+                await addLog('步骤 4：账号已进入 ChatGPT 已登录态，已自动跳过步骤 6，流程将直接进入步骤 7。', 'warn');
+              }
+            }
           }
           break;
         case 7:

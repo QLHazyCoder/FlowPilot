@@ -195,6 +195,7 @@ return {
   assert.deepStrictEqual(result, {
     success: true,
     skipProfileStep: true,
+    skipRegistrationWaitStep: true,
     url: 'https://chatgpt.com/',
   });
 });

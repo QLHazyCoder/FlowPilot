@@ -78,11 +78,17 @@
         : '';
     }
 
-    const isRetryableVerificationTransportError = typeof deps.isRetryableContentScriptTransportError === 'function'
+    const baseRetryableVerificationTransportError = typeof deps.isRetryableContentScriptTransportError === 'function'
       ? deps.isRetryableContentScriptTransportError
       : ((error) => /back\/forward cache|message channel is closed|Receiving end does not exist|port closed before a response was received|A listener indicated an asynchronous response|内容脚本\s+\d+(?:\.\d+)?\s*秒内未响应|did not respond in \d+s/i.test(
         String(typeof error === 'string' ? error : error?.message || '')
       ));
+
+    function isRetryableVerificationTransportError(error) {
+      const message = String(typeof error === 'string' ? error : error?.message || '');
+      return Boolean(baseRetryableVerificationTransportError(error))
+        || /页面刚完成跳转或刷新，内容脚本还没有重新接回/i.test(message);
+    }
 
     function getVerificationCodeStateKey(step) {
       return step === 4 ? 'lastSignupCode' : 'lastLoginCode';
@@ -199,6 +205,7 @@
               success: true,
               reason: 'chatgpt_home',
               skipProfileStep: true,
+              skipRegistrationWaitStep: true,
               url: currentUrl,
             };
           }
@@ -1176,6 +1183,7 @@
                 assumed: true,
                 transportRecovered: true,
                 skipProfileStep: Boolean(fallback.skipProfileStep),
+                skipRegistrationWaitStep: Boolean(fallback.skipRegistrationWaitStep),
                 url: fallback.url,
               };
             }
@@ -1439,6 +1447,7 @@
             code: result.code,
             phoneVerificationRequired: Boolean(submitResult.addPhonePage),
             ...(step === 4 && submitResult?.skipProfileStep ? { skipProfileStep: true } : {}),
+            ...(step === 4 && submitResult?.skipRegistrationWaitStep ? { skipRegistrationWaitStep: true } : {}),
             ...(step === 4 && submitResult?.skipProfileStepReason
               ? { skipProfileStepReason: submitResult.skipProfileStepReason }
               : {}),

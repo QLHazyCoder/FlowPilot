@@ -10985,6 +10985,27 @@ async function handleStepData(step, payload) {
         }),
         signupVerificationRequestedAt: null,
       });
+      if (payload.skipProfileStep) {
+        const latestState = await getState();
+        const step5NodeId = getNodeIdByStepForState(5, latestState);
+        const step5Status = step5NodeId ? latestState.nodeStatuses?.[step5NodeId] : '';
+        if (step5NodeId && step5Status !== 'running' && step5Status !== 'completed' && step5Status !== 'manual_completed') {
+          await setNodeStatus(step5NodeId, 'skipped');
+          if (payload.skipProfileStepReason === 'combined_verification_profile') {
+            await addLog('步骤 4：当前验证码页已内嵌完成注册资料提交，已自动跳过步骤 5。', 'warn');
+          } else {
+            await addLog('步骤 4：检测到账号已直接进入已登录态，已自动跳过步骤 5。', 'warn');
+          }
+        }
+        if (payload.skipRegistrationWaitStep) {
+          const step6NodeId = getNodeIdByStepForState(6, latestState);
+          const step6Status = step6NodeId ? latestState.nodeStatuses?.[step6NodeId] : '';
+          if (step6NodeId && step6Status !== 'running' && step6Status !== 'completed' && step6Status !== 'manual_completed') {
+            await setNodeStatus(step6NodeId, 'skipped');
+            await addLog('步骤 4：账号已进入 ChatGPT 已登录态，已自动跳过步骤 6，流程将直接进入步骤 7。', 'warn');
+          }
+        }
+      }
       break;
     case 8:
       await setState({

@@ -1618,6 +1618,43 @@ test('verification flow uses resilient openai-auth transport when submitting ver
   assert.ok(resilientCalls[0].options.timeoutMs >= 30000);
 });
 
+test('verification flow treats step 4 resilient reconnect timeout as success when tab reached logged-in home', async () => {
+  const logs = [];
+
+  const helpers = api.createVerificationFlowHelpers({
+    addLog: async (message, level) => {
+      logs.push({ message, level });
+    },
+    chrome: {
+      tabs: {
+        update: async () => {},
+        get: async () => ({
+          id: 1,
+          url: 'https://chatgpt.com/',
+        }),
+      },
+    },
+    getTabId: async () => 1,
+    isRetryableContentScriptTransportError: (error) => /did not respond/i.test(String(error?.message || error || '')),
+    sendToContentScriptResilient: async () => {
+      throw new Error('认证页 页面刚完成跳转或刷新，内容脚本还没有重新接回；扩展已自动重试，但仍未恢复。请重试当前步骤。');
+    },
+    sleepWithStop: async () => {},
+  });
+
+  const result = await helpers.submitVerificationCode(4, '654321');
+
+  assert.deepStrictEqual(result, {
+    success: true,
+    assumed: true,
+    transportRecovered: true,
+    skipProfileStep: true,
+    skipRegistrationWaitStep: true,
+    url: 'https://chatgpt.com/',
+  });
+  assert.equal(logs.some(({ message }) => /ChatGPT 已登录首页/.test(message)), true);
+});
+
 test('verification flow does not replay step 8 code submit after transient auth-page transport failure', async () => {
   const directMessages = [];
   const resilientMessages = [];

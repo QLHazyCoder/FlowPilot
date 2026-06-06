@@ -398,6 +398,25 @@ test('message router skips step 5 when step 4 reports already logged-in transiti
   assert.equal(events.logs[0]?.message, '步骤 4：检测到账号已直接进入已登录态，已自动跳过步骤 5。');
 });
 
+test('message router skips steps 5 and 6 when step 4 reaches logged-in home', async () => {
+  const { router, events } = createRouter({
+    state: { stepStatuses: { 5: 'pending', 6: 'pending' } },
+  });
+
+  await router.handleStepData(4, {
+    emailTimestamp: 123,
+    skipProfileStep: true,
+    skipRegistrationWaitStep: true,
+  });
+
+  assert.deepStrictEqual(events.stepStatuses, [
+    { step: 5, status: 'skipped' },
+    { step: 6, status: 'skipped' },
+  ]);
+  assert.equal(events.logs[0]?.message, '步骤 4：检测到账号已直接进入已登录态，已自动跳过步骤 5。');
+  assert.equal(events.logs[1]?.message, '步骤 4：账号已进入 ChatGPT 已登录态，已自动跳过步骤 6，流程将直接进入步骤 7。');
+});
+
 test('message router skips login-code step when oauth login lands on consent page', async () => {
   const stepKeys = {
     7: 'oauth-login',
