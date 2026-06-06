@@ -681,7 +681,6 @@
 
       for (let targetRun = resumeCurrentRun; targetRun <= totalRuns; targetRun += 1) {
         const roundSummary = roundSummaries[targetRun - 1];
-        let roundRecordAppended = false;
         const resumingCurrentRound = continueCurrentOnFirstAttempt && targetRun === resumeCurrentRun;
         let attemptRun = resumingCurrentRound ? resumeAttemptRun : 1;
         let reuseExistingProgress = resumingCurrentRound;
@@ -756,21 +755,14 @@
             forceFreshTabsNextRun = false;
           }
 
-          const appendRoundRecordIfNeeded = async (status, reason = '', errorLike = null) => {
-            if (roundRecordAppended) {
-              return;
-            }
-
+          const appendRoundRecord = async (status, reason = '', errorLike = null, stateOverride = null) => {
             if (typeof appendAccountRunRecord !== 'function') {
               return;
             }
 
-            const recordState = await getState();
+            const recordState = stateOverride || await getState();
             const recordStatus = resolveAutoRunAccountRecordStatus(status, recordState, errorLike);
-            const record = await appendAccountRunRecord(recordStatus, recordState, reason);
-            if (record) {
-              roundRecordAppended = true;
-            }
+            return appendAccountRunRecord(recordStatus, recordState, reason);
           };
 
           try {
@@ -810,7 +802,7 @@
           } catch (err) {
             if (isStopError(err)) {
               stoppedEarly = true;
-              await appendRoundRecordIfNeeded('stopped', getErrorMessage(err), err);
+              await appendRoundRecord('stopped', getErrorMessage(err), err);
               await addLog(`第 ${targetRun}/${totalRuns} 轮已被用户停止`, 'warn');
               await broadcastAutoRunStatus('stopped', {
                 currentRun: targetRun,
@@ -871,7 +863,7 @@
               await setState({
                 autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               });
-              await appendRoundRecordIfNeeded('failed', reason, err);
+              await appendRoundRecord('failed', reason, err);
               cancelPendingCommands('当前轮因认证流程进入 add-phone 已终止。');
               await broadcastStopToContentScripts();
               if (!autoRunSkipFailures) {
@@ -906,7 +898,7 @@
               await setState({
                 autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               });
-              await appendRoundRecordIfNeeded('failed', reason, err);
+              await appendRoundRecord('failed', reason, err);
               cancelPendingCommands('当前轮因接码号池暂无可用号码已终止。');
               await broadcastStopToContentScripts();
               if (!autoRunSkipFailures) {
@@ -941,7 +933,7 @@
               await setState({
                 autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               });
-              await appendRoundRecordIfNeeded('failed', reason, err);
+              await appendRoundRecord('failed', reason, err);
               cancelPendingCommands('当前轮因 Plus 免费试用资格不可用已终止。');
               await broadcastStopToContentScripts();
               if (!autoRunSkipFailures) {
@@ -976,7 +968,7 @@
               await setState({
                 autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               });
-              await appendRoundRecordIfNeeded('failed', reason, err);
+              await appendRoundRecord('failed', reason, err);
               cancelPendingCommands('当前轮因 GPC 页面流程已结束。');
               await broadcastStopToContentScripts();
               if (!autoRunSkipFailures) {
@@ -1011,7 +1003,7 @@
               await setState({
                 autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               });
-              await appendRoundRecordIfNeeded('failed', reason, err);
+              await appendRoundRecord('failed', reason, err);
               cancelPendingCommands('当前轮因 user_already_exists 已终止。');
               await broadcastStopToContentScripts();
               if (!autoRunSkipFailures) {
@@ -1046,7 +1038,7 @@
               await setState({
                 autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               });
-              await appendRoundRecordIfNeeded('failed', reason, err);
+              await appendRoundRecord('failed', reason, err);
               cancelPendingCommands('当前轮因步骤 4 连续 405 错误已终止。');
               await broadcastStopToContentScripts();
               if (!autoRunSkipFailures) {
@@ -1081,7 +1073,7 @@
               await setState({
                 autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               });
-              await appendRoundRecordIfNeeded('failed', reason, err);
+              await appendRoundRecord('failed', reason, err);
               cancelPendingCommands('当前轮检测到 Kiro 代理异常页，已停止自动运行，等待用户切换代理。');
               await broadcastStopToContentScripts();
               await addLog(`第 ${targetRun}/${totalRuns} 轮检测到 Kiro 代理异常页：${reason}`, 'error');
@@ -1123,7 +1115,7 @@
               } catch (sleepError) {
                 if (isStopError(sleepError)) {
                   stoppedEarly = true;
-                  await appendRoundRecordIfNeeded('stopped', getErrorMessage(sleepError), sleepError);
+                  await appendRoundRecord('stopped', getErrorMessage(sleepError), sleepError);
                   await addLog(`第 ${targetRun}/${totalRuns} 轮已被用户停止`, 'warn');
                   await broadcastAutoRunStatus('stopped', {
                     currentRun: targetRun,
@@ -1147,7 +1139,7 @@
               } catch (sleepError) {
                 if (isStopError(sleepError)) {
                   stoppedEarly = true;
-                  await appendRoundRecordIfNeeded('stopped', getErrorMessage(sleepError), sleepError);
+                  await appendRoundRecord('stopped', getErrorMessage(sleepError), sleepError);
                   await addLog(`第 ${targetRun}/${totalRuns} 轮已被用户停止`, 'warn');
                   await broadcastAutoRunStatus('stopped', {
                     currentRun: targetRun,
@@ -1169,7 +1161,7 @@
             await setState({
               autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
             });
-            await appendRoundRecordIfNeeded('failed', reason, err);
+            await appendRoundRecord('failed', reason, err);
             if (!autoRunSkipFailures) {
               cancelPendingCommands('当前轮执行失败。');
               await broadcastStopToContentScripts();

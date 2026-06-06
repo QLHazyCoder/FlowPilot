@@ -138,7 +138,8 @@
       if (!isAutoRunRecordDisplayRunning(currentState)) {
         return record;
       }
-      if (getRecordDisplayStatus(record) === 'success') {
+      const persistedStatus = String(record.finalStatus || '').trim().toLowerCase();
+      if (persistedStatus === 'success') {
         return record;
       }
 
@@ -151,6 +152,72 @@
         ...record,
         displayStatus: 'running',
         displaySummary: '正在运行',
+      };
+    }
+
+    function buildRuntimeRunningRecord(currentState = {}) {
+      if (!isAutoRunRecordDisplayRunning(currentState)) {
+        return null;
+      }
+
+      const recordId = buildCurrentAccountRecordId(currentState);
+      if (!recordId) {
+        return null;
+      }
+
+      const accountIdentifierType = String(currentState.accountIdentifierType || '').trim().toLowerCase() === 'phone'
+        ? 'phone'
+        : 'email';
+      const email = String(currentState.email || '').trim();
+      const phoneNumber = String(
+        currentState.signupPhoneNumber
+        || currentState.phoneNumber
+        || currentState.phone
+        || ''
+      ).trim();
+      const accountIdentifier = String(
+        currentState.accountIdentifier
+        || (accountIdentifierType === 'phone' ? phoneNumber : email)
+        || ''
+      ).trim();
+      const retryCount = Math.max(0, Math.floor(Number(currentState.autoRunAttemptRun) || 0) - 1);
+      const sessionId = Number(currentState.autoRunSessionId) || 0;
+      const currentRun = Math.max(0, Math.floor(Number(currentState.autoRunCurrentRun) || 0));
+      const totalRuns = Math.max(0, Math.floor(Number(currentState.autoRunTotalRuns) || 0));
+      const attemptRun = Math.max(0, Math.floor(Number(currentState.autoRunAttemptRun) || 0));
+      const phase = String(currentState.autoRunPhase || '').trim().toLowerCase();
+      const phaseLabel = phase === 'waiting_step'
+        ? '等待步骤执行'
+        : (phase === 'waiting_email'
+          ? '等待邮箱'
+          : (phase === 'retrying' ? '等待重试' : '正在运行'));
+      const positionLabel = currentRun > 0 && totalRuns > 0
+        ? `第 ${currentRun}/${totalRuns} 轮`
+        : '';
+      const attemptLabel = attemptRun > 0 ? `第 ${attemptRun} 次尝试` : '';
+      const summary = [phaseLabel, positionLabel, attemptLabel].filter(Boolean).join(' · ');
+
+      return {
+        recordId,
+        runtimeRecord: true,
+        runtimeSessionId: sessionId,
+        accountIdentifierType,
+        accountIdentifier,
+        email,
+        phoneNumber,
+        finalStatus: 'running',
+        displayStatus: 'running',
+        displaySummary: summary || '正在运行',
+        failureLabel: '正在运行',
+        failureDetail: '',
+        finishedAt: new Date().toISOString(),
+        retryCount,
+        source: 'auto',
+        autoRunContext: {
+          currentRun,
+          totalRuns,
+          attemptRun,
+        },
       };
     }
 
@@ -222,11 +289,20 @@
     }
 
     function getAccountRunRecords(currentState = state.getLatestState()) {
-      return (Array.isArray(currentState?.accountRunHistory) ? currentState.accountRunHistory : [])
+      const persistedRecords = (Array.isArray(currentState?.accountRunHistory) ? currentState.accountRunHistory : [])
         .filter((item) => item && typeof item === 'object')
         .slice()
         .sort((left, right) => normalizeTimestamp(right.finishedAt) - normalizeTimestamp(left.finishedAt))
         .map((record) => applyRunningDisplayState(record, currentState));
+      const runtimeRecord = buildRuntimeRunningRecord(currentState);
+      if (!runtimeRecord) {
+        return persistedRecords;
+      }
+
+      const runtimeRecordId = buildRecordId(runtimeRecord);
+      const filteredRecords = persistedRecords.filter((record) => buildRecordId(record) !== runtimeRecordId);
+      return [runtimeRecord, ...filteredRecords]
+        .sort((left, right) => normalizeTimestamp(right.finishedAt) - normalizeTimestamp(left.finishedAt));
     }
 
     function summarizeAccountRunHistory(records = []) {
@@ -642,6 +718,11 @@
       const shouldSelect = forceSelected === null
         ? !selectedRecordIds.has(normalizedRecordId)
         : Boolean(forceSelected);
+      const records = getAccountRunRecords();
+      const targetRecord = records.find((record) => buildRecordId(record) === normalizedRecordId);
+      if (targetRecord?.runtimeRecord) {
+        return;
+      }
 
       if (shouldSelect) {
         selectedRecordIds.add(normalizedRecordId);
@@ -711,7 +792,10 @@
         throw new Error(response.error);
       }
 
-      const existingRecords = getAccountRunRecords();
+      const existingRecords = (Array.isArray(state.getLatestState()?.accountRunHistory)
+        ? state.getLatestState().accountRunHistory
+        : []
+      ).filter((item) => item && typeof item === 'object');
       const selectedIds = new Set(recordIds);
       const nextRecords = existingRecords.filter((record) => !selectedIds.has(buildRecordId(record)));
 

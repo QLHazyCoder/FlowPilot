@@ -4619,9 +4619,13 @@ async function setEmailState(email, options = {}) {
   await setEmailStateSilently(email, options);
   if (email) {
     const latestState = await getState();
-    const recordStatus = shouldMarkAccountRunRecordRunning(latestState) ? 'running' : 'node:submit-signup-email:stopped';
-    const recordReason = recordStatus === 'running' ? '正在运行' : '节点 submit-signup-email 已使用邮箱，流程尚未完成。';
-    await appendManualAccountRunRecordIfNeeded(recordStatus, latestState, recordReason);
+    if (!shouldMarkAccountRunRecordRunning(latestState)) {
+      await appendManualAccountRunRecordIfNeeded(
+        'node:submit-signup-email:stopped',
+        latestState,
+        '节点 submit-signup-email 已使用邮箱，流程尚未完成。'
+      );
+    }
     await resumeAutoRunIfWaitingForEmail();
   }
 }
@@ -4700,9 +4704,13 @@ async function setSignupPhoneState(phoneNumber) {
   await setSignupPhoneStateSilently(phoneNumber);
   if (String(phoneNumber || '').trim()) {
     const latestState = await getState();
-    const recordStatus = shouldMarkAccountRunRecordRunning(latestState) ? 'running' : 'node:submit-signup-email:stopped';
-    const recordReason = recordStatus === 'running' ? '正在运行' : '节点 submit-signup-email 已使用手机号，流程尚未完成。';
-    await appendManualAccountRunRecordIfNeeded(recordStatus, latestState, recordReason);
+    if (!shouldMarkAccountRunRecordRunning(latestState)) {
+      await appendManualAccountRunRecordIfNeeded(
+        'node:submit-signup-email:stopped',
+        latestState,
+        '节点 submit-signup-email 已使用手机号，流程尚未完成。'
+      );
+    }
   }
 }
 
@@ -11329,9 +11337,8 @@ async function completeNodeFromBackground(nodeId, payload = {}) {
         nodeId: normalizedNodeId,
       });
     }
+    await runCompletedNodeSideEffects(normalizedNodeId, payload, completionState, lastNodeId);
     notifyNodeComplete(normalizedNodeId, payload);
-    void runCompletedNodeSideEffects(normalizedNodeId, payload, completionState, lastNodeId)
-      .catch((error) => reportCompletedNodeSideEffectError(normalizedNodeId, error));
     return;
   }
 

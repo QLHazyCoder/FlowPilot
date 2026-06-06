@@ -151,11 +151,7 @@ test('account run history helper upgrades old records, keeps stopped items and s
     autoRunTotalRuns: 2,
     autoRunAttemptRun: 1,
   }, 'running', '正在运行');
-  assert.equal(runningRecord.finalStatus, 'running');
-  assert.equal(runningRecord.failureLabel, '正在运行');
-  assert.equal(runningRecord.failureDetail, '');
-  assert.equal(runningRecord.failedStep, null);
-  assert.equal(runningRecord.source, 'auto');
+  assert.equal(runningRecord, null);
 
   const normalizedStoppedRecord = helpers.normalizeAccountRunHistoryRecord({
     recordId: 'legacy-stop@example.com',

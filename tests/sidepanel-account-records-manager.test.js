@@ -286,6 +286,75 @@ test('account records manager shows full failure detail before short label', () 
   assert.doesNotMatch(list.innerHTML, /account-record-item-summary">步骤 2 失败/);
 });
 
+test('account records manager renders runtime running entry from live state instead of persisted running history', () => {
+  const source = fs.readFileSync('sidepanel/account-records-manager.js', 'utf8');
+  const windowObject = {};
+  const api = new Function('window', `${source}; return window.SidepanelAccountRecordsManager;`)(windowObject);
+
+  const latestState = {
+    autoRunning: true,
+    autoRunPhase: 'retrying',
+    autoRunCurrentRun: 2,
+    autoRunTotalRuns: 5,
+    autoRunAttemptRun: 3,
+    autoRunSessionId: 77,
+    accountIdentifierType: 'email',
+    accountIdentifier: 'running@example.com',
+    email: 'running@example.com',
+    accountRunHistory: [
+      {
+        recordId: 'running@example.com',
+        accountIdentifierType: 'email',
+        accountIdentifier: 'running@example.com',
+        email: 'running@example.com',
+        finalStatus: 'stopped',
+        finishedAt: '2026-04-17T04:32:00.000Z',
+        retryCount: 0,
+        failureLabel: '姝ラ 2 鍋滄',
+      },
+      {
+        recordId: 'failed@example.com',
+        accountIdentifierType: 'email',
+        accountIdentifier: 'failed@example.com',
+        email: 'failed@example.com',
+        finalStatus: 'failed',
+        finishedAt: '2026-04-17T04:30:00.000Z',
+        retryCount: 1,
+        failureLabel: '姝ラ 8 澶辫触',
+      },
+    ],
+  };
+
+  const list = createNode();
+  const manager = api.createAccountRecordsManager({
+    state: {
+      getLatestState: () => latestState,
+      syncLatestState() {},
+    },
+    dom: {
+      accountRecordsList: list,
+      accountRecordsMeta: createNode(),
+      accountRecordsPageLabel: createNode(),
+      accountRecordsStats: createNode(),
+    },
+    helpers: {
+      escapeHtml: (value) => String(value || ''),
+    },
+    runtime: {
+      sendMessage: async () => ({}),
+    },
+  });
+
+  manager.render();
+
+  assert.match(list.innerHTML, /is-running/);
+  assert.match(list.innerHTML, /等待重试/);
+  assert.match(list.innerHTML, /第 2\/5 轮/);
+  assert.match(list.innerHTML, /第 3 次尝试/);
+  assert.match(list.innerHTML, /failed@example\.com/);
+  assert.doesNotMatch(list.innerHTML, /姝ラ 2 鍋滄/);
+});
+
 test('account records manager supports filter chips and partial multi-select delete', async () => {
   const source = fs.readFileSync('sidepanel/account-records-manager.js', 'utf8');
   const windowObject = {};

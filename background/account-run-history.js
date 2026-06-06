@@ -32,9 +32,6 @@
       if (normalized === 'success') {
         return 'success';
       }
-      if (normalized === 'running' || /_running$/.test(normalized) || /^node:[^:]+:running$/.test(normalized)) {
-        return 'running';
-      }
       if (normalized === 'failed' || /_failed$/.test(normalized) || /^node:[^:]+:failed$/.test(normalized)) {
         return 'failed';
       }
@@ -209,9 +206,6 @@
     function buildFailureLabel(finalStatus, failedNodeId = '', failedStep = null, failureDetail = '', state = {}) {
       if (finalStatus === 'success') {
         return '流程完成';
-      }
-      if (finalStatus === 'running') {
-        return '正在运行';
       }
       if (finalStatus === 'stopped') {
         if (failedNodeId) {
