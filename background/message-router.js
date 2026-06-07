@@ -689,6 +689,9 @@
       if (normalized === 'gpc-helper') {
         return 'gpc-helper';
       }
+      if (normalized === 'plus-pix' || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus') {
+        return 'plus-pix';
+      }
       return 'paypal';
     }
 
@@ -702,6 +705,9 @@
       }
       if (method === 'gpc-helper') {
         return 'GPC';
+      }
+      if (method === 'plus-pix') {
+        return 'Pix';
       }
       return 'PayPal';
     }
