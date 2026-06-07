@@ -8,7 +8,7 @@
   const PLUS_PAYMENT_METHOD_AUTO = 'plus-auto';
   const DEFAULT_GPC_BASE_URL = 'https://gpc.qlhazycoder.top';
   const ALLOWED_GPC_REMOTE_HOST = 'gpc.qlhazycoder.top';
-  const DEFAULT_AUTO_BASE_URL = 'https://pixplus.1iiu.com';
+  const DEFAULT_AUTO_BASE_URL = 'https://auto.1iiu.com';
 
   function normalizePlusPaymentMethod(value = '') {
     const normalized = String(value || '').trim().toLowerCase();

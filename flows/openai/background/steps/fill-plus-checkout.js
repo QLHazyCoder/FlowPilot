@@ -10,7 +10,7 @@
   const PLUS_PAYMENT_METHOD_PAYPAL = 'paypal';
   const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
   const PLUS_PAYMENT_METHOD_AUTO = 'plus-auto';
-  const DEFAULT_AUTO_BASE_URL = 'https://pixplus.1iiu.com';
+  const DEFAULT_AUTO_BASE_URL = 'https://auto.1iiu.com';
   const AUTO_ORDER_PATH = '/api/v1/orders';
   const AUTO_JOB_LOGS_PATH = '/api/v1/jobs';
   const AUTO_POLL_INTERVAL_MS = 3000;

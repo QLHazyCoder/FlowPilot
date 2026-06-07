@@ -11,7 +11,7 @@
 
   const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
   const PLUS_PAYMENT_METHOD_AUTO = 'plus-auto';
-  const DEFAULT_AUTO_BASE_URL = 'https://pixplus.1iiu.com';
+  const DEFAULT_AUTO_BASE_URL = 'https://auto.1iiu.com';
   const AUTO_REDEEM_PATH = '/api/v1/redeem';
   const AUTO_REQUEST_TIMEOUT_MS = 30000;
   const LOCAL_CHECKOUT_PROXY_HEALTH_URL = 'http://127.0.0.1:21988/health';

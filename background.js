@@ -732,7 +732,7 @@ const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
 const PLUS_PAYMENT_METHOD_AUTO = 'plus-auto';
 const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_AUTO;
 const DEFAULT_AUTO_BASE_URL = (typeof self !== 'undefined' && self.GpcUtils?.DEFAULT_AUTO_BASE_URL)
-  || 'https://pixplus.1iiu.com';
+  || 'https://auto.1iiu.com';
 const DEFAULT_AUTO_TIMEOUT_SECONDS = 900;
 const DEFAULT_PLUS_HOSTED_CHECKOUT_OAUTH_DELAY_SECONDS = 3;
 const DISPLAY_TIMEZONE = 'Asia/Shanghai';
