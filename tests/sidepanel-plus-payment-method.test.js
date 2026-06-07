@@ -495,12 +495,14 @@ const plusPaymentMethodCaption = { textContent: '' };
 const rowPayPalAccount = { style: { display: '' } };
 const rowGpcCardKey = { style: { display: '' } };
 const rowPixCdk = { style: { display: 'none' } };
+const btnPixCdkPurchase = { style: { display: 'none' } };
 ${bundle}
 return {
   updatePlusModeUI,
   selectPlusPaymentMethod,
   plusPaymentMethodCaption,
   rows: { rowGpcCardKey, rowPixCdk, rowPayPalAccount },
+  btnPixCdkPurchase,
 };
 `)();
 
@@ -509,11 +511,13 @@ return {
   assert.equal(api.rows.rowPixCdk.style.display, '');
   assert.equal(api.rows.rowGpcCardKey.style.display, 'none');
   assert.equal(api.rows.rowPayPalAccount.style.display, 'none');
-  assert.match(api.plusPaymentMethodCaption.textContent, /Pix/);
+  assert.equal(api.plusPaymentMethodCaption.textContent, '', 'Pix 不显示说明文字');
+  assert.equal(api.btnPixCdkPurchase.style.display, '', 'Pix 显示获取卡密按钮');
 
   api.selectPlusPaymentMethod.value = 'gpc-helper';
   api.updatePlusModeUI();
   assert.equal(api.rows.rowPixCdk.style.display, 'none');
+  assert.equal(api.btnPixCdkPurchase.style.display, 'none', '非 Pix 隐藏获取卡密按钮');
   assert.equal(api.rows.rowGpcCardKey.style.display, '');
 });
 
@@ -523,6 +527,8 @@ test('sidepanel HTML exposes the Pix payment option and config rows', () => {
   assert.match(sidepanelHtml, /id="input-pix-cdk"/);
   // Pix 接口地址固定内置，不在 UI 暴露。
   assert.doesNotMatch(sidepanelHtml, /id="input-pix-base-url"/);
+  // 「获取卡密」按钮
+  assert.match(sidepanelHtml, /id="btn-pix-cdk-purchase"[^>]*>获取卡密</);
 });
 
 test('sidepanel start check only requires a GPC card key', async () => {

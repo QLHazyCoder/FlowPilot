@@ -219,6 +219,7 @@ const inputPlusModeEnabled = document.getElementById('input-plus-mode-enabled');
 const rowPlusPaymentMethod = document.getElementById('row-plus-payment-method');
 const selectPlusPaymentMethod = document.getElementById('select-plus-payment-method');
 const btnGpcCardKeyPurchase = document.getElementById('btn-gpc-card-key-purchase');
+const btnPixCdkPurchase = document.getElementById('btn-pix-cdk-purchase');
 const plusPaymentMethodCaption = document.getElementById('plus-payment-method-caption');
 const rowPlusAccountAccessStrategy = document.getElementById('row-plus-account-access-strategy');
 const selectPlusAccountAccessStrategy = document.getElementById('select-plus-account-access-strategy');
@@ -10965,7 +10966,7 @@ function updatePlusModeUI() {
       ? 'GPC 网页充值链路'
 
       : method === pixValue
-      ? 'Pix 卡密充值链路'
+      ? ''
       : method === noneValue
       ? '已有 Plus，无需配置支付链路'
       : method === paypalHostedValue
@@ -11083,6 +11084,9 @@ function updatePlusModeUI() {
   }
   if (typeof rowPixCdk !== 'undefined' && rowPixCdk) {
     rowPixCdk.style.display = pixRowsVisible ? '' : 'none';
+  }
+  if (typeof btnPixCdkPurchase !== 'undefined' && btnPixCdkPurchase) {
+    btnPixCdkPurchase.style.display = pixRowsVisible ? '' : 'none';
   }
 
 }
@@ -16341,6 +16345,10 @@ inputPlusModeEnabled?.addEventListener('change', () => {
 
 btnGpcCardKeyPurchase?.addEventListener('click', () => {
   openExternalUrl('https://pay.ldxp.cn/shop/gpc');
+});
+
+btnPixCdkPurchase?.addEventListener('click', () => {
+  openExternalUrl('https://shop.qlhazycoder.top/');
 });
 
 btnOpenTargetRepository?.addEventListener('click', () => {
