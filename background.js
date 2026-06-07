@@ -730,7 +730,7 @@ const PLUS_PAYMENT_METHOD_PAYPAL_HOSTED = 'paypal-hosted';
 const PLUS_PAYMENT_METHOD_NONE = 'none';
 const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
 const PLUS_PAYMENT_METHOD_PIX = 'plus-pix';
-const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_GPC_HELPER;
+const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_PIX;
 const DEFAULT_PIX_BASE_URL = (typeof self !== 'undefined' && self.GpcUtils?.DEFAULT_PIX_BASE_URL)
   || 'https://pixplus.1iiu.com';
 const DEFAULT_PIX_TIMEOUT_SECONDS = 900;

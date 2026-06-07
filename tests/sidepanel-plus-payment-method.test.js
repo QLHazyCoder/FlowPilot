@@ -62,12 +62,11 @@ function extractLastFunction(name) {
   return sidepanelSource.slice(start, end);
 }
 
-test('sidepanel defaults Plus payment method to GPC', () => {
-  assert.match(sidepanelSource, /const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_GPC_HELPER;/);
+test('sidepanel defaults Plus payment method to Pix', () => {
+  assert.match(sidepanelSource, /const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_PIX;/);
   assert.match(sidepanelSource, /currentPlusPaymentMethod = DEFAULT_PLUS_PAYMENT_METHOD/);
   assert.match(sidepanelSource, /state\?\.plusPaymentMethod \|\| DEFAULT_PLUS_PAYMENT_METHOD/);
-  assert.match(sidepanelHtml, /<option value="gpc-helper" selected>GPC<\/option>/);
-  assert.match(sidepanelHtml, /id="plus-payment-method-caption">GPC 网页充值链路<\/span>/);
+  assert.match(sidepanelHtml, /<option value="plus-pix" selected>Pix 充值<\/option>/);
 });
 
 test('sidepanel step definitions normalize legacy gopay payment method to PayPal', () => {
@@ -522,7 +521,7 @@ return {
 });
 
 test('sidepanel HTML exposes the Pix payment option and config rows', () => {
-  assert.match(sidepanelHtml, /<option value="plus-pix">Pix 充值<\/option>/);
+  assert.match(sidepanelHtml, /<option value="plus-pix" selected>Pix 充值<\/option>/);
   assert.match(sidepanelHtml, /id="row-pix-cdk"/);
   assert.match(sidepanelHtml, /id="input-pix-cdk"/);
   // Pix 接口地址固定内置，不在 UI 暴露。
