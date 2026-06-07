@@ -1740,14 +1740,14 @@ function FindProxyForURL(url, host) {
       const cardKey = resolvePixCdk(state);
       // Pix 接口地址固定使用内置端点，不接受用户自定义。
       const redeemUrl = `${DEFAULT_PIX_BASE_URL}${PIX_REDEEM_PATH}`;
-      await addLog('步骤 6：正在从 ChatGPT 获取完整 session...', 'info');
+      await addLog('发起 Pix 充值：正在从 ChatGPT 获取完整 session...', 'info');
       const session = await readSessionForPixCheckout();
       const accessToken = String(session?.accessToken || '').trim();
       if (!session || !accessToken) {
-        throw new Error('步骤 6：Pix 模式获取 ChatGPT session 失败。');
+        throw new Error('发起 Pix 充值：获取 ChatGPT session 失败。');
       }
 
-      await addLog('步骤 6：正在向 Pix 充值接口发起充值（/api/v1/redeem）...', 'info');
+      await addLog('发起 Pix 充值：正在调用充值接口提交订单（/api/v1/redeem）...', 'info');
       const { response, data } = await fetchJsonWithTimeout(redeemUrl, {
         method: 'POST',
         headers: {
@@ -1762,11 +1762,11 @@ function FindProxyForURL(url, host) {
 
       if (!response?.ok) {
         const detail = String(data?.error || data?.message || data?.detail || `HTTP ${response?.status || 0}`).trim();
-        throw new Error(`步骤 6：Pix 发起充值失败：${detail}`);
+        throw new Error(`发起 Pix 充值失败：${detail}`);
       }
       const orderId = String(data?.order_id ?? data?.orderId ?? '').trim();
       if (!orderId) {
-        throw new Error(`步骤 6：Pix 发起充值返回不可用响应：${JSON.stringify(data || {})}`);
+        throw new Error(`发起 Pix 充值返回不可用响应：${JSON.stringify(data || {})}`);
       }
       const jobId = String(data?.job_id ?? data?.jobId ?? '').trim();
       const orderState = String(data?.state || '').trim();
@@ -1781,9 +1781,11 @@ function FindProxyForURL(url, host) {
         pixOrderState: orderState || 'queued',
         pixPaymentStatus: '',
       });
+      // 注意：此处仅代表订单已提交（通常为 queued/排队中），充值尚未完成；
+      // 真正的成功判定在下一步「等待 Pix 充值完成」轮询订单状态后给出。
       await addLog(
-        `步骤 6：Pix 充值订单已创建（order_id=${orderId}${jobId ? `, job_id=${jobId}` : ''}${Number.isFinite(remaining) ? `, 剩余次数=${remaining}` : ''}），准备等待充值完成。`,
-        'ok'
+        `发起 Pix 充值：订单已提交（order_id=${orderId}${jobId ? `, job_id=${jobId}` : ''}${orderState ? `, 状态=${orderState}` : ''}${Number.isFinite(remaining) ? `, 剩余次数=${remaining}` : ''}）。订单尚未完成，将在下一步轮询充值结果。`,
+        'info'
       );
       await completeNodeFromBackground('plus-checkout-create', {
         plusCheckoutSource: PLUS_PAYMENT_METHOD_PIX,

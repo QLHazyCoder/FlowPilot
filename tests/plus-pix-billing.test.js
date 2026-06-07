@@ -120,6 +120,6 @@ test('Pix 轮询：HTTP 错误时抛错', async () => {
 
   await assert.rejects(
     () => executor.executePlusCheckoutBilling(PIX_STATE),
-    /查询 Pix 订单状态失败/,
+    /查询订单状态失败/,
   );
 });
