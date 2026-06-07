@@ -46,7 +46,9 @@
   }
 
   function normalizePixCdk(value = '') {
-    return String(value || '').trim().toUpperCase();
+    // Pix 卡密是大小写敏感的随机串（如 cdk_YACIkbgSjvLuJxsSmVvxMDoonk3i9），
+    // 只去首尾空白，保留原始大小写，切勿转大写。
+    return String(value || '').trim();
   }
 
   function buildPixApiUrl(baseUrl = '', path = '') {

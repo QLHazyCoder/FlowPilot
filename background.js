@@ -3397,7 +3397,7 @@ function normalizePersistentSettingValue(key, value) {
     case 'pixCdk':
       return self.GpcUtils?.normalizePixCdk
         ? self.GpcUtils.normalizePixCdk(value)
-        : String(value || '').trim().toUpperCase();
+        : String(value || '').trim();
     case 'pixTimeoutSeconds': {
       const numeric = Math.floor(Number(value));
       return Number.isFinite(numeric) && numeric > 0

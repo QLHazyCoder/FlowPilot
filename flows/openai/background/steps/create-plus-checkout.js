@@ -1718,7 +1718,7 @@ function FindProxyForURL(url, host) {
       const rootScope = typeof self !== 'undefined' ? self : globalThis;
       const cardKey = rootScope.GpcUtils?.normalizePixCdk
         ? rootScope.GpcUtils.normalizePixCdk(state?.pixCdk)
-        : String(state?.pixCdk || '').trim().toUpperCase();
+        : String(state?.pixCdk || '').trim();
       if (!cardKey) {
         throw new Error('步骤 6：Pix 模式缺少卡密，请先在侧边栏填写 Pix 卡密。');
       }

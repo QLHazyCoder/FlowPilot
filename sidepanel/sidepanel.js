@@ -5265,8 +5265,8 @@ function collectSettingsPayload() {
       ? normalizeGpcCardKeyInput(inputGpcCardKey.value || '')
       : normalizeGpcCardKeyInput(latestState?.gpcCardKey || ''),
     pixCdk: typeof inputPixCdk !== 'undefined' && inputPixCdk
-      ? String(inputPixCdk.value || '').trim().toUpperCase()
-      : String(latestState?.pixCdk || '').trim().toUpperCase(),
+      ? String(inputPixCdk.value || '').trim()
+      : String(latestState?.pixCdk || '').trim(),
     ...(accountContributionEnabled ? {} : {
       customPassword: inputPassword.value,
     }),
