@@ -179,10 +179,12 @@ test('requestStop appends a stopped record for the next unfinished step when no 
     extractFunction('getRunningSteps'),
     extractFunction('inferStoppedRecordNode'),
     extractFunction('inferStoppedRecordStep'),
+    extractFunction('clearStep5ProfileStatePatch'),
     extractFunction('requestStop'),
   ].join('\n');
 
   const api = new Function(`
+const self = {};
 let stopRequested = false;
 let autoRunActive = false;
 let autoRunCurrentRun = 0;
@@ -249,6 +251,9 @@ async function getState() {
       10: 'pending',
     },
   };
+}
+async function setState(updates) {
+  return updates;
 }
 
 ${bundle}

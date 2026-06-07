@@ -11358,8 +11358,9 @@ async function completeNodeFromBackground(nodeId, payload = {}) {
         nodeId: normalizedNodeId,
       });
     }
-    await runCompletedNodeSideEffects(normalizedNodeId, payload, completionState, lastNodeId);
     notifyNodeComplete(normalizedNodeId, payload);
+    void runCompletedNodeSideEffects(normalizedNodeId, payload, completionState, lastNodeId)
+      .catch((error) => reportCompletedNodeSideEffectError(normalizedNodeId, error));
     return;
   }
 

@@ -60,6 +60,7 @@ const helperBundle = [
   extractFunction(helperSource, 'throwIfStep8SettledOrStopped'),
   extractFunction(helperSource, 'getRunningSteps'),
   extractFunction(helperSource, 'inferStoppedRecordStep'),
+  extractFunction(helperSource, 'clearStep5ProfileStatePatch'),
   extractFunction(helperSource, 'requestStop'),
 ].join('\n');
 
@@ -153,6 +154,9 @@ async function broadcastAutoRunStatus() {}
 async function appendAndBroadcastAccountRunRecord() {}
 async function getState() {
   return { autoRunning: false };
+}
+async function setState(updates) {
+  return updates;
 }
 function getPendingAutoRunTimerPlan() {
   return null;

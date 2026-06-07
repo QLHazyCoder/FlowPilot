@@ -675,12 +675,14 @@ return {
 test('resetState preserves LuckMail session config, used map, and preserve tag cache while clearing runtime purchase state', async () => {
   const bundle = [
     extractFunction('buildAccountContributionState'),
+    extractFunction('clearStep5ProfileStatePatch'),
     extractFunction('resetState'),
   ].join('\n');
 
   const factory = new Function([
     'let cleared = false;',
     'let storedPayload = null;',
+    'const self = {};',
     "const LOG_PREFIX = '[test]';",
     "const DEFAULT_LUCKMAIL_PRESERVE_TAG_NAME = '保留';",
     'const DEFAULT_STATE = {',
