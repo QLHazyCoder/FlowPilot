@@ -524,7 +524,7 @@ test('sidepanel HTML exposes the auto payment option and config rows', () => {
   assert.match(sidepanelHtml, /<option value="plus-auto" selected>Plus 自动充值<\/option>/);
   assert.match(sidepanelHtml, /id="row-auto-cdk"/);
   assert.match(sidepanelHtml, /id="input-auto-cdk"/);
-  // Pix 接口地址固定内置，不在 UI 暴露。
+  // Plus 自动充值接口地址固定内置，不在 UI 暴露。
   assert.doesNotMatch(sidepanelHtml, /id="input-auto-base-url"/);
   // 「获取卡密」按钮
   assert.match(sidepanelHtml, /id="btn-auto-cdk-purchase"[^>]*>获取卡密</);
