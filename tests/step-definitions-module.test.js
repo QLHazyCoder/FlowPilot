@@ -679,11 +679,11 @@ test('sidepanel html exposes Plus mode, PayPal, no-payment, and GPC settings', (
   const plusPaymentSelect = getSelectMarkup(visibleHtml, 'select-plus-payment-method');
   assert.match(html, /id="input-plus-mode-enabled"/);
   assert.match(html, /id="select-plus-payment-method"/);
-  assert.match(plusPaymentSelect, /<option value="plus-pix" selected>Pix 充值<\/option>/);
+  assert.match(plusPaymentSelect, /<option value="plus-auto" selected>Plus 自动充值<\/option>/);
   assert.match(html, /<option value="none">无需支付<\/option>/);
   assert.match(html, /id="select-paypal-account"/);
   assert.match(html, /id="btn-add-paypal-account"/);
-  assert.match(html, /<option value="plus-pix" selected>Pix 充值<\/option>/);
+  assert.match(html, /<option value="plus-auto" selected>Plus 自动充值<\/option>/);
   assert.match(html, /id="btn-gpc-card-key-purchase"/);
   assert.match(html, /id="btn-gpc-card-key-query"/);
   assert.match(html, />购买卡密</);

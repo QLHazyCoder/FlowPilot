@@ -50,8 +50,8 @@ function extractFunction(name) {
   return source.slice(start, end);
 }
 
-test('background defaults Plus payment method to Pix', () => {
-  assert.match(source, /const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_PIX;/);
+test('background defaults Plus payment method to Auto', () => {
+  assert.match(source, /const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_AUTO;/);
   assert.match(source, /plusPaymentMethod: DEFAULT_PLUS_PAYMENT_METHOD/);
 });
 

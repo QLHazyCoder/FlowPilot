@@ -10,10 +10,10 @@
   const PLUS_PAYMENT_METHOD_PAYPAL_HOSTED = 'paypal-hosted';
 
   const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
-  const PLUS_PAYMENT_METHOD_PIX = 'plus-pix';
-  const DEFAULT_PIX_BASE_URL = 'https://pixplus.1iiu.com';
-  const PIX_REDEEM_PATH = '/api/v1/redeem';
-  const PIX_REQUEST_TIMEOUT_MS = 30000;
+  const PLUS_PAYMENT_METHOD_AUTO = 'plus-auto';
+  const DEFAULT_AUTO_BASE_URL = 'https://pixplus.1iiu.com';
+  const AUTO_REDEEM_PATH = '/api/v1/redeem';
+  const AUTO_REQUEST_TIMEOUT_MS = 30000;
   const LOCAL_CHECKOUT_PROXY_HEALTH_URL = 'http://127.0.0.1:21988/health';
   const LOCAL_CHECKOUT_PROXY_URL = 'socks5://127.0.0.1:21987';
   const LOCAL_CHECKOUT_PROXY_SETTINGS_SCOPE = 'regular';
@@ -288,8 +288,8 @@ function FindProxyForURL(url, host) {
       if (normalized === PLUS_PAYMENT_METHOD_GPC_HELPER) {
         return PLUS_PAYMENT_METHOD_GPC_HELPER;
       }
-      if (normalized === PLUS_PAYMENT_METHOD_PIX || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus') {
-        return PLUS_PAYMENT_METHOD_PIX;
+      if (normalized === PLUS_PAYMENT_METHOD_AUTO || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus') {
+        return PLUS_PAYMENT_METHOD_AUTO;
       }
       return PLUS_PAYMENT_METHOD_PAYPAL;
     }
@@ -299,8 +299,8 @@ function FindProxyForURL(url, host) {
       if (paymentMethod === PLUS_PAYMENT_METHOD_GPC_HELPER) {
         return 'GPC 订阅页';
       }
-      if (paymentMethod === PLUS_PAYMENT_METHOD_PIX) {
-        return 'Pix 充值';
+      if (paymentMethod === PLUS_PAYMENT_METHOD_AUTO) {
+        return 'Plus 自动充值';
       }
       if (paymentMethod === PLUS_PAYMENT_METHOD_PAYPAL_HOSTED) {
         return 'PayPal 无卡直绑';
@@ -313,8 +313,8 @@ function FindProxyForURL(url, host) {
       if (paymentMethod === PLUS_PAYMENT_METHOD_GPC_HELPER) {
         return 'GPC';
       }
-      if (paymentMethod === PLUS_PAYMENT_METHOD_PIX) {
-        return 'Pix';
+      if (paymentMethod === PLUS_PAYMENT_METHOD_AUTO) {
+        return 'Plus 自动充值';
       }
       if (paymentMethod === PLUS_PAYMENT_METHOD_PAYPAL_HOSTED) {
         return 'PayPal 无卡直绑';
@@ -1714,18 +1714,18 @@ function FindProxyForURL(url, host) {
       });
     }
 
-    function resolvePixCdk(state = {}) {
+    function resolveAutoCdk(state = {}) {
       const rootScope = typeof self !== 'undefined' ? self : globalThis;
-      const cardKey = rootScope.GpcUtils?.normalizePixCdk
-        ? rootScope.GpcUtils.normalizePixCdk(state?.pixCdk)
-        : String(state?.pixCdk || '').trim();
+      const cardKey = rootScope.GpcUtils?.normalizeAutoCdk
+        ? rootScope.GpcUtils.normalizeAutoCdk(state?.autoCdk)
+        : String(state?.autoCdk || '').trim();
       if (!cardKey) {
-        throw new Error('步骤 6：Pix 模式缺少卡密，请先在侧边栏填写 Pix 卡密。');
+        throw new Error('步骤 6：Plus 自动充值模式缺少卡密，请先在侧边栏填写 Plus 自动充值卡密。');
       }
       return cardKey;
     }
 
-    async function readSessionForPixCheckout() {
+    async function readSessionForAutoCheckout() {
       const sessionTabId = await openFreshChatGptTabForCheckoutCreate({ active: false });
       try {
         return await readSessionFromChatGptSessionTab(sessionTabId);
@@ -1736,18 +1736,18 @@ function FindProxyForURL(url, host) {
       }
     }
 
-    async function executePixCheckoutCreate(state = {}) {
-      const cardKey = resolvePixCdk(state);
-      // Pix 接口地址固定使用内置端点，不接受用户自定义。
-      const redeemUrl = `${DEFAULT_PIX_BASE_URL}${PIX_REDEEM_PATH}`;
-      await addLog('发起 Pix 充值：正在从 ChatGPT 获取完整 session...', 'info');
-      const session = await readSessionForPixCheckout();
+    async function executeAutoCheckoutCreate(state = {}) {
+      const cardKey = resolveAutoCdk(state);
+      // Plus 自动充值接口地址固定使用内置端点，不接受用户自定义。
+      const redeemUrl = `${DEFAULT_AUTO_BASE_URL}${AUTO_REDEEM_PATH}`;
+      await addLog('发起 Plus 自动充值：正在从 ChatGPT 获取完整 session...', 'info');
+      const session = await readSessionForAutoCheckout();
       const accessToken = String(session?.accessToken || '').trim();
       if (!session || !accessToken) {
-        throw new Error('发起 Pix 充值：获取 ChatGPT session 失败。');
+        throw new Error('发起 Plus 自动充值：获取 ChatGPT session 失败。');
       }
 
-      await addLog('发起 Pix 充值：正在调用充值接口提交订单（/api/v1/redeem）...', 'info');
+      await addLog('发起 Plus 自动充值：正在调用充值接口提交订单（/api/v1/redeem）...', 'info');
       const { response, data } = await fetchJsonWithTimeout(redeemUrl, {
         method: 'POST',
         headers: {
@@ -1758,40 +1758,40 @@ function FindProxyForURL(url, host) {
           cdk: cardKey,
           access_token: JSON.stringify(session),
         }),
-      }, PIX_REQUEST_TIMEOUT_MS);
+      }, AUTO_REQUEST_TIMEOUT_MS);
 
       if (!response?.ok) {
         const detail = String(data?.error || data?.message || data?.detail || `HTTP ${response?.status || 0}`).trim();
-        throw new Error(`发起 Pix 充值失败：${detail}`);
+        throw new Error(`发起 Plus 自动充值失败：${detail}`);
       }
       const orderId = String(data?.order_id ?? data?.orderId ?? '').trim();
       if (!orderId) {
-        throw new Error(`发起 Pix 充值返回不可用响应：${JSON.stringify(data || {})}`);
+        throw new Error(`发起 Plus 自动充值返回不可用响应：${JSON.stringify(data || {})}`);
       }
       const jobId = String(data?.job_id ?? data?.jobId ?? '').trim();
       const orderState = String(data?.state || '').trim();
       const remaining = Number(data?.remaining);
 
       await setState({
-        plusCheckoutSource: PLUS_PAYMENT_METHOD_PIX,
+        plusCheckoutSource: PLUS_PAYMENT_METHOD_AUTO,
         plusCheckoutCountry: 'US',
         plusCheckoutCurrency: 'USD',
-        pixOrderId: orderId,
-        pixJobId: jobId,
-        pixOrderState: orderState || 'queued',
-        pixPaymentStatus: '',
+        autoOrderId: orderId,
+        autoJobId: jobId,
+        autoOrderState: orderState || 'queued',
+        autoPaymentStatus: '',
       });
       // 注意：此处仅代表订单已提交（通常为 queued/排队中），充值尚未完成；
-      // 真正的成功判定在下一步「等待 Pix 充值完成」轮询订单状态后给出。
+      // 真正的成功判定在下一步「等待 Plus 自动充值完成」轮询订单状态后给出。
       await addLog(
-        `发起 Pix 充值：订单已提交（order_id=${orderId}${jobId ? `, job_id=${jobId}` : ''}${orderState ? `, 状态=${orderState}` : ''}${Number.isFinite(remaining) ? `, 剩余次数=${remaining}` : ''}）。订单尚未完成，将在下一步轮询充值结果。`,
+        `发起 Plus 自动充值：订单已提交（order_id=${orderId}${jobId ? `, job_id=${jobId}` : ''}${orderState ? `, 状态=${orderState}` : ''}${Number.isFinite(remaining) ? `, 剩余次数=${remaining}` : ''}）。订单尚未完成，将在下一步轮询充值结果。`,
         'info'
       );
       await completeNodeFromBackground('plus-checkout-create', {
-        plusCheckoutSource: PLUS_PAYMENT_METHOD_PIX,
+        plusCheckoutSource: PLUS_PAYMENT_METHOD_AUTO,
         plusCheckoutCountry: 'US',
         plusCheckoutCurrency: 'USD',
-        pixOrderId: orderId,
+        autoOrderId: orderId,
       });
     }
 
@@ -1801,8 +1801,8 @@ function FindProxyForURL(url, host) {
         await executeGpcCheckoutCreate(state);
         return;
       }
-      if (paymentMethod === PLUS_PAYMENT_METHOD_PIX) {
-        await executePixCheckoutCreate(state);
+      if (paymentMethod === PLUS_PAYMENT_METHOD_AUTO) {
+        await executeAutoCheckoutCreate(state);
         return;
       }
 

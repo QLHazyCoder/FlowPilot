@@ -9,15 +9,15 @@
   const PLUS_CHECKOUT_PAYPAL_REDIRECT_TIMEOUT_MS = 10000;
   const PLUS_PAYMENT_METHOD_PAYPAL = 'paypal';
   const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
-  const PLUS_PAYMENT_METHOD_PIX = 'plus-pix';
-  const DEFAULT_PIX_BASE_URL = 'https://pixplus.1iiu.com';
-  const PIX_ORDER_PATH = '/api/v1/orders';
-  const PIX_JOB_LOGS_PATH = '/api/v1/jobs';
-  const PIX_POLL_INTERVAL_MS = 3000;
-  const PIX_REQUEST_TIMEOUT_MS = 30000;
-  const PIX_DEFAULT_TIMEOUT_SECONDS = 900;
+  const PLUS_PAYMENT_METHOD_AUTO = 'plus-auto';
+  const DEFAULT_AUTO_BASE_URL = 'https://pixplus.1iiu.com';
+  const AUTO_ORDER_PATH = '/api/v1/orders';
+  const AUTO_JOB_LOGS_PATH = '/api/v1/jobs';
+  const AUTO_POLL_INTERVAL_MS = 3000;
+  const AUTO_REQUEST_TIMEOUT_MS = 30000;
+  const AUTO_DEFAULT_TIMEOUT_SECONDS = 900;
   // 失败 error_key → 友好中文提示（对接文档 §五）。
-  const PIX_ERROR_KEY_MESSAGES = Object.freeze({
+  const AUTO_ERROR_KEY_MESSAGES = Object.freeze({
     err_no_trial: '该账号无免费试用资格（可能已开过 Plus），请更换新号。',
     err_at_invalid: 'access token 无效或已过期，请重新获取。',
     err_already_plus: '该账号已是 Plus，无需重复开通。',
@@ -122,9 +122,9 @@
         || normalizeText(state?.plusCheckoutSource) === PLUS_PAYMENT_METHOD_GPC_HELPER;
     }
 
-    function isPixCheckout(state = {}) {
-      return normalizePlusPaymentMethod(state?.plusPaymentMethod) === PLUS_PAYMENT_METHOD_PIX
-        || normalizeText(state?.plusCheckoutSource) === PLUS_PAYMENT_METHOD_PIX;
+    function isAutoCheckout(state = {}) {
+      return normalizePlusPaymentMethod(state?.plusPaymentMethod) === PLUS_PAYMENT_METHOD_AUTO
+        || normalizeText(state?.plusCheckoutSource) === PLUS_PAYMENT_METHOD_AUTO;
     }
 
     function compactCountryText(value = '') {
@@ -140,8 +140,8 @@
       if (normalized === PLUS_PAYMENT_METHOD_GPC_HELPER) {
         return PLUS_PAYMENT_METHOD_GPC_HELPER;
       }
-      if (normalized === PLUS_PAYMENT_METHOD_PIX || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus') {
-        return PLUS_PAYMENT_METHOD_PIX;
+      if (normalized === PLUS_PAYMENT_METHOD_AUTO || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus') {
+        return PLUS_PAYMENT_METHOD_AUTO;
       }
       return PLUS_PAYMENT_METHOD_PAYPAL;
     }
@@ -476,23 +476,23 @@
       return results?.[0]?.result || {};
     }
 
-    function getPixTimeoutMs(state = {}) {
-      const seconds = Math.floor(Number(state?.pixTimeoutSeconds));
+    function getAutoTimeoutMs(state = {}) {
+      const seconds = Math.floor(Number(state?.autoTimeoutSeconds));
       const normalized = Number.isFinite(seconds) && seconds > 0
         ? Math.min(3600, Math.max(30, seconds))
-        : PIX_DEFAULT_TIMEOUT_SECONDS;
+        : AUTO_DEFAULT_TIMEOUT_SECONDS;
       return normalized * 1000;
     }
 
-    async function fetchPixJson(url) {
+    async function fetchAutoJson(url) {
       const fetcher = typeof fetchImpl === 'function'
         ? fetchImpl
         : (typeof fetch === 'function' ? fetch.bind(globalThis) : null);
       if (typeof fetcher !== 'function') {
-        throw new Error('等待 Pix 充值完成：当前运行环境不支持 fetch，无法查询 Pix 状态。');
+        throw new Error('等待 Plus 自动充值完成：当前运行环境不支持 fetch，无法查询 Plus 自动充值状态。');
       }
       const controller = typeof AbortController === 'function' ? new AbortController() : null;
-      const timer = controller ? setTimeout(() => controller.abort(), PIX_REQUEST_TIMEOUT_MS) : null;
+      const timer = controller ? setTimeout(() => controller.abort(), AUTO_REQUEST_TIMEOUT_MS) : null;
       try {
         const separator = url.includes('?') ? '&' : '?';
         const response = await fetcher(`${url}${separator}t=${Date.now()}`, {
@@ -516,86 +516,86 @@
       }
     }
 
-    function fetchPixJobLogs(baseUrl, jobId) {
-      return fetchPixJson(`${baseUrl}${PIX_JOB_LOGS_PATH}/${encodeURIComponent(jobId)}/logs`);
+    function fetchAutoJobLogs(baseUrl, jobId) {
+      return fetchAutoJson(`${baseUrl}${AUTO_JOB_LOGS_PATH}/${encodeURIComponent(jobId)}/logs`);
     }
 
-    function fetchPixOrder(baseUrl, orderId) {
-      return fetchPixJson(`${baseUrl}${PIX_ORDER_PATH}/${encodeURIComponent(orderId)}`);
+    function fetchAutoOrder(baseUrl, orderId) {
+      return fetchAutoJson(`${baseUrl}${AUTO_ORDER_PATH}/${encodeURIComponent(orderId)}`);
     }
 
-    async function resolvePixOrderId(state = {}) {
-      const direct = String(state?.pixOrderId || '').trim();
+    async function resolveAutoOrderId(state = {}) {
+      const direct = String(state?.autoOrderId || '').trim();
       if (direct) {
         return direct;
       }
       const latestState = typeof getState === 'function' ? await getState().catch(() => ({})) : {};
-      return String(latestState?.pixOrderId || '').trim();
+      return String(latestState?.autoOrderId || '').trim();
     }
 
-    async function resolvePixJobId(state = {}) {
-      const direct = String(state?.pixJobId || '').trim();
+    async function resolveAutoJobId(state = {}) {
+      const direct = String(state?.autoJobId || '').trim();
       if (direct) {
         return direct;
       }
       const latestState = typeof getState === 'function' ? await getState().catch(() => ({})) : {};
-      return String(latestState?.pixJobId || '').trim();
+      return String(latestState?.autoJobId || '').trim();
     }
 
-    function describePixFailure(payload = {}) {
+    function describeAutoFailure(payload = {}) {
       const errorKey = String(payload?.error_key || payload?.errorKey || '').trim();
       const errorText = String(payload?.error || '').trim();
-      const mapped = PIX_ERROR_KEY_MESSAGES[errorKey];
+      const mapped = AUTO_ERROR_KEY_MESSAGES[errorKey];
       if (mapped) {
         return errorKey === 'err_generic' && errorText ? `${mapped}${errorText}` : mapped;
       }
       return errorText || errorKey || '未知错误';
     }
 
-    async function completePixBilling(orderState, payload = {}) {
+    async function completeAutoBilling(orderState, payload = {}) {
       const email = String(payload?.email || '').trim();
       await setState({
-        plusCheckoutSource: PLUS_PAYMENT_METHOD_PIX,
-        pixOrderState: orderState,
-        pixPaymentStatus: String(payload?.payment_status || payload?.paymentStatus || '').trim(),
+        plusCheckoutSource: PLUS_PAYMENT_METHOD_AUTO,
+        autoOrderState: orderState,
+        autoPaymentStatus: String(payload?.payment_status || payload?.paymentStatus || '').trim(),
       });
-      await addLog(`等待 Pix 充值完成：开通成功${email ? `（${email}）` : ''}，准备继续下一步。`, 'ok');
+      await addLog(`等待 Plus 自动充值完成：开通成功${email ? `（${email}）` : ''}，准备继续下一步。`, 'ok');
       await completeNodeFromBackground('plus-checkout-billing', {
-        plusCheckoutSource: PLUS_PAYMENT_METHOD_PIX,
-        pixOrderState: orderState,
-        pixPaymentStatus: String(payload?.payment_status || payload?.paymentStatus || '').trim(),
+        plusCheckoutSource: PLUS_PAYMENT_METHOD_AUTO,
+        autoOrderState: orderState,
+        autoPaymentStatus: String(payload?.payment_status || payload?.paymentStatus || '').trim(),
       });
     }
 
-    async function pollPixOrderFallback(baseUrl, orderId) {
+    async function pollAutoOrderFallback(baseUrl, orderId) {
       // job 过期（404）后按 order_id 查持久终态。
-      const { response, payload } = await fetchPixOrder(baseUrl, orderId);
+      const { response, payload } = await fetchAutoOrder(baseUrl, orderId);
       if (!response?.ok) {
         const detail = String(payload?.error || payload?.message || `HTTP ${response?.status || 0}`).trim();
-        throw new Error(`等待 Pix 充值完成：查询订单终态失败：${detail}`);
+        throw new Error(`等待 Plus 自动充值完成：查询订单终态失败：${detail}`);
       }
       const orderState = String(payload?.state || '').trim().toLowerCase();
       if (orderState === 'done') {
-        await completePixBilling(orderState, payload);
+        await completeAutoBilling(orderState, payload);
         return true;
       }
       if (orderState === 'failed') {
-        throw new Error(`等待 Pix 充值完成：充值失败：${describePixFailure(payload)}`);
+        throw new Error(`等待 Plus 自动充值完成：充值失败：${describeAutoFailure(payload)}`);
       }
       return false;
     }
 
-    async function executePixBilling(state = {}) {
-      const orderId = await resolvePixOrderId(state);
+    async function executeAutoBilling(state = {}) {
+      const orderId = await resolveAutoOrderId(state);
       if (!orderId) {
-        throw new Error('等待 Pix 充值完成：缺少 Pix 订单号，请先执行「发起 Pix 充值」。');
+        throw new Error('等待 Plus 自动充值完成：缺少 Plus 自动充值订单号，请先执行「发起 Plus 自动充值」。');
       }
-      const jobId = await resolvePixJobId(state);
-      // Pix 接口地址固定使用内置端点，不接受用户自定义。
-      const baseUrl = DEFAULT_PIX_BASE_URL;
-      const deadline = Date.now() + getPixTimeoutMs(state);
+      const jobId = await resolveAutoJobId(state);
+      // Plus 自动充值接口地址固定使用内置端点，不接受用户自定义。
+      const baseUrl = DEFAULT_AUTO_BASE_URL;
+      const deadline = Date.now() + getAutoTimeoutMs(state);
       await addLog(
-        `等待 Pix 充值完成：正在轮询开通进度（order_id=${orderId}${jobId ? `, job_id=${jobId}` : ''}）...`,
+        `等待 Plus 自动充值完成：正在轮询开通进度（order_id=${orderId}${jobId ? `, job_id=${jobId}` : ''}）...`,
         'info'
       );
 
@@ -606,25 +606,25 @@
 
         // 无 job_id 时直接走 order 终态兜底轮询。
         if (!jobId) {
-          if (await pollPixOrderFallback(baseUrl, orderId)) {
+          if (await pollAutoOrderFallback(baseUrl, orderId)) {
             return;
           }
-          await sleepWithStop(PIX_POLL_INTERVAL_MS);
+          await sleepWithStop(AUTO_POLL_INTERVAL_MS);
           continue;
         }
 
-        const { response, payload } = await fetchPixJobLogs(baseUrl, jobId);
+        const { response, payload } = await fetchAutoJobLogs(baseUrl, jobId);
         if (response?.status === 404) {
           // job 已过期，转为 order 终态兜底。
-          if (await pollPixOrderFallback(baseUrl, orderId)) {
+          if (await pollAutoOrderFallback(baseUrl, orderId)) {
             return;
           }
-          await sleepWithStop(PIX_POLL_INTERVAL_MS);
+          await sleepWithStop(AUTO_POLL_INTERVAL_MS);
           continue;
         }
         if (!response?.ok) {
           const detail = String(payload?.error || payload?.message || `HTTP ${response?.status || 0}`).trim();
-          throw new Error(`等待 Pix 充值完成：查询进度失败：${detail}`);
+          throw new Error(`等待 Plus 自动充值完成：查询进度失败：${detail}`);
         }
 
         // 增量渲染进度日志（每次返回完整列表，只输出新增的部分）。
@@ -633,7 +633,7 @@
           const entry = logs[index] || {};
           const msg = String(entry.msg || entry.key || '').trim();
           if (msg) {
-            await addLog(`等待 Pix 充值完成：${msg}`, 'info');
+            await addLog(`等待 Plus 自动充值完成：${msg}`, 'info');
           }
         }
         renderedLogCount = Math.max(renderedLogCount, logs.length);
@@ -642,21 +642,21 @@
         if (orderState !== lastState) {
           lastState = orderState;
           await setState({
-            plusCheckoutSource: PLUS_PAYMENT_METHOD_PIX,
-            pixOrderState: orderState,
+            plusCheckoutSource: PLUS_PAYMENT_METHOD_AUTO,
+            autoOrderState: orderState,
           });
         }
         if (orderState === 'done') {
-          await completePixBilling(orderState, payload);
+          await completeAutoBilling(orderState, payload);
           return;
         }
         if (orderState === 'failed') {
-          throw new Error(`等待 Pix 充值完成：充值失败：${describePixFailure(payload)}`);
+          throw new Error(`等待 Plus 自动充值完成：充值失败：${describeAutoFailure(payload)}`);
         }
-        await sleepWithStop(PIX_POLL_INTERVAL_MS);
+        await sleepWithStop(AUTO_POLL_INTERVAL_MS);
       }
 
-      throw new Error(`等待 Pix 充值完成：轮询超时，未在限定时间内完成（最后状态：${lastState || '未知'}）。`);
+      throw new Error(`等待 Plus 自动充值完成：轮询超时，未在限定时间内完成（最后状态：${lastState || '未知'}）。`);
     }
 
     async function executeGpcHelperBilling(state = {}) {
@@ -1327,8 +1327,8 @@
         await executeGpcHelperBilling(state);
         return;
       }
-      if (isPixCheckout(state)) {
-        await executePixBilling(state);
+      if (isAutoCheckout(state)) {
+        await executeAutoBilling(state);
         return;
       }
       const paymentMethod = normalizePlusPaymentMethod(state?.plusPaymentMethod);

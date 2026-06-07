@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
-// 加载 gpc-utils（提供 Pix 归一化）与 create-plus-checkout 模块。
+// 加载 gpc-utils（提供 Plus 自动充值归一化）与 create-plus-checkout 模块。
 const gpcUtilsSource = fs.readFileSync('gpc-utils.js', 'utf8');
 const source = fs.readFileSync('flows/openai/background/steps/create-plus-checkout.js', 'utf8');
 const globalScope = {};
@@ -56,14 +56,14 @@ function createExecutorHarness({ redeemResponse, redeemStatus = 200, session = {
   return { executor, logs, stateUpdates, completedNodes, fetchCalls };
 }
 
-test('Pix 发起充值：成功返回 order_id 时存储订单并完成节点', async () => {
+test('Plus 自动充值发起：成功返回 order_id 时存储订单并完成节点', async () => {
   const { executor, stateUpdates, completedNodes, fetchCalls } = createExecutorHarness({
     redeemResponse: { order_id: 12, job_id: 'job-abc', state: 'queued', remaining: 2 },
   });
 
   await executor.executePlusCheckoutCreate({
-    plusPaymentMethod: 'plus-pix',
-    pixCdk: '  QZ-aB12-Cd34-Ef56  ',
+    plusPaymentMethod: 'plus-auto',
+    autoCdk: '  QZ-aB12-Cd34-Ef56  ',
   });
 
   // 调用了固定内置端点的 redeem 接口（不接受用户自定义地址）
@@ -75,17 +75,17 @@ test('Pix 发起充值：成功返回 order_id 时存储订单并完成节点', 
   assert.ok(body.access_token.includes('eyJ-token'), 'access_token 应包含 session');
 
   // 订单号写入 state
-  const orderState = stateUpdates.find((patch) => patch.pixOrderId);
-  assert.equal(orderState.pixOrderId, '12');
-  assert.equal(orderState.plusCheckoutSource, 'plus-pix');
+  const orderState = stateUpdates.find((patch) => patch.autoOrderId);
+  assert.equal(orderState.autoOrderId, '12');
+  assert.equal(orderState.plusCheckoutSource, 'plus-auto');
 
   // 完成节点
   const completion = completedNodes.find((node) => node.key === 'plus-checkout-create');
   assert.ok(completion, '应完成 plus-checkout-create 节点');
-  assert.equal(completion.payload.pixOrderId, '12');
+  assert.equal(completion.payload.autoOrderId, '12');
 });
 
-test('Pix 发起充值：卡密无效返回 400 时抛错', async () => {
+test('Plus 自动充值发起：卡密无效返回 400 时抛错', async () => {
   const { executor } = createExecutorHarness({
     redeemResponse: { error: '卡密已用完' },
     redeemStatus: 400,
@@ -93,31 +93,31 @@ test('Pix 发起充值：卡密无效返回 400 时抛错', async () => {
 
   await assert.rejects(
     () => executor.executePlusCheckoutCreate({
-      plusPaymentMethod: 'plus-pix',
-      pixCdk: 'QZ-USED0000000',
+      plusPaymentMethod: 'plus-auto',
+      autoCdk: 'QZ-USED0000000',
     }),
     /卡密已用完/,
   );
 });
 
-test('Pix 发起充值：缺少卡密时抛错', async () => {
+test('Plus 自动充值发起：缺少卡密时抛错', async () => {
   const { executor } = createExecutorHarness({ redeemResponse: {} });
 
   await assert.rejects(
-    () => executor.executePlusCheckoutCreate({ plusPaymentMethod: 'plus-pix', pixCdk: '' }),
+    () => executor.executePlusCheckoutCreate({ plusPaymentMethod: 'plus-auto', autoCdk: '' }),
     /缺少卡密/,
   );
 });
 
-test('Pix 发起充值：返回缺少 order_id 时抛错', async () => {
+test('Plus 自动充值发起：返回缺少 order_id 时抛错', async () => {
   const { executor } = createExecutorHarness({
     redeemResponse: { state: 'queued' },
   });
 
   await assert.rejects(
     () => executor.executePlusCheckoutCreate({
-      plusPaymentMethod: 'plus-pix',
-      pixCdk: 'QZ-NOORDER0000',
+      plusPaymentMethod: 'plus-auto',
+      autoCdk: 'QZ-NOORDER0000',
     }),
     /不可用响应/,
   );

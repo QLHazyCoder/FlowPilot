@@ -376,10 +376,10 @@
             <option value="paypal-hosted">PayPal 无卡直绑</option>
             <option value="paypal">PayPal</option>
             <option value="gpc-helper">GPC</option>
-            <option value="plus-pix" selected>Pix 充值</option>
+            <option value="plus-auto" selected>Plus 自动充值</option>
           </select>
           <button id="btn-gpc-card-key-purchase" class="btn btn-outline btn-sm data-inline-btn" type="button" style="display:none;">购买卡密</button>
-          <button id="btn-pix-cdk-purchase" class="btn btn-outline btn-sm data-inline-btn" type="button" style="display:none;">获取卡密</button>
+          <button id="btn-auto-cdk-purchase" class="btn btn-outline btn-sm data-inline-btn" type="button" style="display:none;">获取卡密</button>
           <span class="setting-caption" id="plus-payment-method-caption">GPC 网页充值链路</span>
         </div>
       </div>
@@ -430,15 +430,15 @@
           <span id="display-gpc-card-key-status" class="data-value mono">等待输入</span>
         </div>
       </div>
-      <div class="data-row" id="row-pix-cdk" style="display:none;">
-        <span class="data-label">Pix 卡密</span>
+      <div class="data-row" id="row-auto-cdk" style="display:none;">
+        <span class="data-label">Plus 自动充值卡密</span>
         <div class="data-inline gpc-card-key-inline">
           <div class="input-with-icon">
-            <input type="password" id="input-pix-cdk" class="data-input data-input-with-icon"
-              placeholder="请输入 Pix 卡密（QZ-XXXX-XXXX-XXXX）" autocomplete="off" />
+            <input type="password" id="input-auto-cdk" class="data-input data-input-with-icon"
+              placeholder="请输入 Plus 自动充值卡密（QZ-XXXX-XXXX-XXXX）" autocomplete="off" />
             <button id="btn-toggle-pix-cdk" class="input-icon-btn" type="button"
-              data-password-toggle="input-pix-cdk" data-show-label="显示 Pix 卡密"
-              data-hide-label="隐藏 Pix 卡密" aria-label="显示 Pix 卡密" title="显示 Pix 卡密"></button>
+              data-password-toggle="input-auto-cdk" data-show-label="显示 Plus 自动充值卡密"
+              data-hide-label="隐藏 Plus 自动充值卡密" aria-label="显示 Plus 自动充值卡密" title="显示 Plus 自动充值卡密"></button>
           </div>
         </div>
       </div>

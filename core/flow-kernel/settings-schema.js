@@ -504,8 +504,8 @@
             input?.plusPaymentMethod
             ?? currentFlow.plus?.plusPaymentMethod
             ?? defaultOpenAiPlus.plusPaymentMethod
-            ?? 'plus-pix'
-          ).trim() || defaultOpenAiPlus.plusPaymentMethod || 'plus-pix',
+            ?? 'plus-auto'
+          ).trim() || defaultOpenAiPlus.plusPaymentMethod || 'plus-auto',
           plusAccountAccessStrategy: normalizePlusAccountAccessStrategy(
             input?.plusAccountAccessStrategy
             ?? currentFlow.plus?.plusAccountAccessStrategy
@@ -753,7 +753,7 @@
       next.phoneVerificationEnabled = Boolean(openaiState.signup?.phoneVerificationEnabled);
       next.phoneSignupReloginAfterBindEmailEnabled = Boolean(openaiState.signup?.phoneSignupReloginAfterBindEmailEnabled);
       next.plusModeEnabled = Boolean(openaiState.plus?.plusModeEnabled);
-      next.plusPaymentMethod = openaiState.plus?.plusPaymentMethod || 'plus-pix';
+      next.plusPaymentMethod = openaiState.plus?.plusPaymentMethod || 'plus-auto';
       next.plusAccountAccessStrategy = openaiState.plus?.plusAccountAccessStrategy || 'oauth';
       next.hostedCheckoutVerificationUrl = openaiState.plus?.hostedCheckoutVerificationUrl || '';
       next.hostedCheckoutPhoneNumber = openaiState.plus?.hostedCheckoutPhoneNumber || '';

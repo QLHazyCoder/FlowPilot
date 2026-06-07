@@ -219,7 +219,7 @@ const inputPlusModeEnabled = document.getElementById('input-plus-mode-enabled');
 const rowPlusPaymentMethod = document.getElementById('row-plus-payment-method');
 const selectPlusPaymentMethod = document.getElementById('select-plus-payment-method');
 const btnGpcCardKeyPurchase = document.getElementById('btn-gpc-card-key-purchase');
-const btnPixCdkPurchase = document.getElementById('btn-pix-cdk-purchase');
+const btnAutoCdkPurchase = document.getElementById('btn-auto-cdk-purchase');
 const plusPaymentMethodCaption = document.getElementById('plus-payment-method-caption');
 const rowPlusAccountAccessStrategy = document.getElementById('row-plus-account-access-strategy');
 const selectPlusAccountAccessStrategy = document.getElementById('select-plus-account-access-strategy');
@@ -241,8 +241,8 @@ const rowGpcCardKey = document.getElementById('row-gpc-card-key');
 const inputGpcCardKey = document.getElementById('input-gpc-card-key');
 const displayGpcCardKeyStatus = document.getElementById('display-gpc-card-key-status');
 const btnGpcCardKeyQuery = document.getElementById('btn-gpc-card-key-query');
-const rowPixCdk = document.getElementById('row-pix-cdk');
-const inputPixCdk = document.getElementById('input-pix-cdk');
+const rowAutoCdk = document.getElementById('row-auto-cdk');
+const inputAutoCdk = document.getElementById('input-auto-cdk');
 const selectMailProvider = document.getElementById('select-mail-provider');
 const btnMailLogin = document.getElementById('btn-mail-login');
 const rowCustomMailReceiveMode = document.getElementById('row-custom-mail-receive-mode');
@@ -595,10 +595,10 @@ const PLUS_PAYMENT_METHOD_PAYPAL = 'paypal';
 const PLUS_PAYMENT_METHOD_PAYPAL_HOSTED = 'paypal-hosted';
 const PLUS_PAYMENT_METHOD_NONE = 'none';
 const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
-const PLUS_PAYMENT_METHOD_PIX = 'plus-pix';
+const PLUS_PAYMENT_METHOD_AUTO = 'plus-auto';
 const DEFAULT_GPC_BASE_URL = 'https://gpc.qlhazycoder.top';
 const DEFAULT_PLUS_HOSTED_CHECKOUT_OAUTH_DELAY_SECONDS = 3;
-const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_PIX;
+const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_AUTO;
 const PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH = 'oauth';
 const PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION = 'sub2api_codex_session';
 const PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION = 'cpa_codex_session';
@@ -3455,7 +3455,7 @@ function normalizePlusPaymentMethod(value = '') {
   }
 
   const gpcValue = typeof PLUS_PAYMENT_METHOD_GPC_HELPER !== 'undefined' ? PLUS_PAYMENT_METHOD_GPC_HELPER : 'gpc-helper';
-  const pixValue = typeof PLUS_PAYMENT_METHOD_PIX !== 'undefined' ? PLUS_PAYMENT_METHOD_PIX : 'plus-pix';
+  const autoValue = typeof PLUS_PAYMENT_METHOD_AUTO !== 'undefined' ? PLUS_PAYMENT_METHOD_AUTO : 'plus-auto';
   const paypalValue = typeof PLUS_PAYMENT_METHOD_PAYPAL !== 'undefined' ? PLUS_PAYMENT_METHOD_PAYPAL : 'paypal';
   const paypalHostedValue = typeof PLUS_PAYMENT_METHOD_PAYPAL_HOSTED !== 'undefined' ? PLUS_PAYMENT_METHOD_PAYPAL_HOSTED : 'paypal-hosted';
   const noneValue = typeof PLUS_PAYMENT_METHOD_NONE !== 'undefined' ? PLUS_PAYMENT_METHOD_NONE : 'none';
@@ -3469,8 +3469,8 @@ function normalizePlusPaymentMethod(value = '') {
   if (normalized === gpcValue) {
     return gpcValue;
   }
-  if (normalized === pixValue || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus') {
-    return pixValue;
+  if (normalized === autoValue || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus') {
+    return autoValue;
   }
   return paypalValue;
 }
@@ -5265,9 +5265,9 @@ function collectSettingsPayload() {
     gpcCardKey: typeof inputGpcCardKey !== 'undefined' && inputGpcCardKey
       ? normalizeGpcCardKeyInput(inputGpcCardKey.value || '')
       : normalizeGpcCardKeyInput(latestState?.gpcCardKey || ''),
-    pixCdk: typeof inputPixCdk !== 'undefined' && inputPixCdk
-      ? String(inputPixCdk.value || '').trim()
-      : String(latestState?.pixCdk || '').trim(),
+    autoCdk: typeof inputAutoCdk !== 'undefined' && inputAutoCdk
+      ? String(inputAutoCdk.value || '').trim()
+      : String(latestState?.autoCdk || '').trim(),
     ...(accountContributionEnabled ? {} : {
       customPassword: inputPassword.value,
     }),
@@ -10834,7 +10834,7 @@ function updatePlusModeUI() {
   const noneValue = typeof PLUS_PAYMENT_METHOD_NONE !== 'undefined' ? PLUS_PAYMENT_METHOD_NONE : 'none';
 
   const gpcValue = typeof PLUS_PAYMENT_METHOD_GPC_HELPER !== 'undefined' ? PLUS_PAYMENT_METHOD_GPC_HELPER : 'gpc-helper';
-  const pixValue = typeof PLUS_PAYMENT_METHOD_PIX !== 'undefined' ? PLUS_PAYMENT_METHOD_PIX : 'plus-pix';
+  const autoValue = typeof PLUS_PAYMENT_METHOD_AUTO !== 'undefined' ? PLUS_PAYMENT_METHOD_AUTO : 'plus-auto';
   const oauthStrategyValue = typeof PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH !== 'undefined'
     ? PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH
     : 'oauth';
@@ -10951,7 +10951,7 @@ function updatePlusModeUI() {
     : method;
   const hostedRowsVisible = enabled && selectedMethod === paypalHostedValue;
   const gpcRowsVisible = enabled && selectedMethod === gpcValue;
-  const pixRowsVisible = enabled && selectedMethod === pixValue;
+  const autoRowsVisible = enabled && selectedMethod === autoValue;
   if (typeof rowPlusMode !== 'undefined' && rowPlusMode) {
     rowPlusMode.style.display = supportsPlusMode ? '' : 'none';
   }
@@ -10965,7 +10965,7 @@ function updatePlusModeUI() {
     plusPaymentMethodCaption.textContent = method === gpcValue
       ? 'GPC 网页充值链路'
 
-      : method === pixValue
+      : method === autoValue
       ? ''
       : method === noneValue
       ? '已有 Plus，无需配置支付链路'
@@ -11082,11 +11082,11 @@ function updatePlusModeUI() {
   if (typeof btnGpcCardKeyPurchase !== 'undefined' && btnGpcCardKeyPurchase) {
     btnGpcCardKeyPurchase.style.display = gpcRowsVisible ? '' : 'none';
   }
-  if (typeof rowPixCdk !== 'undefined' && rowPixCdk) {
-    rowPixCdk.style.display = pixRowsVisible ? '' : 'none';
+  if (typeof rowAutoCdk !== 'undefined' && rowAutoCdk) {
+    rowAutoCdk.style.display = autoRowsVisible ? '' : 'none';
   }
-  if (typeof btnPixCdkPurchase !== 'undefined' && btnPixCdkPurchase) {
-    btnPixCdkPurchase.style.display = pixRowsVisible ? '' : 'none';
+  if (typeof btnAutoCdkPurchase !== 'undefined' && btnAutoCdkPurchase) {
+    btnAutoCdkPurchase.style.display = autoRowsVisible ? '' : 'none';
   }
 
 }
@@ -11999,8 +11999,8 @@ function applySettingsState(state) {
       setGpcCardKeyStatus(inputGpcCardKey.value ? '等待检测' : '等待输入', '');
     }
   }
-  if (typeof inputPixCdk !== 'undefined' && inputPixCdk) {
-    inputPixCdk.value = state?.pixCdk || '';
+  if (typeof inputAutoCdk !== 'undefined' && inputAutoCdk) {
+    inputAutoCdk.value = state?.autoCdk || '';
   }
   if (typeof inputHostedCheckoutVerificationUrl !== 'undefined' && inputHostedCheckoutVerificationUrl) {
     inputHostedCheckoutVerificationUrl.value = String(state?.hostedCheckoutVerificationUrl || '').trim();
@@ -16321,6 +16321,13 @@ inputPassword.addEventListener('blur', () => {
 });
 
 inputPlusModeEnabled?.addEventListener('change', () => {
+  // 每次开启 Plus 模式时，支付方式强制重置为默认值（不沿用上次选择）。
+  if (inputPlusModeEnabled.checked
+    && typeof selectPlusPaymentMethod !== 'undefined' && selectPlusPaymentMethod
+    && typeof DEFAULT_PLUS_PAYMENT_METHOD !== 'undefined') {
+    selectPlusPaymentMethod.value = DEFAULT_PLUS_PAYMENT_METHOD;
+    currentPlusPaymentMethod = DEFAULT_PLUS_PAYMENT_METHOD;
+  }
   updatePlusModeUI();
   updateSignupMethodUI({ notify: true });
   const stepDefinitionState = typeof resolveStepDefinitionCapabilityState === 'function'
@@ -16347,7 +16354,7 @@ btnGpcCardKeyPurchase?.addEventListener('click', () => {
   openExternalUrl('https://pay.ldxp.cn/shop/gpc');
 });
 
-btnPixCdkPurchase?.addEventListener('click', () => {
+btnAutoCdkPurchase?.addEventListener('click', () => {
   openExternalUrl('https://shop.qlhazycoder.top/');
 });
 
@@ -16426,7 +16433,7 @@ selectPlusPaymentMethod?.addEventListener('change', () => {
   inputHostedCheckoutVerificationUrl,
   inputHostedCheckoutPhone,
   inputPlusHostedCheckoutOauthDelaySeconds,
-  inputPixCdk,
+  inputAutoCdk,
 ].forEach((input) => {
   input?.addEventListener('input', () => {
     markSettingsDirty(true);
@@ -19028,8 +19035,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       if (message.payload.gpcCardKey !== undefined && inputGpcCardKey) {
         inputGpcCardKey.value = message.payload.gpcCardKey || '';
       }
-      if (message.payload.pixCdk !== undefined && typeof inputPixCdk !== 'undefined' && inputPixCdk) {
-        inputPixCdk.value = message.payload.pixCdk || '';
+      if (message.payload.autoCdk !== undefined && typeof inputAutoCdk !== 'undefined' && inputAutoCdk) {
+        inputAutoCdk.value = message.payload.autoCdk || '';
       }
       if (
         message.payload.gpcBalance !== undefined

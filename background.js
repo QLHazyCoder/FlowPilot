@@ -729,11 +729,11 @@ const PLUS_PAYMENT_METHOD_PAYPAL = 'paypal';
 const PLUS_PAYMENT_METHOD_PAYPAL_HOSTED = 'paypal-hosted';
 const PLUS_PAYMENT_METHOD_NONE = 'none';
 const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
-const PLUS_PAYMENT_METHOD_PIX = 'plus-pix';
-const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_PIX;
-const DEFAULT_PIX_BASE_URL = (typeof self !== 'undefined' && self.GpcUtils?.DEFAULT_PIX_BASE_URL)
+const PLUS_PAYMENT_METHOD_AUTO = 'plus-auto';
+const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_AUTO;
+const DEFAULT_AUTO_BASE_URL = (typeof self !== 'undefined' && self.GpcUtils?.DEFAULT_AUTO_BASE_URL)
   || 'https://pixplus.1iiu.com';
-const DEFAULT_PIX_TIMEOUT_SECONDS = 900;
+const DEFAULT_AUTO_TIMEOUT_SECONDS = 900;
 const DEFAULT_PLUS_HOSTED_CHECKOUT_OAUTH_DELAY_SECONDS = 3;
 const DISPLAY_TIMEZONE = 'Asia/Shanghai';
 const MICROSOFT_TOKEN_DNR_RULE_ID = 1001;
@@ -847,9 +847,9 @@ function normalizePlusPaymentMethod(value = '') {
   if (normalized === PLUS_PAYMENT_METHOD_GPC_HELPER) {
     return PLUS_PAYMENT_METHOD_GPC_HELPER;
   }
-  const pixValue = typeof PLUS_PAYMENT_METHOD_PIX !== 'undefined' ? PLUS_PAYMENT_METHOD_PIX : 'plus-pix';
-  if (normalized === pixValue || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus') {
-    return pixValue;
+  const autoValue = typeof PLUS_PAYMENT_METHOD_AUTO !== 'undefined' ? PLUS_PAYMENT_METHOD_AUTO : 'plus-auto';
+  if (normalized === autoValue || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus') {
+    return autoValue;
   }
   return PLUS_PAYMENT_METHOD_PAYPAL;
 }
@@ -1328,12 +1328,12 @@ const PERSISTED_SETTING_DEFAULTS = {
   gpcCardStatus: '',
   gpcPageStatus: '',
   gpcPageStatusText: '',
-  pixCdk: '',
-  pixTimeoutSeconds: DEFAULT_PIX_TIMEOUT_SECONDS,
-  pixOrderId: '',
-  pixJobId: '',
-  pixOrderState: '',
-  pixPaymentStatus: '',
+  autoCdk: '',
+  autoTimeoutSeconds: DEFAULT_AUTO_TIMEOUT_SECONDS,
+  autoOrderId: '',
+  autoJobId: '',
+  autoOrderState: '',
+  autoPaymentStatus: '',
   autoRunSkipFailures: false,
   autoRunFallbackThreadIntervalMinutes: 0,
   operationDelayEnabled: true,
@@ -2070,9 +2070,9 @@ function normalizePlusPaymentMethod(value = '') {
   if (normalized === PLUS_PAYMENT_METHOD_GPC_HELPER) {
     return PLUS_PAYMENT_METHOD_GPC_HELPER;
   }
-  if (typeof PLUS_PAYMENT_METHOD_PIX !== 'undefined'
-    && (normalized === PLUS_PAYMENT_METHOD_PIX || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus')) {
-    return PLUS_PAYMENT_METHOD_PIX;
+  if (typeof PLUS_PAYMENT_METHOD_AUTO !== 'undefined'
+    && (normalized === PLUS_PAYMENT_METHOD_AUTO || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus')) {
+    return PLUS_PAYMENT_METHOD_AUTO;
   }
   return PLUS_PAYMENT_METHOD_PAYPAL;
 }
@@ -3394,20 +3394,20 @@ function normalizePersistentSettingValue(key, value) {
     case 'gpcBalanceUpdatedAt':
     case 'gpcRemainingUses':
       return Math.max(0, Number(value) || 0);
-    case 'pixCdk':
-      return self.GpcUtils?.normalizePixCdk
-        ? self.GpcUtils.normalizePixCdk(value)
+    case 'autoCdk':
+      return self.GpcUtils?.normalizeAutoCdk
+        ? self.GpcUtils.normalizeAutoCdk(value)
         : String(value || '').trim();
-    case 'pixTimeoutSeconds': {
+    case 'autoTimeoutSeconds': {
       const numeric = Math.floor(Number(value));
       return Number.isFinite(numeric) && numeric > 0
         ? Math.min(3600, Math.max(30, numeric))
-        : DEFAULT_PIX_TIMEOUT_SECONDS;
+        : DEFAULT_AUTO_TIMEOUT_SECONDS;
     }
-    case 'pixOrderId':
-    case 'pixJobId':
-    case 'pixOrderState':
-    case 'pixPaymentStatus':
+    case 'autoOrderId':
+    case 'autoJobId':
+    case 'autoOrderState':
+    case 'autoPaymentStatus':
       return String(value || '').trim();
     case 'autoRunSkipFailures':
       return Boolean(value);

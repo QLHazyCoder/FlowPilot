@@ -8,7 +8,7 @@
   const PLUS_PAYMENT_METHOD_NONE = 'none';
 
   const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
-  const PLUS_PAYMENT_METHOD_PIX = 'plus-pix';
+  const PLUS_PAYMENT_METHOD_AUTO = 'plus-auto';
   const PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH = 'oauth';
   const PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION = 'sub2api_codex_session';
   const PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION = 'cpa_codex_session';
@@ -2428,17 +2428,17 @@
   ]
 });
 
-  // Pix 充值渠道与 GPC 渠道流程同构（发起 → 轮询等待完成 → 后续登录接入），
-  // 因此从 plusGpc* 变体派生 plusPix* 变体，仅替换 step6/step7 的标题文案，
+  // Plus 自动充值渠道与 GPC 渠道流程同构（发起 → 轮询等待完成 → 后续登录接入），
+  // 因此从 plusGpc* 变体派生 plusAuto* 变体，仅替换 step6/step7 的标题文案，
   // 避免手写复制整组步骤定义造成重复。
-  const PIX_STEP_TITLE_OVERRIDES = {
-    'plus-checkout-create': '发起 Pix 充值',
-    'plus-checkout-billing': '等待 Pix 充值完成',
+  const AUTO_STEP_TITLE_OVERRIDES = {
+    'plus-checkout-create': '发起 Plus 自动充值',
+    'plus-checkout-billing': '等待 Plus 自动充值完成',
   };
 
-  function derivePixVariantSteps(gpcSteps = []) {
+  function deriveAutoVariantSteps(gpcSteps = []) {
     return gpcSteps.map((step) => {
-      const overrideTitle = PIX_STEP_TITLE_OVERRIDES[String(step?.key || '').trim()];
+      const overrideTitle = AUTO_STEP_TITLE_OVERRIDES[String(step?.key || '').trim()];
       return overrideTitle ? { ...step, title: overrideTitle } : { ...step };
     });
   }
@@ -2446,8 +2446,8 @@
   Object.keys(STEP_VARIANTS_RAW)
     .filter((variantKey) => variantKey.startsWith('plusGpc'))
     .forEach((gpcVariantKey) => {
-      const pixVariantKey = gpcVariantKey.replace(/^plusGpc/, 'plusPix');
-      STEP_VARIANTS_RAW[pixVariantKey] = derivePixVariantSteps(STEP_VARIANTS_RAW[gpcVariantKey]);
+      const autoVariantKey = gpcVariantKey.replace(/^plusGpc/, 'plusAuto');
+      STEP_VARIANTS_RAW[autoVariantKey] = deriveAutoVariantSteps(STEP_VARIANTS_RAW[gpcVariantKey]);
     });
 
   const STEP_VARIANTS = freezeDeep(STEP_VARIANTS_RAW);
@@ -2574,8 +2574,8 @@
     if (normalized === PLUS_PAYMENT_METHOD_GPC_HELPER) {
       return PLUS_PAYMENT_METHOD_GPC_HELPER;
     }
-    if (normalized === PLUS_PAYMENT_METHOD_PIX || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus') {
-      return PLUS_PAYMENT_METHOD_PIX;
+    if (normalized === PLUS_PAYMENT_METHOD_AUTO || normalized === 'pix' || normalized === 'pix_plus' || normalized === 'pixplus') {
+      return PLUS_PAYMENT_METHOD_AUTO;
     }
     return PLUS_PAYMENT_METHOD_PAYPAL;
   }
@@ -2657,17 +2657,17 @@
       return 'plusGpc';
     }
 
-    if (paymentMethod === PLUS_PAYMENT_METHOD_PIX) {
+    if (paymentMethod === PLUS_PAYMENT_METHOD_AUTO) {
       if (signupMethod === SIGNUP_METHOD_PHONE) {
-        return reloginAfterBindEmail ? 'plusPixPhoneRelogin' : 'plusPixPhone';
+        return reloginAfterBindEmail ? 'plusAutoPhoneRelogin' : 'plusAutoPhone';
       }
       if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
-        return 'plusPixSub2apiSession';
+        return 'plusAutoSub2apiSession';
       }
       if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION) {
-        return 'plusPixCpaSession';
+        return 'plusAutoCpaSession';
       }
-      return 'plusPix';
+      return 'plusAuto';
     }
 
     if (signupMethod === SIGNUP_METHOD_PHONE) {

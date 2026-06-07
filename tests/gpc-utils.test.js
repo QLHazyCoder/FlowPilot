@@ -15,28 +15,28 @@ test('GPC utils keeps supported Plus payment methods distinct and normalizes leg
   assert.equal(api.normalizePlusPaymentMethod('none'), 'none');
   assert.equal(api.normalizePlusPaymentMethod('no-payment'), 'none');
   assert.equal(api.normalizePlusPaymentMethod('gpc-helper'), 'gpc-helper');
-  assert.equal(api.normalizePlusPaymentMethod('plus-pix'), 'plus-pix');
-  assert.equal(api.normalizePlusPaymentMethod('pix'), 'plus-pix');
-  assert.equal(api.normalizePlusPaymentMethod('pixplus'), 'plus-pix');
+  assert.equal(api.normalizePlusPaymentMethod('plus-auto'), 'plus-auto');
+  assert.equal(api.normalizePlusPaymentMethod('pix'), 'plus-auto');
+  assert.equal(api.normalizePlusPaymentMethod('pixplus'), 'plus-auto');
   assert.equal(api.normalizePlusPaymentMethod('gopay'), 'paypal');
   assert.equal(api.normalizePlusPaymentMethod('unknown'), 'paypal');
 });
 
-test('GPC utils normalizes Pix base URL and cdk, and builds Pix API URLs', () => {
+test('GPC utils normalizes Auto base URL and cdk, and builds Auto API URLs', () => {
   const api = loadGpcUtils();
-  assert.equal(api.DEFAULT_PIX_BASE_URL, 'https://pixplus.1iiu.com');
-  assert.equal(api.PLUS_PAYMENT_METHOD_PIX, 'plus-pix');
-  assert.equal(api.normalizePixBaseUrl(''), 'https://pixplus.1iiu.com');
-  assert.equal(api.normalizePixBaseUrl('https://pixplus.1iiu.com/'), 'https://pixplus.1iiu.com');
-  assert.equal(api.normalizePixBaseUrl('not a url'), 'https://pixplus.1iiu.com');
-  assert.equal(api.normalizePixBaseUrl('https://custom.example.com/base/'), 'https://custom.example.com/base');
-  assert.equal(api.normalizePixCdk(' QZ-aB12-Cd34-Ef56 '), 'QZ-aB12-Cd34-Ef56');
+  assert.equal(api.DEFAULT_AUTO_BASE_URL, 'https://pixplus.1iiu.com');
+  assert.equal(api.PLUS_PAYMENT_METHOD_AUTO, 'plus-auto');
+  assert.equal(api.normalizeAutoBaseUrl(''), 'https://pixplus.1iiu.com');
+  assert.equal(api.normalizeAutoBaseUrl('https://pixplus.1iiu.com/'), 'https://pixplus.1iiu.com');
+  assert.equal(api.normalizeAutoBaseUrl('not a url'), 'https://pixplus.1iiu.com');
+  assert.equal(api.normalizeAutoBaseUrl('https://custom.example.com/base/'), 'https://custom.example.com/base');
+  assert.equal(api.normalizeAutoCdk(' QZ-aB12-Cd34-Ef56 '), 'QZ-aB12-Cd34-Ef56');
   assert.equal(
-    api.buildPixApiUrl('https://pixplus.1iiu.com', '/api/v1/redeem'),
+    api.buildAutoApiUrl('https://pixplus.1iiu.com', '/api/v1/redeem'),
     'https://pixplus.1iiu.com/api/v1/redeem'
   );
   assert.equal(
-    api.buildPixApiUrl('', 'api/v1/orders/12'),
+    api.buildAutoApiUrl('', 'api/v1/orders/12'),
     'https://pixplus.1iiu.com/api/v1/orders/12'
   );
 });
