@@ -63,7 +63,7 @@ test('Pix 发起充值：成功返回 order_id 时存储订单并完成节点', 
 
   await executor.executePlusCheckoutCreate({
     plusPaymentMethod: 'plus-pix',
-    pixCdk: '  cdk_YACIkbgSjvLuJxsSmVvxMDoonk3i9  ',
+    pixCdk: '  QZ-aB12-Cd34-Ef56  ',
   });
 
   // 调用了固定内置端点的 redeem 接口（不接受用户自定义地址）
@@ -71,7 +71,7 @@ test('Pix 发起充值：成功返回 order_id 时存储订单并完成节点', 
   assert.ok(redeemCall, '应调用 /api/v1/redeem');
   assert.ok(String(redeemCall.url).startsWith('https://pixplus.1iiu.com/api/v1/redeem'), '应使用内置 Pix 端点');
   const body = JSON.parse(redeemCall.options.body);
-  assert.equal(body.cdk, 'cdk_YACIkbgSjvLuJxsSmVvxMDoonk3i9', 'cdk 应去首尾空白但保留原始大小写');
+  assert.equal(body.cdk, 'QZ-aB12-Cd34-Ef56', 'cdk 应去首尾空白但保留原始大小写');
   assert.ok(body.access_token.includes('eyJ-token'), 'access_token 应包含 session');
 
   // 订单号写入 state

@@ -12,10 +12,21 @@
   const PLUS_PAYMENT_METHOD_PIX = 'plus-pix';
   const DEFAULT_PIX_BASE_URL = 'https://pixplus.1iiu.com';
   const PIX_ORDER_PATH = '/api/v1/orders';
+  const PIX_JOB_LOGS_PATH = '/api/v1/jobs';
   const PIX_POLL_INTERVAL_MS = 3000;
   const PIX_REQUEST_TIMEOUT_MS = 30000;
   const PIX_DEFAULT_TIMEOUT_SECONDS = 900;
-  const PIX_SUCCESS_PAYMENT_STATUSES = ['paid', 'pix_ready', 'already_plus'];
+  // 失败 error_key → 友好中文提示（对接文档 §五）。
+  const PIX_ERROR_KEY_MESSAGES = Object.freeze({
+    err_no_trial: '该账号无免费试用资格（可能已开过 Plus），请更换新号。',
+    err_at_invalid: 'access token 无效或已过期，请重新获取。',
+    err_already_plus: '该账号已是 Plus，无需重复开通。',
+    err_blocked: '该账号被风控拦截，请更换账号重试。',
+    err_network: '网络/代理临时故障，请稍后重试。',
+    err_timeout: '处理超时，请稍后重试。',
+    err_busy: '服务繁忙（上游额度耗尽或维护），请稍后重试。',
+    err_generic: '开通失败。',
+  });
   const GPC_PORTAL_URL = 'https://gpc.qlhazycoder.top/';
   const GPC_PAGE_POLL_INTERVAL_MS = 3000;
   const GPC_PAGE_DEFAULT_TIMEOUT_SECONDS = 900;
@@ -473,18 +484,18 @@
       return normalized * 1000;
     }
 
-    async function fetchPixOrder(baseUrl, orderId) {
+    async function fetchPixJson(url) {
       const fetcher = typeof fetchImpl === 'function'
         ? fetchImpl
         : (typeof fetch === 'function' ? fetch.bind(globalThis) : null);
       if (typeof fetcher !== 'function') {
-        throw new Error('步骤 7：当前运行环境不支持 fetch，无法查询 Pix 订单状态。');
+        throw new Error('等待 Pix 充值完成：当前运行环境不支持 fetch，无法查询 Pix 状态。');
       }
-      const url = `${baseUrl}${PIX_ORDER_PATH}/${encodeURIComponent(orderId)}`;
       const controller = typeof AbortController === 'function' ? new AbortController() : null;
       const timer = controller ? setTimeout(() => controller.abort(), PIX_REQUEST_TIMEOUT_MS) : null;
       try {
-        const response = await fetcher(`${url}?t=${Date.now()}`, {
+        const separator = url.includes('?') ? '&' : '?';
+        const response = await fetcher(`${url}${separator}t=${Date.now()}`, {
           method: 'GET',
           cache: 'no-store',
           headers: { Accept: 'application/json' },
@@ -505,6 +516,14 @@
       }
     }
 
+    function fetchPixJobLogs(baseUrl, jobId) {
+      return fetchPixJson(`${baseUrl}${PIX_JOB_LOGS_PATH}/${encodeURIComponent(jobId)}/logs`);
+    }
+
+    function fetchPixOrder(baseUrl, orderId) {
+      return fetchPixJson(`${baseUrl}${PIX_ORDER_PATH}/${encodeURIComponent(orderId)}`);
+    }
+
     async function resolvePixOrderId(state = {}) {
       const direct = String(state?.pixOrderId || '').trim();
       if (direct) {
@@ -514,52 +533,125 @@
       return String(latestState?.pixOrderId || '').trim();
     }
 
+    async function resolvePixJobId(state = {}) {
+      const direct = String(state?.pixJobId || '').trim();
+      if (direct) {
+        return direct;
+      }
+      const latestState = typeof getState === 'function' ? await getState().catch(() => ({})) : {};
+      return String(latestState?.pixJobId || '').trim();
+    }
+
+    function describePixFailure(payload = {}) {
+      const errorKey = String(payload?.error_key || payload?.errorKey || '').trim();
+      const errorText = String(payload?.error || '').trim();
+      const mapped = PIX_ERROR_KEY_MESSAGES[errorKey];
+      if (mapped) {
+        return errorKey === 'err_generic' && errorText ? `${mapped}${errorText}` : mapped;
+      }
+      return errorText || errorKey || '未知错误';
+    }
+
+    async function completePixBilling(orderState, payload = {}) {
+      const email = String(payload?.email || '').trim();
+      await setState({
+        plusCheckoutSource: PLUS_PAYMENT_METHOD_PIX,
+        pixOrderState: orderState,
+        pixPaymentStatus: String(payload?.payment_status || payload?.paymentStatus || '').trim(),
+      });
+      await addLog(`等待 Pix 充值完成：开通成功${email ? `（${email}）` : ''}，准备继续下一步。`, 'ok');
+      await completeNodeFromBackground('plus-checkout-billing', {
+        plusCheckoutSource: PLUS_PAYMENT_METHOD_PIX,
+        pixOrderState: orderState,
+        pixPaymentStatus: String(payload?.payment_status || payload?.paymentStatus || '').trim(),
+      });
+    }
+
+    async function pollPixOrderFallback(baseUrl, orderId) {
+      // job 过期（404）后按 order_id 查持久终态。
+      const { response, payload } = await fetchPixOrder(baseUrl, orderId);
+      if (!response?.ok) {
+        const detail = String(payload?.error || payload?.message || `HTTP ${response?.status || 0}`).trim();
+        throw new Error(`等待 Pix 充值完成：查询订单终态失败：${detail}`);
+      }
+      const orderState = String(payload?.state || '').trim().toLowerCase();
+      if (orderState === 'done') {
+        await completePixBilling(orderState, payload);
+        return true;
+      }
+      if (orderState === 'failed') {
+        throw new Error(`等待 Pix 充值完成：充值失败：${describePixFailure(payload)}`);
+      }
+      return false;
+    }
+
     async function executePixBilling(state = {}) {
       const orderId = await resolvePixOrderId(state);
       if (!orderId) {
         throw new Error('等待 Pix 充值完成：缺少 Pix 订单号，请先执行「发起 Pix 充值」。');
       }
+      const jobId = await resolvePixJobId(state);
       // Pix 接口地址固定使用内置端点，不接受用户自定义。
       const baseUrl = DEFAULT_PIX_BASE_URL;
       const deadline = Date.now() + getPixTimeoutMs(state);
-      await addLog(`等待 Pix 充值完成：正在轮询订单状态（order_id=${orderId}）...`, 'info');
+      await addLog(
+        `等待 Pix 充值完成：正在轮询开通进度（order_id=${orderId}${jobId ? `, job_id=${jobId}` : ''}）...`,
+        'info'
+      );
 
+      let renderedLogCount = 0;
       let lastState = '';
-      let lastPaymentStatus = '';
       while (Date.now() <= deadline) {
         throwIfStopped();
-        const { response, payload } = await fetchPixOrder(baseUrl, orderId);
+
+        // 无 job_id 时直接走 order 终态兜底轮询。
+        if (!jobId) {
+          if (await pollPixOrderFallback(baseUrl, orderId)) {
+            return;
+          }
+          await sleepWithStop(PIX_POLL_INTERVAL_MS);
+          continue;
+        }
+
+        const { response, payload } = await fetchPixJobLogs(baseUrl, jobId);
+        if (response?.status === 404) {
+          // job 已过期，转为 order 终态兜底。
+          if (await pollPixOrderFallback(baseUrl, orderId)) {
+            return;
+          }
+          await sleepWithStop(PIX_POLL_INTERVAL_MS);
+          continue;
+        }
         if (!response?.ok) {
           const detail = String(payload?.error || payload?.message || `HTTP ${response?.status || 0}`).trim();
-          throw new Error(`等待 Pix 充值完成：查询订单状态失败：${detail}`);
+          throw new Error(`等待 Pix 充值完成：查询进度失败：${detail}`);
         }
+
+        // 增量渲染进度日志（每次返回完整列表，只输出新增的部分）。
+        const logs = Array.isArray(payload?.logs) ? payload.logs : [];
+        for (let index = renderedLogCount; index < logs.length; index += 1) {
+          const entry = logs[index] || {};
+          const msg = String(entry.msg || entry.key || '').trim();
+          if (msg) {
+            await addLog(`等待 Pix 充值完成：${msg}`, 'info');
+          }
+        }
+        renderedLogCount = Math.max(renderedLogCount, logs.length);
+
         const orderState = String(payload?.state || '').trim().toLowerCase();
-        const paymentStatus = String(payload?.payment_status || payload?.paymentStatus || '').trim().toLowerCase();
-        if (orderState !== lastState || paymentStatus !== lastPaymentStatus) {
+        if (orderState !== lastState) {
           lastState = orderState;
-          lastPaymentStatus = paymentStatus;
           await setState({
             plusCheckoutSource: PLUS_PAYMENT_METHOD_PIX,
             pixOrderState: orderState,
-            pixPaymentStatus: paymentStatus,
           });
-          await addLog(`等待 Pix 充值完成：订单状态 ${orderState || '未知'}${paymentStatus ? `（${paymentStatus}）` : ''}。`, 'info');
         }
-
         if (orderState === 'done') {
-          if (PIX_SUCCESS_PAYMENT_STATUSES.includes(paymentStatus)) {
-            await addLog(`等待 Pix 充值完成：充值成功（${paymentStatus}），准备继续下一步。`, 'ok');
-            await completeNodeFromBackground('plus-checkout-billing', {
-              plusCheckoutSource: PLUS_PAYMENT_METHOD_PIX,
-              pixOrderState: orderState,
-              pixPaymentStatus: paymentStatus,
-            });
-            return;
-          }
-          throw new Error(`等待 Pix 充值完成：订单已结束但支付状态异常：${paymentStatus || '未知'}。`);
+          await completePixBilling(orderState, payload);
+          return;
         }
         if (orderState === 'failed') {
-          throw new Error(`等待 Pix 充值完成：充值失败${paymentStatus ? `（${paymentStatus}）` : ''}。`);
+          throw new Error(`等待 Pix 充值完成：充值失败：${describePixFailure(payload)}`);
         }
         await sleepWithStop(PIX_POLL_INTERVAL_MS);
       }

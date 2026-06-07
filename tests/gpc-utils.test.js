@@ -30,7 +30,7 @@ test('GPC utils normalizes Pix base URL and cdk, and builds Pix API URLs', () =>
   assert.equal(api.normalizePixBaseUrl('https://pixplus.1iiu.com/'), 'https://pixplus.1iiu.com');
   assert.equal(api.normalizePixBaseUrl('not a url'), 'https://pixplus.1iiu.com');
   assert.equal(api.normalizePixBaseUrl('https://custom.example.com/base/'), 'https://custom.example.com/base');
-  assert.equal(api.normalizePixCdk(' cdk_YACIkbgSjvLuJxsSmVvxMDoonk3i9 '), 'cdk_YACIkbgSjvLuJxsSmVvxMDoonk3i9');
+  assert.equal(api.normalizePixCdk(' QZ-aB12-Cd34-Ef56 '), 'QZ-aB12-Cd34-Ef56');
   assert.equal(
     api.buildPixApiUrl('https://pixplus.1iiu.com', '/api/v1/redeem'),
     'https://pixplus.1iiu.com/api/v1/redeem'

@@ -46,8 +46,8 @@
   }
 
   function normalizePixCdk(value = '') {
-    // Pix 卡密是大小写敏感的随机串（如 cdk_YACIkbgSjvLuJxsSmVvxMDoonk3i9），
-    // 只去首尾空白，保留原始大小写，切勿转大写。
+    // Pix 卡密格式为 QZ-XXXX-XXXX-XXXX，作为鉴权凭证按原样传输：
+    // 只去首尾空白，保留原始字符（不转大小写），避免破坏可能的大小写敏感字符。
     return String(value || '').trim();
   }
 
