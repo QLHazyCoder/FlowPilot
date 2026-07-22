@@ -254,6 +254,81 @@ test('sub2api session import falls back to registration email when session has n
   assert.equal(importBody.name, 'registration@example.com');
 });
 
+test('sub2api agent identity import registers an agent and never submits the access token as import content', async () => {
+  const apiModule = loadSub2ApiApiModule();
+  const token = createJwtToken({
+    sub: 'user-123',
+    email: 'owner@example.com',
+    'https://api.openai.com/auth': {
+      chatgpt_account_id: 'account-123',
+      chatgpt_user_id: 'user-123',
+      chatgpt_plan_type: 'plus',
+    },
+    'https://api.openai.com/profile': { email: 'owner@example.com' },
+  });
+  let importBody = null;
+  const api = apiModule.createSub2ApiApi({
+    addLog: async () => {},
+    normalizeSub2ApiUrl: (value) => value,
+    DEFAULT_SUB2API_GROUP_NAME: 'codex',
+    cryptoImpl: {
+      subtle: {
+        async generateKey() { return { privateKey: {}, publicKey: {} }; },
+        async exportKey(format) {
+          return format === 'pkcs8'
+            ? Uint8Array.from([1, 2, 3]).buffer
+            : Uint8Array.from(new Array(32).fill(7)).buffer;
+        },
+      },
+    },
+    fetchImpl: async (url, options = {}) => {
+      const parsed = new URL(url);
+      const body = options.body ? JSON.parse(options.body) : null;
+      if (parsed.origin === 'https://auth.openai.com') {
+        assert.equal(parsed.pathname, '/api/accounts/v1/agent/register');
+        assert.equal(options.headers.Authorization, `Bearer ${token}`);
+        assert.match(body.agent_public_key, /^ssh-ed25519 /);
+        return createJsonResponse({ agent_runtime_id: 'agent-123' });
+      }
+      if (parsed.pathname === '/api/v1/auth/login') {
+        return createJsonResponse({ code: 0, data: { access_token: 'admin-token' } });
+      }
+      if (parsed.pathname === '/api/v1/admin/groups/all') {
+        return createJsonResponse({ code: 0, data: [{ id: 5, name: 'codex', platform: 'openai' }] });
+      }
+      if (parsed.pathname === '/api/v1/admin/proxies/all') {
+        return createJsonResponse({ code: 0, data: [{ id: 7, name: '新加坡', status: 'active' }] });
+      }
+      if (parsed.pathname === '/api/v1/admin/accounts/import/codex-session') {
+        importBody = body;
+        return createJsonResponse({ code: 0, data: { total: 1, created: 1, updated: 0, skipped: 0, failed: 0 } });
+      }
+      return createJsonResponse({ code: 1, message: `unexpected path ${parsed.pathname}` }, 404);
+    },
+  });
+
+  const result = await api.importCurrentChatGptSessionAsAgentIdentity({
+    sub2apiUrl: 'https://sub.example/admin/accounts',
+    sub2apiEmail: 'admin@example.com',
+    sub2apiPassword: 'secret',
+    sub2apiGroupName: 'codex',
+    sub2apiDefaultProxyName: '新加坡',
+    sub2apiAccountPriority: 2,
+    accessToken: token,
+  });
+
+  const authJson = JSON.parse(importBody.content);
+  assert.equal(authJson.auth_mode, 'agent_identity');
+  assert.equal(authJson.agent_identity.agent_runtime_id, 'agent-123');
+  assert.equal(authJson.agent_identity.email, 'owner@example.com');
+  assert.equal(importBody.name, 'owner@example.com');
+  assert.equal(importBody.proxy_id, 7);
+  assert.deepEqual(importBody.group_ids, [5]);
+  assert.equal(importBody.priority, 2);
+  assert.equal(importBody.content.includes(token), false);
+  assert.match(result.verifiedStatus, /Agent Identity/);
+});
+
 test('session import step reads current ChatGPT session and completes node', async () => {
   const moduleApi = loadSub2ApiSessionImportModule();
   const completed = [];
@@ -363,6 +438,143 @@ test('session import step reads current ChatGPT session and completes node', asy
     logs.some((entry) => entry.stepKey === 'sub2api-session-import' && /读取当前 ChatGPT 登录会话/.test(entry.message)),
     true
   );
+});
+
+test('session import retries session token reads after a short initial delay', async () => {
+  const moduleApi = loadSub2ApiSessionImportModule();
+  const sleeps = [];
+  const sentMessages = [];
+  const logs = [];
+  const importedPayloads = [];
+
+  const executor = moduleApi.createSub2ApiSessionImportExecutor({
+    addLog: async (message, level = 'info', options = {}) => {
+      logs.push({ message, level, step: options.step, stepKey: options.stepKey });
+    },
+    chrome: {
+      tabs: {
+        get: async (tabId) => ({
+          id: tabId,
+          url: 'https://chatgpt.com/',
+        }),
+        update: async () => {},
+      },
+    },
+    completeNodeFromBackground: async () => {},
+    createSub2ApiApi: () => ({
+      importCurrentChatGptSession: async (state) => {
+        importedPayloads.push(state);
+        return { verifiedStatus: 'ok' };
+      },
+    }),
+    ensureContentScriptReadyOnTabUntilStopped: async () => {},
+    getTabId: async () => null,
+    isTabAlive: async () => false,
+    normalizeSub2ApiUrl: (value) => value,
+    registerTab: async () => {},
+    sendTabMessageUntilStopped: async (tabId, source, message) => {
+      sentMessages.push({ tabId, source, message });
+      if (sentMessages.length === 1) {
+        return {};
+      }
+      return {
+        session: {
+          accessToken: 'retry-access-token',
+          user: { email: 'retry@example.com' },
+        },
+        accessToken: 'retry-access-token',
+      };
+    },
+    sessionReadMaxAttempts: 2,
+    sleepWithStop: async (ms) => {
+      sleeps.push(ms);
+    },
+    throwIfStopped: () => {},
+    waitForTabCompleteUntilStopped: async () => {},
+  });
+
+  await executor.executeSub2ApiSessionImport({
+    nodeId: 'sub2api-session-import',
+    visibleStep: 10,
+    plusCheckoutTabId: 91,
+  });
+
+  assert.deepStrictEqual(sleeps, [1000, 2000]);
+  assert.equal(sentMessages.length, 2);
+  assert.equal(importedPayloads.length, 1);
+  assert.equal(importedPayloads[0].accessToken, 'retry-access-token');
+  assert.equal(
+    logs.some((entry) => entry.level === 'warn' && /2 秒后重试/.test(entry.message)),
+    true
+  );
+});
+
+test('agent identity import retries when session exists but access token is not ready', async () => {
+  const moduleApi = loadSub2ApiSessionImportModule();
+  const sleeps = [];
+  const sentMessages = [];
+  const importedPayloads = [];
+
+  const executor = moduleApi.createSub2ApiSessionImportExecutor({
+    addLog: async () => {},
+    chrome: {
+      tabs: {
+        get: async (tabId) => ({
+          id: tabId,
+          url: 'https://chatgpt.com/',
+        }),
+        update: async () => {},
+      },
+    },
+    completeNodeFromBackground: async () => {},
+    createSub2ApiApi: () => ({
+      importCurrentChatGptSessionAsAgentIdentity: async (state) => {
+        importedPayloads.push(state);
+        return { verifiedStatus: 'ok' };
+      },
+    }),
+    ensureContentScriptReadyOnTabUntilStopped: async () => {},
+    getTabId: async () => null,
+    isTabAlive: async () => false,
+    normalizeSub2ApiUrl: (value) => value,
+    registerTab: async () => {},
+    sendTabMessageUntilStopped: async () => {
+      sentMessages.push(true);
+      if (sentMessages.length === 1) {
+        return {
+          session: {
+            user: { email: 'pending@example.com' },
+          },
+          accessToken: '',
+        };
+      }
+      return {
+        session: {
+          accessToken: 'agent-access-token',
+          user: { email: 'ready@example.com' },
+        },
+        accessToken: 'agent-access-token',
+      };
+    },
+    sessionReadMaxAttempts: 2,
+    sleepWithStop: async (ms) => {
+      sleeps.push(ms);
+    },
+    throwIfStopped: () => {},
+    waitForTabCompleteUntilStopped: async () => {},
+  });
+
+  await executor.executeSub2ApiAgentIdentityImport({
+    nodeId: 'sub2api-agent-identity-import',
+    visibleStep: 7,
+    plusCheckoutTabId: 91,
+  });
+
+  assert.deepStrictEqual(sleeps, [1000, 2000]);
+  assert.equal(sentMessages.length, 2);
+  assert.equal(importedPayloads.length, 1);
+  assert.equal(importedPayloads[0].accessToken, 'agent-access-token');
+  assert.equal(importedPayloads[0].session.user.email, 'ready@example.com');
 });
 
 test('session import step falls back to an active ChatGPT tab when no checkout tab is tracked', async () => {

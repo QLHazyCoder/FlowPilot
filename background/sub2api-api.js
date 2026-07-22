@@ -9,6 +9,7 @@
       fetchImpl = (...args) => fetch(...args),
       setTimeoutImpl = (...args) => setTimeout(...args),
       clearTimeoutImpl = (...args) => clearTimeout(...args),
+      cryptoImpl = globalThis.crypto,
     } = deps;
 
     const DEFAULT_REDIRECT_URI = 'http://localhost:1455/auth/callback';
@@ -558,6 +559,99 @@
       }
     }
 
+    function encodeBase64(bytes) {
+      const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+      if (typeof btoa === 'function') {
+        let binary = '';
+        for (let index = 0; index < view.length; index += 0x8000) {
+          binary += String.fromCharCode(...view.subarray(index, index + 0x8000));
+        }
+        return btoa(binary);
+      }
+      if (typeof Buffer !== 'undefined') {
+        return Buffer.from(view).toString('base64');
+      }
+      throw new Error('当前环境不支持 Base64 编码。');
+    }
+
+    function encodeSshEd25519PublicKey(rawPublicKey) {
+      const algorithm = new TextEncoder().encode('ssh-ed25519');
+      const publicKey = new Uint8Array(rawPublicKey);
+      const bytes = new Uint8Array(4 + algorithm.length + 4 + publicKey.length);
+      const view = new DataView(bytes.buffer);
+      view.setUint32(0, algorithm.length);
+      bytes.set(algorithm, 4);
+      view.setUint32(4 + algorithm.length, publicKey.length);
+      bytes.set(publicKey, 8 + algorithm.length);
+      return `ssh-ed25519 ${encodeBase64(bytes)}`;
+    }
+
+    function buildAgentIdentityContext(state = {}, session = null, accessToken = '') {
+      const token = normalizeString(accessToken || session?.accessToken);
+      const claims = parseCodexAccessTokenClaims(token);
+      const auth = claims?.['https://api.openai.com/auth'] || {};
+      const profile = claims?.['https://api.openai.com/profile'] || {};
+      const accountId = normalizeString(auth.chatgpt_account_id);
+      const userId = normalizeString(auth.chatgpt_user_id || auth.user_id || claims?.sub);
+      if (!accountId || !userId) {
+        throw new Error('accessToken 缺少 OpenAI account_id 或 user_id，无法生成 Agent Identity。');
+      }
+      return {
+        accessToken: token,
+        accountId,
+        userId,
+        email: normalizeEmailValue(profile.email)
+          || resolveCodexSessionImportAccountName(state, session, token),
+        planType: normalizeString(auth.chatgpt_plan_type) || 'free',
+      };
+    }
+
+    async function createOpenAiAgentIdentity(state = {}, session = null, accessToken = '', options = {}) {
+      if (!cryptoImpl?.subtle) {
+        throw new Error('当前浏览器不支持 Web Crypto，无法生成 Agent Identity。');
+      }
+      const context = buildAgentIdentityContext(state, session, accessToken);
+      let keyPair;
+      try {
+        keyPair = await cryptoImpl.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+      } catch {
+        throw new Error('当前浏览器不支持 Ed25519，无法生成 Agent Identity。');
+      }
+      const [privateKey, publicKey] = await Promise.all([
+        cryptoImpl.subtle.exportKey('pkcs8', keyPair.privateKey),
+        cryptoImpl.subtle.exportKey('raw', keyPair.publicKey),
+      ]);
+      const registered = await requestJson('https://auth.openai.com', '/api/accounts/v1/agent/register', {
+        method: 'POST',
+        token: context.accessToken,
+        timeoutMs: options.agentTimeoutMs || options.timeoutMs,
+        body: {
+          abom: {
+            agent_version: '0.138.0-alpha.6',
+            agent_harness_id: 'codex-cli',
+            running_location: 'local',
+          },
+          agent_public_key: encodeSshEd25519PublicKey(publicKey),
+        },
+      });
+      const runtimeId = normalizeString(registered?.agent_runtime_id);
+      if (!runtimeId) {
+        throw new Error('OpenAI Agent 注册未返回 agent_runtime_id。');
+      }
+      return {
+        auth_mode: 'agent_identity',
+        agent_identity: {
+          agent_runtime_id: runtimeId,
+          agent_private_key: encodeBase64(privateKey),
+          account_id: context.accountId,
+          chatgpt_user_id: context.userId,
+          email: context.email,
+          plan_type: context.planType,
+          chatgpt_account_is_fedramp: false,
+        },
+      };
+    }
+
     function resolveCodexSessionImportAccountName(state = {}, session = null, accessToken = '') {
       const sessionObject = normalizeCodexSessionObject(session);
       const claims = parseCodexAccessTokenClaims(accessToken || sessionObject?.accessToken);
@@ -960,9 +1054,71 @@
       };
     }
 
+    async function importCurrentChatGptSessionAsAgentIdentity(state = {}, options = {}) {
+      const logLabel = normalizeString(options.logLabel) || 'SUB2API Agent Identity 导入';
+      const session = normalizeCodexSessionObject(state?.session);
+      const accessToken = normalizeString(state?.accessToken || session?.accessToken);
+      if (!accessToken) {
+        throw new Error('未读取到 ChatGPT accessToken，无法生成 Agent Identity。');
+      }
+
+      await logWithOptions(`${logLabel}：正在使用当前 ChatGPT accessToken 注册 Agent...`, 'info', options);
+      const authJson = await createOpenAiAgentIdentity(state, session, accessToken, options);
+      const accountName = normalizeString(authJson?.agent_identity?.email)
+        || resolveCodexSessionImportAccountName(state, session, accessToken);
+
+      await logWithOptions(`${logLabel}：正在登录 SUB2API 并解析分组、代理...`, 'info', options);
+      const { origin, token } = await loginSub2Api(state, options);
+      const groupNames = state.sub2apiGroupName || DEFAULT_SUB2API_GROUP_NAME;
+      const groups = await getGroupsByNames(origin, token, groupNames, options);
+      const proxyPreference = resolveSub2ApiProxyPreference(state);
+      const proxy = proxyPreference ? await resolveSub2ApiProxy(origin, token, proxyPreference, options) : null;
+      const proxyId = normalizeProxyId(proxy?.id);
+      const accountPriority = resolveSub2ApiAccountPriority(state);
+      const groupIds = groups
+        .map((group) => Number(group?.id))
+        .filter((id) => Number.isFinite(id) && id > 0);
+      if (!groupIds.length) {
+        throw new Error('SUB2API 返回的目标分组 ID 无效。');
+      }
+
+      const importPayload = {
+        content: JSON.stringify(authJson),
+        group_ids: groupIds,
+        ...(accountName ? { name: accountName } : {}),
+        priority: accountPriority,
+        update_existing: true,
+      };
+      if (proxyId) {
+        importPayload.proxy_id = proxyId;
+      }
+
+      await logWithOptions(`${logLabel}：正在导入 Agent Identity 到 SUB2API...`, 'info', options);
+      const importResult = normalizeCodexSessionImportResult(await requestJson(origin, '/api/v1/admin/accounts/import/codex-session', {
+        method: 'POST',
+        token,
+        timeoutMs: options.importTimeoutMs || options.timeoutMs,
+        body: importPayload,
+      }));
+      if (importResult.failed > 0 || (importResult.created <= 0 && importResult.updated <= 0)) {
+        throw new Error(getCodexSessionImportFailureMessage(importResult));
+      }
+      const verifiedStatus = `SUB2API Agent Identity 导入完成：新建 ${importResult.created}，更新 ${importResult.updated}，跳过 ${importResult.skipped}，失败 ${importResult.failed}`;
+      await logWithOptions(verifiedStatus, 'ok', options);
+      return {
+        verifiedStatus,
+        sub2apiImportTotal: importResult.total,
+        sub2apiImportCreated: importResult.created,
+        sub2apiImportUpdated: importResult.updated,
+        sub2apiImportSkipped: importResult.skipped,
+        sub2apiImportFailed: importResult.failed,
+      };
+    }
+
     return {
       buildDraftAccountName,
       buildCodexSessionImportContent,
+      buildAgentIdentityContext,
       buildOpenAiCredentials,
       buildOpenAiExtra,
       buildProxyDisplayName,
@@ -972,6 +1128,7 @@
       prepareGrokOAuth,
       createGrokAccountFromOAuth,
       importCurrentChatGptSession,
+      importCurrentChatGptSessionAsAgentIdentity,
       loginSub2Api,
       normalizeProxyId,
       normalizeRedirectUri,

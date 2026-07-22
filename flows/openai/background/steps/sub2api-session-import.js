@@ -3,6 +3,9 @@
 })(typeof self !== 'undefined' ? self : globalThis, function createBackgroundSub2ApiSessionImportModule() {
   const PLUS_CHECKOUT_SOURCE = 'plus-checkout';
   const PLUS_CHECKOUT_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'flows/openai/content/plus-checkout.js'];
+  const SESSION_READ_INITIAL_DELAY_MS = 1000;
+  const SESSION_READ_RETRY_DELAY_MS = 2000;
+  const SESSION_READ_MAX_ATTEMPTS = 11;
 
   function createSub2ApiSessionImportExecutor(deps = {}) {
     const {
@@ -15,6 +18,9 @@
       normalizeSub2ApiUrl = (value) => value,
       registerTab,
       sendTabMessageUntilStopped,
+      sessionReadInitialDelayMs = SESSION_READ_INITIAL_DELAY_MS,
+      sessionReadRetryDelayMs = SESSION_READ_RETRY_DELAY_MS,
+      sessionReadMaxAttempts = SESSION_READ_MAX_ATTEMPTS,
       sleepWithStop = async () => {},
       throwIfStopped = () => {},
       waitForTabCompleteUntilStopped = async () => {},
@@ -199,9 +205,7 @@
       return tab;
     }
 
-    async function readCurrentChatGptSession(tabId, visibleStep) {
-      await waitForTabCompleteUntilStopped(tabId);
-      await sleepWithStop(1000);
+    async function requestCurrentChatGptSession(tabId, visibleStep, options = {}) {
       await ensureContentScriptReadyOnTabUntilStopped(PLUS_CHECKOUT_SOURCE, tabId, {
         inject: PLUS_CHECKOUT_INJECT_FILES,
         injectSource: PLUS_CHECKOUT_SOURCE,
@@ -227,6 +231,9 @@
         sessionResult?.accessToken
         || session?.accessToken
       );
+      if (options.requireAccessToken && !accessToken) {
+        throw new Error(`步骤 ${visibleStep}：未读取到 ChatGPT accessToken，请确认当前标签页仍处于已登录状态。`);
+      }
       if (!session && !accessToken) {
         throw new Error(`步骤 ${visibleStep}：未读取到有效的 ChatGPT 会话或 accessToken，请确认当前标签页仍处于已登录状态。`);
       }
@@ -235,6 +242,39 @@
         session,
         accessToken,
       };
+    }
+
+    async function readCurrentChatGptSession(tabId, visibleStep, options = {}) {
+      await waitForTabCompleteUntilStopped(tabId);
+
+      const firstDelayMs = Math.max(0, Math.floor(Number(sessionReadInitialDelayMs) || 0));
+      const retryDelayMs = Math.max(0, Math.floor(Number(sessionReadRetryDelayMs) || 0));
+      const maxAttempts = Math.max(1, Math.floor(Number(sessionReadMaxAttempts) || SESSION_READ_MAX_ATTEMPTS));
+      let lastError = null;
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        throwIfStopped();
+        const delayMs = attempt === 1 ? firstDelayMs : retryDelayMs;
+        if (delayMs > 0) {
+          await sleepWithStop(delayMs);
+        }
+
+        try {
+          return await requestCurrentChatGptSession(tabId, visibleStep, options);
+        } catch (error) {
+          lastError = error;
+          if (attempt >= maxAttempts) {
+            break;
+          }
+          await addStepLog(
+            visibleStep,
+            `未读取到 ChatGPT session/accessToken，${Math.round(retryDelayMs / 1000)} 秒后重试...`,
+            'warn'
+          );
+        }
+      }
+
+      throw lastError || new Error(`步骤 ${visibleStep}：未读取到有效的 ChatGPT 会话或 accessToken，请确认当前标签页仍处于已登录状态。`);
     }
 
     async function executeSub2ApiSessionImport(state = {}) {
@@ -268,8 +308,42 @@
       await completeNodeFromBackground(state?.nodeId || 'sub2api-session-import', result);
     }
 
+    async function executeSub2ApiAgentIdentityImport(state = {}) {
+      throwIfStopped();
+      const visibleStep = resolveVisibleStep(state);
+      const api = getSub2ApiApi();
+      const importAgentIdentity = api.importCurrentChatGptSessionAsAgentIdentity
+        || api.importCurrentChatGptSession;
+
+      await addStepLog(visibleStep, '正在定位当前 ChatGPT 会话页并读取 accessToken...', 'info');
+      const tabId = await resolveSessionTabId(state);
+      const tab = await getResolvedSessionTab(tabId, visibleStep);
+      if (chrome?.tabs?.update) {
+        await chrome.tabs.update(tab.id, { active: true }).catch(() => {});
+      }
+      const sessionState = await readCurrentChatGptSession(tab.id, visibleStep, {
+        requireAccessToken: true,
+      });
+      throwIfStopped();
+
+      const result = await importAgentIdentity({
+        ...state,
+        session: sessionState.session,
+        accessToken: sessionState.accessToken,
+      }, {
+        visibleStep,
+        logLabel: `步骤 ${visibleStep}`,
+        logOptions: { step: visibleStep, stepKey: 'sub2api-agent-identity-import' },
+        timeoutMs: 120000,
+        agentTimeoutMs: 60000,
+        importTimeoutMs: 120000,
+      });
+      await completeNodeFromBackground(state?.nodeId || 'sub2api-agent-identity-import', result);
+    }
+
     return {
       executeSub2ApiSessionImport,
+      executeSub2ApiAgentIdentityImport,
       isSupportedChatGptSessionUrl,
     };
   }

@@ -16,6 +16,7 @@
   const OPENAI_WEBCHAT_UPLOAD_STEP_KEY = 'openai-upload-session-to-webchat';
   const OPENAI_CHATGPT2API_TARGET_ID = 'chatgpt2api';
   const OPENAI_CHATGPT2API_UPLOAD_STEP_KEY = 'openai-upload-session-to-chatgpt2api';
+  const OPENAI_SUB2API_AGENT_IDENTITY_IMPORT_STEP_KEY = 'sub2api-agent-identity-import';
 
   function freezeDeep(entry) {
     if (!entry || typeof entry !== 'object' || Object.isFrozen(entry)) {
@@ -1909,6 +1910,37 @@
     };
   }
 
+  function getSub2ApiAgentIdentityImportStep() {
+    return {
+      key: OPENAI_SUB2API_AGENT_IDENTITY_IMPORT_STEP_KEY,
+      title: '生成并导入 Agent Identity',
+      sourceId: 'sub2api-panel',
+      driverId: 'flows/openai/background/steps/sub2api-session-import',
+      command: OPENAI_SUB2API_AGENT_IDENTITY_IMPORT_STEP_KEY,
+      flowId: 'openai',
+    };
+  }
+
+  function isSub2ApiAgentIdentityMode(options = {}) {
+    return String(options?.targetId || '').trim().toLowerCase() === 'sub2api'
+      && String(options?.sub2apiImportMode || '').trim().toLowerCase() === 'agent_identity';
+  }
+
+  function replaceOpenAiOAuthTailWithAgentIdentity(steps = []) {
+    const registrationWaitIndex = steps.findIndex((step) => step.key === PLUS_REGISTRATION_WAIT_STEP_KEY);
+    if (registrationWaitIndex < 0) return steps;
+    return [
+      ...steps.slice(0, registrationWaitIndex + 1),
+      getSub2ApiAgentIdentityImportStep(),
+    ];
+  }
+
+  function replaceSessionImportWithAgentIdentity(steps = []) {
+    return steps.map((step) => step.key === 'sub2api-session-import'
+      ? getSub2ApiAgentIdentityImportStep()
+      : step);
+  }
+
   function getPlusRegistrationWaitStep() {
     const sourceStep = STEP_VARIANTS.normal.find((step) => step.key === PLUS_REGISTRATION_WAIT_STEP_KEY);
     return {
@@ -2078,6 +2110,11 @@
     }
     if (!isPhoneVerificationEnabled(options)) {
       steps = omitPostLoginPhoneVerificationSteps(steps);
+    }
+    if (isSub2ApiAgentIdentityMode(options)) {
+      steps = steps.some((step) => step.key === 'sub2api-session-import')
+        ? replaceSessionImportWithAgentIdentity(steps)
+        : replaceOpenAiOAuthTailWithAgentIdentity(steps);
     }
     if (isOpenAiRemotePublicationTarget(options)) {
       steps = omitOpenAiWebchatPublicationSteps(steps);

@@ -103,6 +103,8 @@ const rowSub2ApiEmail = document.getElementById('row-sub2api-email');
 const inputSub2ApiEmail = document.getElementById('input-sub2api-email');
 const rowSub2ApiPassword = document.getElementById('row-sub2api-password');
 const inputSub2ApiPassword = document.getElementById('input-sub2api-password');
+const rowSub2ApiImportMode = document.getElementById('row-sub2api-import-mode');
+const inputSub2ApiImportMode = document.getElementById('input-sub2api-import-mode');
 const rowSub2ApiGroup = document.getElementById('row-sub2api-group');
 const inputSub2ApiGroup = document.getElementById('input-sub2api-group');
 const sub2ApiGroupPickerRoot = document.getElementById('sub2api-group-picker');
@@ -638,6 +640,7 @@ let currentStepDefinitionFlowId = DEFAULT_ACTIVE_FLOW_ID;
 let currentStepDefinitionTargetId = '';
 let currentStepDefinitionOpenAiWebchatUploadEnabled = false;
 let currentStepDefinitionGrokSub2apiGrok2ApiUploadEnabled = false;
+let currentStepDefinitionSub2ApiImportMode = 'oauth';
 let phoneSignupReuseUiWasLocked = false;
 let kiroRsConnectionTestStatusText = '未测试';
 let lastPhoneSmsProviderBeforeChange = null;
@@ -662,6 +665,7 @@ const nexSmsCountrySearchTextById = new Map();
 let stepDefinitions = getStepDefinitionsForMode(false, {
   plusPaymentMethod: currentPlusPaymentMethod,
   plusAccountAccessStrategy: currentPlusAccountAccessStrategy,
+  sub2apiImportMode: currentStepDefinitionSub2ApiImportMode,
   signupMethod: currentSignupMethod,
   phoneVerificationEnabled: currentPhoneVerificationEnabled,
   phoneSignupReloginAfterBindEmailEnabled: currentPhoneSignupReloginAfterBindEmailEnabled,
@@ -669,6 +673,7 @@ let stepDefinitions = getStepDefinitionsForMode(false, {
 let workflowNodes = getWorkflowNodesForMode(false, {
   plusPaymentMethod: currentPlusPaymentMethod,
   plusAccountAccessStrategy: currentPlusAccountAccessStrategy,
+  sub2apiImportMode: currentStepDefinitionSub2ApiImportMode,
   signupMethod: currentSignupMethod,
   phoneVerificationEnabled: currentPhoneVerificationEnabled,
   phoneSignupReloginAfterBindEmailEnabled: currentPhoneSignupReloginAfterBindEmailEnabled,
@@ -1121,6 +1126,12 @@ function initPhoneVerificationSectionExpandedState() {
   }
 }
 
+function normalizeSub2ApiImportModeForStepDefinitions(value = '') {
+  return String(value || '').trim().toLowerCase() === 'agent_identity'
+    ? 'agent_identity'
+    : 'oauth';
+}
+
 function getStepDefinitionsForMode(plusModeEnabled = false, options = {}) {
   const defaultFlowId = typeof DEFAULT_ACTIVE_FLOW_ID !== 'undefined' ? DEFAULT_ACTIVE_FLOW_ID : 'openai';
   const defaultMethod = typeof DEFAULT_PLUS_PAYMENT_METHOD !== 'undefined' ? DEFAULT_PLUS_PAYMENT_METHOD : 'paypal';
@@ -1131,6 +1142,17 @@ function getStepDefinitionsForMode(plusModeEnabled = false, options = {}) {
   const rawPlusAccountAccessStrategy = typeof options === 'string'
     ? currentPlusAccountAccessStrategy
     : (options.plusAccountAccessStrategy || currentPlusAccountAccessStrategy || defaultStrategy);
+  const normalizeSub2ApiImportModeSafe = typeof normalizeSub2ApiImportModeForStepDefinitions === 'function'
+    ? normalizeSub2ApiImportModeForStepDefinitions
+    : ((value = '') => (String(value || '').trim().toLowerCase() === 'agent_identity' ? 'agent_identity' : 'oauth'));
+  const sub2apiImportMode = normalizeSub2ApiImportModeSafe(
+    typeof options === 'string'
+      ? currentStepDefinitionSub2ApiImportMode
+      : (options.sub2apiImportMode
+        ?? (typeof inputSub2ApiImportMode !== 'undefined' && inputSub2ApiImportMode
+          ? inputSub2ApiImportMode.value
+          : (typeof latestState !== 'undefined' ? latestState?.sub2apiImportMode : currentStepDefinitionSub2ApiImportMode)))
+  );
   const rawSignupMethod = typeof options === 'string'
     ? currentSignupMethod
     : (options.signupMethod || currentSignupMethod || DEFAULT_SIGNUP_METHOD);
@@ -1174,6 +1196,7 @@ function getStepDefinitionsForMode(plusModeEnabled = false, options = {}) {
     plusModeEnabled,
     plusPaymentMethod: normalizePlusPaymentMethod(rawPaymentMethod),
     plusAccountAccessStrategy: normalizePlusAccountAccessStrategy(rawPlusAccountAccessStrategy),
+    ...(sub2apiImportMode === 'agent_identity' ? { sub2apiImportMode } : {}),
     openaiWebchatUploadEnabled,
     grokSub2apiGrok2ApiUploadEnabled,
     settingsState,
@@ -1200,6 +1223,17 @@ function getWorkflowNodesForMode(plusModeEnabled = false, options = {}) {
   const rawPlusAccountAccessStrategy = typeof options === 'string'
     ? currentPlusAccountAccessStrategy
     : (options.plusAccountAccessStrategy || currentPlusAccountAccessStrategy || defaultStrategy);
+  const normalizeSub2ApiImportModeSafe = typeof normalizeSub2ApiImportModeForStepDefinitions === 'function'
+    ? normalizeSub2ApiImportModeForStepDefinitions
+    : ((value = '') => (String(value || '').trim().toLowerCase() === 'agent_identity' ? 'agent_identity' : 'oauth'));
+  const sub2apiImportMode = normalizeSub2ApiImportModeSafe(
+    typeof options === 'string'
+      ? currentStepDefinitionSub2ApiImportMode
+      : (options.sub2apiImportMode
+        ?? (typeof inputSub2ApiImportMode !== 'undefined' && inputSub2ApiImportMode
+          ? inputSub2ApiImportMode.value
+          : (typeof latestState !== 'undefined' ? latestState?.sub2apiImportMode : currentStepDefinitionSub2ApiImportMode)))
+  );
   const rawSignupMethod = typeof options === 'string'
     ? currentSignupMethod
     : (options.signupMethod || currentSignupMethod || DEFAULT_SIGNUP_METHOD);
@@ -1243,6 +1277,7 @@ function getWorkflowNodesForMode(plusModeEnabled = false, options = {}) {
     plusModeEnabled,
     plusPaymentMethod: normalizePlusPaymentMethod(rawPaymentMethod),
     plusAccountAccessStrategy: normalizePlusAccountAccessStrategy(rawPlusAccountAccessStrategy),
+    ...(sub2apiImportMode === 'agent_identity' ? { sub2apiImportMode } : {}),
     openaiWebchatUploadEnabled,
     grokSub2apiGrok2ApiUploadEnabled,
     settingsState,
@@ -1311,6 +1346,17 @@ function rebuildStepDefinitionState(plusModeEnabled = false, options = {}) {
   const rawPlusAccountAccessStrategy = typeof options === 'string'
     ? currentPlusAccountAccessStrategy
     : (options.plusAccountAccessStrategy || currentPlusAccountAccessStrategy || defaultStrategy);
+  const normalizeSub2ApiImportModeSafe = typeof normalizeSub2ApiImportModeForStepDefinitions === 'function'
+    ? normalizeSub2ApiImportModeForStepDefinitions
+    : ((value = '') => (String(value || '').trim().toLowerCase() === 'agent_identity' ? 'agent_identity' : 'oauth'));
+  const sub2apiImportMode = normalizeSub2ApiImportModeSafe(
+    typeof options === 'string'
+      ? currentStepDefinitionSub2ApiImportMode
+      : (options.sub2apiImportMode
+        ?? (typeof inputSub2ApiImportMode !== 'undefined' && inputSub2ApiImportMode
+          ? inputSub2ApiImportMode.value
+          : (typeof latestState !== 'undefined' ? latestState?.sub2apiImportMode : currentStepDefinitionSub2ApiImportMode)))
+  );
   const rawSignupMethod = typeof options === 'string'
     ? currentSignupMethod
     : (options.signupMethod || currentSignupMethod || DEFAULT_SIGNUP_METHOD);
@@ -1343,6 +1389,7 @@ function rebuildStepDefinitionState(plusModeEnabled = false, options = {}) {
   const settingsState = options.settingsState || (typeof latestState !== 'undefined' ? latestState?.settingsState : undefined);
   currentPlusPaymentMethod = normalizePlusPaymentMethod(rawPaymentMethod);
   currentPlusAccountAccessStrategy = normalizePlusAccountAccessStrategy(rawPlusAccountAccessStrategy);
+  currentStepDefinitionSub2ApiImportMode = sub2apiImportMode;
   currentSignupMethod = normalizeSignupMethod(rawSignupMethod);
   currentPhoneVerificationEnabled = Boolean(phoneVerificationEnabled);
   currentPhoneSignupReloginAfterBindEmailEnabled = phoneSignupReloginAfterBindEmailEnabled;
@@ -1368,6 +1415,7 @@ function rebuildStepDefinitionState(plusModeEnabled = false, options = {}) {
     targetId,
     plusPaymentMethod: currentPlusPaymentMethod,
     plusAccountAccessStrategy: currentPlusAccountAccessStrategy,
+    sub2apiImportMode: currentStepDefinitionSub2ApiImportMode,
     openaiWebchatUploadEnabled,
     grokSub2apiGrok2ApiUploadEnabled,
     settingsState,
@@ -1382,6 +1430,7 @@ function rebuildStepDefinitionState(plusModeEnabled = false, options = {}) {
       targetId,
       plusPaymentMethod: currentPlusPaymentMethod,
       plusAccountAccessStrategy: currentPlusAccountAccessStrategy,
+      sub2apiImportMode: currentStepDefinitionSub2ApiImportMode,
       openaiWebchatUploadEnabled,
       grokSub2apiGrok2ApiUploadEnabled,
       settingsState,
@@ -5460,6 +5509,10 @@ function collectSettingsPayload() {
     sub2apiUrl: inputSub2ApiUrl.value.trim(),
     sub2apiEmail: inputSub2ApiEmail.value.trim(),
     sub2apiPassword: inputSub2ApiPassword.value,
+    sub2apiImportMode: (
+      typeof inputSub2ApiImportMode !== 'undefined'
+      && inputSub2ApiImportMode?.value === 'agent_identity'
+    ) ? 'agent_identity' : 'oauth',
     sub2apiGroupName: selectedSub2ApiGroupName,
     sub2apiGroupNames,
     sub2apiAccountPriority: sub2apiAccountPriorityNormalizer(
@@ -11884,6 +11937,15 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
       || currentPlusAccountAccessStrategy
       || defaultStrategy
   );
+  const normalizeSub2ApiImportModeSafe = typeof normalizeSub2ApiImportModeForStepDefinitions === 'function'
+    ? normalizeSub2ApiImportModeForStepDefinitions
+    : ((value = '') => (String(value || '').trim().toLowerCase() === 'agent_identity' ? 'agent_identity' : 'oauth'));
+  const nextSub2ApiImportMode = normalizeSub2ApiImportModeSafe(
+    options.sub2apiImportMode
+    ?? (typeof inputSub2ApiImportMode !== 'undefined' && inputSub2ApiImportMode
+      ? inputSub2ApiImportMode.value
+      : (typeof latestState !== 'undefined' ? latestState?.sub2apiImportMode : currentStepDefinitionSub2ApiImportMode))
+  );
   const nextSignupMethod = normalizeSignupMethod(options.signupMethod || currentSignupMethod || DEFAULT_SIGNUP_METHOD);
   const nextPhoneVerificationEnabled = Boolean(options.phoneVerificationEnabled ?? (typeof inputPhoneVerificationEnabled !== 'undefined' && inputPhoneVerificationEnabled
     ? inputPhoneVerificationEnabled.checked
@@ -11930,6 +11992,9 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
   const currentGrokSub2apiGrok2ApiUploadEnabled = typeof currentStepDefinitionGrokSub2apiGrok2ApiUploadEnabled !== 'undefined'
     ? Boolean(currentStepDefinitionGrokSub2apiGrok2ApiUploadEnabled)
     : Boolean(typeof latestState !== 'undefined' ? latestState?.grokSub2apiGrok2ApiUploadEnabled : false);
+  const currentSub2ApiImportMode = typeof currentStepDefinitionSub2ApiImportMode !== 'undefined'
+    ? normalizeSub2ApiImportModeSafe(currentStepDefinitionSub2ApiImportMode)
+    : 'oauth';
   const rootScope = typeof window !== 'undefined' ? window : globalThis;
   const currentPaymentStep = stepDefinitions.find((step) => step.key === 'paypal-approve');
   const nextPaymentTitle = rootScope.MultiPageStepDefinitions?.getPlusPaymentStepTitle?.({
@@ -11938,6 +12003,7 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
     plusModeEnabled: nextPlusModeEnabled,
     plusPaymentMethod: nextPaymentMethod,
     plusAccountAccessStrategy: nextPlusAccountAccessStrategy,
+    sub2apiImportMode: nextSub2ApiImportMode,
     openaiWebchatUploadEnabled: nextOpenaiWebchatUploadEnabled,
     grokSub2apiGrok2ApiUploadEnabled: nextGrokSub2apiGrok2ApiUploadEnabled,
     settingsState: nextSettingsState,
@@ -11950,6 +12016,7 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
     || nextPlusModeEnabled !== currentPlusModeEnabled
     || nextPaymentMethod !== currentPlusPaymentMethod
     || nextPlusAccountAccessStrategy !== currentPlusAccountAccessStrategy
+    || nextSub2ApiImportMode !== currentSub2ApiImportMode
     || nextSignupMethod !== currentSignupMethod
     || nextPhoneVerificationEnabled !== currentPhoneVerificationEnabled
     || nextPhoneSignupReloginAfterBindEmailEnabled !== currentPhoneSignupReloginAfterBindEmailEnabled
@@ -11968,6 +12035,7 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
     targetId: nextTargetId,
     plusPaymentMethod: nextPaymentMethod,
     plusAccountAccessStrategy: nextPlusAccountAccessStrategy,
+    sub2apiImportMode: nextSub2ApiImportMode,
     openaiWebchatUploadEnabled: nextOpenaiWebchatUploadEnabled,
     grokSub2apiGrok2ApiUploadEnabled: nextGrokSub2apiGrok2ApiUploadEnabled,
     settingsState: nextSettingsState,
@@ -12000,6 +12068,7 @@ function syncStepDefinitionsFromUiState(stateOverrides = {}) {
     targetId: nextState?.targetId,
     plusPaymentMethod: getSelectedPlusPaymentMethod(nextState),
     plusAccountAccessStrategy: stepDefinitionState.plusAccountAccessStrategy,
+    sub2apiImportMode: nextState?.sub2apiImportMode,
     openaiWebchatUploadEnabled: stepDefinitionState.openaiWebchatUploadEnabled,
     grokSub2apiGrok2ApiUploadEnabled: stepDefinitionState.grokSub2apiGrok2ApiUploadEnabled,
     settingsState: nextState?.settingsState,
@@ -12031,6 +12100,7 @@ function applySettingsState(state) {
       plusPaymentMethod: state?.plusPaymentMethod,
       signupMethod: stepDefinitionState.signupMethod,
       plusAccountAccessStrategy: stepDefinitionState.plusAccountAccessStrategy,
+      sub2apiImportMode: state?.sub2apiImportMode,
       openaiWebchatUploadEnabled: stepDefinitionState.openaiWebchatUploadEnabled,
       grokSub2apiGrok2ApiUploadEnabled: stepDefinitionState.grokSub2apiGrok2ApiUploadEnabled,
       settingsState: state?.settingsState,
@@ -12138,6 +12208,9 @@ function applySettingsState(state) {
   inputSub2ApiUrl.value = state?.sub2apiUrl || '';
   inputSub2ApiEmail.value = state?.sub2apiEmail || '';
   inputSub2ApiPassword.value = state?.sub2apiPassword || '';
+  if (typeof inputSub2ApiImportMode !== 'undefined' && inputSub2ApiImportMode) {
+    inputSub2ApiImportMode.value = state?.sub2apiImportMode === 'agent_identity' ? 'agent_identity' : 'oauth';
+  }
   renderSub2ApiGroupOptions(state, state?.sub2apiGroupName || '');
   if (typeof inputSub2ApiAccountPriority !== 'undefined' && inputSub2ApiAccountPriority) {
     inputSub2ApiAccountPriority.value = String(normalizeSub2ApiAccountPriorityValue(state?.sub2apiAccountPriority));
@@ -17381,6 +17454,19 @@ inputSub2ApiPassword.addEventListener('input', () => {
 inputSub2ApiPassword.addEventListener('blur', () => {
   saveSettings({ silent: true }).catch(() => { });
 });
+
+if (typeof inputSub2ApiImportMode !== 'undefined' && inputSub2ApiImportMode) {
+  inputSub2ApiImportMode.addEventListener('change', () => {
+    const sub2apiImportMode = normalizeSub2ApiImportModeForStepDefinitions(inputSub2ApiImportMode.value);
+    inputSub2ApiImportMode.value = sub2apiImportMode;
+    syncLatestState({ sub2apiImportMode });
+    if (typeof syncStepDefinitionsFromUiState === 'function') {
+      syncStepDefinitionsFromUiState({ sub2apiImportMode });
+    }
+    markSettingsDirty(true);
+    saveSettings({ silent: true }).catch(() => {});
+  });
+}
 
 inputSub2ApiGroup.addEventListener('change', () => {
   syncLatestState({

@@ -601,6 +601,27 @@ test('OpenAI remote upload is appended only for remote publication targets', () 
   assert.equal(schemaSyncSteps.some((step) => step.key === 'openai-upload-session-to-chatgpt2api'), false);
 });
 
+test('SUB2API Agent Identity mode replaces the OAuth callback tail while OAuth mode remains unchanged', () => {
+  const globalScope = {};
+  const api = new Function('self', `${readStepDefinitionsBundle()}; return self.MultiPageStepDefinitions;`)(globalScope);
+  const oauthKeys = api.getSteps({ targetId: 'sub2api', sub2apiImportMode: 'oauth' }).map((step) => step.key);
+  assert.equal(oauthKeys.includes('oauth-login'), true);
+  assert.equal(oauthKeys.includes('platform-verify'), true);
+
+  const agentSteps = api.getSteps({ targetId: 'sub2api', sub2apiImportMode: 'agent_identity' });
+  assert.deepEqual(agentSteps.map((step) => step.key), [
+    'open-chatgpt',
+    'submit-signup-email',
+    'fill-password',
+    'fetch-signup-code',
+    'fill-profile',
+    'wait-registration-success',
+    'sub2api-agent-identity-import',
+  ]);
+  assert.equal(agentSteps.at(-1)?.title, '生成并导入 Agent Identity');
+  assert.equal(agentSteps.at(-1)?.driverId, 'flows/openai/background/steps/sub2api-session-import');
+});
+
 test('Plus session strategy swaps the OAuth tail for a single SUB2API import node', () => {
   const globalScope = {};
   const api = new Function('self', `${readStepDefinitionsBundle()}; return self.MultiPageStepDefinitions;`)(globalScope);

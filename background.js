@@ -928,6 +928,9 @@ function getStepDefinitionsForState(state = {}) {
       plusModeEnabled: Boolean(resolvedState?.plusModeEnabled),
       plusPaymentMethod: normalizePlusPaymentMethod(resolvedState?.plusPaymentMethod),
       plusAccountAccessStrategy: normalizePlusAccountAccessStrategy(resolvedState?.plusAccountAccessStrategy),
+      ...(String(resolvedState?.sub2apiImportMode || '').trim().toLowerCase() === 'agent_identity'
+        ? { sub2apiImportMode: 'agent_identity' }
+        : {}),
       signupMethod: getSignupMethodForStepDefinitions(resolvedState),
       phoneVerificationEnabled: Boolean(resolvedState?.phoneVerificationEnabled),
       phoneSignupReloginAfterBindEmailEnabled: Boolean(resolvedState?.phoneSignupReloginAfterBindEmailEnabled),
@@ -1233,6 +1236,7 @@ const PERSISTED_SETTING_DEFAULTS = {
   sub2apiUrl: DEFAULT_SUB2API_URL,
   sub2apiEmail: '',
   sub2apiPassword: '',
+  sub2apiImportMode: 'oauth',
   sub2apiGroupName: DEFAULT_SUB2API_GROUP_NAME,
   sub2apiGroupNames: DEFAULT_SUB2API_GROUP_NAMES,
   sub2apiAccountPriority: DEFAULT_SUB2API_ACCOUNT_PRIORITY,
@@ -1399,6 +1403,7 @@ const SETTINGS_SCHEMA_VIEW_KEYS = Object.freeze([
   'sub2apiUrl',
   'sub2apiEmail',
   'sub2apiPassword',
+  'sub2apiImportMode',
   'sub2apiGroupName',
   'sub2apiGroupNames',
   'sub2apiAccountPriority',
@@ -1442,7 +1447,7 @@ const SETTINGS_SCHEMA_VIEW_KEYS = Object.freeze([
 const SETTINGS_SCHEMA_VIEW_KEY_SET = new Set(SETTINGS_SCHEMA_VIEW_KEYS);
 const SETTINGS_EXPORT_SCHEMA_VERSION = 1;
 const SETTINGS_EXPORT_FILENAME_PREFIX = 'multipage-settings';
-const STEP6_REGISTRATION_SUCCESS_WAIT_MS = 20000;
+const STEP6_REGISTRATION_SUCCESS_WAIT_MS = 1000;
 
 const DEFAULT_STATE = {
   flowId: DEFAULT_ACTIVE_FLOW_ID,
@@ -3218,6 +3223,8 @@ function normalizePersistentSettingValue(key, value) {
       return String(value || '').trim();
     case 'sub2apiPassword':
       return String(value || '');
+    case 'sub2apiImportMode':
+      return String(value || '').trim().toLowerCase() === 'agent_identity' ? 'agent_identity' : 'oauth';
     case 'sub2apiGroupName':
       return String(value || '').trim();
     case 'sub2apiGroupNames':
@@ -12268,7 +12275,7 @@ const AUTO_RUN_NODE_DELAYS = Object.freeze({
   'fill-password': 3000,
   'fetch-signup-code': 2000,
   'fill-profile': 0,
-  'wait-registration-success': 3000,
+  'wait-registration-success': 0,
   'plus-checkout-create': 3000,
   'paypal-hosted-openai-checkout': 2000,
   'paypal-hosted-email': 2000,
@@ -14211,6 +14218,7 @@ const stepExecutorsByKey = {
   'paypal-approve': (state) => payPalApproveExecutor.executePayPalApprove(state),
   'plus-checkout-return': (state) => plusReturnConfirmExecutor.executePlusReturnConfirm(state),
   'sub2api-session-import': (state) => sub2ApiSessionImportExecutor.executeSub2ApiSessionImport(state),
+  'sub2api-agent-identity-import': (state) => sub2ApiSessionImportExecutor.executeSub2ApiAgentIdentityImport(state),
   'cpa-session-import': (state) => cpaSessionImportExecutor.executeCpaSessionImport(state),
   'openai-upload-session-to-webchat': (state) => openAiWebchatPublisher.executeOpenAiUploadSessionToWebchat(state),
   'openai-upload-session-to-chatgpt2api': (state) => openAiChatgpt2ApiPublisher.executeOpenAiUploadSessionToChatgpt2Api(state),

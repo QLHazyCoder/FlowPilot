@@ -412,6 +412,74 @@ return {
   assert.equal(api.calls.at(-2).options.openaiWebchatUploadEnabled, true);
 });
 
+test('sidepanel step definitions rerender when SUB2API import mode changes', () => {
+  const bundle = [
+    extractFunction(sidepanelSource, 'normalizeSignupMethod'),
+    extractFunction(sidepanelSource, 'normalizePlusPaymentMethod'),
+    extractFunction(sidepanelSource, 'getStepDefinitionsForMode'),
+    extractFunction(sidepanelSource, 'rebuildStepDefinitionState'),
+    extractFunction(sidepanelSource, 'syncStepDefinitionsForMode'),
+  ].join('\n');
+
+  const api = new Function(`
+const calls = [];
+const window = {
+  MultiPageStepDefinitions: {
+    getSteps(options) {
+      calls.push({ type: 'getSteps', options });
+      return options.sub2apiImportMode === 'agent_identity'
+        ? [{ id: 7, order: 7, key: 'sub2api-agent-identity-import' }]
+        : [{ id: 7, order: 7, key: 'oauth-login' }, { id: 10, order: 10, key: 'platform-verify' }];
+    },
+  },
+};
+let latestState = { activeFlowId: 'openai', targetId: 'sub2api', sub2apiImportMode: 'oauth' };
+let currentPlusModeEnabled = false;
+let currentPlusPaymentMethod = 'paypal';
+let currentPlusAccountAccessStrategy = 'oauth';
+let currentStepDefinitionSub2ApiImportMode = 'oauth';
+let currentSignupMethod = 'email';
+let currentPhoneVerificationEnabled = false;
+let currentPhoneSignupReloginAfterBindEmailEnabled = false;
+let currentStepDefinitionFlowId = 'openai';
+let currentStepDefinitionTargetId = 'sub2api';
+let currentStepDefinitionOpenAiWebchatUploadEnabled = false;
+let currentStepDefinitionGrokSub2apiGrok2ApiUploadEnabled = false;
+const DEFAULT_ACTIVE_FLOW_ID = 'openai';
+const DEFAULT_SIGNUP_METHOD = 'email';
+const DEFAULT_PLUS_PAYMENT_METHOD = 'paypal';
+const DEFAULT_PLUS_ACCOUNT_ACCESS_STRATEGY = 'oauth';
+let stepDefinitions = [{ id: 7, key: 'oauth-login' }, { id: 10, key: 'platform-verify' }];
+let STEP_IDS = [7, 10];
+let STEP_DEFAULT_STATUSES = { 7: 'pending', 10: 'pending' };
+let SKIPPABLE_STEPS = new Set([7, 10]);
+function renderStepsList() {
+  calls.push({ type: 'render', stepIds: [...STEP_IDS] });
+}
+function normalizePlusAccountAccessStrategy(value = '') {
+  return String(value || DEFAULT_PLUS_ACCOUNT_ACCESS_STRATEGY).trim().toLowerCase() || DEFAULT_PLUS_ACCOUNT_ACCESS_STRATEGY;
+}
+${bundle}
+return {
+  calls,
+  syncStepDefinitionsForMode,
+  getStepIds: () => [...STEP_IDS],
+};
+`)();
+
+  api.syncStepDefinitionsForMode(false, {
+    activeFlowId: 'openai',
+    targetId: 'sub2api',
+    sub2apiImportMode: 'agent_identity',
+    plusPaymentMethod: 'paypal',
+    signupMethod: 'email',
+  });
+
+  assert.deepEqual(api.getStepIds(), [7]);
+  assert.equal(api.calls.at(-2).options.sub2apiImportMode, 'agent_identity');
+  assert.equal(api.calls.at(-1).type, 'render');
+});
+
 test('sidepanel step definitions rerender when Grok SUB2API dual publishing changes', () => {
   const bundle = [
     extractFunction(sidepanelSource, 'normalizeSignupMethod'),

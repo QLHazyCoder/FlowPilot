@@ -71,6 +71,7 @@
         "sub2apiUrl": "",
         "sub2apiEmail": "",
         "sub2apiPassword": "",
+        "sub2apiImportMode": "oauth",
         "sub2apiGroupName": "codex",
         "sub2apiGroupNames": [
           "codex",
@@ -431,6 +432,7 @@
         "row-sub2api-url",
         "row-sub2api-email",
         "row-sub2api-password",
+        "row-sub2api-import-mode",
         "row-sub2api-group",
         "row-sub2api-account-priority",
         "row-sub2api-default-proxy"
