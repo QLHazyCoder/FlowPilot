@@ -1318,7 +1318,7 @@
 
     function isAuthContentScriptUnreachableError(error) {
       const message = String(error?.message || error || '').trim();
-      return /Receiving end does not exist|Could not establish connection|Frame with ID \d+ is showing error page|等待认证页状态检查超时/i.test(message);
+      return /Receiving end does not exist|Could not establish connection|Frame with ID \d+ is showing error page|Content script .* did not respond|Try refreshing the tab and retry|等待认证页状态检查超时/i.test(message);
     }
 
     function buildPhoneRestartStep7Error(phoneNumber = '') {
@@ -3296,9 +3296,20 @@
     }
 
     async function cancelSignupPhoneActivation(state = {}, activation = null) {
-      const normalizedActivation = normalizeActivation(activation || state?.signupPhoneActivation);
+      let latestState = state;
+      try {
+        latestState = await getState();
+      } catch (_) {
+        latestState = state;
+      }
+      const normalizedActivation = normalizeActivation(activation)
+        || normalizeActivation(latestState?.signupPhoneActivation)
+        || normalizeActivation(state?.signupPhoneActivation);
       if (normalizedActivation) {
-        await cancelPhoneActivation(state, normalizedActivation);
+        await cancelPhoneActivation({
+          ...(state || {}),
+          ...(latestState || {}),
+        }, normalizedActivation);
       }
       await clearSignupPhoneRuntimeState();
     }
@@ -3670,7 +3681,16 @@
           throw new Error(`步骤 ${visibleStep}：登录手机验证码未能成功提交。`);
         } catch (error) {
           if (shouldCancelActivation && activation) {
-            await cancelPhoneActivation(state, activation).catch(() => {});
+            let latestState = state;
+            try {
+              latestState = await getState();
+            } catch (_) {
+              latestState = state;
+            }
+            await cancelPhoneActivation({
+              ...(state || {}),
+              ...(latestState || {}),
+            }, activation).catch(() => {});
           }
           await setPhoneRuntimeState({
             signupPhoneActivation: null,

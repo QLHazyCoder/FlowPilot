@@ -8161,6 +8161,121 @@ test('phone verification helper propagates stop errors instead of swallowing res
   assert.equal(messages.includes('RETURN_TO_ADD_PHONE'), false);
 });
 
+test('phone verification helper releases HeroSMS order before recovering from content script no-response', async () => {
+  const requests = [];
+  const messages = [];
+  let navigateCalls = 0;
+  let acquireCount = 0;
+  let currentState = {
+    heroSmsApiKey: 'demo-key',
+    heroSmsCountryId: 52,
+    heroSmsCountryLabel: 'Thailand',
+    verificationResendCount: 0,
+    phoneVerificationReplacementLimit: 2,
+    phoneCodeWaitSeconds: 15,
+    phoneCodeTimeoutWindows: 1,
+    phoneCodePollIntervalSeconds: 15,
+    phoneCodePollMaxRounds: 1,
+    currentPhoneActivation: null,
+    reusablePhoneActivation: null,
+  };
+
+  const helpers = api.createPhoneVerificationHelpers({
+    addLog: async () => {},
+    ensureStep8SignupPageReady: async () => {},
+    fetchImpl: async (url) => {
+      const parsedUrl = new URL(url);
+      requests.push(parsedUrl);
+      const action = parsedUrl.searchParams.get('action');
+      const id = parsedUrl.searchParams.get('id');
+
+      if (action === 'getPrices') {
+        return { ok: true, text: async () => buildHeroSmsPricesPayload() };
+      }
+      if (action === 'getNumber') {
+        acquireCount += 1;
+        return {
+          ok: true,
+          text: async () => (
+            acquireCount === 1
+              ? 'ACCESS_NUMBER:hero-old:66950000001'
+              : 'ACCESS_NUMBER:hero-new:66950000002'
+          ),
+        };
+      }
+      if (action === 'getStatus') {
+        return {
+          ok: true,
+          text: async () => (id === 'hero-new' ? 'STATUS_OK:246810' : 'STATUS_WAIT_CODE'),
+        };
+      }
+      if (action === 'setStatus') {
+        return { ok: true, text: async () => 'STATUS_UPDATED' };
+      }
+      throw new Error(`Unexpected HeroSMS action: ${action}`);
+    },
+    getOAuthFlowStepTimeoutMs: async (defaultTimeoutMs) => defaultTimeoutMs,
+    getState: async () => ({ ...currentState }),
+    navigateAuthTabToAddPhone: async () => {
+      navigateCalls += 1;
+      return {
+        addPhonePage: true,
+        phoneVerificationPage: false,
+        url: 'https://auth.openai.com/add-phone',
+      };
+    },
+    sendToContentScriptResilient: async (_source, message) => {
+      messages.push(message.type);
+      if (message.type === 'SUBMIT_PHONE_NUMBER') {
+        return {
+          phoneVerificationPage: true,
+          url: 'https://auth.openai.com/phone-verification',
+        };
+      }
+      if (message.type === 'RETURN_TO_ADD_PHONE' || message.type === 'STEP8_GET_STATE') {
+        throw new Error('Content script on openai-auth did not respond in 30s. Try refreshing the tab and retry.');
+      }
+      if (message.type === 'SUBMIT_PHONE_VERIFICATION_CODE') {
+        return {
+          success: true,
+          consentReady: true,
+          url: 'https://auth.openai.com/authorize',
+        };
+      }
+      throw new Error(`Unexpected content-script message: ${message.type}`);
+    },
+    setState: async (updates) => {
+      currentState = { ...currentState, ...updates };
+    },
+    sleepWithStop: async () => {},
+    throwIfStopped: () => {},
+  });
+
+  const result = await helpers.completePhoneVerificationFlow(1, {
+    addPhonePage: true,
+    phoneVerificationPage: false,
+    url: 'https://auth.openai.com/add-phone',
+  });
+
+  assert.deepStrictEqual(result, {
+    success: true,
+    consentReady: true,
+    url: 'https://auth.openai.com/authorize',
+  });
+  assert.equal(navigateCalls, 1);
+  assert.deepStrictEqual(
+    requests
+      .filter((requestUrl) => requestUrl.searchParams.get('action') === 'setStatus')
+      .map((requestUrl) => `${requestUrl.searchParams.get('id')}:${requestUrl.searchParams.get('status')}`),
+    ['hero-old:8', 'hero-new:6']
+  );
+  assert.deepStrictEqual(
+    messages.filter((type) => type === 'SUBMIT_PHONE_NUMBER'),
+    ['SUBMIT_PHONE_NUMBER', 'SUBMIT_PHONE_NUMBER']
+  );
+  assert.equal(currentState.currentPhoneActivation, null);
+});
+
 test('phone verification helper falls back to the next country after repeated sms timeout on the same country', async () => {
   const requests = [];
   let currentState = {
