@@ -796,6 +796,9 @@ function findHostedCheckoutUrl(payload = {}) {
 
 async function createPlusCheckoutSession(options = {}) {
   await waitForDocumentComplete();
+  if (location.origin !== 'https://chatgpt.com') {
+    throw new Error('付款操作只允许在 chatgpt.com 域名下执行。');
+  }
   log('Plus：正在读取 ChatGPT 登录会话...');
 
   const sessionResponse = await fetch('/api/auth/session', {
