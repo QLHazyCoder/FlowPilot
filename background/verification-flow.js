@@ -149,7 +149,7 @@
       };
     }
 
-    function isLikelyLoggedInChatgptHomeUrl(rawUrl) {
+    function isRegistrationCompletionChatgptUrl(rawUrl) {
       const url = String(rawUrl || '').trim();
       if (!url) return false;
 
@@ -260,12 +260,12 @@
       return null;
     }
 
-    async function detectStep4PostSubmitFallback(tabId, options = {}) {
+    async function confirmStep4PostSubmitState(tabId, options = {}) {
       const timeoutMs = Math.max(1000, Number(options.timeoutMs) || 8000);
       const pollIntervalMs = Math.max(100, Number(options.pollIntervalMs) || 250);
       const startedAt = Date.now();
       let lastUrl = '';
-      let pendingChatgptHomeUrl = '';
+      let pendingRegistrationSuccessUrl = '';
 
       while (Date.now() - startedAt < timeoutMs) {
         throwIfStopped();
@@ -276,18 +276,19 @@
             lastUrl = currentUrl;
           }
 
-          if (isLikelyLoggedInChatgptHomeUrl(currentUrl)) {
+          if (isRegistrationCompletionChatgptUrl(currentUrl)) {
             const loggedInSignal = await inspectChatgptHomeLoggedInSignal(tabId);
             if (loggedInSignal === null) {
-              pendingChatgptHomeUrl = currentUrl;
+              pendingRegistrationSuccessUrl = currentUrl;
               await sleepWithStop(pollIntervalMs);
               continue;
             }
             return {
               success: true,
-              reason: 'chatgpt_home',
+              reason: loggedInSignal ? 'logged_in_home' : 'registration_success_page',
               skipProfileStep: true,
-              skipRegistrationWaitStep: loggedInSignal === true,
+              ...(loggedInSignal ? { skipRegistrationWaitStep: true } : {}),
+              ...(!loggedInSignal ? { skipProfileStepReason: 'registration_success_page' } : {}),
               url: currentUrl,
             };
           }
@@ -307,13 +308,13 @@
         await sleepWithStop(pollIntervalMs);
       }
 
-      if (pendingChatgptHomeUrl) {
+      if (pendingRegistrationSuccessUrl) {
         return {
           success: true,
-          reason: 'chatgpt_home',
+          reason: 'registration_success_page',
           skipProfileStep: true,
-          skipRegistrationWaitStep: false,
-          url: pendingChatgptHomeUrl,
+          skipProfileStepReason: 'registration_success_page',
+          url: pendingRegistrationSuccessUrl,
         };
       }
 
@@ -1261,14 +1262,14 @@
           });
         } catch (err) {
           if (step === 4 && isRetryableVerificationTransportError(err)) {
-            const fallback = await detectStep4PostSubmitFallback(signupTabId, {
+            const fallback = await confirmStep4PostSubmitState(signupTabId, {
               timeoutMs: 9000,
               pollIntervalMs: 300,
             });
             if (fallback.success) {
-              const fallbackLabel = fallback.reason === 'chatgpt_home'
+              const fallbackLabel = fallback.reason === 'logged_in_home'
                 ? 'ChatGPT 已登录首页'
-                : '注册资料页';
+                : (fallback.reason === 'registration_success_page' ? '注册成功等待页' : '注册资料页');
               await addLog(`步骤 4：验证码提交后页面已切换到${fallbackLabel}，按提交成功继续。`, 'warn');
               return {
                 success: true,
@@ -1276,6 +1277,7 @@
                 transportRecovered: true,
                 skipProfileStep: Boolean(fallback.skipProfileStep),
                 skipRegistrationWaitStep: Boolean(fallback.skipRegistrationWaitStep),
+                ...(fallback.skipProfileStepReason ? { skipProfileStepReason: fallback.skipProfileStepReason } : {}),
                 url: fallback.url,
               };
             }
@@ -1553,6 +1555,7 @@
       }
 
       return {
+        confirmStep4PostSubmitState,
         confirmCustomVerificationStepBypass,
         getVerificationCodeLabel,
         getVerificationCodeStateKey,

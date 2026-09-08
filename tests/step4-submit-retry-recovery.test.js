@@ -48,7 +48,10 @@ function extractFunction(name) {
     }
   }
 
-  return source.slice(start, end);
+  const extracted = source.slice(start, end);
+  return name === 'getStep4PostVerificationState'
+    ? `${extractFunction('isRegistrationCompletionChatgptUrl')}\n${extracted}`
+    : extracted;
 }
 
 test('waitForVerificationSubmitOutcome recovers signup retry page after submit', async () => {
@@ -197,6 +200,33 @@ return {
     skipProfileStep: true,
     skipRegistrationWaitStep: true,
     url: 'https://chatgpt.com/',
+  });
+});
+
+test('getStep4PostVerificationState recognizes the registration success page without skipping step 6', () => {
+  const api = new Function(`
+const location = { href: 'https://chatgpt.com/c/registration-complete' };
+
+function isVerificationPageStillVisible() { return false; }
+function isStep5Ready() { return false; }
+function findSignupEntryTrigger() { return {}; }
+
+${extractFunction('isSignupProfilePageUrl')}
+${extractFunction('isLikelyLoggedInChatgptHomeUrl')}
+${extractFunction('getStep4PostVerificationState')}
+
+return {
+  run() {
+    return getStep4PostVerificationState();
+  },
+};
+`)();
+
+  assert.deepStrictEqual(api.run(), {
+    state: 'registration_success_page',
+    skipProfileStep: true,
+    skipProfileStepReason: 'registration_success_page',
+    url: 'https://chatgpt.com/c/registration-complete',
   });
 });
 

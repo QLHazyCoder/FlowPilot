@@ -49,7 +49,10 @@ function extractFunction(name) {
     }
   }
 
-  return source.slice(start, end);
+  const extracted = source.slice(start, end);
+  return name === 'getStep4PostVerificationState'
+    ? `${extractFunction('isRegistrationCompletionChatgptUrl')}\n${extracted}`
+    : extracted;
 }
 
 test('verification visibility text fallback should not treat password retry page as verification page', () => {

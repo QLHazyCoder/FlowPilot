@@ -24,7 +24,7 @@ test('step 2 completes with password step skipped when landing on email verifica
       completedPayloads.push({ step, payload });
     },
     ensureContentScriptReadyOnTab: async () => {},
-    ensureSignupEntryPageReady: async () => ({ tabId: 11 }),
+    openSignupEntryTab: async () => 11,
     ensureSignupPostEmailPageReadyInTab: async () => ({
       state: 'verification_page',
       url: 'https://auth.openai.com/email-verification',
@@ -63,7 +63,7 @@ test('step 2 keeps password flow when landing on password page', async () => {
       completedPayloads.push({ step, payload });
     },
     ensureContentScriptReadyOnTab: async () => {},
-    ensureSignupEntryPageReady: async () => ({ tabId: 12 }),
+    openSignupEntryTab: async () => 12,
     ensureSignupPostEmailPageReadyInTab: async () => ({
       state: 'password_page',
       url: 'https://auth.openai.com/create-account/password',
@@ -114,7 +114,7 @@ test('step 2 uses phone activation when resolved signup method is phone', async 
       completedPayloads.push({ step, payload });
     },
     ensureContentScriptReadyOnTab: async () => {},
-    ensureSignupEntryPageReady: async () => ({ tabId: 14 }),
+    openSignupEntryTab: async () => 14,
     ensureSignupPostEmailPageReadyInTab: async () => {
       throw new Error('email landing helper should not be used for phone signup');
     },
@@ -204,7 +204,7 @@ test('step 2 reuses existing signup phone activation without acquiring a new num
       completedPayloads.push({ step, payload });
     },
     ensureContentScriptReadyOnTab: async () => {},
-    ensureSignupEntryPageReady: async () => ({ tabId: 15 }),
+    openSignupEntryTab: async () => 15,
     ensureSignupPostIdentityPageReadyInTab: async () => ({
       state: 'phone_verification_page',
       url: 'https://auth.openai.com/phone-verification',
@@ -267,7 +267,7 @@ test('step 2 submits manual signup phone without acquiring a number', async () =
       completedPayloads.push({ step, payload });
     },
     ensureContentScriptReadyOnTab: async () => {},
-    ensureSignupEntryPageReady: async () => ({ tabId: 16 }),
+    openSignupEntryTab: async () => 16,
     ensureSignupPostIdentityPageReadyInTab: async () => ({
       state: 'phone_verification_page',
       url: 'https://auth.openai.com/phone-verification',
@@ -340,9 +340,9 @@ test('step 2 reopens the generic signup entry once when email submission hits an
       completedPayloads.push({ step, payload });
     },
     ensureContentScriptReadyOnTab: async () => {},
-    ensureSignupEntryPageReady: async () => {
+    openSignupEntryTab: async () => {
       reopenCalls += 1;
-      return { tabId: 13 };
+      return 13;
     },
     ensureSignupPostEmailPageReadyInTab: async () => ({
       state: 'password_page',
@@ -406,9 +406,9 @@ test('step 2 reopens the generic signup entry once when phone submission hits an
       completedPayloads.push({ step, payload });
     },
     ensureContentScriptReadyOnTab: async () => {},
-    ensureSignupEntryPageReady: async () => {
+    openSignupEntryTab: async () => {
       reopenCalls += 1;
-      return { tabId: 15 };
+      return 15;
     },
     ensureSignupPostIdentityPageReadyInTab: async () => ({
       state: 'phone_verification_page',
@@ -483,9 +483,9 @@ test('step 2 submits directly on an existing signup tab without reopening the en
       completedPayloads.push({ step, payload });
     },
     ensureContentScriptReadyOnTab: async () => {},
-    ensureSignupEntryPageReady: async () => {
+    openSignupEntryTab: async () => {
       reopenCalls += 1;
-      return { tabId: 16 };
+      return 16;
     },
     ensureSignupPostEmailPageReadyInTab: async () => ({
       state: 'password_page',
@@ -549,7 +549,7 @@ test('step 2 waits for the existing signup tab to settle before submitting email
     ensureContentScriptReadyOnTab: async () => {
       events.push('content-ready');
     },
-    ensureSignupEntryPageReady: async () => ({ tabId: 17 }),
+    openSignupEntryTab: async () => 17,
     ensureSignupPostEmailPageReadyInTab: async () => ({
       state: 'password_page',
       url: 'https://auth.openai.com/create-account/password',
@@ -650,7 +650,7 @@ test('signup flow helper recognizes email verification page as post-email landin
   assert.equal(passwordReadyChecks, 0);
 });
 
-test('signup flow helper waits for the signup entry tab to settle for step 2 before probing the entry page', async () => {
+test('signup flow helper waits for the signup entry tab to settle for step 2 without probing the entry page', async () => {
   const logs = [];
   const events = [];
 
@@ -683,10 +683,6 @@ test('signup flow helper waits for the signup entry tab to settle for step 2 bef
       events.push('reuse-or-create');
       return 23;
     },
-    sendToContentScriptResilient: async () => {
-      events.push('probe-entry');
-      return { ready: true, state: 'entry_home', url: 'https://chatgpt.com/' };
-    },
     setEmailState: async () => {},
     SIGNUP_ENTRY_URL: 'https://chatgpt.com/',
     OPENAI_AUTH_INJECT_FILES: [],
@@ -697,7 +693,7 @@ test('signup flow helper waits for the signup entry tab to settle for step 2 bef
     waitForTabUrlMatch: async () => null,
   });
 
-  const result = await helpers.ensureSignupEntryPageReady(2);
+  const result = await helpers.openSignupEntryTab(2);
 
   assert.deepStrictEqual(events, [
     'reuse-or-create',
@@ -711,18 +707,10 @@ test('signup flow helper waits for the signup entry tab to settle for step 2 bef
       },
     },
     'content-ready',
-    'probe-entry',
   ]);
   assert.equal(logs.some((item) => /额外稳定 3 秒/.test(item.message)), true);
   assert.equal(logs.some((item) => item.meta.step === 2 && item.meta.stepKey === 'signup-entry'), true);
-  assert.deepStrictEqual(result, {
-    tabId: 23,
-    result: {
-      ready: true,
-      state: 'entry_home',
-      url: 'https://chatgpt.com/',
-    },
-  });
+  assert.equal(result, 23);
 });
 
 test('signup flow helper accepts phone signup landing on login password page', async () => {

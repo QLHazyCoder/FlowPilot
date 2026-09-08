@@ -393,6 +393,21 @@ test('message router skips step 5 when step 4 reports already logged-in transiti
   assert.equal(events.logs[0]?.message, '步骤 4：检测到账号已直接进入已登录态，已自动跳过步骤 5。');
 });
 
+test('message router skips only step 5 when step 4 reaches registration success page', async () => {
+  const { router, events } = createRouter({
+    state: { stepStatuses: { 5: 'pending', 6: 'pending' } },
+  });
+
+  await router.handleStepData(4, {
+    emailTimestamp: 123,
+    skipProfileStep: true,
+    skipProfileStepReason: 'registration_success_page',
+  });
+
+  assert.deepStrictEqual(events.stepStatuses, [{ step: 5, status: 'skipped' }]);
+  assert.equal(events.logs[0]?.message, '步骤 4：检测到页面已进入注册成功等待页，已自动跳过步骤 5。');
+});
+
 test('message router skips steps 5 and registration wait when step 4 reaches logged-in home', async () => {
   const { router, events } = createRouter({
     state: { stepStatuses: { 5: 'pending', 6: 'pending' } },

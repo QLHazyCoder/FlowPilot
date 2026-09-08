@@ -734,13 +734,13 @@ return {
   assert.equal(events.recoveryRuns.some(({ nodeId }) => nodeId === 'oauth-login'), false);
 });
 
-test('executeNode retries fetch-network errors for fetch-signup-code with cooldown and bounded attempts', async () => {
+test('executeNode retries transient transport errors for fetch-signup-code without restarting registration progress', async () => {
   const api = new Function(`
 const LOG_PREFIX = '[test]';
 const STOP_ERROR_MESSAGE = '流程已被用户停止。';
 const BROWSER_SWITCH_REQUIRED_ERROR_PREFIX = 'BROWSER_SWITCH_REQUIRED::';
 const AUTH_CHAIN_STEP_IDS = new Set([7, 8, 9, 10]);
-const STEP_FETCH_NETWORK_RETRY_POLICIES = new Map([[4, { maxAttempts: 3, cooldownMs: 1 }]]);
+const STEP_TRANSIENT_TRANSPORT_RETRY_POLICIES = new Map([[4, { maxAttempts: 3, cooldownMs: 1 }]]);
 let activeTopLevelAuthChainExecution = null;
 let stopRequested = false;
 const events = {
@@ -785,8 +785,11 @@ const stepRegistry = {
   async executeStep(step) {
     events.registryCalls.push(step);
     runCount += 1;
-    if (runCount < 3) {
+    if (runCount === 1) {
       throw new TypeError('Failed to fetch');
+    }
+    if (runCount === 2) {
+      throw new Error('认证页 页面刚完成跳转或刷新，内容脚本还没有重新接回；扩展已自动重试，但仍未恢复。请重试当前步骤。');
     }
   },
 };
@@ -800,8 +803,8 @@ function getStepDefinitionForState(step) {
 ${NODE_EXECUTE_COMPAT_HELPERS}
 ${extractFunction('isStopError')}
 ${extractFunction('isRetryableContentScriptTransportError')}
-${extractFunction('isStepFetchNetworkRetryableError')}
-${extractFunction('getStepFetchNetworkRetryPolicy')}
+${extractFunction('isStepTransientTransportRetryableError')}
+${extractFunction('getStepTransientTransportRetryPolicy')}
 ${extractFunction('throwIfStopped')}
 ${extractFunction('isAuthChainStep')}
 ${extractFunction('acquireTopLevelAuthChainExecutionForNode')}
@@ -824,7 +827,12 @@ return {
   assert.deepStrictEqual(events.registryCalls, [4, 4, 4]);
   assert.deepStrictEqual(events.sleepCalls, [1, 1]);
   assert.equal(
-    events.logs.filter(({ message }) => message.includes('[NETWORK_FETCH_RETRY]')).length >= 3,
+    events.statusCalls.some(({ status }) => status === 'failed'),
+    false,
+    '当前节点的瞬态通信错误不应升级为失败并触发注册链重开'
+  );
+  assert.equal(
+    events.logs.filter(({ message }) => message.includes('[TRANSIENT_TRANSPORT_RETRY]')).length >= 3,
     true
   );
 });

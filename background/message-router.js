@@ -1057,6 +1057,8 @@
               await setNodeStatusByStep(5, 'skipped', latestState);
               if (payload.skipProfileStepReason === 'combined_verification_profile') {
                 await addLog('步骤 4：当前验证码页已内嵌完成注册资料提交，已自动跳过步骤 5。', 'warn');
+              } else if (payload.skipProfileStepReason === 'registration_success_page') {
+                await addLog('步骤 4：检测到页面已进入注册成功等待页，已自动跳过步骤 5。', 'warn');
               } else {
                 await addLog('步骤 4：检测到账号已直接进入已登录态，已自动跳过步骤 5。', 'warn');
               }

@@ -66,7 +66,7 @@ function getStep5Bundle() {
     extractFunction('waitForStep5SubmitButton'),
     extractFunction('isStep5SubmitButtonClickable'),
     extractFunction('isStep5ProfileStillVisible'),
-    extractFunction('isStep5CompletionChatgptUrl'),
+    extractFunction('isRegistrationCompletionChatgptUrl'),
     extractFunction('getStep5PostSubmitSuccessState'),
     extractFunction('installStep5NavigationCompletionReporter'),
     extractFunction('waitForStep5SubmitOutcome'),

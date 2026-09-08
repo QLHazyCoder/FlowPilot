@@ -172,7 +172,7 @@ test('step 4 checks iCloud session before polling iCloud mailbox', async () => {
   assert.equal(resolved, true);
 });
 
-test('step 4 forwards skipProfileStep when prepare stage already reached logged-in home', async () => {
+test('step 4 forwards registration success page skip reason when prepare stage already passed profile', async () => {
   const completions = [];
   let resolveCalls = 0;
 
@@ -206,10 +206,12 @@ test('step 4 forwards skipProfileStep when prepare stage already reached logged-
     sendToContentScript: async () => ({
       alreadyVerified: true,
       skipProfileStep: true,
+      skipProfileStepReason: 'registration_success_page',
     }),
     sendToContentScriptResilient: async () => ({
       alreadyVerified: true,
       skipProfileStep: true,
+      skipProfileStepReason: 'registration_success_page',
     }),
     isRetryableContentScriptTransportError: () => false,
     shouldUseCustomRegistrationEmail: () => false,
@@ -225,7 +227,10 @@ test('step 4 forwards skipProfileStep when prepare stage already reached logged-
   assert.deepStrictEqual(completions, [
     {
       step: 'fetch-signup-code',
-      payload: { skipProfileStep: true },
+      payload: {
+        skipProfileStep: true,
+        skipProfileStepReason: 'registration_success_page',
+      },
     },
   ]);
   assert.equal(resolveCalls, 0);
@@ -456,4 +461,71 @@ test('step 4 prepare retries transport by recovering retry page without replayin
     logs.some((entry) => /正在确认注册验证码页面是否就绪/.test(entry.message)),
     true
   );
+});
+
+test('step 4 confirms a completed ChatGPT page after prepare transport failure without reopening registration', async () => {
+  let sendToContentScriptCalls = 0;
+  let recoveryCalls = 0;
+  let resolveCalls = 0;
+  const completions = [];
+
+  const executor = api.createStep4Executor({
+    addLog: async () => {},
+    chrome: {
+      tabs: {
+        update: async () => {},
+      },
+    },
+    completeNodeFromBackground: async (_nodeId, payload) => {
+      completions.push(payload);
+    },
+    confirmStep4PostSubmitState: async () => ({
+      success: true,
+      reason: 'logged_in_home',
+      skipProfileStep: true,
+      skipRegistrationWaitStep: true,
+    }),
+    confirmCustomVerificationStepBypass: async () => {},
+    ensureMail2925MailboxSession: async () => {},
+    getMailConfig: () => ({
+      provider: '163',
+      label: '163 邮箱',
+      source: 'mail-163',
+      url: 'https://mail.163.com',
+    }),
+    getTabId: async () => 1,
+    HOTMAIL_PROVIDER: 'hotmail-api',
+    isTabAlive: async () => true,
+    LUCKMAIL_PROVIDER: 'luckmail-api',
+    CLOUDFLARE_TEMP_EMAIL_PROVIDER: 'cloudflare-temp-email',
+    resolveVerificationStep: async () => {
+      resolveCalls += 1;
+    },
+    reuseOrCreateTab: async () => {},
+    sendToContentScript: async () => {
+      sendToContentScriptCalls += 1;
+      throw new Error('认证页 页面刚完成跳转或刷新，内容脚本还没有重新接回；扩展已自动重试，但仍未恢复。请重试当前步骤。');
+    },
+    sendToContentScriptResilient: async () => {
+      recoveryCalls += 1;
+      return {};
+    },
+    isRetryableContentScriptTransportError: (error) => /页面刚完成跳转或刷新/.test(String(error?.message || error)),
+    shouldUseCustomRegistrationEmail: () => false,
+    STANDARD_MAIL_VERIFICATION_RESEND_INTERVAL_MS: 25000,
+    throwIfStopped: () => {},
+  });
+
+  await executor.executeStep4({
+    email: 'user@example.com',
+    password: 'secret',
+  });
+
+  assert.equal(sendToContentScriptCalls, 1);
+  assert.equal(recoveryCalls, 0);
+  assert.equal(resolveCalls, 0);
+  assert.deepEqual(completions, [{
+    skipProfileStep: true,
+    skipRegistrationWaitStep: true,
+  }]);
 });

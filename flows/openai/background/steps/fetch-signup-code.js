@@ -8,6 +8,7 @@
       addLog,
       chrome,
       completeNodeFromBackground,
+      confirmStep4PostSubmitState = async () => ({ success: false }),
       confirmCustomVerificationStepBypass,
       generateRandomBirthday,
       generateRandomName,
@@ -89,6 +90,7 @@
         code: result?.code || '',
         ...(result?.skipProfileStep ? { skipProfileStep: true } : {}),
         ...(result?.skipProfileStepReason ? { skipProfileStepReason: result.skipProfileStepReason } : {}),
+        ...(result?.skipRegistrationWaitStep ? { skipRegistrationWaitStep: true } : {}),
       });
       return result || {};
     }
@@ -250,26 +252,51 @@
             throw error;
           }
 
-          const recoverResult = await sendToContentScriptResilient('openai-auth', {
-            type: 'RECOVER_AUTH_RETRY_PAGE',
-            step: 4,
-            source: 'background',
-            payload: {
-              flow: 'signup',
-              step: 4,
-              timeoutMs: Math.min(12000, remainingMs),
-              maxClickAttempts: 2,
-              logLabel: '步骤 4：检测到注册认证重试页，正在点击“重试”恢复',
-            },
-          }, {
-            timeoutMs: Math.min(12000, remainingMs),
-            responseTimeoutMs: Math.min(12000, remainingMs),
-            retryDelayMs: 700,
-            logMessage: '步骤 4：认证页正在切换，等待页面重新就绪后继续检测...',
+          const completionState = await confirmStep4PostSubmitState(signupTabId, {
+            timeoutMs: Math.min(9000, remainingMs),
+            pollIntervalMs: 300,
           });
+          if (completionState?.success) {
+            const completionLabel = completionState.reason === 'logged_in_home'
+              ? 'ChatGPT 已登录首页'
+              : (completionState.reason === 'registration_success_page' ? '注册成功等待页' : '注册资料页');
+            await addLog(`步骤 4：认证页通信中断，但已确认页面进入${completionLabel}，按验证码提交成功继续。`, 'warn');
+            prepareResult = {
+              ready: true,
+              alreadyVerified: true,
+              ...(completionState.skipProfileStep ? { skipProfileStep: true } : {}),
+              ...(completionState.skipProfileStepReason ? { skipProfileStepReason: completionState.skipProfileStepReason } : {}),
+              ...(completionState.skipRegistrationWaitStep ? { skipRegistrationWaitStep: true } : {}),
+            };
+            break;
+          }
 
-          if (recoverResult?.error) {
-            throw new Error(recoverResult.error);
+          try {
+            const recoverResult = await sendToContentScriptResilient('openai-auth', {
+              type: 'RECOVER_AUTH_RETRY_PAGE',
+              step: 4,
+              source: 'background',
+              payload: {
+                flow: 'signup',
+                step: 4,
+                timeoutMs: Math.min(12000, remainingMs),
+                maxClickAttempts: 2,
+                logLabel: '步骤 4：检测到注册认证重试页，正在点击“重试”恢复',
+              },
+            }, {
+              timeoutMs: Math.min(12000, remainingMs),
+              responseTimeoutMs: Math.min(12000, remainingMs),
+              retryDelayMs: 700,
+              logMessage: '步骤 4：认证页正在切换，等待页面重新就绪后继续检测...',
+            });
+
+            if (recoverResult?.error) {
+              throw new Error(recoverResult.error);
+            }
+          } catch (recoveryError) {
+            if (!isRetryableContentScriptTransportError(recoveryError)) {
+              throw recoveryError;
+            }
           }
         }
       }
@@ -282,7 +309,11 @@
         throw new Error(prepareResult.error);
       }
       if (prepareResult?.alreadyVerified) {
-        await completeNodeFromBackground('fetch-signup-code', prepareResult?.skipProfileStep ? { skipProfileStep: true } : {});
+        await completeNodeFromBackground('fetch-signup-code', {
+          ...(prepareResult?.skipProfileStep ? { skipProfileStep: true } : {}),
+          ...(prepareResult?.skipProfileStepReason ? { skipProfileStepReason: prepareResult.skipProfileStepReason } : {}),
+          ...(prepareResult?.skipRegistrationWaitStep ? { skipRegistrationWaitStep: true } : {}),
+        });
         return;
       }
 

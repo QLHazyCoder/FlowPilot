@@ -110,7 +110,7 @@ async function waitForTabStableComplete() {}
 ${extractFunction('parseUrlSafely')}
 ${extractFunction('isSignupEntryHost')}
 ${extractFunction('isLikelyLoggedInChatgptHomeUrl')}
-${extractFunction('isStep5CompletionChatgptUrl')}
+${extractFunction('isRegistrationCompletionChatgptUrl')}
 ${extractFunction('getStep5SubmitStateFromContent')}
 ${extractFunction('recoverStep5SubmitRetryPageOnTab')}
 ${extractFunction('validateStep5PostCompletion')}
@@ -187,7 +187,7 @@ async function waitForTabStableComplete() {}
 ${extractFunction('parseUrlSafely')}
 ${extractFunction('isSignupEntryHost')}
 ${extractFunction('isLikelyLoggedInChatgptHomeUrl')}
-${extractFunction('isStep5CompletionChatgptUrl')}
+${extractFunction('isRegistrationCompletionChatgptUrl')}
 ${extractFunction('getStep5SubmitStateFromContent')}
 ${extractFunction('recoverStep5SubmitRetryPageOnTab')}
 ${extractFunction('validateStep5PostCompletion')}
@@ -256,7 +256,7 @@ async function waitForTabStableComplete() {}
 ${extractFunction('parseUrlSafely')}
 ${extractFunction('isSignupEntryHost')}
 ${extractFunction('isLikelyLoggedInChatgptHomeUrl')}
-${extractFunction('isStep5CompletionChatgptUrl')}
+${extractFunction('isRegistrationCompletionChatgptUrl')}
 ${extractFunction('getStep5SubmitStateFromContent')}
 ${extractFunction('recoverStep5SubmitRetryPageOnTab')}
 ${extractFunction('validateStep5PostCompletion')}
@@ -307,7 +307,7 @@ function getErrorMessage(error) {
 ${extractFunction('parseUrlSafely')}
 ${extractFunction('isSignupEntryHost')}
 ${extractFunction('isLikelyLoggedInChatgptHomeUrl')}
-${extractFunction('isStep5CompletionChatgptUrl')}
+${extractFunction('isRegistrationCompletionChatgptUrl')}
 ${extractFunction('completeStep5FromTabUrlAfterTransportError')}
 
 return {

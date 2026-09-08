@@ -75,26 +75,6 @@
       return tabId;
     }
 
-    async function ensureSignupEntryPageReady(step = 1) {
-      const tabId = await openSignupEntryTab(step);
-      const result = await sendToContentScriptResilient('openai-auth', {
-        type: 'ENSURE_SIGNUP_ENTRY_READY',
-        step,
-        source: 'background',
-        payload: {},
-      }, {
-        timeoutMs: 20000,
-        retryDelayMs: 700,
-        logMessage: `步骤 ${step}：官网注册入口正在切换，等待页面恢复...`,
-      });
-
-      if (result?.error) {
-        throw new Error(result.error);
-      }
-
-      return { tabId, result: result || {} };
-    }
-
     function parseUrlSafely(rawUrl) {
       if (!rawUrl) return null;
       try {
@@ -385,7 +365,6 @@
     }
 
     return {
-      ensureSignupEntryPageReady,
       ensureSignupPostIdentityPageReadyInTab,
       ensureSignupPostEmailPageReadyInTab,
       finalizeSignupPasswordSubmitInTab,

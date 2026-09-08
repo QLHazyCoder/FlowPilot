@@ -37,7 +37,6 @@ if (document.documentElement.getAttribute(OPENAI_AUTH_LISTENER_SENTINEL) !== '1'
       || message.type === 'RESEND_PHONE_VERIFICATION_CODE'
       || message.type === 'CHECK_PHONE_RESEND_ERROR'
       || message.type === 'RETURN_TO_ADD_PHONE'
-      || message.type === 'ENSURE_SIGNUP_ENTRY_READY'
       || message.type === 'ENSURE_SIGNUP_PHONE_ENTRY_READY'
       || message.type === 'ENSURE_SIGNUP_PASSWORD_PAGE_READY'
     ) {
@@ -159,8 +158,6 @@ async function handleCommand(message) {
       return phoneAuthHelpers.checkPhoneResendError();
     case 'RETURN_TO_ADD_PHONE':
       return await phoneAuthHelpers.returnToAddPhone();
-    case 'ENSURE_SIGNUP_ENTRY_READY':
-      return await ensureSignupEntryReady();
     case 'ENSURE_SIGNUP_PHONE_ENTRY_READY':
       return await ensureSignupPhoneEntryReady();
     case 'ENSURE_SIGNUP_PASSWORD_PAGE_READY':
@@ -809,6 +806,15 @@ function inspectSignupEntryState() {
     };
   }
 
+  if (postVerificationState?.state === 'registration_success_page') {
+    return {
+      state: 'registration_success_page',
+      skipProfileStep: true,
+      skipProfileStepReason: 'registration_success_page',
+      url: postVerificationState.url || location.href,
+    };
+  }
+
   if (typeof isVerificationPageStillVisible === 'function' && isVerificationPageStillVisible()) {
     return {
       state: 'verification_page',
@@ -1273,20 +1279,6 @@ async function waitForSignupEntryState(options = {}) {
     log(`步骤 ${step}：等待注册入口状态超时，最终状态快照：${JSON.stringify(getSignupEntryStateSummary(finalSnapshot))}`, 'warn');
   }
   return finalSnapshot;
-}
-
-async function ensureSignupEntryReady(timeout = 15000) {
-  const snapshot = await waitForSignupEntryState({ timeout, autoOpenEntry: false });
-  if (snapshot.state === 'entry_home' || snapshot.state === 'phone_entry' || snapshot.state === 'email_entry' || snapshot.state === 'password_page') {
-    return {
-      ready: true,
-      state: snapshot.state,
-      url: snapshot.url || location.href,
-    };
-  }
-
-  log(`注册入口识别失败，诊断快照：${JSON.stringify(getSignupEntryDiagnostics())}`, 'warn');
-  throw new Error('当前页面没有可用的注册入口，也不在邮箱/密码页。URL: ' + location.href);
 }
 
 async function ensureSignupPhoneEntryReady(timeout = 25000) {
@@ -2735,6 +2727,7 @@ async function step3_fillEmailPassword(payload) {
     || snapshot.state === 'verification_page'
     || snapshot.state === 'profile_page'
     || snapshot.state === 'logged_in_home'
+    || snapshot.state === 'registration_success_page'
   ) {
     const completionPayload = {
       email: email || '',
@@ -2748,6 +2741,7 @@ async function step3_fillEmailPassword(payload) {
       skippedPasswordPage: true,
       deferredSubmit: false,
       ...(snapshot.skipProfileStep ? { skipProfileStep: true } : {}),
+      ...(snapshot.skipProfileStepReason ? { skipProfileStepReason: snapshot.skipProfileStepReason } : {}),
       ...(snapshot.skipRegistrationWaitStep ? { skipRegistrationWaitStep: true } : {}),
     };
     log('步骤 3：当前页面已进入验证码或后续阶段，密码页按已跳过处理。', 'warn');
@@ -3067,7 +3061,7 @@ function isLikelyLoggedInChatgptHomeUrl(rawUrl = location.href) {
   }
 }
 
-function isStep5CompletionChatgptUrl(rawUrl = location.href) {
+function isRegistrationCompletionChatgptUrl(rawUrl = location.href) {
   const url = String(rawUrl || '').trim();
   if (!url) {
     return false;
@@ -3108,6 +3102,15 @@ function getStep4PostVerificationState(options = {}) {
       state: 'logged_in_home',
       skipProfileStep: true,
       skipRegistrationWaitStep: true,
+      url: location.href,
+    };
+  }
+
+  if (isRegistrationCompletionChatgptUrl()) {
+    return {
+      state: 'registration_success_page',
+      skipProfileStep: true,
+      skipProfileStepReason: 'registration_success_page',
       url: location.href,
     };
   }
@@ -5088,6 +5091,15 @@ function inspectSignupVerificationState() {
     };
   }
 
+  if (postVerificationState?.state === 'registration_success_page') {
+    return {
+      state: 'registration_success_page',
+      skipProfileStep: true,
+      skipProfileStepReason: 'registration_success_page',
+      url: postVerificationState.url || location.href,
+    };
+  }
+
   if (typeof isOAuthConsentPage === 'function' && isOAuthConsentPage()) {
     return {
       state: 'oauth_consent_page',
@@ -5156,6 +5168,7 @@ async function waitForSignupVerificationTransition(timeout = 5000) {
     if (
       snapshot.state === 'step5'
       || snapshot.state === 'logged_in_home'
+      || snapshot.state === 'registration_success_page'
       || snapshot.state === 'oauth_consent_page'
       || snapshot.state === 'verification'
       || snapshot.state === 'contact_verification_server_error'
@@ -5250,6 +5263,18 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
         alreadyVerified: true,
         skipProfileStep: true,
         skipRegistrationWaitStep: true,
+        retried: recoveryRound,
+        prepareSource,
+      };
+    }
+
+    if (snapshot.state === 'registration_success_page') {
+      log(`${prepareLogLabel}：页面已进入注册成功等待页，本步骤按已完成处理，并将跳过步骤 5。`, 'ok');
+      return {
+        ready: true,
+        alreadyVerified: true,
+        skipProfileStep: true,
+        skipProfileStepReason: 'registration_success_page',
         retried: recoveryRound,
         prepareSource,
       };
@@ -5391,6 +5416,14 @@ async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
           url: postVerificationState.url || location.href,
         };
       }
+      if (postVerificationState?.state === 'registration_success_page') {
+        return {
+          success: true,
+          skipProfileStep: true,
+          skipProfileStepReason: 'registration_success_page',
+          url: postVerificationState.url || location.href,
+        };
+      }
       if (postVerificationState?.state === 'step5') {
         return { success: true };
       }
@@ -5432,6 +5465,14 @@ async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
         success: true,
         skipProfileStep: true,
         skipRegistrationWaitStep: true,
+        url: postVerificationState.url || location.href,
+      };
+    }
+    if (postVerificationState?.state === 'registration_success_page') {
+      return {
+        success: true,
+        skipProfileStep: true,
+        skipProfileStepReason: 'registration_success_page',
         url: postVerificationState.url || location.href,
       };
     }
@@ -5570,6 +5611,18 @@ async function fillVerificationCode(step, payload) {
         alreadyAdvanced: true,
         skipProfileStep: true,
         skipRegistrationWaitStep: true,
+        url: postVerificationState.url || location.href,
+      };
+    }
+    if (postVerificationState?.state === 'registration_success_page') {
+      if (typeof clearStep405RecoveryCount === 'function') clearStep405RecoveryCount(step);
+      log(`步骤 ${step}：检测到页面已进入注册成功等待页，本次验证码提交按成功处理，并将跳过步骤 5。`, 'ok');
+      return {
+        success: true,
+        assumed: true,
+        alreadyAdvanced: true,
+        skipProfileStep: true,
+        skipProfileStepReason: 'registration_success_page',
         url: postVerificationState.url || location.href,
       };
     }
@@ -7470,7 +7523,7 @@ function getStep5PostSubmitSuccessState() {
     return null;
   }
 
-  if (isStep5CompletionChatgptUrl()) {
+  if (isRegistrationCompletionChatgptUrl()) {
     return {
       state: 'logged_in_home',
       url: location.href,

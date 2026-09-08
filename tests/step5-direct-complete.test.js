@@ -64,7 +64,7 @@ function getStep5OutcomeBundle() {
     extractFunction('waitForStep5SubmitButton'),
     extractFunction('isStep5SubmitButtonClickable'),
     extractFunction('isStep5ProfileStillVisible'),
-    extractFunction('isStep5CompletionChatgptUrl'),
+    extractFunction('isRegistrationCompletionChatgptUrl'),
     extractFunction('getStep5PostSubmitSuccessState'),
     extractFunction('installStep5NavigationCompletionReporter'),
     extractFunction('waitForStep5SubmitOutcome'),
@@ -1153,7 +1153,7 @@ function isOAuthConsentPage() { return false; }
 function isAddPhonePageReady() { return false; }
 function isStep5ProfileStillVisible() { return false; }
 
-${extractFunction('isStep5CompletionChatgptUrl')}
+${extractFunction('isRegistrationCompletionChatgptUrl')}
 ${extractFunction('getStep5PostSubmitSuccessState')}
 
 return {
@@ -1175,7 +1175,7 @@ const location = {
 function getStep5AuthRetryPageState() { return null; }
 function isStep5ProfileStillVisible() { return false; }
 
-${extractFunction('isStep5CompletionChatgptUrl')}
+${extractFunction('isRegistrationCompletionChatgptUrl')}
 ${extractFunction('getStep5PostSubmitSuccessState')}
 
 return {
@@ -1184,7 +1184,7 @@ return {
     return getStep5PostSubmitSuccessState();
   },
   isCompletion(url) {
-    return isStep5CompletionChatgptUrl(url);
+    return isRegistrationCompletionChatgptUrl(url);
   },
 };
 `)();
