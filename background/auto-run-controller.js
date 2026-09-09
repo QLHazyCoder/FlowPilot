@@ -435,9 +435,10 @@
     }
 
     function shouldKeepCustomMailProviderPoolEmail(state = {}) {
-      return String(state?.mailProvider || '').trim().toLowerCase() === 'custom'
-        && Array.isArray(state?.customMailProviderPool)
-        && state.customMailProviderPool.length > 0;
+      const isCustomProvider = String(state?.mailProvider || '').trim().toLowerCase() === 'custom';
+      const hasEmailPoolEntries = Array.isArray(state?.customEmailPoolEntries) && state.customEmailPoolEntries.length > 0;
+      const hasEmailPool = Array.isArray(state?.customEmailPool) && state.customEmailPool.length > 0;
+      return isCustomProvider && (hasEmailPoolEntries || hasEmailPool);
     }
 
     function isPhoneNumberSupplyExhaustedFailure(error) {

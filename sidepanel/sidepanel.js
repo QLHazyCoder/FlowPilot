@@ -4235,14 +4235,6 @@ function usesCustomEmailPoolGenerator(provider = selectMailProvider.value) {
     && getSelectedEmailGenerator() === CUSTOM_EMAIL_POOL_GENERATOR;
 }
 
-function getCustomMailProviderPoolSize() {
-  return normalizeCustomEmailPoolEntries(inputCustomMailProviderPool?.value).length;
-}
-
-function usesCustomMailProviderPool(provider = selectMailProvider.value) {
-  return isCustomMailProvider(provider) && getCustomMailProviderPoolSize() > 0;
-}
-
 function getCustomEmailPoolSize() {
   if (typeof customEmailPoolEntriesState !== 'undefined' && Array.isArray(customEmailPoolEntriesState)) {
     const activeEntries = getActiveCustomEmailPoolEmails(customEmailPoolEntriesState);
@@ -4254,10 +4246,7 @@ function getCustomEmailPoolSize() {
 }
 
 function getLockedRunCountFromEmailPool(provider = selectMailProvider.value) {
-  if (usesCustomMailProviderPool(provider)) {
-    return getCustomMailProviderPoolSize();
-  }
-  if (usesCustomEmailPoolGenerator(provider)) {
+  if (isCustomMailProvider(provider) || usesCustomEmailPoolGenerator(provider)) {
     return getCustomEmailPoolSize();
   }
   return 0;
@@ -5575,9 +5564,6 @@ function collectSettingsPayload() {
     duckDdgToken: typeof inputDuckDdgToken !== 'undefined' && inputDuckDdgToken
       ? String(inputDuckDdgToken.value || '').trim()
       : '',
-    customMailProviderPool: typeof normalizeCustomEmailPoolEntries === 'function'
-      ? normalizeCustomEmailPoolEntries(inputCustomMailProviderPool?.value)
-      : [],
     customEmailPool: normalizedCustomEmailPool,
     customEmailPoolEntries: normalizedCustomEmailPoolEntries,
     autoDeleteUsedIcloudAlias: checkboxAutoDeleteIcloud?.checked,
@@ -12265,9 +12251,6 @@ function applySettingsState(state) {
   setManagedAliasBaseEmailInputForProvider(restoredMailProvider, state);
   inputInbucketHost.value = state?.inbucketHost || '';
   inputInbucketMailbox.value = state?.inbucketMailbox || '';
-  if (inputCustomMailProviderPool) {
-    inputCustomMailProviderPool.value = normalizeCustomEmailPoolEntries(state?.customMailProviderPool).join('\n');
-  }
   const restoredCustomEmailPoolEntries = typeof restoreCustomEmailPoolEntriesFromState === 'function'
     ? restoreCustomEmailPoolEntriesFromState(state)
     : normalizeCustomEmailPoolEntries(state?.customEmailPool);
@@ -13819,9 +13802,6 @@ function updateMailProviderUI() {
   if (rowMail2925PoolSettings) {
     rowMail2925PoolSettings.style.display = useMail2925 ? '' : 'none';
   }
-  if (typeof rowCustomMailProviderPool !== 'undefined' && rowCustomMailProviderPool) {
-    rowCustomMailProviderPool.style.display = useCustomEmail ? '' : 'none';
-  }
   if (typeof rowCustomMailReceiveMode !== 'undefined' && rowCustomMailReceiveMode) {
     rowCustomMailReceiveMode.style.display = useCustomEmail ? '' : 'none';
   }
@@ -13832,7 +13812,7 @@ function updateMailProviderUI() {
   const hotmailServiceMode = getSelectedHotmailServiceMode();
   rowInbucketHost.style.display = useInbucket ? '' : 'none';
   rowInbucketMailbox.style.display = useInbucket ? '' : 'none';
-  const useCustomEmailPool = useEmailGenerator && selectedGenerator === customEmailPoolGenerator;
+  const useCustomEmailPool = useCustomEmail || (useEmailGenerator && selectedGenerator === customEmailPoolGenerator);
   const useCloudflare = selectedGenerator === 'cloudflare';
   const useIcloud = selectedGenerator === 'icloud';
   const useCloudflareTempEmailGenerator = selectedGenerator === 'cloudflare-temp-email';

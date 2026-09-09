@@ -940,7 +940,9 @@ test('auto-run controller keeps retrying the same custom mail provider pool emai
     autoRunFallbackThreadIntervalMinutes: 0,
     autoStepDelaySeconds: null,
     mailProvider: 'custom',
-    customMailProviderPool: ['first@example.com'],
+    customEmailPoolEntries: [
+      { id: '1', email: 'first@example.com', enabled: true, used: false }
+    ],
     emailGenerator: 'duck',
     gmailBaseEmail: '',
     mail2925BaseEmail: '',
@@ -1020,7 +1022,7 @@ test('auto-run controller keeps retrying the same custom mail provider pool emai
       stepStatuses: { ...(currentState.stepStatuses || {}) },
       tabRegistry: { ...(currentState.tabRegistry || {}) },
       sourceLastUrls: { ...(currentState.sourceLastUrls || {}) },
-      customMailProviderPool: [...(currentState.customMailProviderPool || [])],
+      customEmailPoolEntries: [...(currentState.customEmailPoolEntries || [])],
     }),
     getStopRequested: () => false,
     hasSavedProgress: () => false,

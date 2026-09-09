@@ -1157,7 +1157,6 @@ const PERSISTED_SETTING_DEFAULTS = {
   customMailHelperBaseUrl: DEFAULT_CUSTOM_MAIL_HELPER_BASE_URL,
   emailGenerator: 'duck',
   duckDdgToken: '',
-  customMailProviderPool: [],
   customEmailPool: [],
   customEmailPoolEntries: [],
   autoDeleteUsedIcloudAlias: false,
@@ -2432,7 +2431,7 @@ function getCustomEmailPoolEntries(state = {}) {
 }
 
 async function markCurrentCustomEmailPoolEntryUsed(state = {}, options = {}) {
-  if (!isCustomEmailPoolGenerator(state)) {
+  if (!isCustomMailProvider(state) && !isCustomEmailPoolGenerator(state)) {
     return { updated: false };
   }
 
@@ -2554,16 +2553,6 @@ async function markCurrentRegistrationAccountUsed(state = {}, options = {}) {
 
 function getCustomEmailPoolEmailForRun(state = {}, targetRun = 1) {
   const entries = getCustomEmailPool(state);
-  const numericRun = Math.max(1, Math.floor(Number(targetRun) || 1));
-  return entries[numericRun - 1] || '';
-}
-
-function getCustomMailProviderPool(state = {}) {
-  return normalizeCustomEmailPool(state?.customMailProviderPool);
-}
-
-function getCustomMailProviderPoolEmailForRun(state = {}, targetRun = 1) {
-  const entries = getCustomMailProviderPool(state);
   const numericRun = Math.max(1, Math.floor(Number(targetRun) || 1));
   return entries[numericRun - 1] || '';
 }
@@ -3225,7 +3214,6 @@ function normalizePersistentSettingValue(key, value) {
       return normalizeEmailGenerator(value);
     case 'duckDdgToken':
       return normalizeDuckDdgToken(value);
-    case 'customMailProviderPool':
     case 'customEmailPool':
       return normalizeCustomEmailPool(value);
     case 'customEmailPoolEntries':
@@ -12569,20 +12557,7 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
     return currentState.email;
   }
 
-  if (isCustomMailProvider(currentState)) {
-    const poolSize = getCustomMailProviderPool(currentState).length;
-    if (poolSize > 0) {
-      const queuedEmail = getCustomMailProviderPoolEmailForRun(currentState, targetRun);
-      if (!queuedEmail) {
-        throw new Error(`自定义邮箱号池第 ${targetRun} 个邮箱不存在，请检查号池数量是否与自动轮数一致。`);
-      }
-      await setEmailState(queuedEmail);
-      await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱号池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试；第 4/8 步仍需手动输入验证码）===`, 'ok');
-      return queuedEmail;
-    }
-  }
-
-  if (isCustomEmailPoolGenerator(currentState)) {
+  if (isCustomMailProvider(currentState) || isCustomEmailPoolGenerator(currentState)) {
     const queuedEmail = getCustomEmailPoolEmailForRun(currentState, targetRun);
     if (!queuedEmail) {
       const poolSize = getCustomEmailPool(currentState).length;
@@ -12727,20 +12702,7 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
     return currentState.email;
   }
 
-  if (isCustomMailProvider(currentState)) {
-    const poolSize = getCustomMailProviderPool(currentState).length;
-    if (poolSize > 0) {
-      const queuedEmail = getCustomMailProviderPoolEmailForRun(currentState, targetRun);
-      if (!queuedEmail) {
-        throw new Error(`自定义邮箱号池第 ${targetRun} 个邮箱不存在，请检查号池数量是否与自动轮数一致。`);
-      }
-      await setEmailState(queuedEmail);
-      await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱号池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试；第 4/8 步仍需手动输入验证码）===`, 'ok');
-      return queuedEmail;
-    }
-  }
-
-  if (isCustomEmailPoolGenerator(currentState)) {
+  if (isCustomMailProvider(currentState) || isCustomEmailPoolGenerator(currentState)) {
     const queuedEmail = getCustomEmailPoolEmailForRun(currentState, targetRun);
     if (!queuedEmail) {
       const poolSize = getCustomEmailPool(currentState).length;
