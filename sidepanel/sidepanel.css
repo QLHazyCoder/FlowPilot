@@ -1663,7 +1663,7 @@ header {
   border-radius: var(--radius-sm);
   padding: 10px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 10px;
   align-items: flex-start;
 }
@@ -1693,7 +1693,8 @@ header {
 .luckmail-item-email {
   font-weight: 600;
   color: var(--text-primary);
-  word-break: break-all;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .luckmail-item-meta,
@@ -1709,10 +1710,12 @@ header {
 }
 
 .luckmail-item-actions {
+  grid-column: 2;
+  min-width: 0;
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .luckmail-tag {
@@ -2061,7 +2064,7 @@ header {
   border-radius: var(--radius-sm);
   padding: 10px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 10px;
   align-items: flex-start;
 }
@@ -2078,16 +2081,19 @@ header {
 }
 
 .icloud-item-actions {
+  grid-column: 2;
+  min-width: 0;
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .icloud-item-email {
   font-weight: 600;
   color: var(--text-primary);
-  word-break: break-all;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .icloud-item-meta {
