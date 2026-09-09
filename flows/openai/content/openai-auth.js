@@ -787,34 +787,6 @@ function inspectSignupEntryState() {
     };
   }
 
-  const postVerificationState = typeof getStep4PostVerificationState === 'function'
-    ? getStep4PostVerificationState()
-    : null;
-  if (postVerificationState?.state === 'step5') {
-    return {
-      state: 'profile_page',
-      url: postVerificationState.url || location.href,
-    };
-  }
-
-  if (postVerificationState?.state === 'logged_in_home') {
-    return {
-      state: 'logged_in_home',
-      skipProfileStep: true,
-      skipRegistrationWaitStep: true,
-      url: postVerificationState.url || location.href,
-    };
-  }
-
-  if (postVerificationState?.state === 'registration_success_page') {
-    return {
-      state: 'registration_success_page',
-      skipProfileStep: true,
-      skipProfileStepReason: 'registration_success_page',
-      url: postVerificationState.url || location.href,
-    };
-  }
-
   if (typeof isVerificationPageStillVisible === 'function' && isVerificationPageStillVisible()) {
     return {
       state: 'verification_page',
@@ -862,6 +834,27 @@ function inspectSignupEntryState() {
       state: 'entry_home',
       signupTrigger,
       url: location.href,
+    };
+  }
+
+  const postVerificationState = typeof getStep4PostVerificationState === 'function'
+    ? getStep4PostVerificationState()
+    : null;
+  if (postVerificationState?.state === 'logged_in_home') {
+    return {
+      state: 'logged_in_home',
+      skipProfileStep: true,
+      skipRegistrationWaitStep: true,
+      url: postVerificationState.url || location.href,
+    };
+  }
+
+  if (postVerificationState?.state === 'registration_success_page') {
+    return {
+      state: 'registration_success_page',
+      skipProfileStep: true,
+      skipProfileStepReason: 'registration_success_page',
+      url: postVerificationState.url || location.href,
     };
   }
 
@@ -2725,9 +2718,6 @@ async function step3_fillEmailPassword(payload) {
   if (
     snapshot.state === 'phone_verification_page'
     || snapshot.state === 'verification_page'
-    || snapshot.state === 'profile_page'
-    || snapshot.state === 'logged_in_home'
-    || snapshot.state === 'registration_success_page'
   ) {
     const completionPayload = {
       email: email || '',
@@ -2740,11 +2730,8 @@ async function step3_fillEmailPassword(payload) {
       ) ? Date.now() : null,
       skippedPasswordPage: true,
       deferredSubmit: false,
-      ...(snapshot.skipProfileStep ? { skipProfileStep: true } : {}),
-      ...(snapshot.skipProfileStepReason ? { skipProfileStepReason: snapshot.skipProfileStepReason } : {}),
-      ...(snapshot.skipRegistrationWaitStep ? { skipRegistrationWaitStep: true } : {}),
     };
-    log('步骤 3：当前页面已进入验证码或后续阶段，密码页按已跳过处理。', 'warn');
+    log('步骤 3：当前页面已进入验证码阶段，密码页按已跳过处理。', 'warn');
     reportComplete(3, completionPayload);
     return completionPayload;
   }

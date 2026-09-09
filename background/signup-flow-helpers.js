@@ -19,7 +19,6 @@
       isSignupEmailVerificationPageUrl,
       isSignupPasswordPageUrl,
       isSignupPhoneVerificationPageUrl = null,
-      isSignupProfilePageUrl = null,
       persistRegistrationEmailState = null,
       reuseOrCreateTab,
       sendToContentScriptResilient,
@@ -90,12 +89,6 @@
       return /\/phone-verification(?:[/?#]|$)/i.test(parsed.pathname || '');
     }
 
-    function fallbackSignupProfilePageUrl(rawUrl) {
-      const parsed = parseUrlSafely(rawUrl);
-      if (!parsed) return false;
-      return /\/(?:create-account\/profile|u\/signup\/profile|signup\/profile|about-you)(?:[/?#]|$)/i.test(parsed.pathname || '');
-    }
-
     function resolveSignupPostIdentityState(rawUrl) {
       if (isSignupPasswordPageUrl(rawUrl)) {
         return 'password_page';
@@ -108,12 +101,6 @@
         : fallbackSignupPhoneVerificationPageUrl(rawUrl);
       if (isPhoneVerificationUrl) {
         return 'phone_verification_page';
-      }
-      const isProfileUrl = typeof isSignupProfilePageUrl === 'function'
-        ? isSignupProfilePageUrl(rawUrl)
-        : fallbackSignupProfilePageUrl(rawUrl);
-      if (isProfileUrl) {
-        return 'profile_page';
       }
       return '';
     }
@@ -147,7 +134,7 @@
       }
 
       if (!landingState) {
-        throw new Error(`注册身份提交后未能识别当前页面，既不是密码页、验证码页，也不是资料页。URL: ${landingUrl || 'unknown'}`);
+        throw new Error(`注册身份提交后未能识别当前页面，既不是密码页也不是验证码页。URL: ${landingUrl || 'unknown'}`);
       }
 
       if (landingState !== 'password_page' && typeof waitForTabStableComplete === 'function') {

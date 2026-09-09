@@ -13456,10 +13456,6 @@ const signupFlowHelpers = self.MultiPageSignupFlowHelpers?.createSignupFlowHelpe
     const parsed = parseUrlSafely(rawUrl);
     return Boolean(parsed && isSignupPageHost(parsed.hostname) && /\/phone-verification(?:[/?#]|$)/i.test(parsed.pathname || ''));
   },
-  isSignupProfilePageUrl: (rawUrl) => {
-    const parsed = parseUrlSafely(rawUrl);
-    return Boolean(parsed && isSignupPageHost(parsed.hostname) && /\/(?:create-account\/profile|u\/signup\/profile|signup\/profile|about-you)(?:[/?#]|$)/i.test(parsed.pathname || ''));
-  },
   isRetryableContentScriptTransportError,
   isHotmailProvider,
   isLuckmailProvider,

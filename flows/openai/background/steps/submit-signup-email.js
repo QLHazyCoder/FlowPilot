@@ -270,7 +270,7 @@
         signupPhoneActivation: activation || null,
         nextSignupState: landingResult?.state || step2Result?.state || 'password_page',
         nextSignupUrl: landingResult?.url || step2Result?.url || '',
-        skippedPasswordStep: landingResult?.state === 'phone_verification_page' || landingResult?.state === 'profile_page',
+        skippedPasswordStep: landingResult?.state === 'phone_verification_page',
       });
     }
 

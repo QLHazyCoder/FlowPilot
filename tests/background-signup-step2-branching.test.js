@@ -650,6 +650,37 @@ test('signup flow helper recognizes email verification page as post-email landin
   assert.equal(passwordReadyChecks, 0);
 });
 
+test('signup flow helper rejects a step 5 profile page as a step 2 landing state', async () => {
+  const helpers = signupFlowApi.createSignupFlowHelpers({
+    chrome: {
+      tabs: {
+        get: async () => ({
+          id: 24,
+          url: 'https://auth.openai.com/create-account/profile',
+        }),
+      },
+    },
+    ensureContentScriptReadyOnTab: async () => {},
+    isSignupEmailVerificationPageUrl: () => false,
+    isSignupPasswordPageUrl: () => false,
+    isSignupPhoneVerificationPageUrl: () => false,
+    reuseOrCreateTab: async () => 24,
+    sendToContentScriptResilient: async () => ({}),
+    SIGNUP_ENTRY_URL: 'https://chatgpt.com/',
+    OPENAI_AUTH_INJECT_FILES: [],
+    waitForTabUrlMatch: async (_tabId, predicate) => (
+      predicate('https://auth.openai.com/create-account/profile')
+        ? { id: 24, url: 'https://auth.openai.com/create-account/profile' }
+        : null
+    ),
+  });
+
+  await assert.rejects(
+    helpers.ensureSignupPostEmailPageReadyInTab(24, 2),
+    /等待注册身份提交后的页面跳转超时/
+  );
+});
+
 test('signup flow helper waits for the signup entry tab to settle for step 2 without probing the entry page', async () => {
   const logs = [];
   const events = [];
