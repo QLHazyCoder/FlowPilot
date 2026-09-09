@@ -294,6 +294,7 @@ const btnCustomEmailPoolBulkUnused = document.getElementById('btn-custom-email-p
 const btnCustomEmailPoolBulkEnable = document.getElementById('btn-custom-email-pool-bulk-enable');
 const btnCustomEmailPoolBulkDisable = document.getElementById('btn-custom-email-pool-bulk-disable');
 const btnCustomEmailPoolBulkDelete = document.getElementById('btn-custom-email-pool-bulk-delete');
+const btnCustomEmailPoolToggleList = document.getElementById('btn-custom-email-pool-toggle-list');
 const customEmailPoolList = document.getElementById('custom-email-pool-list');
 const rowTempEmailBaseUrl = document.getElementById('row-temp-email-base-url');
 const inputTempEmailBaseUrl = document.getElementById('input-temp-email-base-url');
@@ -15444,6 +15445,7 @@ const customEmailPoolManager = window.SidepanelCustomEmailPoolManager?.createCus
     btnCustomEmailPoolBulkEnable,
     btnCustomEmailPoolBulkDisable,
     btnCustomEmailPoolBulkDelete,
+    btnCustomEmailPoolToggleList,
     customEmailPoolList,
   },
   helpers: {

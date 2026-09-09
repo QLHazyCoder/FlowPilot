@@ -1648,6 +1648,23 @@ header {
   flex-wrap: wrap;
 }
 
+.pool-toggle-btn {
+  margin-left: auto;
+}
+
+.pool-toggle-icon {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.pool-toggle-btn.collapsed .pool-toggle-icon {
+  transform: rotate(-90deg);
+}
+
+.luckmail-list.collapsed {
+  display: none;
+}
+
 .luckmail-list {
   display: flex;
   flex-direction: column;

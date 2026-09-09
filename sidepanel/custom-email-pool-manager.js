@@ -517,6 +517,14 @@
           mode: 'all',
         }, '确认删除当前全部邮箱吗？此操作不可撤销。');
       });
+
+      dom.btnCustomEmailPoolToggleList?.addEventListener('click', () => {
+        const list = dom.customEmailPoolList;
+        if (!list) return;
+        const isCollapsed = list.classList.toggle('collapsed');
+        dom.btnCustomEmailPoolToggleList.classList.toggle('collapsed', isCollapsed);
+        dom.btnCustomEmailPoolToggleList.textContent = isCollapsed ? '展开' : '收起';
+      });
     }
 
     return {
