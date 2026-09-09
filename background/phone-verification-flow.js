@@ -240,7 +240,7 @@
       if (!Number.isFinite(parsed) || parsed <= 0) {
         return DEFAULT_PHONE_NUMBER_REPLACEMENT_LIMIT;
       }
-      return Math.max(1, Math.min(20, parsed));
+      return Math.max(1, parsed);
     }
 
     function normalizeHeroSmsPriceLimit(value) {
