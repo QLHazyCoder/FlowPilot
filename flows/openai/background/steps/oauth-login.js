@@ -14,8 +14,11 @@
         if (/\u624b\u673a\u53f7\u8f93\u5165\u6a21\u5f0f|phone\s+entry/i.test(message)) {
           return false;
         }
-        return /https:\/\/auth\.openai\.com\/add-phone(?:[/?#]|$)|\badd-phone\b|\u6dfb\u52a0\u624b\u673a\u53f7|\u624b\u673a\u53f7\u7801|\u8fdb\u5165\u624b\u673a\u53f7\u9875\u9762|\u624b\u673a\u53f7\u9875|\u624b\u673a\u53f7\u9875\u9762|phone\s+number|telephone/i.test(message);
+        return /\u6dfb\u52a0\u624b\u673a\u53f7|\u624b\u673a\u53f7\u7801|\u8fdb\u5165\u624b\u673a\u53f7\u9875\u9762|\u624b\u673a\u53f7\u9875|\u624b\u673a\u53f7\u9875\u9762|phone\s+(?:number|verification)\s+(?:page|required|verification)|telephone\s+(?:page|required|verification)/i.test(message);
       },
+      isAddPhoneAuthUrl = (error) => /https:\/\/auth\.openai\.com\/(?:add-phone|phone-verification)(?:[/?#]|$)/i.test(
+        String(typeof error === 'string' ? error : error?.message || '')
+      ),
       isStep6RecoverableResult,
       isStep6SuccessResult,
       getTabId,
@@ -86,7 +89,6 @@
 
     function canUseConfiguredPhoneSignup(state = {}) {
       return isPhoneSignupMethodForStep7(state)
-        && Boolean(state?.phoneVerificationEnabled)
         && !Boolean(state?.plusModeEnabled)
         && !Boolean(state?.accountContributionEnabled);
     }
@@ -416,7 +418,7 @@
           throw new Error(`步骤 ${completionStep}：认证页未返回可识别的登录结果。`);
         } catch (err) {
           throwIfStopped(err);
-          if (isAddPhoneAuthFailure(err)) {
+          if (isAddPhoneAuthFailure(err) || isAddPhoneAuthUrl(err)) {
             const latestAddPhoneState = typeof getState === 'function'
               ? await getState().catch(() => state)
               : state;

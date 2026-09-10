@@ -123,7 +123,6 @@
   "settingsDefaults": {
     "signup": {
       "signupMethod": "email",
-      "phoneVerificationEnabled": false,
       "phoneSignupReloginAfterBindEmailEnabled": false
     },
     "plus": {

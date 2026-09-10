@@ -315,8 +315,8 @@
       if (options.mail2925BaseEmail !== undefined) {
         mergedState.mail2925BaseEmail = String(options.mail2925BaseEmail || '').trim();
       }
-      if (options.customEmailPool !== undefined) {
-        mergedState.customEmailPool = options.customEmailPool;
+      if (options.customEmailPoolEntries !== undefined) {
+        mergedState.customEmailPoolEntries = options.customEmailPoolEntries;
       }
       if (generator === 'custom') {
         throw new Error('当前邮箱生成方式为自定义邮箱，请直接填写注册邮箱。');

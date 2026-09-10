@@ -2,7 +2,7 @@
  * @Author: QLHazycoder
  * @Date: 2026-07-22 00:00:00
  * @LastEditors: QLHazycoder
- * @LastEditTime: 2026-07-22 00:00:00
+ * @LastEditTime: 2026-09-10 18:50:11
  * @Description: OpenAI registration, payment, and account-delivery workflow composition.
  */
 (function attachMultiPageOpenAiWorkflow(root, factory) {
@@ -334,13 +334,6 @@
     return cloneSteps(ACCOUNT_DELIVERY_STAGE_BY_ROUTE[fallbackRoute] || OAUTH_DELIVERY_STAGE_EMAIL);
   }
 
-  function removePhoneVerificationSteps(steps = []) {
-    return steps.filter((step) => ![
-      'post-login-phone-verification',
-      'post-bound-email-phone-verification',
-    ].includes(step.key));
-  }
-
   function reindexModeStepDefinitions(steps = []) {
     return steps.map((step, index) => ({
       ...step,
@@ -354,10 +347,7 @@
     const registration = buildRegistrationStage(options);
     const payment = buildPaymentStage(options);
     const delivery = buildAccountDeliveryStage(options);
-    let steps = [...registration, ...payment, ...delivery];
-    if (options?.phoneVerificationEnabled === false) {
-      steps = removePhoneVerificationSteps(steps);
-    }
+    const steps = [...registration, ...payment, ...delivery];
     return reindexModeStepDefinitions(steps);
   }
 

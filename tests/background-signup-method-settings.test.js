@@ -48,15 +48,16 @@ function extractFunction(name) {
   return source.slice(start, end);
 }
 
-test('signup method resolution freezes per run and falls back when phone signup is unavailable', async () => {
+test('signup method resolution freezes per run and falls back when the selected flow cannot use phone signup', async () => {
   const api = new Function(`
 const SIGNUP_METHOD_EMAIL = 'email';
 const SIGNUP_METHOD_PHONE = 'phone';
 const DEFAULT_SIGNUP_METHOD = SIGNUP_METHOD_EMAIL;
 const logs = [];
 let state = {
+  activeFlowId: 'openai',
+  targetId: 'cpa',
   signupMethod: 'phone',
-  phoneVerificationEnabled: true,
   plusModeEnabled: false,
   accountContributionEnabled: false,
   resolvedSignupMethod: null,
@@ -77,19 +78,24 @@ return {
 };
 `)();
 
-  assert.equal(api.resolveSignupMethod({ signupMethod: 'phone', phoneVerificationEnabled: true }), 'phone');
-  assert.equal(api.resolveSignupMethod({ signupMethod: 'phone', phoneVerificationEnabled: false }), 'email');
-  assert.equal(api.resolveSignupMethod({ signupMethod: 'phone', phoneVerificationEnabled: true, plusModeEnabled: true }), 'email');
-  assert.equal(api.resolveSignupMethod({ signupMethod: 'email', resolvedSignupMethod: 'phone', phoneVerificationEnabled: false }), 'phone');
+  assert.equal(api.resolveSignupMethod({ activeFlowId: 'openai', targetId: 'cpa', signupMethod: 'phone' }), 'phone');
+  assert.equal(api.resolveSignupMethod({ activeFlowId: 'openai', targetId: 'cpa', signupMethod: 'phone', plusModeEnabled: true }), 'email');
+  assert.equal(api.resolveSignupMethod({ activeFlowId: 'openai', targetId: 'cpa', signupMethod: 'email', resolvedSignupMethod: 'phone' }), 'phone');
+  assert.equal(api.resolveSignupMethod({ activeFlowId: 'webchat', targetId: 'webchat', signupMethod: 'phone' }), 'email');
 
   assert.equal(await api.ensureResolvedSignupMethodForRun(), 'phone');
   assert.equal(api.state.resolvedSignupMethod, 'phone');
 
-  await api.setState({ signupMethod: 'email', phoneVerificationEnabled: false });
+  await api.setState({ signupMethod: 'email' });
   assert.equal(await api.ensureResolvedSignupMethodForRun(), 'phone');
   assert.equal(api.state.resolvedSignupMethod, 'phone');
 
-  await api.setState({ resolvedSignupMethod: null, signupMethod: 'phone', phoneVerificationEnabled: false });
+  await api.setState({
+    activeFlowId: 'webchat',
+    targetId: 'webchat',
+    resolvedSignupMethod: null,
+    signupMethod: 'phone',
+  });
   assert.equal(await api.ensureResolvedSignupMethodForRun({ force: true }), 'email');
   assert.equal(api.state.resolvedSignupMethod, 'email');
   assert.equal(api.logs.some((entry) => /固定为邮箱注册/.test(entry.message)), true);
@@ -125,17 +131,14 @@ return {
 
   assert.equal(api.canUsePhoneSignup({
     activeFlowId: 'site-a',
-    phoneVerificationEnabled: true,
     signupMethod: 'phone',
   }), false);
   assert.equal(api.resolveSignupMethod({
     activeFlowId: 'site-a',
-    phoneVerificationEnabled: true,
     signupMethod: 'phone',
   }), 'email');
   assert.equal(api.resolveSignupMethod({
     activeFlowId: 'openai',
-    phoneVerificationEnabled: true,
     signupMethod: 'phone',
   }), 'phone');
 });
@@ -177,15 +180,14 @@ return {
   });
 
   assert.deepEqual(api.getCaptured(), [{
-    activeFlowId: 'openai',
+      activeFlowId: 'openai',
     targetId: undefined,
     accountDeliveryMode: undefined,
     accountDeliveryRouteId: undefined,
-    plusModeEnabled: false,
-    plusPaymentMethod: 'paypal',
-    signupMethod: 'phone',
-    phoneVerificationEnabled: false,
-    phoneSignupReloginAfterBindEmailEnabled: false,
+      plusModeEnabled: false,
+      plusPaymentMethod: 'paypal',
+      signupMethod: 'phone',
+      phoneSignupReloginAfterBindEmailEnabled: false,
     grokSub2apiGrok2ApiUploadEnabled: false,
   }]);
   assert.equal(steps[0].title, '注册并输入手机号');

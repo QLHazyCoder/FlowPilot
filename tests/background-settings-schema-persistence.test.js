@@ -109,7 +109,6 @@ const SETTINGS_SCHEMA_VIEW_KEYS = Object.freeze([
   'codex2apiAdminKey',
   'customPassword',
   'signupMethod',
-  'phoneVerificationEnabled',
   'phoneSignupReloginAfterBindEmailEnabled',
   'plusModeEnabled',
   'plusPaymentMethod',
@@ -140,7 +139,6 @@ const PERSISTED_SETTING_DEFAULTS = {
   plusModeEnabled: false,
   plusPaymentMethod: 'paypal',
   accountDeliveryMode: 'oauth',
-  phoneVerificationEnabled: false,
   mailProvider: '163',
   customMailReceiveMode: 'manual',
   customMailHelperBaseUrl: 'http://127.0.0.1:17374',
@@ -452,7 +450,6 @@ test('buildPersistentSettingsPayload accepts schema-only input when requireKnown
           },
           signup: {
             signupMethod: 'email',
-            phoneVerificationEnabled: false,
             phoneSignupReloginAfterBindEmailEnabled: false,
           },
           plus: {
@@ -594,7 +591,6 @@ const chrome = {
                 },
                 signup: {
                   signupMethod: 'email',
-                  phoneVerificationEnabled: false,
                   phoneSignupReloginAfterBindEmailEnabled: false,
                 },
                 plus: {
@@ -710,7 +706,6 @@ function getRemovedKeys() {
           },
           signup: {
             signupMethod: 'email',
-            phoneVerificationEnabled: false,
             phoneSignupReloginAfterBindEmailEnabled: false,
           },
           plus: {
@@ -993,7 +988,6 @@ const chrome = {
                 },
                 signup: {
                   signupMethod: 'email',
-                  phoneVerificationEnabled: false,
                   phoneSignupReloginAfterBindEmailEnabled: false,
                 },
                 plus: {

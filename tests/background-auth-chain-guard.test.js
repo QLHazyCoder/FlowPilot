@@ -94,7 +94,6 @@ test('step 8 recovery rebuilds primary phone login identity before rerunning oau
   let state = {
     signupMethod: 'phone',
     resolvedSignupMethod: 'phone',
-    phoneVerificationEnabled: true,
     email: 'bound.step8@example.com',
     forceLoginIdentifierType: 'email',
     forceEmailLogin: true,

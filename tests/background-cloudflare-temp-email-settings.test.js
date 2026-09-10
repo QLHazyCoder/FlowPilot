@@ -222,7 +222,6 @@ function normalizeLuckmailBaseUrl(value) { return String(value || '').trim(); }
 function normalizeLuckmailEmailType(value) { return String(value || '').trim(); }
 function normalizeCloudflareDomain(value) { return String(value || '').trim().toLowerCase(); }
 function normalizeCloudflareDomains(value) { return Array.isArray(value) ? value.map((item) => String(item || '').trim().toLowerCase()).filter(Boolean) : []; }
-function normalizeCustomEmailPool(value) { return Array.isArray(value) ? value : []; }
 function normalizeCloudflareTempEmailBaseUrl(value) { return String(value || '').trim(); }
 function normalizeCloudflareTempEmailAddress(value = '') { return String(value || '').trim().toLowerCase(); }
 function normalizeCloudflareTempEmailReceiveMailbox(value = '') { return String(value || '').trim().toLowerCase(); }

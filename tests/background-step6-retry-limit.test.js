@@ -255,7 +255,6 @@ test('step 7 no longer runs shared phone verification inside oauth-login', async
     getState: async () => ({
       email: 'user@example.com',
       password: 'secret',
-      phoneVerificationEnabled: true,
     }),
     getTabId: async (sourceName) => (sourceName === 'openai-auth' ? 91 : 0),
     isStep6RecoverableResult: (result) => result?.step6Outcome === 'recoverable',
@@ -281,7 +280,6 @@ test('step 7 no longer runs shared phone verification inside oauth-login', async
   await executor.executeStep7({
     email: 'user@example.com',
     password: 'secret',
-    phoneVerificationEnabled: true,
   });
 
   assert.equal(events.refreshCalls, 1);
@@ -299,7 +297,7 @@ test('step 7 no longer runs shared phone verification inside oauth-login', async
   ]);
 });
 
-test('step 7 add-phone handoff does not depend on phone verification being enabled', async () => {
+test('step 7 add-phone handoff does not depend on a removed phone verification switch', async () => {
   const source = fs.readFileSync('flows/openai/background/steps/oauth-login.js', 'utf8');
   const globalScope = {};
   const api = new Function('self', `${source}; return self.MultiPageBackgroundStep7;`)(globalScope);
@@ -316,7 +314,7 @@ test('step 7 add-phone handoff does not depend on phone verification being enabl
     },
     getErrorMessage: (error) => error?.message || String(error || ''),
     getLoginAuthStateLabel: (state) => state || 'unknown',
-    getState: async () => ({ email: 'user@example.com', password: 'secret', phoneVerificationEnabled: false }),
+    getState: async () => ({ email: 'user@example.com', password: 'secret' }),
     getTabId: async () => 91,
     isStep6RecoverableResult: (result) => result?.step6Outcome === 'recoverable',
     isStep6SuccessResult: (result) => result?.step6Outcome === 'success',
@@ -335,7 +333,7 @@ test('step 7 add-phone handoff does not depend on phone verification being enabl
     throwIfStopped: () => {},
   });
 
-  await executor.executeStep7({ email: 'user@example.com', password: 'secret', phoneVerificationEnabled: false });
+  await executor.executeStep7({ email: 'user@example.com', password: 'secret' });
   assert.equal(events.phoneCalls, 0);
   assert.equal(events.completions, 1);
 });
@@ -357,7 +355,7 @@ test('step 7 ignores obsolete shared add-phone verifier during handoff', async (
     },
     getErrorMessage: (error) => error?.message || String(error || ''),
     getLoginAuthStateLabel: (state) => state || 'unknown',
-    getState: async () => ({ email: 'user@example.com', password: 'secret', phoneVerificationEnabled: true }),
+    getState: async () => ({ email: 'user@example.com', password: 'secret' }),
     getTabId: async () => 91,
     isStep6RecoverableResult: (result) => result?.step6Outcome === 'recoverable',
     isStep6SuccessResult: (result) => result?.step6Outcome === 'success',
@@ -376,7 +374,7 @@ test('step 7 ignores obsolete shared add-phone verifier during handoff', async (
     throwIfStopped: () => {},
   });
 
-  await executor.executeStep7({ email: 'user@example.com', password: 'secret', phoneVerificationEnabled: true });
+  await executor.executeStep7({ email: 'user@example.com', password: 'secret' });
   assert.equal(events.phoneCalls, 0);
   assert.equal(events.completions, 1);
 });
@@ -653,7 +651,6 @@ test('step 7 keeps Plus email login even when phone sms runtime exists', async (
     getLoginAuthStateLabel: (state) => state || 'unknown',
     getState: async () => ({
       plusModeEnabled: true,
-      phoneVerificationEnabled: true,
       signupMethod: 'phone',
       email: 'plus.user@example.com',
       password: 'secret',
@@ -677,7 +674,6 @@ test('step 7 keeps Plus email login even when phone sms runtime exists', async (
 
   await executor.executeStep7({
     plusModeEnabled: true,
-    phoneVerificationEnabled: true,
     signupMethod: 'phone',
     email: 'plus.user@example.com',
     password: 'secret',
@@ -767,7 +763,6 @@ test('step 7 keeps phone login after step 8 stores an unbound email for phone si
   };
 
   const phoneSignupState = {
-    phoneVerificationEnabled: true,
     signupMethod: 'phone',
     resolvedSignupMethod: 'email',
     email: 'bound.step8@example.com',
@@ -825,7 +820,6 @@ test('step 7 ignores stale email force flags outside bound-email relogin', async
   const pollutedPhoneSignupState = {
     nodeId: 'oauth-login',
     authLoginPhase: 'primary-login',
-    phoneVerificationEnabled: true,
     signupMethod: 'phone',
     resolvedSignupMethod: 'phone',
     forceLoginIdentifierType: 'email',
@@ -888,7 +882,6 @@ test('step 7 can infer phone login from an available phone signup configuration 
     getErrorMessage: (error) => error?.message || String(error || ''),
     getLoginAuthStateLabel: (state) => state || 'unknown',
     getState: async () => ({
-      phoneVerificationEnabled: true,
       signupMethod: 'phone',
       signupPhoneNumber: '+447780579093',
     }),
@@ -909,7 +902,6 @@ test('step 7 can infer phone login from an available phone signup configuration 
   });
 
   await executor.executeStep7({
-    phoneVerificationEnabled: true,
     signupMethod: 'phone',
     signupPhoneNumber: '+447780579093',
   });

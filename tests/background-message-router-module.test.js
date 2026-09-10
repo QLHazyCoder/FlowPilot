@@ -157,7 +157,6 @@ test('SAVE_SETTING preserves phone reuse preferences while phone signup is selec
   const persistedPayloads = [];
   let state = {
     signupMethod: 'phone',
-    phoneVerificationEnabled: true,
     plusModeEnabled: false,
     phoneSmsReuseEnabled: true,
     heroSmsReuseEnabled: true,
@@ -224,7 +223,6 @@ test('SAVE_SETTING allows phone reuse preferences after switching back to email 
   const api = new Function('self', `${source}; return self.MultiPageBackgroundMessageRouter;`)(globalScope);
   let state = {
     signupMethod: 'phone',
-    phoneVerificationEnabled: true,
     plusModeEnabled: false,
     phoneSmsReuseEnabled: true,
     heroSmsReuseEnabled: true,
@@ -640,7 +638,6 @@ test('SAVE_SETTING syncs canonical kiro settingsState back into session state', 
         },
         signup: {
           signupMethod: 'email',
-          phoneVerificationEnabled: false,
           phoneSignupReloginAfterBindEmailEnabled: false,
         },
         plus: {
@@ -941,7 +938,6 @@ test('AUTO_RUN applies current phone capability state from sidepanel payload bef
     targetId: 'cpa',
     signupMethod: 'phone',
     resolvedSignupMethod: 'phone',
-    phoneVerificationEnabled: true,
     plusModeEnabled: false,
   };
 
@@ -962,7 +958,6 @@ test('AUTO_RUN applies current phone capability state from sidepanel payload bef
         targetId: validationState?.targetId,
         signupMethod: validationState?.signupMethod,
         resolvedSignupMethod: validationState?.resolvedSignupMethod,
-        phoneVerificationEnabled: validationState?.phoneVerificationEnabled,
         plusModeEnabled: validationState?.plusModeEnabled,
         optionTargetId: options?.targetId,
       });
@@ -978,7 +973,6 @@ test('AUTO_RUN applies current phone capability state from sidepanel payload bef
       activeFlowId: 'openai',
       targetId: 'webchat',
       signupMethod: 'email',
-      phoneVerificationEnabled: false,
       plusModeEnabled: true,
     },
   });
@@ -987,7 +981,6 @@ test('AUTO_RUN applies current phone capability state from sidepanel payload bef
   assert.equal(state.targetId, 'webchat');
   assert.equal(state.signupMethod, 'email');
   assert.equal(state.resolvedSignupMethod, null);
-  assert.equal(state.phoneVerificationEnabled, false);
   assert.equal(state.plusModeEnabled, false);
   assert.deepStrictEqual(calls, [
     {
@@ -997,7 +990,6 @@ test('AUTO_RUN applies current phone capability state from sidepanel payload bef
         flowId: 'openai',
         targetId: 'webchat',
         signupMethod: 'email',
-        phoneVerificationEnabled: false,
         plusModeEnabled: false,
         resolvedSignupMethod: null,
       },
@@ -1022,7 +1014,6 @@ test('AUTO_RUN applies current phone capability state from sidepanel payload bef
       targetId: 'webchat',
       signupMethod: 'email',
       resolvedSignupMethod: null,
-      phoneVerificationEnabled: false,
       plusModeEnabled: false,
       optionTargetId: 'webchat',
     },
@@ -1035,7 +1026,6 @@ test('SAVE_SETTING re-resolves signup method when panel mode changes', async () 
   const api = new Function('self', `${source}; return self.MultiPageBackgroundMessageRouter;`)(globalScope);
   let state = {
     signupMethod: 'phone',
-    phoneVerificationEnabled: true,
     plusModeEnabled: false,
     targetId: 'sub2api',
   };
@@ -1077,7 +1067,6 @@ test('SAVE_SETTING clears stale frozen signup method when switching to phone sig
     targetId: 'cpa',
     signupMethod: 'email',
     resolvedSignupMethod: 'email',
-    phoneVerificationEnabled: false,
     plusModeEnabled: false,
   };
 
@@ -1089,9 +1078,6 @@ test('SAVE_SETTING clears stale frozen signup method when switching to phone sig
       if (Object.prototype.hasOwnProperty.call(input, 'signupMethod')) {
         updates.signupMethod = String(input.signupMethod || 'email');
       }
-      if (Object.prototype.hasOwnProperty.call(input, 'phoneVerificationEnabled')) {
-        updates.phoneVerificationEnabled = Boolean(input.phoneVerificationEnabled);
-      }
       if (Object.prototype.hasOwnProperty.call(input, 'plusModeEnabled')) {
         updates.plusModeEnabled = Boolean(input.plusModeEnabled);
       }
@@ -1101,7 +1087,6 @@ test('SAVE_SETTING clears stale frozen signup method when switching to phone sig
     getState: async () => ({ ...state }),
     resolveSignupMethod: (nextState = {}) => (
       String(nextState.signupMethod || '').trim().toLowerCase() === 'phone'
-        && Boolean(nextState.phoneVerificationEnabled)
         && !Boolean(nextState.plusModeEnabled)
         ? 'phone'
         : 'email'
@@ -1122,18 +1107,15 @@ test('SAVE_SETTING clears stale frozen signup method when switching to phone sig
     type: 'SAVE_SETTING',
     payload: {
       signupMethod: 'phone',
-      phoneVerificationEnabled: true,
       plusModeEnabled: false,
     },
   });
 
   assert.equal(response.ok, true);
   assert.equal(state.signupMethod, 'phone');
-  assert.equal(state.phoneVerificationEnabled, true);
   assert.equal(state.resolvedSignupMethod, null);
   assert.deepEqual(persistedPayloads[0], {
     signupMethod: 'phone',
-    phoneVerificationEnabled: true,
     plusModeEnabled: false,
   });
   assert.equal(setStateCalls.some((updates) => updates.resolvedSignupMethod === null), true);
@@ -1147,7 +1129,6 @@ test('SAVE_SETTING applies shared mode-switch normalization before persisting in
   let state = {
     activeFlowId: 'site-a',
     signupMethod: 'email',
-    phoneVerificationEnabled: false,
     plusModeEnabled: false,
     targetId: 'cpa',
   };
@@ -1157,13 +1138,12 @@ test('SAVE_SETTING applies shared mode-switch normalization before persisting in
     buildLuckmailSessionSettingsPayload: () => ({}),
     buildPersistentSettingsPayload: (input = {}) => ({
       plusModeEnabled: Boolean(input.plusModeEnabled),
-      phoneVerificationEnabled: Boolean(input.phoneVerificationEnabled),
       signupMethod: String(input.signupMethod || 'email'),
     }),
     broadcastDataUpdate: () => {},
     getState: async () => ({ ...state }),
     resolveSignupMethod: (nextState = {}) => (
-      Boolean(nextState.phoneVerificationEnabled) && Boolean(nextState.plusModeEnabled) ? 'phone' : 'email'
+      Boolean(nextState.plusModeEnabled) ? 'phone' : 'email'
     ),
     setPersistentSettings: async (updates) => {
       persistedPayloads.push({ ...updates });
@@ -1177,7 +1157,6 @@ test('SAVE_SETTING applies shared mode-switch normalization before persisting in
       errors: [{ code: 'plus_mode_unsupported', message: '当前 flow 不支持 Plus 模式。' }],
       normalizedUpdates: {
         plusModeEnabled: false,
-        phoneVerificationEnabled: false,
         signupMethod: 'email',
       },
     }),
@@ -1187,18 +1166,15 @@ test('SAVE_SETTING applies shared mode-switch normalization before persisting in
     type: 'SAVE_SETTING',
     payload: {
       plusModeEnabled: true,
-      phoneVerificationEnabled: true,
       signupMethod: 'phone',
     },
   });
 
   assert.equal(response.ok, true);
   assert.equal(state.plusModeEnabled, false);
-  assert.equal(state.phoneVerificationEnabled, false);
   assert.equal(state.signupMethod, 'email');
   assert.deepEqual(persistedPayloads[0], {
     plusModeEnabled: false,
-    phoneVerificationEnabled: false,
     signupMethod: 'email',
   });
   assert.equal(response.modeValidation?.errors?.[0]?.code, 'plus_mode_unsupported');

@@ -505,9 +505,6 @@
       if (response?.error) {
         throw new Error(response.error);
       }
-      if (step === 8 && response?.addPhoneDetected) {
-        throw new Error(`步骤 ${completionStep}：验证码提交后页面进入手机号页面，当前流程无法继续自动授权。 URL: https://auth.openai.com/add-phone`);
-      }
       if (!response?.confirmed) {
         throw new Error(`步骤 ${completionStep}：已取消手动${verificationLabel}验证码确认。`);
       }

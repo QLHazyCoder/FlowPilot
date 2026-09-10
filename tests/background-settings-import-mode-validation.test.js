@@ -72,7 +72,6 @@ let currentState = {
   targetId: 'sub2api',
   signupMethod: 'phone',
   plusModeEnabled: false,
-  phoneVerificationEnabled: false,
   stepStatuses: {},
 };
 async function ensureManualInteractionAllowed() {
@@ -88,7 +87,6 @@ function validateModeSwitchState() {
     normalizedUpdates: {
       targetId: 'cpa',
       plusModeEnabled: false,
-      phoneVerificationEnabled: false,
       signupMethod: 'email',
     },
   };
@@ -126,7 +124,6 @@ return {
     settings: {
       targetId: 'sub2api',
       plusModeEnabled: true,
-      phoneVerificationEnabled: true,
       signupMethod: 'phone',
     },
   });
@@ -134,12 +131,10 @@ return {
   assert.deepEqual(api.getPersistedUpdates(), {
     targetId: 'cpa',
     plusModeEnabled: false,
-    phoneVerificationEnabled: false,
     signupMethod: 'email',
   });
   assert.equal(api.getStateUpdates().targetId, 'cpa');
   assert.equal(api.getStateUpdates().plusModeEnabled, false);
-  assert.equal(api.getStateUpdates().phoneVerificationEnabled, false);
   assert.equal(api.getStateUpdates().signupMethod, 'email');
   assert.equal(api.getBroadcastPayload().targetId, 'cpa');
   assert.equal(api.getBroadcastPayload().signupMethod, 'email');
@@ -194,7 +189,6 @@ const self = {
                   },
                   signup: {
                     signupMethod: 'email',
-                    phoneVerificationEnabled: false,
                     phoneSignupReloginAfterBindEmailEnabled: false,
                   },
                   plus: {
@@ -331,7 +325,6 @@ const self = {
                   targets: {},
                   signup: {
                     signupMethod: 'email',
-                    phoneVerificationEnabled: false,
                     phoneSignupReloginAfterBindEmailEnabled: false,
                   },
                   plus: {

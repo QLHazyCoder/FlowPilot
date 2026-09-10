@@ -1,3 +1,10 @@
+/*
+ * @Author: QLHazycoder
+ * @Date: 2026-07-22 00:00:00
+ * @LastEditors: QLHazycoder
+ * @LastEditTime: 2026-09-10 18:50:11
+ * @Description: Normalize persisted FlowPilot settings and legacy view state.
+ */
 (function attachMultiPageSettingsSchema(root, factory) {
   root.MultiPageSettingsSchema = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createSettingsSchemaModule() {
@@ -689,12 +696,6 @@
             ?? defaultOpenAiSignup.signupMethod
             ?? 'email'
           ).trim().toLowerCase() === 'phone' ? 'phone' : 'email',
-          phoneVerificationEnabled: Boolean(
-            input?.phoneVerificationEnabled
-            ?? currentFlow.signup?.phoneVerificationEnabled
-            ?? defaultOpenAiSignup.phoneVerificationEnabled
-            ?? false
-          ),
           phoneSignupReloginAfterBindEmailEnabled: Boolean(
             input?.phoneSignupReloginAfterBindEmailEnabled
             ?? currentFlow.signup?.phoneSignupReloginAfterBindEmailEnabled
@@ -986,7 +987,6 @@
       next.openaiChatgpt2ApiAdminKey = openaiState.targets.chatgpt2api?.apiKey || '';
       next.customPassword = normalizedState.services.account.customPassword;
       next.signupMethod = openaiState.signup?.signupMethod || 'email';
-      next.phoneVerificationEnabled = Boolean(openaiState.signup?.phoneVerificationEnabled);
       next.phoneSignupReloginAfterBindEmailEnabled = Boolean(openaiState.signup?.phoneSignupReloginAfterBindEmailEnabled);
       next.plusModeEnabled = false;
       next.plusPaymentMethod = normalizePlusPaymentMethod(openaiState.plus?.plusPaymentMethod || 'paypal');

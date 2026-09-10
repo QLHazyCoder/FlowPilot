@@ -215,7 +215,6 @@ const selectMailProvider = { value: '163' };
 const selectEmailGenerator = { value: 'duck' };
 const checkboxAutoDeleteIcloud = { checked: true };
 const selectIcloudHostPreference = { value: 'auto' };
-const inputPhoneVerificationEnabled = { checked: true };
 const selectPhoneSmsProvider = { value: 'hero-sms' };
 const inputHeroSmsApiKey = { value: '' };
 const inputHeroSmsReuseEnabled = { checked: true };
@@ -341,7 +340,6 @@ return {
   assert.equal('customPassword' in contributionPayload, false);
   assert.equal('accountRunHistoryTextEnabled' in contributionPayload, false);
   assert.equal('accountRunHistoryHelperBaseUrl' in contributionPayload, false);
-  assert.equal(contributionPayload.phoneVerificationEnabled, true);
   assert.equal(contributionPayload.cloudflareTempEmailUseRandomSubdomain, true);
 
   api.setLatestState({ accountContributionEnabled: false });
@@ -351,7 +349,6 @@ return {
   assert.equal(normalPayload.customPassword, 'Secret123!');
   assert.equal(normalPayload.accountRunHistoryTextEnabled, true);
   assert.equal(normalPayload.accountRunHistoryHelperBaseUrl, 'http://127.0.0.1:17373');
-  assert.equal(normalPayload.phoneVerificationEnabled, true);
   assert.equal(normalPayload.codex2apiUrl, 'http://localhost:8080/admin/accounts');
   assert.equal(normalPayload.codex2apiAdminKey, 'codex-admin-secret');
   assert.equal(normalPayload.cloudflareTempEmailUseRandomSubdomain, true);

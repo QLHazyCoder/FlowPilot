@@ -1,3 +1,10 @@
+/*
+ * @Author: QLHazycoder
+ * @Date: 2026-07-22 00:00:00
+ * @LastEditors: QLHazycoder
+ * @LastEditTime: 2026-09-10 18:50:11
+ * @Description: Resolve flow, target, and runtime capability constraints.
+ */
 (function attachMultiPageFlowCapabilities(root, factory) {
   root.MultiPageFlowCapabilities = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createFlowCapabilitiesModule() {
@@ -77,7 +84,6 @@
   const MODE_SWITCH_RELEVANT_KEYS = Object.freeze([
     'activeFlowId',
     'accountContributionEnabled',
-    'phoneVerificationEnabled',
     'plusModeEnabled',
     'signupMethod',
     'accountDeliveryMode',
@@ -513,7 +519,6 @@
       const runtimeLocks = {
         autoRunLocked: Boolean(options?.autoRunLocked ?? state?.autoRunLocked),
         accountContribution: Boolean(flowState.supportsAccountContribution) && Boolean(state?.accountContributionEnabled),
-        phoneVerificationEnabled: canShowPhoneSettings && Boolean(state?.phoneVerificationEnabled),
         plusModeEnabled: activeFlowId === 'openai' && flowState.supportsPlusMode && Boolean(state?.plusModeEnabled),
         settingsMenuLocked: Boolean(options?.settingsMenuLocked ?? state?.settingsMenuLocked),
       };
@@ -524,7 +529,7 @@
       const canSelectPhoneSignup = activeFlowId === 'openai'
         && Boolean(flowState.supportsPhoneSignup)
         && Boolean(targetState.supportsPhoneSignup)
-        && runtimeLocks.phoneVerificationEnabled
+        && canShowPhoneSettings
         && !runtimeLocks.plusModeEnabled
         && !runtimeLocks.accountContribution;
       if (canSelectPhoneSignup) {
@@ -651,7 +656,6 @@
           accountDeliveryRouteId: effectiveAccountDeliveryRouteId,
           targetId: effectiveTargetId,
           plusModeEnabled: runtimeLocks.plusModeEnabled,
-          phoneVerificationEnabled: runtimeLocks.phoneVerificationEnabled,
           openaiChatgpt2ApiUploadEnabled: openaiChatgpt2Api.uploadRequired,
           openaiWebchatUploadEnabled: openaiWebchat.uploadRequired,
           grokSub2apiGrok2ApiUploadEnabled: grok2Api.dualUploadEnabled,
@@ -680,12 +684,6 @@
         return {
           code: 'phone_signup_panel_unsupported',
           message: `当前来源 ${getTargetLabel(capabilityState.activeFlowId, capabilityState.requestedTargetId)} 不支持手机号注册。`,
-        };
-      }
-      if (!runtimeLocks.phoneVerificationEnabled) {
-        return {
-          code: 'phone_signup_phone_verification_disabled',
-          message: '请先开启接码设置后再使用手机号注册。',
         };
       }
       if (runtimeLocks.plusModeEnabled) {
@@ -831,18 +829,6 @@
         errors.push({
           code: 'contribution_mode_unsupported',
           message: '当前 flow 不支持贡献模式。',
-        });
-      }
-
-      if (
-        changedKeySet.has('phoneVerificationEnabled')
-        && Boolean(state?.phoneVerificationEnabled)
-        && !capabilityState.canShowPhoneSettings
-      ) {
-        normalizedUpdates.phoneVerificationEnabled = false;
-        errors.push({
-          code: 'phone_verification_unsupported',
-          message: '当前 flow 不支持接码设置。',
         });
       }
 

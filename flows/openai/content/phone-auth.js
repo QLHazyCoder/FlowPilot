@@ -773,13 +773,19 @@
       throw new Error('Timed out waiting for add-phone page.');
     }
 
-    async function waitForPhoneVerificationReady(timeout = 20000) {
+    async function waitForPhoneVerificationReady(timeout = 20000, options = {}) {
+      const authPurpose = String(options.authPurpose || '').trim();
       const start = Date.now();
       while (Date.now() - start < timeout) {
         throwIfStopped();
         if (is405MethodNotAllowedPage()) {
           await recoverPhoneRoute405(Math.min(12000, Math.max(1000, timeout - (Date.now() - start))));
           continue;
+        }
+        const currentPageText = typeof getPageTextSnapshot === 'function' ? getPageTextSnapshot() : '';
+        if (authPurpose === 'email-post-login-phone'
+          && /糟糕，出错了|invalid_auth_step|授权步骤无效/i.test(currentPageText)) {
+          throw new Error('STEP8_RESTART_STEP7::步骤 9：认证页进入错误/超时状态（授权步骤无效），请回到步骤 7 重新开始。URL: ' + location.href);
         }
         if (isPhoneVerificationPageReady()) {
           return {
@@ -815,8 +821,16 @@
 
     async function submitPhoneNumber(payload = {}) {
       const countryLabel = String(payload.countryLabel || '').trim();
+      const authPurpose = String(payload.authPurpose || '').trim();
       const isExplicitInternational = isExplicitInternationalPhoneInput(payload.phoneNumber);
       await waitForAddPhoneReady();
+
+      const pageText = typeof getPageTextSnapshot === 'function' ? getPageTextSnapshot() : '';
+      if (authPurpose === 'email-post-login-phone'
+        && /糟糕，出错了|invalid_auth_step|授权步骤无效/i.test(pageText)) {
+        throw new Error('STEP8_RESTART_STEP7::步骤 9：认证页进入错误/超时状态（授权步骤无效），请回到步骤 7 重新开始。URL: ' + location.href);
+      }
+
       const countrySelected = await ensureCountrySelected(countryLabel, payload.phoneNumber);
       if (!countrySelected) {
         throw new Error(`Failed to select "${countryLabel || 'target country'}" on the add-phone page.`);
@@ -866,16 +880,23 @@
       await performOperationWithDelay({ stepKey: 'phone-auth', kind: 'submit', label: 'phone-number-submit' }, async () => {
         simulateClick(submitButton);
       });
-      return waitForPhoneVerificationReady();
+      return waitForPhoneVerificationReady(20000, { authPurpose });
     }
 
-    async function waitForPhoneVerificationOutcome(timeout = 30000) {
+    async function waitForPhoneVerificationOutcome(timeout = 30000, options = {}) {
+      const authPurpose = String(options.authPurpose || '').trim();
       const start = Date.now();
       while (Date.now() - start < timeout) {
         throwIfStopped();
         if (is405MethodNotAllowedPage()) {
           await recoverPhoneRoute405(Math.min(12000, Math.max(1000, timeout - (Date.now() - start))));
           continue;
+        }
+
+        const currentPageText = typeof getPageTextSnapshot === 'function' ? getPageTextSnapshot() : '';
+        if (authPurpose === 'email-post-login-phone'
+          && /糟糕，出错了|invalid_auth_step|授权步骤无效/i.test(currentPageText)) {
+          throw new Error('STEP8_RESTART_STEP7::步骤 9：认证页进入错误/超时状态（授权步骤无效），请回到步骤 7 重新开始。URL: ' + location.href);
         }
 
         const errorText = getVerificationErrorText();
@@ -922,11 +943,12 @@
 
     async function submitPhoneVerificationCode(payload = {}) {
       const code = String(payload.code || '').trim();
+      const authPurpose = String(payload.authPurpose || '').trim();
       if (!code) {
         throw new Error('Missing phone verification code.');
       }
 
-      await waitForPhoneVerificationReady();
+      await waitForPhoneVerificationReady(20000, { authPurpose });
       const codeInput = getPhoneVerificationCodeInput() || await waitForElement(
         'input[name="code"], input[autocomplete="one-time-code"], input[inputmode="numeric"]',
         10000
@@ -951,7 +973,7 @@
       if (is405MethodNotAllowedPage()) {
         await recoverPhoneRoute405(12000);
       }
-      return waitForPhoneVerificationOutcome();
+      return waitForPhoneVerificationOutcome(30000, { authPurpose });
     }
 
     async function resendPhoneVerificationCode(timeout = 45000, options = {}) {

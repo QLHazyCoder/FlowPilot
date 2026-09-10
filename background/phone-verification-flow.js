@@ -100,6 +100,7 @@
     const phoneSmsProviderAdaptersById = new Map();
     let activePhoneVerificationLogStep = null;
     let activePhoneVerificationLogStepKey = null;
+    let activePhoneVerificationAuthPurpose = '';
 
     function normalizeLogStep(value) {
       const step = Math.floor(Number(value) || 0);
@@ -1982,6 +1983,7 @@
       const state = await getState();
       const countryConfig = resolveCountryConfigFromActivation(activation, state);
       const visibleStep = normalizeLogStep(activePhoneVerificationLogStep) || 9;
+      const authPurpose = String(activePhoneVerificationAuthPurpose || '').trim();
       const timeoutMs = typeof getOAuthFlowStepTimeoutMs === 'function'
         ? await getOAuthFlowStepTimeoutMs(30000, { step: visibleStep, actionLabel: '提交添加手机号' })
         : 30000;
@@ -1992,6 +1994,7 @@
           phoneNumber,
           countryId: countryConfig.id,
           countryLabel: countryConfig.label,
+          ...(authPurpose ? { authPurpose } : {}),
         },
       }, {
         timeoutMs,
@@ -2010,6 +2013,7 @@
 
     async function submitPhoneVerificationCode(tabId, code) {
       const visibleStep = normalizeLogStep(activePhoneVerificationLogStep) || 9;
+      const authPurpose = String(activePhoneVerificationAuthPurpose || '').trim();
       const signupProfile = (
         typeof generateRandomName === 'function'
         && typeof generateRandomBirthday === 'function'
@@ -2037,6 +2041,7 @@
         source: 'background',
         payload: {
           code,
+          ...(authPurpose ? { authPurpose } : {}),
           ...(signupProfile ? { signupProfile } : {}),
         },
       }, {
@@ -3712,8 +3717,10 @@
     async function completePhoneVerificationFlow(tabId, initialPageState = null, options = {}) {
       const previousLogStep = activePhoneVerificationLogStep;
       const previousLogStepKey = activePhoneVerificationLogStepKey;
+      const previousAuthPurpose = activePhoneVerificationAuthPurpose;
       activePhoneVerificationLogStep = normalizeLogStep(options.visibleStep || options.step) || 9;
       activePhoneVerificationLogStepKey = 'phone-verification';
+      activePhoneVerificationAuthPurpose = String(options.authPurpose || '').trim();
       let state = await getState();
       let activation = normalizeActivation(state[PHONE_ACTIVATION_STATE_KEY]);
       let pageState = initialPageState || await readPhonePageState(tabId);
@@ -4286,6 +4293,15 @@
             pageState = await readPhonePageState(tabId);
           }
 
+          if (activePhoneVerificationAuthPurpose === 'email-post-login-phone'
+            && pageState?.retryPage
+            && !pageState?.addPhonePage
+            && !pageState?.phoneVerificationPage) {
+            throw new Error(
+              `STEP8_RESTART_STEP7::步骤 ${visibleStep}：认证页进入错误/超时状态（授权步骤无效），请回到步骤 7 重新开始。URL: ${pageState.url || ''}`
+            );
+          }
+
           if (!pageState?.phoneVerificationPage) {
             return pageState;
           }
@@ -4565,6 +4581,7 @@
       } finally {
         activePhoneVerificationLogStep = previousLogStep;
         activePhoneVerificationLogStepKey = previousLogStepKey;
+        activePhoneVerificationAuthPurpose = previousAuthPurpose;
       }
     }
 

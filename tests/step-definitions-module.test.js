@@ -489,26 +489,29 @@ test('Plus no-payment mode removes only payment chain nodes', () => {
   assert.deepStrictEqual(cpaNodes.find((node) => node.nodeId === 'wait-registration-success')?.next, ['cpa-session-import']);
 });
 
-test('OpenAI OAuth workflow removes post-login phone verification when phone verification is disabled', () => {
+test('OpenAI OAuth workflow selects the phone verification node for the matching signup flow', () => {
   const globalScope = {};
   const api = new Function('self', `${readStepDefinitionsBundle()}; return self.MultiPageStepDefinitions;`)(globalScope);
 
   [
-    { label: 'normal', options: { phoneVerificationEnabled: false } },
-    { label: 'plus paypal', options: { plusModeEnabled: true, phoneVerificationEnabled: false } },
-    { label: 'plus legacy gopay', options: { plusModeEnabled: true, plusPaymentMethod: 'gopay', phoneVerificationEnabled: false } },
-    { label: 'phone relogin', options: { signupMethod: 'phone', phoneSignupReloginAfterBindEmailEnabled: true, phoneVerificationEnabled: false } },
+    { label: 'normal email', options: { signupMethod: 'email' } },
+    { label: 'plus paypal email', options: { plusModeEnabled: true, signupMethod: 'email' } },
+    { label: 'plus legacy gopay email', options: { plusModeEnabled: true, plusPaymentMethod: 'gopay', signupMethod: 'email' } },
+    { label: 'phone relogin', options: { signupMethod: 'phone', phoneSignupReloginAfterBindEmailEnabled: true } },
   ].forEach(({ label, options }) => {
     const steps = api.getSteps(options);
     const nodes = api.getNodes(options);
     const keys = steps.map((step) => step.key);
     const nodeIds = nodes.map((node) => node.nodeId);
-    const expectedNextAfterLoginCode = keys.includes('bind-email') ? 'bind-email' : 'confirm-oauth';
+    const expectedNextAfterLoginCode = keys.includes('bind-email')
+      ? 'bind-email'
+      : 'post-login-phone-verification';
 
-    assert.equal(keys.includes('post-login-phone-verification'), false, `${label} should hide post-login phone step`);
-    assert.equal(keys.includes('post-bound-email-phone-verification'), false, `${label} should hide bound-email phone step`);
-    assert.equal(nodeIds.includes('post-login-phone-verification'), false, `${label} nodes should hide post-login phone step`);
-    assert.equal(nodeIds.includes('post-bound-email-phone-verification'), false, `${label} nodes should hide bound-email phone step`);
+    const shouldKeepPostLoginPhoneStep = options.signupMethod !== 'phone';
+    assert.equal(keys.includes('post-login-phone-verification'), shouldKeepPostLoginPhoneStep, `${label} should keep only its applicable post-login phone step`);
+    assert.equal(keys.includes('post-bound-email-phone-verification'), label === 'phone relogin', `${label} should keep only its applicable bound-email phone step`);
+    assert.equal(nodeIds.includes('post-login-phone-verification'), shouldKeepPostLoginPhoneStep, `${label} nodes should keep only its applicable post-login phone step`);
+    assert.equal(nodeIds.includes('post-bound-email-phone-verification'), label === 'phone relogin', `${label} nodes should keep only its applicable bound-email phone step`);
     assert.deepStrictEqual(
       nodes.find((node) => node.nodeId === 'fetch-login-code')?.next,
       [expectedNextAfterLoginCode],

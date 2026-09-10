@@ -140,7 +140,7 @@ function throwIfStopped() {}
 async function sleepWithStop() {}
 async function ensureStep8SignupPageReady() {}
 async function getState() {
-  return { phoneVerificationEnabled: true };
+  return {};
 }
 const phoneVerificationHelpers = {
   async completePhoneVerificationFlow() {
@@ -241,7 +241,7 @@ return {
   assert.match(String(result?.url || ''), /chatgpt\.com/);
 });
 
-test('step 8 ready check rejects add-phone instead of completing phone verification', async () => {
+test('step 8 ready check waits through a transient add-phone state before OAuth consent', async () => {
   const api = new Function(`
 let pollCount = 0;
 const phoneVerificationCalls = [];
@@ -250,7 +250,7 @@ function throwIfStopped() {}
 async function sleepWithStop() {}
 async function ensureStep8SignupPageReady() {}
 async function getState() {
-  return { phoneVerificationEnabled: true };
+  return {};
 }
 const phoneVerificationHelpers = {
   async completePhoneVerificationFlow(tabId, pageState) {
@@ -292,13 +292,12 @@ return {
 };
 `)();
 
-  await assert.rejects(
-    () => api.run(),
-    /自动确认 OAuth 只处理 OAuth 授权页/
-  );
+  const { result, phoneVerificationCalls } = await api.run();
+  assert.equal(result?.consentReady, true);
+  assert.deepStrictEqual(phoneVerificationCalls, []);
 });
 
-test('step 8 ready check rejects phone pages before OAuth confirmation', async () => {
+test('step 8 ready check does not classify a persistent add-phone state as a direct OAuth fatal error', async () => {
   const api = new Function(`
 const phoneVerificationCalls = [];
 
@@ -306,7 +305,7 @@ function throwIfStopped() {}
 async function sleepWithStop() {}
 async function ensureStep8SignupPageReady() {}
 async function getState() {
-  return { phoneVerificationEnabled: false };
+  return {};
 }
 const phoneVerificationHelpers = {
   async completePhoneVerificationFlow(tabId, pageState) {
@@ -343,6 +342,7 @@ return {
 
   const { error, phoneVerificationCalls } = await api.run();
 
-  assert.match(String(error?.message || ''), /自动确认 OAuth 只处理 OAuth 授权页/);
+  assert.match(String(error?.message || ''), /长时间未进入 OAuth 同意页/);
+  assert.doesNotMatch(String(error?.message || ''), /自动确认 OAuth 只处理 OAuth 授权页/);
   assert.deepStrictEqual(phoneVerificationCalls, []);
 });

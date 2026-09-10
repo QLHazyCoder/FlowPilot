@@ -142,7 +142,6 @@ let currentAccountDeliveryRouteId = 'oauth';
 let currentSignupMethod = 'email';
 let currentPhoneSignupReloginAfterBindEmailEnabled = false;
 let latestState = {};
-const inputPhoneVerificationEnabled = null;
 function normalizePlusPaymentMethod(value) { return value; }
 function normalizeAccountDeliveryMode(value, fallback = 'oauth') { return value || fallback; }
 function normalizeSignupMethod(value) { return value; }
@@ -569,7 +568,6 @@ let currentPlusPaymentMethod = 'paypal';
 let currentAccountDeliveryMode = 'oauth';
 let currentAccountDeliveryRouteId = 'oauth';
 let currentSignupMethod = 'email';
-let currentPhoneVerificationEnabled = false;
 let currentPhoneSignupReloginAfterBindEmailEnabled = false;
 let currentStepDefinitionFlowId = 'openai';
 let currentStepDefinitionTargetId = 'cpa';
@@ -616,7 +614,6 @@ return {
       grokSub2apiGrok2ApiUploadEnabled: false,
       settingsState: undefined,
       signupMethod: 'email',
-      phoneVerificationEnabled: false,
       phoneSignupReloginAfterBindEmailEnabled: false,
       accountContributionEnabled: false,
     },
@@ -652,7 +649,6 @@ let currentPlusPaymentMethod = 'paypal';
 let currentAccountDeliveryMode = 'oauth';
 let currentAccountDeliveryRouteId = 'oauth';
 let currentSignupMethod = 'email';
-let currentPhoneVerificationEnabled = false;
 let currentPhoneSignupReloginAfterBindEmailEnabled = false;
 let currentStepDefinitionFlowId = 'openai';
 let currentStepDefinitionTargetId = 'cpa';
@@ -722,7 +718,6 @@ let currentPlusPaymentMethod = 'paypal';
 let currentAccountDeliveryMode = 'oauth';
 let currentAccountDeliveryRouteId = 'oauth';
 let currentSignupMethod = 'email';
-let currentPhoneVerificationEnabled = false;
 let currentPhoneSignupReloginAfterBindEmailEnabled = false;
 let currentStepDefinitionFlowId = 'grok';
 let currentStepDefinitionTargetId = 'sub2api';

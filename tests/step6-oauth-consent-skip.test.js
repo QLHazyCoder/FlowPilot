@@ -80,7 +80,6 @@ ${extractFunction('createStep6SuccessResult')}
 ${extractFunction('createStep6OAuthConsentSuccessResult')}
 ${extractFunction('createStep6RecoverableResult')}
 ${extractFunction('normalizeStep6Snapshot')}
-${extractFunction('getStep6OptionMessage')}
 ${extractFunction('resolveStep6PostSubmitSnapshot')}
 ${extractFunction('waitForStep6PostSubmitTransition')}
 ${extractFunction('waitForStep6PasswordSubmitTransition')}

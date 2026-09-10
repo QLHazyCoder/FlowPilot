@@ -681,7 +681,8 @@ test('verification flow keeps step 8 successful when code submit transport fails
   assert.ok(events.some((entry) => entry[0] === 'log' && /通信中断/.test(entry[1])));
 });
 
-test('verification flow treats manual step 8 add-phone confirmation as the same fatal add-phone error', async () => {
+test('verification flow hands manual step 8 add-phone confirmation to the post-login phone node', async () => {
+  let skippedNode = null;
   const helpers = api.createVerificationFlowHelpers({
     addLog: async () => {},
     chrome: {
@@ -691,10 +692,10 @@ test('verification flow treats manual step 8 add-phone confirmation as the same 
     },
     CLOUDFLARE_TEMP_EMAIL_PROVIDER: 'cloudflare-temp-email',
     completeNodeFromBackground: async () => {
-      throw new Error('should not complete step 8');
+      throw new Error('step 8 should be marked skipped directly');
     },
     confirmCustomVerificationStepBypassRequest: async () => ({
-      confirmed: false,
+      confirmed: true,
       addPhoneDetected: true,
     }),
     getHotmailVerificationPollConfig: () => ({}),
@@ -712,18 +713,16 @@ test('verification flow treats manual step 8 add-phone confirmation as the same 
     sendToContentScript: async () => ({}),
     sendToMailContentScriptResilient: async () => ({}),
     setState: async () => {},
-    setStepStatus: async () => {
-      throw new Error('should not mark step skipped when add-phone is chosen');
+    setNodeStatus: async (nodeId, status) => {
+      skippedNode = { nodeId, status };
     },
     sleepWithStop: async () => {},
     throwIfStopped: () => {},
     VERIFICATION_POLL_MAX_ROUNDS: 5,
   });
 
-  await assert.rejects(
-    () => helpers.confirmCustomVerificationStepBypass(8),
-    /验证码提交后页面进入手机号页面/
-  );
+  await helpers.confirmCustomVerificationStepBypass(8);
+  assert.deepStrictEqual(skippedNode, { nodeId: 'fetch-login-code', status: 'skipped' });
 });
 
 test('verification flow caps mail polling timeout to the remaining oauth budget', async () => {

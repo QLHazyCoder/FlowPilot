@@ -1,3 +1,10 @@
+/*
+ * @Author: QLHazycoder
+ * @Date: 2026-07-22 00:00:00
+ * @LastEditors: QLHazycoder
+ * @LastEditTime: 2026-09-10 18:50:11
+ * @Description: Execute OpenAI login-code, bind-email, and post-login verification steps.
+ */
 (function attachBackgroundStep8(root, factory) {
   root.MultiPageBackgroundStep8 = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createBackgroundStep8Module() {
@@ -30,6 +37,7 @@
       sendToContentScriptResilient,
       persistRegistrationEmailState = null,
       phoneVerificationHelpers = null,
+      setNodeStatus = null,
       setState,
       shouldUseCustomRegistrationEmail,
       shouldUseCustomMailHelper = () => false,
@@ -80,6 +88,19 @@
     function normalizeIdentifierType(value = '') {
       const normalized = String(value || '').trim().toLowerCase();
       return normalized === 'phone' || normalized === 'email' ? normalized : '';
+    }
+
+    function resolvePostLoginPhoneAuthPurpose(state = {}, runtime = {}) {
+      const nodeId = String(
+        state?.nodeId
+        || runtime?.fallbackNodeId
+        || runtime?.nodeId
+        || ''
+      ).trim();
+      const signupMethod = normalizeSignupMethod(state?.resolvedSignupMethod || state?.signupMethod);
+      return nodeId === 'post-login-phone-verification' && signupMethod === 'email'
+        ? 'email-post-login-phone'
+        : 'phone-signup';
     }
 
     function isPhoneLoginCodeMode(state = {}) {
@@ -337,11 +358,6 @@
       }
     }
 
-    function isStep8AddPhoneStateError(error) {
-      const message = String(error?.message || error || '');
-      return /add-phone|手机号页面|手机号验证页|phone[\s-_]verification|phone\s+number/i.test(message);
-    }
-
     async function recoverStep8PollingFailure(currentState, visibleStep) {
       const authLoginStep = getAuthLoginStepForState(currentState, visibleStep);
       try {
@@ -360,7 +376,10 @@
           await completeStep8WhenAuthAlreadyOnOauthConsent(visibleStep, { fromRecovery: true, nodeId: currentState?.nodeId });
           return { outcome: 'completed' };
         }
-        if (pageState?.state === 'verification_page' || pageState?.state === 'phone_verification_page' || pageState?.state === 'add_email_page') {
+        if (pageState?.state === 'verification_page'
+          || pageState?.state === 'add_phone_page'
+          || pageState?.state === 'phone_verification_page'
+          || pageState?.state === 'add_email_page') {
           await addLog(
             `步骤 ${visibleStep}：检测到邮箱轮询/页面通信异常，但认证页仍在当前登录后续页面，先在当前链路重试，不回到步骤 ${authLoginStep}。`,
             'warn'
@@ -370,9 +389,6 @@
       } catch (inspectError) {
         if (isStep8RestartStep7Error(inspectError)) {
           return { outcome: 'restart_step7', error: inspectError };
-        }
-        if (isStep8AddPhoneStateError(inspectError)) {
-          throw inspectError;
         }
         await addLog(
           `步骤 ${visibleStep}：轮询失败后复核认证页状态异常：${inspectError?.message || inspectError}，将回到步骤 ${authLoginStep} 重试。`,
@@ -464,12 +480,15 @@
 
     async function completePostLoginPhoneVerificationSkippedOnOauth(visibleStep, options = {}) {
       const stepKey = options.stepKey || 'post-login-phone-verification';
+      const nodeId = options.nodeId || 'post-login-phone-verification';
       await addLog(`步骤 ${visibleStep}：当前认证页已进入 OAuth 授权页，跳过手机号验证步骤。`, 'warn', {
         step: visibleStep,
         stepKey,
       });
-      if (typeof completeNodeFromBackground === 'function') {
-        await completeNodeFromBackground(options.nodeId || 'post-login-phone-verification', {
+      if (typeof setNodeStatus === 'function') {
+        await setNodeStatus(nodeId, 'skipped');
+      } else if (typeof completeNodeFromBackground === 'function') {
+        await completeNodeFromBackground(nodeId, {
           directOAuthConsentPage: true,
           phoneVerification: false,
         });
@@ -480,6 +499,7 @@
       const visibleStep = getVisibleStep(state, 9);
       activeFetchLoginCodeStep = visibleStep;
       activeFetchLoginCodeStepKey = runtime.stepKey || 'post-login-phone-verification';
+      const authPurpose = resolvePostLoginPhoneAuthPurpose(state, runtime);
       const authTabId = await ensureAuthTabForPostLoginStep(state, visibleStep);
       const pageState = await getLoginAuthStateFromContent(visibleStep, {
         timeoutMs: await getStep8ReadyTimeoutMs('确认手机号验证页或 OAuth 授权页已就绪', state?.oauthUrl || '', visibleStep),
@@ -494,11 +514,12 @@
         });
         return;
       }
+      if (pageState?.state === 'login_timeout_error_page' && authPurpose === 'email-post-login-phone') {
+        const urlPart = pageState.url ? ` URL: ${pageState.url}` : '';
+        throw new Error(`STEP8_RESTART_STEP7::步骤 ${visibleStep}：认证页进入错误/超时状态（授权步骤无效），请回到步骤 7 重新开始。${urlPart}`.trim());
+      }
       if (pageState?.state !== 'add_phone_page' && pageState?.state !== 'phone_verification_page') {
         throw new Error(`步骤 ${visibleStep}：手机号验证步骤只处理添加手机号页或手机验证码页，当前状态：${pageState?.state || 'unknown'}。URL: ${pageState?.url || ''}`.trim());
-      }
-      if (!state?.phoneVerificationEnabled) {
-        throw new Error(`步骤 ${visibleStep}：检测到需要手机号验证，但手机接码未开启。URL: ${pageState?.url || ''}`.trim());
       }
       if (typeof phoneVerificationHelpers?.completePhoneVerificationFlow !== 'function') {
         throw new Error(`步骤 ${visibleStep}：手机号验证流程不可用，接码模块尚未初始化。`);
@@ -507,7 +528,11 @@
       const result = await phoneVerificationHelpers.completePhoneVerificationFlow(authTabId, pageState, {
         step: visibleStep,
         visibleStep,
+        authPurpose,
       });
+      if (result?.retryPage || (!result?.code && !result?.success && !result?.consentReady && !result?.phoneVerification)) {
+        throw new Error(`步骤 ${visibleStep}：手机号验证未完成，当前认证页未进入 OAuth 授权页。URL: ${result?.url || pageState?.url || ''}`.trim());
+      }
       if (typeof completeNodeFromBackground === 'function') {
         await completeNodeFromBackground(state?.nodeId || runtime.fallbackNodeId || 'post-login-phone-verification', {
           phoneVerification: true,

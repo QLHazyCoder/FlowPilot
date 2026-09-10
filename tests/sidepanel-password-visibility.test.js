@@ -65,7 +65,6 @@ test('sidepanel masks bulk text areas with an eye toggle', () => {
   const css = fs.readFileSync('sidepanel/sidepanel.css', 'utf8');
 
   [
-    'input-custom-mail-provider-pool',
     'input-custom-email-pool-import',
     'input-hotmail-import',
     'input-mail2925-import',

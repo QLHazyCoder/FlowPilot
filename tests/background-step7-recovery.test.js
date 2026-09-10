@@ -303,7 +303,7 @@ test('post-login phone verification completes only on phone pages', async () => 
   await executor.executePostLoginPhoneVerification({
     visibleStep: 9,
     nodeId: 'post-login-phone-verification',
-    phoneVerificationEnabled: true,
+    signupMethod: 'email',
     oauthUrl: 'https://oauth.example/latest',
   });
 
@@ -317,6 +317,7 @@ test('post-login phone verification completes only on phone pages', async () => 
       options: {
         step: 9,
         visibleStep: 9,
+        authPurpose: 'email-post-login-phone',
       },
     },
   ]);
@@ -332,17 +333,14 @@ test('post-login phone verification completes only on phone pages', async () => 
   ]);
 });
 
-test('post-login phone verification skips on OAuth consent and errors when disabled', async () => {
-  const completions = [];
+test('post-login phone verification skips on OAuth consent and marks the node skipped', async () => {
+  const statusUpdates = [];
   const executor = api.createStep8Executor({
     addLog: async () => {},
     chrome: {
       tabs: {
         update: async () => {},
       },
-    },
-    completeNodeFromBackground: async (step, payload) => {
-      completions.push({ step, payload });
     },
     getOAuthFlowStepTimeoutMs: async (defaultTimeoutMs) => defaultTimeoutMs,
     getTabId: async () => 1,
@@ -353,6 +351,9 @@ test('post-login phone verification skips on OAuth consent and errors when disab
     },
     reuseOrCreateTab: async () => 1,
     sendToContentScriptResilient: async () => ({ state: 'oauth_consent_page' }),
+    setNodeStatus: async (nodeId, status) => {
+      statusUpdates.push({ nodeId, status });
+    },
     setState: async () => {},
     throwIfStopped: () => {},
   });
@@ -360,21 +361,15 @@ test('post-login phone verification skips on OAuth consent and errors when disab
   await executor.executePostLoginPhoneVerification({
     visibleStep: 9,
     nodeId: 'post-login-phone-verification',
-    phoneVerificationEnabled: true,
+    signupMethod: 'email',
     oauthUrl: 'https://oauth.example/latest',
   });
 
-  assert.deepStrictEqual(completions, [
-    {
-      step: 'post-login-phone-verification',
-      payload: {
-        directOAuthConsentPage: true,
-        phoneVerification: false,
-      },
-    },
+  assert.deepStrictEqual(statusUpdates, [
+    { nodeId: 'post-login-phone-verification', status: 'skipped' },
   ]);
 
-  const disabledExecutor = api.createStep8Executor({
+  const requiredVerificationExecutor = api.createStep8Executor({
     addLog: async () => {},
     chrome: {
       tabs: {
@@ -385,7 +380,7 @@ test('post-login phone verification skips on OAuth consent and errors when disab
     getTabId: async () => 1,
     phoneVerificationHelpers: {
       completePhoneVerificationFlow: async () => {
-        throw new Error('disabled phone verification should not call helper');
+        return { code: '445566' };
       },
     },
     reuseOrCreateTab: async () => 1,
@@ -397,14 +392,11 @@ test('post-login phone verification skips on OAuth consent and errors when disab
     throwIfStopped: () => {},
   });
 
-  await assert.rejects(
-    () => disabledExecutor.executePostLoginPhoneVerification({
+  await requiredVerificationExecutor.executePostLoginPhoneVerification({
       visibleStep: 9,
-      phoneVerificationEnabled: false,
+      signupMethod: 'email',
       oauthUrl: 'https://oauth.example/latest',
-    }),
-    /手机接码未开启/
-  );
+  });
 });
 
 test('step 8 defers add-email page to the dedicated bind-email node in phone mode', async () => {
@@ -954,7 +946,6 @@ test('step 8 does not submit or recover add-email inside fetch-login-code', asyn
     accountIdentifier: '+447780579093',
     signupMethod: 'phone',
     resolvedSignupMethod: 'phone',
-    phoneVerificationEnabled: true,
     signupPhoneNumber: '+447780579093',
     signupPhoneCompletedActivation: {
       activationId: 'signup-done',
@@ -1078,7 +1069,6 @@ test('step 8 rejects add-email page in email login mode', async () => {
     accountIdentifier: 'stale@example.com',
     signupMethod: 'phone',
     resolvedSignupMethod: 'phone',
-    phoneVerificationEnabled: true,
     signupPhoneNumber: '',
   };
 

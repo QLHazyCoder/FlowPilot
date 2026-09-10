@@ -227,7 +227,6 @@ return {
   `)();
 
   assert.equal(api.normalizePersistentSettingValue('accountRunHistoryTextEnabled', 1), true);
-  assert.equal(api.normalizePersistentSettingValue('phoneVerificationEnabled', 1), true);
   assert.equal(api.normalizePersistentSettingValue('phoneSignupReloginAfterBindEmailEnabled', 1), true);
   assert.equal(api.normalizePersistentSettingValue('phoneSignupReloginAfterBindEmailEnabled', 0), false);
   assert.equal(api.normalizePersistentSettingValue('plusPaymentMethod', 'gopay'), 'paypal');

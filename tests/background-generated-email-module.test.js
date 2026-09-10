@@ -335,9 +335,12 @@ test('generated email helper can read the requested address from custom email po
     },
     getCloudflareTempEmailAddressFromResponse: () => '',
     getCloudflareTempEmailConfig: () => ({ baseUrl: '', adminAuth: '', domain: '' }),
-    getCustomEmailPoolEmail: (state, targetRun) => state.customEmailPool?.[targetRun - 1] || '',
+    getCustomEmailPoolEmail: (state, targetRun) => state.customEmailPoolEntries?.[targetRun - 1]?.email || '',
     getState: async () => ({
-      customEmailPool: ['first@example.com', 'second@example.com'],
+      customEmailPoolEntries: [
+        { id: 'first', email: 'first@example.com', enabled: true, used: false },
+        { id: 'second', email: 'second@example.com', enabled: true, used: false },
+      ],
       emailGenerator: 'custom-pool',
       mailProvider: 'gmail',
     }),
@@ -360,12 +363,19 @@ test('generated email helper can read the requested address from custom email po
   });
 
   const email = await helpers.fetchGeneratedEmail({
-    customEmailPool: ['first@example.com', 'second@example.com'],
+    customEmailPoolEntries: [
+      { id: 'first', email: 'first@example.com', enabled: true, used: false },
+      { id: 'second', email: 'second@example.com', enabled: true, used: false },
+    ],
     emailGenerator: 'custom-pool',
     mailProvider: 'gmail',
   }, {
     generator: 'custom-pool',
     poolIndex: 1,
+    customEmailPoolEntries: [
+      { id: 'first', email: 'first@example.com', enabled: true, used: false },
+      { id: 'second', email: 'second@example.com', enabled: true, used: false },
+    ],
   });
 
   assert.equal(email, 'second@example.com');

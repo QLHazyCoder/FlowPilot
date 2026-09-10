@@ -17,7 +17,6 @@ test('flow capability registry keeps OpenAI phone signup available while Plus is
     state: {
       activeFlowId: 'openai',
       targetId: 'cpa',
-      phoneVerificationEnabled: true,
       plusModeEnabled: false,
       accountContributionEnabled: false,
       signupMethod: 'phone',
@@ -28,14 +27,12 @@ test('flow capability registry keeps OpenAI phone signup available while Plus is
   assert.equal(enabledState.effectiveSignupMethod, 'phone');
   assert.equal(enabledState.shouldWarnCpaPhoneSignup, true);
   assert.equal(enabledState.targetCapabilities.usesOauthTimeoutBudget, true);
-  assert.equal(enabledState.stepDefinitionOptions.phoneVerificationEnabled, true);
   assert.deepEqual(enabledState.effectiveSignupMethods, ['email', 'phone']);
 
   const plusLockedState = registry.resolveSidepanelCapabilities({
     state: {
       activeFlowId: 'openai',
       targetId: 'sub2api',
-      phoneVerificationEnabled: true,
       plusModeEnabled: true,
       accountContributionEnabled: false,
       signupMethod: 'phone',
@@ -45,7 +42,6 @@ test('flow capability registry keeps OpenAI phone signup available while Plus is
   assert.equal(plusLockedState.runtimeLocks.plusModeEnabled, false);
   assert.equal(plusLockedState.canUsePhoneSignup, true);
   assert.equal(plusLockedState.effectiveSignupMethod, 'phone');
-  assert.equal(plusLockedState.stepDefinitionOptions.phoneVerificationEnabled, true);
   assert.equal(plusLockedState.shouldWarnCpaPhoneSignup, false);
   assert.equal(plusLockedState.targetCapabilities.usesOauthTimeoutBudget, false);
   assert.deepEqual(plusLockedState.effectiveSignupMethods, ['email', 'phone']);
@@ -222,7 +218,6 @@ test('flow capability registry defaults unknown flows to minimal non-phone capab
     state: {
       activeFlowId: 'site-a',
       targetId: 'codex2api',
-      phoneVerificationEnabled: true,
       plusModeEnabled: true,
       accountContributionEnabled: true,
       signupMethod: 'phone',
@@ -249,7 +244,6 @@ test('flow capability registry exposes Kiro as an independent flow with its own 
       targetId: 'kiro-rs',
       signupMethod: 'phone',
       plusModeEnabled: true,
-      phoneVerificationEnabled: true,
     },
   });
 
@@ -276,7 +270,6 @@ test('flow capability registry exposes Grok as an independent SSO flow without O
       targetId: 'webchat2api',
       signupMethod: 'phone',
       plusModeEnabled: true,
-      phoneVerificationEnabled: true,
       accountContributionEnabled: true,
     },
   });
@@ -368,7 +361,6 @@ test('flow capability registry rejects retired Plus mode and unsupported targets
       activeFlowId: 'openai',
       targetId: 'cpa',
       signupMethod: 'phone',
-      phoneVerificationEnabled: true,
       plusModeEnabled: true,
       accountContributionEnabled: false,
     },
@@ -406,24 +398,16 @@ test('flow capability registry normalizes unsupported mode switches back to the 
       activeFlowId: 'site-a',
       targetId: 'sub2api',
       signupMethod: 'phone',
-      phoneVerificationEnabled: true,
       plusModeEnabled: true,
       accountContributionEnabled: true,
     },
-    changedKeys: [
-      'targetId',
-      'signupMethod',
-      'phoneVerificationEnabled',
-      'plusModeEnabled',
-      'accountContributionEnabled',
-    ],
+    changedKeys: ['targetId', 'signupMethod', 'plusModeEnabled', 'accountContributionEnabled'],
   });
 
   assert.equal(validation.ok, false);
   assert.deepEqual(validation.normalizedUpdates, {
     targetId: 'cpa',
     signupMethod: 'email',
-    phoneVerificationEnabled: false,
     plusModeEnabled: false,
     accountContributionEnabled: false,
   });
@@ -433,7 +417,6 @@ test('flow capability registry normalizes unsupported mode switches back to the 
       'panel_mode_unsupported',
       'plus_mode_unsupported',
       'contribution_mode_unsupported',
-      'phone_verification_unsupported',
       'phone_signup_flow_unsupported',
     ]
   );
@@ -509,7 +492,6 @@ test('flow capability registry disables phone settings for OpenAI webchat target
     state: {
       activeFlowId: 'openai',
       targetId: 'webchat',
-      phoneVerificationEnabled: true,
       signupMethod: 'phone',
       openaiWebchatUrl: 'https://webchat.example.com/admin',
       openaiWebchatAdminKey: 'admin-key',
@@ -517,11 +499,9 @@ test('flow capability registry disables phone settings for OpenAI webchat target
   });
 
   assert.equal(capabilityState.canShowPhoneSettings, false);
-  assert.equal(capabilityState.runtimeLocks.phoneVerificationEnabled, false);
   assert.equal(capabilityState.canUsePhoneSignup, false);
   assert.equal(capabilityState.effectiveSignupMethod, 'email');
   assert.deepEqual(capabilityState.effectiveSignupMethods, ['email']);
-  assert.equal(capabilityState.stepDefinitionOptions.phoneVerificationEnabled, false);
   assert.equal(capabilityState.stepDefinitionOptions.signupMethod, 'email');
   assert.equal(capabilityState.stepDefinitionOptions.openaiWebchatUploadEnabled, true);
   assert.deepEqual(
@@ -533,20 +513,18 @@ test('flow capability registry disables phone settings for OpenAI webchat target
     state: {
       activeFlowId: 'openai',
       targetId: 'webchat',
-      phoneVerificationEnabled: true,
       signupMethod: 'phone',
       openaiWebchatUrl: 'https://webchat.example.com/admin',
       openaiWebchatAdminKey: 'admin-key',
     },
-    changedKeys: ['targetId', 'phoneVerificationEnabled', 'signupMethod'],
+    changedKeys: ['targetId', 'signupMethod'],
   });
 
   assert.equal(validation.ok, false);
-  assert.equal(validation.normalizedUpdates.phoneVerificationEnabled, false);
   assert.equal(validation.normalizedUpdates.signupMethod, 'email');
   assert.deepEqual(
     validation.errors.map((entry) => entry.code),
-    ['phone_verification_unsupported', 'phone_signup_panel_unsupported']
+    ['phone_signup_panel_unsupported']
   );
 });
 
@@ -597,7 +575,6 @@ test('flow capability registry disables phone settings for OpenAI ChatGPT2API ta
     state: {
       activeFlowId: 'openai',
       targetId: 'chatgpt2api',
-      phoneVerificationEnabled: true,
       signupMethod: 'phone',
       openaiChatgpt2ApiUrl: 'https://chatgpt2api.example.com/admin',
       openaiChatgpt2ApiAdminKey: 'admin-key',
@@ -605,11 +582,9 @@ test('flow capability registry disables phone settings for OpenAI ChatGPT2API ta
   });
 
   assert.equal(capabilityState.canShowPhoneSettings, false);
-  assert.equal(capabilityState.runtimeLocks.phoneVerificationEnabled, false);
   assert.equal(capabilityState.canUsePhoneSignup, false);
   assert.equal(capabilityState.effectiveSignupMethod, 'email');
   assert.deepEqual(capabilityState.effectiveSignupMethods, ['email']);
-  assert.equal(capabilityState.stepDefinitionOptions.phoneVerificationEnabled, false);
   assert.equal(capabilityState.stepDefinitionOptions.signupMethod, 'email');
   assert.equal(capabilityState.stepDefinitionOptions.openaiChatgpt2ApiUploadEnabled, true);
   assert.deepEqual(
@@ -621,20 +596,18 @@ test('flow capability registry disables phone settings for OpenAI ChatGPT2API ta
     state: {
       activeFlowId: 'openai',
       targetId: 'chatgpt2api',
-      phoneVerificationEnabled: true,
       signupMethod: 'phone',
       openaiChatgpt2ApiUrl: 'https://chatgpt2api.example.com/admin',
       openaiChatgpt2ApiAdminKey: 'admin-key',
     },
-    changedKeys: ['targetId', 'phoneVerificationEnabled', 'signupMethod'],
+    changedKeys: ['targetId', 'signupMethod'],
   });
 
   assert.equal(validation.ok, false);
-  assert.equal(validation.normalizedUpdates.phoneVerificationEnabled, false);
   assert.equal(validation.normalizedUpdates.signupMethod, 'email');
   assert.deepEqual(
     validation.errors.map((entry) => entry.code),
-    ['phone_verification_unsupported', 'phone_signup_panel_unsupported']
+    ['phone_signup_panel_unsupported']
   );
 });
 

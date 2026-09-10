@@ -109,7 +109,6 @@ const selectIcloudHostPreference = { value: 'auto' };
 const selectIcloudFetchMode = { value: 'reuse_existing' };
 const selectIcloudTargetMailboxType = { value: 'forward-mailbox' };
 const selectIcloudForwardMailProvider = { value: 'gmail' };
-const inputPhoneVerificationEnabled = { checked: false };
 const selectPhoneSmsProvider = { value: 'hero-sms' };
 const inputFiveSimOperator = { value: 'any' };
 const inputAccountRunHistoryTextEnabled = { checked: false };
@@ -274,7 +273,6 @@ const HOTMAIL_SERVICE_MODE_LOCAL = 'local';
 const rowMail2925Mode = createRow();
 const rowMail2925PoolSettings = createRow();
 const rowEmailPrefix = createRow();
-const rowCustomMailProviderPool = createRow();
 const rowInbucketHost = createRow();
 const rowInbucketMailbox = createRow();
 const rowEmailGenerator = createRow();
@@ -342,7 +340,6 @@ function getSelectedIcloudHostPreference() { return selectIcloudHostPreference.v
 function isLuckmailProvider() { return false; }
 function isCustomMailProvider() { return false; }
 function isIcloudMailProvider() { return selectMailProvider.value === ICLOUD_PROVIDER; }
-function usesCustomMailProviderPool() { return false; }
 function usesGeneratedAliasMailProvider() { return false; }
 function getSelectedMail2925Mode() { return 'provide'; }
 function getSelectedCloudflareTempEmailLookupMode() { return 'receive-mailbox'; }
@@ -386,9 +383,7 @@ function isAutoRunLockedPhase() { return false; }
 function getCurrentHotmailEmail() { return ''; }
 function getCurrentLuckmailEmail() { return ''; }
 function getCustomEmailPoolSize() { return 0; }
-function getCustomMailProviderPoolSize() { return 0; }
 function syncRunCountFromCustomEmailPool() {}
-function syncRunCountFromCustomMailProviderPool() {}
 function shouldLockRunCountToEmailPool() { return false; }
 ${bundle}
 return {
@@ -444,7 +439,6 @@ const inputContributionQq = { value: '' };
 const inputMail2925UseAccountPool = { checked: false };
 const inputInbucketHost = { value: '' };
 const inputInbucketMailbox = { value: '' };
-const inputCustomMailProviderPool = { value: '' };
 const inputCustomEmailPool = { value: '' };
 const inputHotmailRemoteBaseUrl = { value: '' };
 const inputHotmailLocalBaseUrl = { value: '' };
@@ -456,9 +450,7 @@ const inputAutoSkipFailures = { checked: false };
 const inputAutoSkipFailuresThreadIntervalMinutes = { value: '' };
 const inputAutoStepDelaySeconds = { value: '' };
 const inputVerificationResendCount = { value: '' };
-const inputPhoneVerificationEnabled = { checked: false };
 const selectPhoneSmsProvider = { value: 'hero-sms' };
-const DEFAULT_PHONE_VERIFICATION_ENABLED = false;
 const inputHeroSmsApiKey = { value: '' };
 const inputHeroSmsReuseEnabled = { checked: true };
 const selectHeroSmsAcquirePriority = { value: 'country' };

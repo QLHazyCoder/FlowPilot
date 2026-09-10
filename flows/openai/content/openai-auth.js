@@ -4849,6 +4849,15 @@ async function createStep6LoginTimeoutRecoveryTransition(reason, snapshot, messa
     };
   }
 
+  if (resolvedSnapshot.state === 'add_phone_page') {
+    return {
+      action: 'done',
+      result: createStep6AddPhoneSuccessResult(resolvedSnapshot, {
+        via: `${via}_add_phone`,
+      }),
+    };
+  }
+
   if (resolvedSnapshot.state === 'password_page') {
     log('登录超时报错页恢复后已进入密码页，继续当前登录流程。', 'warn', { step: visibleStep, stepKey: 'oauth-login' });
     return { action: 'password', snapshot: resolvedSnapshot };
@@ -4951,7 +4960,10 @@ async function finalizeStep6VerificationReady(options = {}) {
     }
 
     if (snapshot.state === 'add_phone_page') {
-      throw new Error(`登录验证码页面准备过程中页面进入手机号页面。URL: ${snapshot.url}`);
+      log('认证页已进入添加手机号页，登录阶段完成，交给后置手机号验证节点。', 'ok', { step: visibleStep, stepKey: 'oauth-login' });
+      return createStep6AddPhoneSuccessResult(snapshot, {
+        via: `${via}_add_phone`,
+      });
     }
   }
 
@@ -4996,6 +5008,13 @@ async function finalizeStep6VerificationReady(options = {}) {
     });
   }
 
+  if (snapshot.state === 'add_phone_page') {
+    log('认证页已进入添加手机号页，登录阶段完成，交给后置手机号验证节点。', 'ok', { step: visibleStep, stepKey: 'oauth-login' });
+    return createStep6AddPhoneSuccessResult(snapshot, {
+      via: `${via}_add_phone`,
+    });
+  }
+
   return createStep6RecoverableResult('verification_page_finalize_unknown', snapshot, {
     message: `登录验证码页面状态在收尾确认阶段未稳定，准备重新执行步骤 ${visibleStep}。`,
     loginVerificationRequestedAt,
@@ -5004,20 +5023,6 @@ async function finalizeStep6VerificationReady(options = {}) {
 
 function normalizeStep6Snapshot(snapshot) {
   return snapshot;
-}
-
-function throwForStep6FatalState(snapshot, visibleStep = 7) {
-  snapshot = normalizeStep6Snapshot(snapshot);
-  switch (snapshot?.state) {
-    case 'oauth_consent_page':
-      return;
-    case 'add_phone_page':
-      throw new Error(`当前页面已进入手机号页面，未经过登录验证码页，无法完成步骤 ${visibleStep}。URL: ${snapshot.url}`);
-    case 'unknown':
-      throw new Error(`无法识别当前登录页面状态。URL: ${snapshot?.url || location.href}`);
-    default:
-      return;
-  }
 }
 
 async function triggerLoginSubmitAction(button, fallbackField) {
@@ -5731,7 +5736,7 @@ async function fillVerificationCode(step, payload) {
     } else if (outcome.emailVerificationRequired) {
       log(`步骤 ${step}：手机验证码已通过，页面进入邮箱验证码验证。`, 'ok');
     } else if (outcome.addPhonePage) {
-      log(`步骤 ${step}：验证码提交后页面进入手机号页面，当前流程将停止自动授权。`, 'warn');
+      log(`步骤 ${step}：验证码提交后页面进入手机号验证流程，交给后置手机号节点处理。`, 'warn');
     } else {
       if (typeof clearStep405RecoveryCount === 'function') clearStep405RecoveryCount(step);
       log(`步骤 ${step}：验证码已通过${outcome.assumed ? '（按成功推定）' : ''}。`, 'ok');
@@ -5772,7 +5777,7 @@ async function fillVerificationCode(step, payload) {
   } else if (outcome.emailVerificationRequired) {
     log(`步骤 ${step}：手机验证码已通过，页面进入邮箱验证码验证。`, 'ok');
   } else if (outcome.addPhonePage) {
-    log(`步骤 ${step}：验证码提交后页面进入手机号页面，当前流程将停止自动授权。`, 'warn');
+    log(`步骤 ${step}：验证码提交后页面进入手机号验证流程，交给后置手机号节点处理。`, 'warn');
   } else {
     if (typeof clearStep405RecoveryCount === 'function') clearStep405RecoveryCount(step);
     log(`步骤 ${step}：验证码已通过${outcome.assumed ? '（按成功推定）' : ''}。`, 'ok');
@@ -5789,10 +5794,6 @@ async function fillVerificationCode(step, payload) {
 // ============================================================
 // Step 7: Login with registered account (on OAuth auth page)
 // ============================================================
-
-function getStep6OptionMessage(value, snapshot) {
-  return typeof value === 'function' ? value(snapshot) : String(value || '');
-}
 
 async function resolveStep6PostSubmitSnapshot(snapshot, options = {}) {
   const normalizedSnapshot = normalizeStep6Snapshot(snapshot || inspectLoginAuthState());
@@ -5813,7 +5814,6 @@ async function resolveStep6PostSubmitSnapshot(snapshot, options = {}) {
     allowFinalSwitchAction = false,
     visibleStep = 7,
     final = false,
-    addPhoneMessage,
   } = options;
 
   if (normalizedSnapshot.state === 'verification_page' || (allowPhoneVerificationPage && normalizedSnapshot.state === 'phone_verification_page')) {
@@ -5895,9 +5895,12 @@ async function resolveStep6PostSubmitSnapshot(snapshot, options = {}) {
   }
 
   if (normalizedSnapshot.state === 'add_phone_page') {
-    const message = getStep6OptionMessage(addPhoneMessage, normalizedSnapshot)
-      || `登录提交后页面进入手机号页面。URL: ${normalizedSnapshot.url || location.href}`;
-    throw new Error(message);
+    return {
+      action: 'done',
+      result: createStep6AddPhoneSuccessResult(normalizedSnapshot, {
+        via: `${via}_add_phone`,
+      }),
+    };
   }
 
   return null;
@@ -5955,7 +5958,6 @@ async function waitForStep6EmailSubmitTransition(emailSubmittedAt, timeout = 120
     allowPasswordAction: true,
     stalledReason: 'email_submit_stalled',
     stalledMessage: '提交邮箱后长时间未进入密码页或登录验证码页。',
-    addPhoneMessage: (snapshot) => `提交邮箱后页面直接进入手机号页面，未经过登录验证码页。URL: ${snapshot.url}`,
   });
 }
 
@@ -5973,7 +5975,6 @@ async function waitForStep6PhoneSubmitTransition(phoneSubmittedAt, timeout = 120
     allowFinalPhoneAction: true,
     stalledReason: 'phone_submit_stalled',
     stalledMessage: '提交手机号后长时间未进入密码页或手机验证码页。',
-    addPhoneMessage: (snapshot) => `提交手机号后页面直接进入手机号补全页面，未经过登录验证码页。URL: ${snapshot.url}`,
   });
 }
 
@@ -5989,7 +5990,6 @@ async function waitForStep6PasswordSubmitTransition(passwordSubmittedAt, timeout
     allowFinalSwitchAction: true,
     stalledReason: 'password_submit_stalled',
     stalledMessage: '提交密码后仍未进入登录验证码页。',
-    addPhoneMessage: (snapshot) => `提交密码后页面直接进入手机号页面，未经过登录验证码页。URL: ${snapshot.url}`,
   });
 }
 
@@ -6004,7 +6004,6 @@ async function waitForStep6SwitchTransition(loginVerificationRequestedAt, timeou
     timeoutRecoveryVia: 'switch_to_one_time_code_timeout_recovered',
     stalledReason: 'one_time_code_switch_stalled',
     stalledMessage: '点击一次性验证码登录后仍未进入登录验证码页。',
-    addPhoneMessage: (snapshot) => `切换到一次性验证码登录后页面直接进入手机号页面，未经过登录验证码页。URL: ${snapshot.url}`,
   });
 
   if (transition.action === 'done' || transition.action === 'recoverable') {
@@ -6333,6 +6332,11 @@ async function step6OpenLoginEntry(payload, snapshot) {
       via: 'entry_open_add_email_page',
     });
   }
+  if (nextSnapshot.state === 'add_phone_page') {
+    return createStep6AddPhoneSuccessResult(nextSnapshot, {
+      via: 'entry_open_add_phone_page',
+    });
+  }
   if (nextSnapshot.state === 'login_timeout_error_page') {
     const transition = await createStep6LoginTimeoutRecoveryTransition(
       'login_timeout_after_entry_open',
@@ -6581,6 +6585,11 @@ async function switchFromEmailPageToPhoneLogin(payload, snapshot) {
   if (nextSnapshot.state === 'add_email_page') {
     return createStep6AddEmailSuccessResult(nextSnapshot, {
       via: 'phone_entry_switch_add_email_page',
+    });
+  }
+  if (nextSnapshot.state === 'add_phone_page') {
+    return createStep6AddPhoneSuccessResult(nextSnapshot, {
+      via: 'phone_entry_switch_add_phone_page',
     });
   }
   if (nextSnapshot.state === 'login_timeout_error_page') {
@@ -6841,7 +6850,13 @@ async function step6_login(payload) {
     return step6OpenLoginEntry(payload, snapshot);
   }
 
-  throwForStep6FatalState(snapshot, visibleStep);
+  if (snapshot.state === 'add_phone_page') {
+    log('认证页已进入添加手机号页，登录阶段完成，交给后置手机号验证节点。', 'ok', { step: visibleStep, stepKey: 'oauth-login' });
+    return createStep6AddPhoneSuccessResult(snapshot, {
+      via: 'already_on_add_phone_page',
+    });
+  }
+
   throw new Error(`无法识别当前登录页面状态。URL: ${snapshot?.url || location.href}`);
 }
 
@@ -7084,9 +7099,6 @@ async function findContinueButton(timeout = 10000) {
   const start = Date.now();
   while (Date.now() - start < timeout) {
     throwIfStopped();
-    if (isAddPhonePageReady()) {
-      throw new Error('当前页面已进入手机号页面，不是 OAuth 授权同意页。URL: ' + location.href);
-    }
     if (isAddEmailPageReady()) {
       throw new Error('当前页面已进入添加邮箱页面，不是 OAuth 授权同意页。URL: ' + location.href);
     }

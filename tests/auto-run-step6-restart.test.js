@@ -521,7 +521,7 @@ test('auto-run stops current-step idle restarts after the retry cap', async () =
   assert.ok(result.events.logs.some(({ message }) => /已连续 3 次因 5 分钟无新日志而重开/.test(message)));
 });
 
-test('auto-run stops restarting once add-phone is detected', async () => {
+test('auto-run restarts email OAuth when an ordinary add-phone error is reported', async () => {
   const harness = createHarness({
     failureStep: 7,
     failureBudget: 1,
@@ -529,15 +529,49 @@ test('auto-run stops restarting once add-phone is detected', async () => {
     authState: { state: 'add_phone_page', url: 'https://auth.openai.com/add-phone' },
   });
 
+  const events = await harness.run();
+
+  assert.equal(events.invalidations.length, 1);
+  assert.deepStrictEqual(events.steps, [7, 7, 8, 9, 10]);
+  assert.ok(events.logs.some(({ message }) => /回到节点 oauth-login 重新开始授权流程/.test(message)));
+});
+
+test('auto-run keeps a bare add-phone URL fatal for phone signup', async () => {
+  const harness = createHarness({
+    failureStep: 7,
+    failureBudget: 1,
+    failureMessage: 'https://auth.openai.com/add-phone',
+    authState: { state: 'add_phone_page', url: 'https://auth.openai.com/add-phone' },
+    customState: {
+      signupMethod: 'phone',
+      resolvedSignupMethod: 'phone',
+    },
+  });
+
   const result = await harness.runAndCaptureError();
 
   assert.ok(result?.error);
   assert.equal(result.events.invalidations.length, 0);
   assert.deepStrictEqual(result.events.steps, [7]);
-  assert.ok(result.events.logs.some(({ message }) => /进入 add-phone/.test(message)));
+  assert.ok(result.events.logs.some(({ message }) => /检测到认证流程进入 add-phone/.test(message)));
 });
 
-test('auto-run stops restarting on generic phone-page failure messages even without add-phone url', async () => {
+test('auto-run honors explicit STEP8_RESTART_STEP7 regardless of add-phone page state', async () => {
+  const harness = createHarness({
+    failureStep: 9,
+    failureBudget: 1,
+    failureMessage: 'STEP8_RESTART_STEP7::步骤 9：认证页进入错误/超时状态，请回到步骤 7 重新开始。URL: https://auth.openai.com/add-phone',
+    authState: { state: 'add_phone_page', url: 'https://auth.openai.com/add-phone' },
+  });
+
+  const events = await harness.run();
+
+  assert.deepStrictEqual(events.steps, [7, 8, 9, 7, 8, 9, 10]);
+  assert.equal(events.invalidations.length, 1);
+  assert.ok(events.logs.some(({ message }) => /回到节点 oauth-login 重新开始授权流程/.test(message)));
+});
+
+test('auto-run restarts email OAuth on generic phone-page failure messages without add-phone url', async () => {
   const harness = createHarness({
     failureStep: 9,
     failureBudget: 1,
@@ -545,12 +579,11 @@ test('auto-run stops restarting on generic phone-page failure messages even with
     authState: { state: 'password_page', url: 'https://auth.openai.com/log-in' },
   });
 
-  const result = await harness.runAndCaptureError();
+  const events = await harness.run();
 
-  assert.ok(result?.error);
-  assert.equal(result.events.invalidations.length, 0);
-  assert.deepStrictEqual(result.events.steps, [7, 8, 9]);
-  assert.ok(!result.events.logs.some(({ message }) => /回到步骤 7 重新开始授权流程/.test(message)));
+  assert.equal(events.invalidations.length, 1);
+  assert.deepStrictEqual(events.steps, [7, 8, 9, 7, 8, 9, 10]);
+  assert.ok(events.logs.some(({ message }) => /回到节点 oauth-login 重新开始授权流程/.test(message)));
 });
 
 test('auto-run does not restart step 7 when phone verification exhausted replacement attempts in add-phone flow', async () => {
@@ -569,7 +602,7 @@ test('auto-run does not restart step 7 when phone verification exhausted replace
   assert.ok(!result.events.logs.some(({ message }) => /回到步骤 7 重新开始授权流程/.test(message)));
 });
 
-test('auto-run restarts bound-email phone verification failures up to the email-mode cap', async () => {
+test('auto-run does not apply the email-mode restart cap to phone-signup bound-email verification', async () => {
   const emailBoundSteps = {
     10: { key: 'oauth-login' },
     11: { key: 'fetch-login-code' },
@@ -591,24 +624,21 @@ test('auto-run restarts bound-email phone verification failures up to the email-
     finalOAuthChainStartStep: 10,
     customState: {
       stepStatuses: { 3: 'completed' },
-      phoneVerificationEnabled: true,
+      signupMethod: 'phone',
+      resolvedSignupMethod: 'phone',
     },
   });
 
-  const events = await harness.run();
+  const result = await harness.runAndCaptureError();
 
-  assert.deepStrictEqual(events.steps, [10, 11, 12, 13, 14, 15, 16, 10, 11, 12, 13, 14, 15, 16, 17, 18]);
-  assert.equal(events.invalidations.length, 1);
-  assert.deepStrictEqual(events.invalidations[0], {
-    step: 10,
-    options: {
-      logLabel: '节点 post-bound-email-phone-verification 手机号验证失败后准备回到 oauth-login 重试（第 1/5 次重开）',
-    },
-  });
-  assert.ok(events.logs.some(({ message }) => /手机号验证失败，准备回到节点 oauth-login 重新开始授权流程（第 1\/5 次重开）/.test(message)));
+  assert.ok(result?.error);
+  assert.deepStrictEqual(result.events.steps, [10, 11, 12, 13, 14, 15, 16]);
+  assert.equal(result.events.invalidations.length, 0);
+  assert.ok(result.events.logs.some(({ message }) => /检测到认证流程进入 add-phone/.test(message)));
+  assert.ok(!result.events.logs.some(({ message }) => /重新开始授权流程（第 1\/5 次重开）/.test(message)));
 });
 
-test('auto-run stops bound-email phone verification restarts after five attempts', async () => {
+test('auto-run does not count phone-signup bound-email verification failures against the email restart cap', async () => {
   const emailBoundSteps = {
     10: { key: 'oauth-login' },
     11: { key: 'fetch-login-code' },
@@ -630,19 +660,16 @@ test('auto-run stops bound-email phone verification restarts after five attempts
     finalOAuthChainStartStep: 10,
     customState: {
       stepStatuses: { 3: 'completed' },
-      phoneVerificationEnabled: true,
+      signupMethod: 'phone',
+      resolvedSignupMethod: 'phone',
     },
   });
 
   const result = await harness.runAndCaptureError();
 
   assert.ok(result?.error);
-  assert.equal(result.events.invalidations.length, 5);
-  assert.ok(result.events.logs.some(({ message, level }) => level === 'error' && /已自动重新开始 5 次，停止继续重试/.test(message)));
-  assert.equal(
-    result.events.logs.filter(({ message }) => /手机号验证失败，准备回到节点 oauth-login 重新开始授权流程/.test(message)).length,
-    5
-  );
+  assert.equal(result.events.invalidations.length, 0);
+  assert.ok(!result.events.logs.some(({ message }) => /已自动重新开始 5 次/.test(message)));
 });
 
 

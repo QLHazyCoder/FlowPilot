@@ -53,7 +53,6 @@ function extractFunction(name) {
 
 const bundle = [
   extractFunction('normalizeEmailGenerator'),
-  extractFunction('normalizeCustomEmailPool'),
   extractFunction('normalizeCustomEmailPoolEntryObjects'),
   extractFunction('getCustomEmailPool'),
   extractFunction('getCustomEmailPoolEmailForRun'),
@@ -69,7 +68,6 @@ ${bundle}
 
 return {
   normalizeEmailGenerator,
-  normalizeCustomEmailPool,
   getCustomEmailPool,
   getCustomEmailPoolEmailForRun,
   getEmailGeneratorLabel,
@@ -84,19 +82,14 @@ test('background recognizes custom email pool generator and label', () => {
   assert.equal(api.getEmailGeneratorLabel('custom-pool'), '自定义邮箱池');
 });
 
-test('background normalizes custom email pool input and keeps order', () => {
-  const api = createApi();
-
-  assert.deepEqual(
-    api.normalizeCustomEmailPool(' Foo@Example.com \ninvalid\nbar@example.com；baz@example.com '),
-    ['foo@example.com', 'bar@example.com', 'baz@example.com']
-  );
-});
-
 test('background selects the matching email for the current auto-run round', () => {
   const api = createApi();
   const state = {
-    customEmailPool: ['first@example.com', 'second@example.com', 'third@example.com'],
+    customEmailPoolEntries: [
+      { id: 'a', email: 'first@example.com', enabled: true, used: false },
+      { id: 'b', email: 'second@example.com', enabled: true, used: false },
+      { id: 'c', email: 'third@example.com', enabled: true, used: false },
+    ],
   };
 
   assert.equal(api.getCustomEmailPoolEmailForRun(state, 1), 'first@example.com');

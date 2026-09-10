@@ -179,7 +179,6 @@ const selectMailProvider = { value: '2925' };
 const selectEmailGenerator = { value: 'duck' };
 const checkboxAutoDeleteIcloud = { checked: false };
 const selectIcloudHostPreference = { value: 'auto' };
-const inputPhoneVerificationEnabled = { checked: false };
 const selectPhoneSmsProvider = { value: 'hero-sms' };
 const inputFiveSimOperator = { value: 'any' };
 const inputAccountRunHistoryTextEnabled = { checked: false };
@@ -298,5 +297,4 @@ return { collectSettingsPayload };
 
   assert.equal(payload.currentMail2925AccountId, 'acc-2');
   assert.equal(payload.mail2925UseAccountPool, true);
-  assert.equal(payload.phoneVerificationEnabled, false);
 });

@@ -51,7 +51,7 @@ function extractFunction(name) {
   return source.slice(start, end);
 }
 
-test('sidepanel html exposes custom email pool generator option and input row', () => {
+test('sidepanel html exposes the unified custom email pool controls', () => {
   const html = fs.readFileSync('sidepanel/sidepanel.html', 'utf8');
 
   assert.match(html, /option value="custom-pool">自定义邮箱池<\/option>/);
@@ -64,8 +64,7 @@ test('sidepanel html exposes custom email pool generator option and input row', 
   assert.match(html, /id="select-custom-mail-receive-mode"/);
   assert.match(html, /id="row-custom-mail-helper-base-url"/);
   assert.match(html, /id="input-custom-mail-helper-base-url"/);
-  assert.match(html, /id="row-custom-mail-provider-pool"/);
-  assert.match(html, /id="input-custom-mail-provider-pool"/);
+  assert.doesNotMatch(html, /id="row-custom-mail-provider-pool"|id="input-custom-mail-provider-pool"/);
 });
 
 test('sidepanel locks run count to custom email pool size', () => {
@@ -75,8 +74,6 @@ test('sidepanel locks run count to custom email pool size', () => {
     extractFunction('getSelectedEmailGenerator'),
     extractFunction('usesGeneratedAliasMailProvider'),
     extractFunction('usesCustomEmailPoolGenerator'),
-    extractFunction('getCustomMailProviderPoolSize'),
-    extractFunction('usesCustomMailProviderPool'),
     extractFunction('getLockedRunCountFromEmailPool'),
     extractFunction('getCustomEmailPoolSize'),
     extractFunction('getRunCountValue'),
@@ -126,15 +123,14 @@ return {
   assert.equal(api.getRunCountValue(), 2);
 });
 
-test('sidepanel locks run count to custom mail provider pool size', () => {
+test('sidepanel locks run count to custom email pool size', () => {
   const bundle = [
     extractFunction('isCustomMailProvider'),
     extractFunction('normalizeCustomEmailPoolEntries'),
+    extractFunction('normalizeCustomEmailPoolEntryObjects'),
     extractFunction('getSelectedEmailGenerator'),
     extractFunction('usesGeneratedAliasMailProvider'),
     extractFunction('usesCustomEmailPoolGenerator'),
-    extractFunction('getCustomMailProviderPoolSize'),
-    extractFunction('usesCustomMailProviderPool'),
     extractFunction('getLockedRunCountFromEmailPool'),
     extractFunction('getCustomEmailPoolSize'),
     extractFunction('getRunCountValue'),
@@ -146,9 +142,13 @@ const GMAIL_ALIAS_GENERATOR = 'gmail-alias';
 const CUSTOM_EMAIL_POOL_GENERATOR = 'custom-pool';
 const selectMailProvider = { value: 'custom' };
 const selectEmailGenerator = { value: 'duck' };
-const inputCustomMailProviderPool = { value: 'first@example.com\\nsecond@example.com\\nthird@example.com' };
 const inputCustomEmailPool = { value: '' };
 const inputRunCount = { value: '99' };
+let customEmailPoolEntriesState = [
+  { id: '1', email: 'first@example.com', enabled: true, used: false },
+  { id: '2', email: 'second@example.com', enabled: true, used: false },
+  { id: '3', email: 'third@example.com', enabled: true, used: false },
+];
 
 function isLuckmailProvider() {
   return false;
@@ -166,18 +166,21 @@ function isManagedAliasProvider(provider) {
   return String(provider || '').trim().toLowerCase() === GMAIL_PROVIDER;
 }
 
+function getActiveCustomEmailPoolEmails(entries = customEmailPoolEntriesState) {
+  return entries
+    .filter((entry) => entry && entry.enabled !== false && entry.used !== true)
+    .map((entry) => entry.email)
+    .filter(Boolean);
+}
+
 ${bundle}
 
 return {
-  usesCustomMailProviderPool,
-  getCustomMailProviderPoolSize,
   getLockedRunCountFromEmailPool,
   getRunCountValue,
 };
 `)();
 
-  assert.equal(api.usesCustomMailProviderPool(), true);
-  assert.equal(api.getCustomMailProviderPoolSize(), 3);
   assert.equal(api.getLockedRunCountFromEmailPool(), 3);
   assert.equal(api.getRunCountValue(), 3);
 });
@@ -232,18 +235,18 @@ return {
 `)();
 
   const prompt = api.getCustomVerificationPromptCopy(8);
-  assert.equal(prompt.phoneActionLabel, '出现手机号验证');
+  assert.equal(prompt.phoneActionLabel, '进入手机号验证');
 
   const result = await api.openCustomVerificationConfirmDialog(8);
   assert.deepEqual(result, {
-    confirmed: false,
+    confirmed: true,
     addPhoneDetected: true,
   });
 
   const modalPayload = api.getOpenActionModalPayload();
   assert.equal(modalPayload.actions.length, 3);
   assert.equal(modalPayload.actions[1].id, 'add_phone');
-  assert.equal(modalPayload.actions[1].label, '出现手机号验证');
+  assert.equal(modalPayload.actions[1].label, '进入手机号验证');
 });
 
 test('sidepanel custom verification dialog exposes add-phone action for Plus login code step', async () => {
@@ -274,11 +277,11 @@ return {
 `)();
 
   const prompt = api.getCustomVerificationPromptCopy(11);
-  assert.equal(prompt.phoneActionLabel, '出现手机号验证');
+  assert.equal(prompt.phoneActionLabel, '进入手机号验证');
 
   const result = await api.openCustomVerificationConfirmDialog(11);
   assert.deepEqual(result, {
-    confirmed: false,
+    confirmed: true,
     addPhoneDetected: true,
   });
 
