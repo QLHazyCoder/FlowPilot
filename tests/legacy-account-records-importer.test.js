@@ -57,7 +57,6 @@ test('legacy account records importer normalizes old history records into canoni
     source: 'manual',
     autoRunContext: null,
     plusModeEnabled: true,
-    accountContributionEnabled: false,
   });
   assert.equal(records[1].recordId, 'phone:+6612345');
   assert.equal(records[1].flowId, 'kiro');

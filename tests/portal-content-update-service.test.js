@@ -2,9 +2,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
-const source = fs.readFileSync('sidepanel/contribution-content-update-service.js', 'utf8');
+const source = fs.readFileSync('sidepanel/portal-content-update-service.js', 'utf8');
 
-function createContributionContentService(options = {}) {
+function createPortalContentService(options = {}) {
   const cache = new Map();
   const windowObject = {};
   let fetchCalls = 0;
@@ -24,7 +24,7 @@ function createContributionContentService(options = {}) {
 
   if (options.cachedSnapshot) {
     cache.set(
-      options.cacheKey || 'multipage-contribution-content-summary-v2:openai:cpa',
+      options.cacheKey || 'multipage-portal-content-summary-v2:openai:cpa',
       JSON.stringify(options.cachedSnapshot)
     );
   }
@@ -56,7 +56,7 @@ function createContributionContentService(options = {}) {
     'AbortController',
     'setTimeout',
     'clearTimeout',
-    `${source}; return window.SidepanelContributionContentService;`
+    `${source}; return window.SidepanelPortalContentService;`
   )(
     windowObject,
     localStorage,
@@ -77,8 +77,8 @@ function createContributionContentService(options = {}) {
   };
 }
 
-test('getContentUpdateSnapshot returns a prompt version for visible contribution content updates', async () => {
-  const { api, getFetchUrls } = createContributionContentService({
+test('getContentUpdateSnapshot returns a prompt version for visible portal content updates', async () => {
+  const { api, getFetchUrls } = createPortalContentService({
     fetchImpl: async () => ({
       ok: true,
       async json() {
@@ -92,7 +92,7 @@ test('getContentUpdateSnapshot returns a prompt version for visible contribution
             {
               slug: 'auto_run_notice',
               title: '自动提示',
-              text: '公告和使用教程更新了，可点上方“贡献/使用教程”查看。',
+              text: '公告和使用教程更新了，可点上方“使用教程”查看。',
               is_enabled: true,
               has_content: true,
               is_visible: true,
@@ -117,7 +117,7 @@ test('getContentUpdateSnapshot returns a prompt version for visible contribution
   assert.equal(snapshot.items.length, 1);
   assert.deepEqual(
     snapshot.items.map((item) => [item.slug, item.isVisible, item.text]),
-    [['auto_run_notice', true, '公告和使用教程更新了，可点上方“贡献/使用教程”查看。']]
+    [['auto_run_notice', true, '公告和使用教程更新了，可点上方“使用教程”查看。']]
   );
 });
 
@@ -144,7 +144,7 @@ test('getContentUpdateSnapshot falls back to cached snapshot when the live reque
     checkedAt: Date.now() - 1000,
   };
 
-  const { api, getFetchCalls } = createContributionContentService({
+  const { api, getFetchCalls } = createPortalContentService({
     cachedSnapshot,
     fetchImpl: async () => {
       throw new Error('offline');
@@ -173,9 +173,9 @@ test('getContentUpdateSnapshot keeps flow caches isolated', async () => {
     checkedAt: Date.now() - 1000,
   };
 
-  const { api } = createContributionContentService({
+  const { api } = createPortalContentService({
     cachedSnapshot,
-    cacheKey: 'multipage-contribution-content-summary-v2:kiro:kiro-rs',
+    cacheKey: 'multipage-portal-content-summary-v2:kiro:kiro-rs',
     fetchImpl: async () => {
       throw new Error('offline');
     },

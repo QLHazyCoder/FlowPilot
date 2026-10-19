@@ -675,7 +675,6 @@ return {
 
 test('resetState preserves LuckMail session config, used map, and preserve tag cache while clearing runtime purchase state', async () => {
   const bundle = [
-    extractFunction('buildAccountContributionState'),
     extractFunction('clearStep5ProfileStatePatch'),
     extractFunction('resetState'),
   ].join('\n');
@@ -704,21 +703,6 @@ test('resetState preserves LuckMail session config, used map, and preserve tag c
     '  reusablePhoneActivation: null,',
     '  email: null,',
     '};',
-    'const CONTRIBUTION_RUNTIME_DEFAULTS = {',
-    '  accountContributionEnabled: false,',
-    "  contributionSessionId: '',",
-    "  contributionAuthUrl: '',",
-    "  contributionAuthState: '',",
-    "  contributionCallbackUrl: '',",
-    "  contributionStatus: '',",
-    "  contributionStatusMessage: '',",
-    '  contributionLastPollAt: 0,',
-    "  contributionCallbackStatus: 'idle',",
-    "  contributionCallbackMessage: '',",
-    '  contributionAuthOpenedAt: 0,',
-    '  contributionAuthTabId: 0,',
-    '};',
-    'const CONTRIBUTION_RUNTIME_KEYS = Object.keys(CONTRIBUTION_RUNTIME_DEFAULTS);',
     'function normalizeLuckmailBaseUrl(value) {',
     "  const normalized = String(value || '').trim() || 'https://mails.luckyous.com';",
     "  return normalized.replace(/\\/$/, '');",

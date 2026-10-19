@@ -11,7 +11,6 @@
   const rootScope = typeof self !== 'undefined' ? self : globalThis;
   const accountDeliveryApi = rootScope.MultiPageOpenAiAccountDelivery || {};
   const flowRegistryApi = rootScope.MultiPageFlowRegistry || {};
-  const contributionRegistryApi = rootScope.MultiPageContributionRegistry || {};
   const settingsSchemaApi = rootScope.MultiPageSettingsSchema || {};
   const DEFAULT_FLOW_ID = flowRegistryApi.DEFAULT_FLOW_ID || 'openai';
   const DEFAULT_OPENAI_TARGET_ID = flowRegistryApi.DEFAULT_OPENAI_TARGET_ID || 'cpa';
@@ -41,10 +40,6 @@
     supportsPhoneSignup: false,
     supportsPhoneVerificationSettings: false,
     supportsPlusMode: false,
-    supportsContributionMode: false,
-    supportsAccountContribution: false,
-    supportsOpenAiOAuthContribution: false,
-    contributionAdapterIds: [],
     supportedTargetIds: [],
     supportsLuckmail: false,
     canSwitchFlow: true,
@@ -83,7 +78,6 @@
 
   const MODE_SWITCH_RELEVANT_KEYS = Object.freeze([
     'activeFlowId',
-    'accountContributionEnabled',
     'plusModeEnabled',
     'signupMethod',
     'accountDeliveryMode',
@@ -406,14 +400,6 @@
     function getFlowCapabilities(flowId) {
       const normalizedFlowId = normalizeCapabilityFlowId(flowId, defaultFlowId);
       const entry = flowCapabilities[normalizedFlowId] || null;
-      const registryAdapterIds = typeof contributionRegistryApi.getContributionAdapterIds === 'function'
-        ? contributionRegistryApi.getContributionAdapterIds(normalizedFlowId)
-        : [];
-      const contributionAdapterIds = registryAdapterIds.length
-        ? registryAdapterIds
-        : (Array.isArray(entry?.contributionAdapterIds)
-          ? entry.contributionAdapterIds.map((value) => String(value || '').trim()).filter(Boolean)
-          : []);
       const supportedTargetIds = normalizedFlowId === 'openai'
         ? normalizeOpenAiTargetList(
           entry?.supportedTargetIds || defaultFlowCapabilities.supportedTargetIds
@@ -425,8 +411,6 @@
         ...defaultFlowCapabilities,
         ...(entry || {}),
         supportedTargetIds,
-        contributionAdapterIds,
-        supportsAccountContribution: Boolean(entry?.supportsAccountContribution || contributionAdapterIds.length > 0),
       };
     }
 
@@ -518,7 +502,6 @@
         && targetState.supportsPhoneVerificationSettings !== false;
       const runtimeLocks = {
         autoRunLocked: Boolean(options?.autoRunLocked ?? state?.autoRunLocked),
-        accountContribution: Boolean(flowState.supportsAccountContribution) && Boolean(state?.accountContributionEnabled),
         plusModeEnabled: activeFlowId === 'openai' && flowState.supportsPlusMode && Boolean(state?.plusModeEnabled),
         settingsMenuLocked: Boolean(options?.settingsMenuLocked ?? state?.settingsMenuLocked),
       };
@@ -530,8 +513,7 @@
         && Boolean(flowState.supportsPhoneSignup)
         && Boolean(targetState.supportsPhoneSignup)
         && canShowPhoneSettings
-        && !runtimeLocks.plusModeEnabled
-        && !runtimeLocks.accountContribution;
+        && !runtimeLocks.plusModeEnabled;
       if (canSelectPhoneSignup) {
         effectiveSignupMethods.push(SIGNUP_METHOD_PHONE);
       }
@@ -567,9 +549,7 @@
         defaultAccountDeliveryMode
       );
       const availableAccountDeliveryModes = activeFlowId === 'openai'
-        ? (runtimeLocks.accountContribution
-          ? [ACCOUNT_DELIVERY_MODE_OAUTH]
-          : targetAccountDeliveryModes)
+        ? targetAccountDeliveryModes
         : [ACCOUNT_DELIVERY_MODE_OAUTH];
       const effectiveAccountDeliveryMode = availableAccountDeliveryModes.includes(requestedAccountDeliveryMode)
         ? requestedAccountDeliveryMode
@@ -584,7 +564,6 @@
         || (effectiveAccountDeliveryMode === ACCOUNT_DELIVERY_MODE_OAUTH ? 'oauth' : '')
       );
       const canShowAccountDeliveryControl = activeFlowId === 'openai'
-        && !runtimeLocks.accountContribution
         && availableAccountDeliveryModes.length > 1;
       const canEditAccountDeliveryMode = canShowAccountDeliveryControl
         && !runtimeLocks.autoRunLocked
@@ -623,7 +602,6 @@
 
       return {
         activeFlowId,
-        canShowContributionMode: Boolean(flowState.supportsAccountContribution),
         canShowLuckmail: activeFlowId === 'openai' && Boolean(flowState.supportsLuckmail),
         canShowPhoneSettings,
         canShowPlusSettings: activeFlowId === 'openai' && Boolean(flowState.supportsPlusMode),
@@ -692,12 +670,6 @@
           message: 'Plus 模式开启时不能使用手机号注册。',
         };
       }
-      if (runtimeLocks.accountContribution) {
-        return {
-          code: 'phone_signup_contribution_mode_locked',
-          message: '贡献模式开启时不能使用手机号注册。',
-        };
-      }
       return {
         code: 'phone_signup_unavailable',
         message: '当前设置暂不支持手机号注册。',
@@ -724,13 +696,6 @@
         errors.push({
           code: 'plus_mode_unsupported',
           message: '当前 flow 不支持 Plus 模式。',
-        });
-      }
-
-      if (Boolean(state?.accountContributionEnabled) && !capabilityState.flowCapabilities?.supportsAccountContribution) {
-        errors.push({
-          code: 'contribution_mode_unsupported',
-          message: '当前 flow 不支持贡献模式。',
         });
       }
 
@@ -817,18 +782,6 @@
         errors.push({
           code: 'plus_mode_unsupported',
           message: '当前 flow 不支持 Plus 模式。',
-        });
-      }
-
-      if (
-        changedKeySet.has('accountContributionEnabled')
-        && Boolean(state?.accountContributionEnabled)
-        && !flowState.supportsAccountContribution
-      ) {
-        normalizedUpdates.accountContributionEnabled = false;
-        errors.push({
-          code: 'contribution_mode_unsupported',
-          message: '当前 flow 不支持贡献模式。',
         });
       }
 

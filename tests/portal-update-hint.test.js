@@ -49,20 +49,20 @@ function extractFunction(name) {
 }
 
 const helperBundle = [
-  extractFunction('getContributionUpdatePromptLines'),
-  extractFunction('getContributionUpdateHintMessage'),
+  extractFunction('getPortalUpdatePromptLines'),
+  extractFunction('getPortalUpdateHintMessage'),
 ].join('\n');
 
 const api = new Function(`
 ${helperBundle}
 return {
-  getContributionUpdatePromptLines,
-  getContributionUpdateHintMessage,
+  getPortalUpdatePromptLines,
+  getPortalUpdateHintMessage,
 };
 `)();
 
-test('getContributionUpdateHintMessage numbers contribution updates when both content and questionnaire are visible', () => {
-  const message = api.getContributionUpdateHintMessage({
+test('getPortalUpdateHintMessage numbers portal updates when both content and questionnaire are visible', () => {
+  const message = api.getPortalUpdateHintMessage({
     promptVersion: 'announcement:2026-04-23T00:00:00Z|questionnaire:2026-04-23T00:00:01Z',
     items: [
       { slug: 'announcement', isVisible: true },
@@ -72,12 +72,12 @@ test('getContributionUpdateHintMessage numbers contribution updates when both co
 
   assert.equal(
     message,
-    '1. 公告 / 使用教程有更新了，可点上方“贡献/使用”查看。\n2. 有新的征求意见，请佬友共同参与选择。'
+    '1. 公告 / 使用教程有更新了，可点上方“使用教程”查看。\n2. 有新的征求意见，请佬友共同参与选择。'
   );
 });
 
-test('getContributionUpdateHintMessage returns questionnaire prompt alone when only questionnaire is updated', () => {
-  const message = api.getContributionUpdateHintMessage({
+test('getPortalUpdateHintMessage returns questionnaire prompt alone when only questionnaire is updated', () => {
+  const message = api.getPortalUpdateHintMessage({
     promptVersion: 'questionnaire:2026-04-23T00:00:01Z',
     items: [
       { slug: 'questionnaire', isVisible: true },
@@ -87,31 +87,31 @@ test('getContributionUpdateHintMessage returns questionnaire prompt alone when o
   assert.equal(message, '有新的征求意见，请佬友共同参与选择。');
 });
 
-test('getContributionUpdateHintMessage uses managed auto run notice text when available', () => {
-  const message = api.getContributionUpdateHintMessage({
+test('getPortalUpdateHintMessage uses managed auto run notice text when available', () => {
+  const message = api.getPortalUpdateHintMessage({
     promptVersion: 'auto_run_notice:2026-04-23T00:00:01Z',
     items: [
       {
         slug: 'auto_run_notice',
         isVisible: true,
-        text: '公告和使用教程更新了，可点上方“贡献/使用教程”查看。',
+        text: '公告和使用教程更新了，可点上方“使用教程”查看。',
       },
       { slug: 'announcement', isVisible: true },
       { slug: 'questionnaire', isVisible: true },
     ],
   });
 
-  assert.equal(message, '公告和使用教程更新了，可点上方“贡献/使用教程”查看。');
+  assert.equal(message, '公告和使用教程更新了，可点上方“使用教程”查看。');
 });
 
-test('getContributionUpdateHintMessage suppresses managed auto run notice when it is disabled', () => {
-  const message = api.getContributionUpdateHintMessage({
+test('getPortalUpdateHintMessage suppresses managed auto run notice when it is disabled', () => {
+  const message = api.getPortalUpdateHintMessage({
     promptVersion: 'announcement:2026-04-23T00:00:00Z',
     items: [
       {
         slug: 'auto_run_notice',
         isVisible: false,
-        text: '公告和使用教程更新了，可点上方“贡献/使用教程”查看。',
+        text: '公告和使用教程更新了，可点上方“使用教程”查看。',
       },
       { slug: 'announcement', isVisible: true },
     ],

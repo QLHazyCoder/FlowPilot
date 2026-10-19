@@ -155,7 +155,6 @@
 - `signupMethod`
 - `phoneVerificationEnabled`
 - `phoneSignupReloginAfterBindEmailEnabled`
-- `contributionMode`
 
 开发时必须先判断某个配置是：
 
@@ -167,11 +166,10 @@
 
 不能把它们混在一起。例如：
 
-- `contributionMode` 是运行态 UI 模式，不是新的 `panelMode`。
 - `resolvedSignupMethod` 是当前轮冻结结果，不等同于用户此刻 UI 上选择的 `signupMethod`。
 - 强制绑定邮箱后重登用邮箱身份，只能通过单次执行参数覆盖登录身份，不能持久改写 `signupMethod`。
 - flow 能力不足时必须在步骤定义层或启动校验层处理，不能等执行到不存在的节点后才报错。
-- flow 私有远程上传、发布型 flow、贡献型 flow 必须显式区分：只有声明了 `publicationTargets` 或明确支持贡献能力的 flow 才能进入发布/贡献 adapter 校验；例如 Grok / `webchat2api` SSO Cookie 上传属于 Grok flow 自己的收尾节点，不是 publication target，也不能因为有 target 就默认接入贡献模式。
+- flow 私有远程上传与发布型 flow 必须显式区分：只有声明了 `publicationTargets` 的 flow 才能进入发布链路；例如 Grok / `webchat2api` SSO Cookie 上传属于 Grok flow 自己的收尾节点，不是 publication target。
 
 ### 1.7 日志步骤号原则
 
@@ -271,22 +269,12 @@
 
 当前约定示例：
 
-- `contributionMode` 是 sidepanel 的运行态 UI 模式，不是新的 `panelMode`
+- 账号贡献体系已删除；如未来恢复，必须重新设计状态、消息、adapter、上传协议和测试，不允许以隐藏入口或兼容分支回填。
 - OpenAI 目标的 canonical 状态是 `targetId`；`panelMode` 只作为兼容视图存在，不能再作为账号交付能力或 route 的事实源
 - 运行态模式不能混进 `PERSISTED_SETTING_DEFAULTS`
 - 运行态模式不能混进配置导入/导出
 - 如果运行态模式会临时覆盖某些持久配置的显示值，必须同时处理好“退出模式后恢复”和“自动保存不能误覆盖原配置”这两个问题
 - 如果运行态模式要隐藏某一行 UI，必须先检查这行里是否绑定了不该一起隐藏的其他设置；必要时先拆行，再做显隐
-
-当前贡献模式补充约定：
-
-- 贡献模式属于 `CPA` 来源下的特殊业务模式，不是新的 provider
-- 贡献模式允许扩展内承接公开 OAuth 交互，但只能调用公开接口，不能触碰 `/v0/management/*`
-- 如果产品要求“开始贡献”和主自动流走同一条链路，则优先把贡献服务接入 `oauth-login / platform-verify`，而不是额外分出一套平行 mini-flow
-- 贡献流程的后台公开 OAuth 状态机应优先收敛到独立模块，例如 `background/contribution-oauth.js`
-- 贡献模式的侧栏按钮、状态展示和轮询调度应优先收敛到独立 manager，例如 `sidepanel/contribution-mode.js`
-- 如果服务端当前返回“无需手动提交 callback”，扩展端必须把它当兼容成功态处理，不能简单按 HTTP 非 200 直接视为失败
-- 如果新增 flow 只是私有收尾产物，例如 Cookie、JSON、会话文件、手动复制值，或只上传到该 flow 自己的专属远端服务，必须保持 `publicationTargets` 为空并关闭 `supportsAccountContribution`；如果后续产品决定把它纳入正式发布 / 贡献体系，必须先设计 publication target、贡献 adapter、敏感字段脱敏和测试，再打开能力开关。
 
 ### 3.4.1 iCloud Hide My Email 维护补充
 
@@ -300,7 +288,7 @@
 - 账号交付是 OpenAI flow 的通用 target 能力，不属于 Plus、支付方式或某个 source 的私有模式。持久配置只写入 `flows.openai.targets.<targetId>.accountDeliveryMode`，交付 route 由 target capability 解析。
 - 当前能力矩阵由 `flows/openai/index.js` 唯一声明：`CPA` 支持 OAuth / ChatGPT Session，`SUB2API` 支持 OAuth / ChatGPT Session / Agent Identity，`Codex2API` 固定 OAuth，`webchat / ChatGPT2API` 固定 ChatGPT Session。
 - 侧栏只根据 capability 渲染方式、说明、显隐和禁用状态；多方式 target 显示独立账号交付控件，单一方式 target 隐藏控件，不能在 `sidepanel.js` 重复维护 target 矩阵或 route 表。
-- 保存账号交付方式时必须携带显式 `targetId`；运行锁、设置锁和贡献模式不得允许修改已解析方式。贡献模式固定使用 OAuth，但不覆盖用户保存的 target 偏好。
+- 保存账号交付方式时必须携带显式 `targetId`；运行锁和设置锁不得允许修改已解析方式。
 - workflow 必须按“注册阶段 -> 可选 dormant 支付阶段 -> 账号交付阶段”组合，交付阶段只消费 capability 已解析的 route，不生成支付方式与交付方式的笛卡尔积变体。
 - ChatGPT Session 交付必须复用通用 session reader，并直接完成目标导入，不进入 OAuth callback 或 `platform-verify`；Session 和 Agent Identity 失败不得静默回退到另一种方式。
 - Agent Identity 必须先完成 SUB2API 登录、分组和代理预检，再生成 Ed25519 身份并注册；原始 access token、私钥和完整敏感 `auth.json` 只能在内存协议边界使用，禁止写入设置、运行态、日志或错误文本。
@@ -498,7 +486,7 @@ npm test
 15. 如果创建了 `docs/md/` 方案文件，我有没有确认它是否应被提交？
 16. 如果改动涉及 flow、步骤、模式切换，我有没有同时检查 `getSteps / getNodes / getWorkflow`、后台 registry、sidepanel `workflowNodes` 和 node 状态？
 17. 我有没有新增任何用数字步骤判断业务含义的代码？如果有，是否能改为 `key / nodeId`？
-18. 如果新增或调整 flow target，我有没有确认它到底是 flow 私有收尾目标、正式发布目标还是贡献 flow，并同步检查 `publicationTargets / supportsAccountContribution / contributionAdapterIds / shared/contribution-registry.js`？
+18. 如果新增或调整 flow target，我有没有确认它到底是 flow 私有收尾目标还是正式发布目标，并同步检查 `publicationTargets` 与发布链路测试？
 
 ## 9. 完成标准
 

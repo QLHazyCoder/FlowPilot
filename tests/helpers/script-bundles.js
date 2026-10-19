@@ -50,7 +50,6 @@ function readFlowCapabilitiesBundle(extraFiles = []) {
   return readBundle([
     ...FLOW_DEFINITION_FILES,
     'core/flow-kernel/flow-registry.js',
-    'shared/contribution-registry.js',
     'core/flow-kernel/settings-schema.js',
     'core/flow-kernel/flow-capabilities.js',
     ...extraFiles,

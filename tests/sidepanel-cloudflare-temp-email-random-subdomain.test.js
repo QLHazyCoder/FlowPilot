@@ -115,12 +115,12 @@ test('sidepanel modal message preserves line breaks and supports inline links', 
   assert.match(css, /\.modal-message a,\s*[\s\S]*\.modal-alert a/);
 });
 
-test('openCloudflareTempEmailUsageGuidePage opens the contribution portal home page', () => {
+test('openCloudflareTempEmailUsageGuidePage opens the official portal home page', () => {
   const bundle = extractFunction('openCloudflareTempEmailUsageGuidePage');
 
   const api = new Function(`
 const openedUrls = [];
-function getContributionPortalUrl() { return 'https://flowpilot.qlhazycoder.top'; }
+function getPortalUrl() { return 'https://flowpilot.qlhazycoder.top'; }
 function openExternalUrl(url) { openedUrls.push(url); }
 ${bundle}
 return {
@@ -133,12 +133,12 @@ return {
   assert.deepEqual(api.openedUrls, ['https://flowpilot.qlhazycoder.top']);
 });
 
-test('openCloudflareTempEmailUsageGuidePage skips opening when the contribution portal URL is empty', () => {
+test('openCloudflareTempEmailUsageGuidePage skips opening when the official portal URL is empty', () => {
   const bundle = extractFunction('openCloudflareTempEmailUsageGuidePage');
 
   const api = new Function(`
 const openedUrls = [];
-function getContributionPortalUrl() { return ''; }
+function getPortalUrl() { return ''; }
 function openExternalUrl(url) { openedUrls.push(url); }
 ${bundle}
 return {

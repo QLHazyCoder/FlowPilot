@@ -72,8 +72,7 @@
         }
         return String(state?.activeFlowId || 'openai').trim().toLowerCase() === 'openai'
           && !['webchat', 'chatgpt2api'].includes(String(state?.targetId || 'cpa').trim().toLowerCase())
-          && !Boolean(state?.plusModeEnabled)
-          && !Boolean(state?.accountContributionEnabled);
+          && !Boolean(state?.plusModeEnabled);
       },
       resolveSignupMethod = (state = {}) => {
         const method = normalizeSignupMethod(state?.signupMethod);
@@ -153,8 +152,6 @@
       notifyNodeError,
       patchMail2925Account,
       patchHotmailAccount,
-      pollContributionStatus,
-      submitFlowContribution,
       registerTab,
       requestStop,
       probeIpProxyExit,
@@ -167,7 +164,6 @@
       setCurrentPayPalAccount,
       setCurrentMail2925Account,
       setCurrentHotmailAccount,
-      setAccountContributionMode,
       setEmailState,
       setEmailStateSilently,
       persistRegistrationEmailState,
@@ -184,7 +180,6 @@
       setNodeStatus,
       skipAutoRunCountdown,
       skipNode,
-      startFlowContribution,
       startAutoRunLoop,
       deleteMail2925Account,
       deleteMail2925Accounts,
@@ -1278,72 +1273,6 @@
           return await setFreeReusablePhoneActivation(message.payload || {});
         }
 
-        case 'SET_ACCOUNT_CONTRIBUTION_MODE': {
-          const enabled = Boolean(message.payload?.enabled);
-          const state = await ensureManualInteractionAllowed(enabled ? '进入账号贡献' : '退出账号贡献');
-          if (Object.values(state.nodeStatuses || {}).some((status) => status === 'running')) {
-            throw new Error(enabled ? '当前有步骤正在执行，无法进入账号贡献。' : '当前有步骤正在执行，无法退出账号贡献。');
-          }
-          if (typeof setAccountContributionMode !== 'function') {
-            throw new Error('账号贡献切换能力未接入。');
-          }
-          return {
-            ok: true,
-            state: await setAccountContributionMode(enabled, {
-              adapterId: message.payload?.adapterId,
-              flowId: message.payload?.flowId || state?.activeFlowId || state?.flowId,
-            }),
-          };
-        }
-
-        case 'START_FLOW_CONTRIBUTION': {
-          const state = await ensureManualInteractionAllowed('开始贡献');
-          if (Object.values(state.nodeStatuses || {}).some((status) => status === 'running')) {
-            throw new Error('当前有步骤正在执行，无法开始贡献流程。');
-          }
-          if (!state?.accountContributionEnabled) {
-            throw new Error('请先进入账号贡献。');
-          }
-          if (typeof startFlowContribution !== 'function') {
-            throw new Error('贡献 OAuth 流程尚未接入。');
-          }
-          return {
-            ok: true,
-            state: await startFlowContribution({
-              nickname: message.payload?.nickname,
-              qq: message.payload?.qq,
-            }),
-          };
-        }
-
-        case 'SUBMIT_FLOW_CONTRIBUTION': {
-          const state = await getState();
-          if (!state?.accountContributionEnabled) {
-            throw new Error('请先进入账号贡献。');
-          }
-          if (typeof submitFlowContribution !== 'function') {
-            throw new Error('贡献提交能力尚未接入。');
-          }
-          return {
-            ok: true,
-            state: await submitFlowContribution(message.payload?.callbackUrl, {
-              reason: message.payload?.reason || 'sidepanel_submit',
-            }),
-          };
-        }
-
-        case 'POLL_FLOW_CONTRIBUTION_STATUS': {
-          if (typeof pollContributionStatus !== 'function') {
-            throw new Error('贡献状态轮询能力尚未接入。');
-          }
-          return {
-            ok: true,
-            state: await pollContributionStatus({
-              reason: message.payload?.reason || 'sidepanel_poll',
-            }),
-          };
-        }
-
         case 'CLEAR_ACCOUNT_RUN_HISTORY': {
           const state = await getState();
           if (isAutoRunLockedState(state)) {
@@ -1410,20 +1339,6 @@
           clearStopRequest();
           if (message.source === 'sidepanel') {
             await lockAutomationWindowFromMessage(message, sender);
-          }
-          if (Boolean(message.payload?.accountContributionEnabled) && typeof setAccountContributionMode === 'function') {
-            await setAccountContributionMode(true, {
-              adapterId: message.payload?.contributionAdapterId,
-              flowId: message.payload?.activeFlowId || message.payload?.flowId,
-            });
-            if (typeof setState === 'function') {
-              const contributionNickname = String(message.payload?.contributionNickname || '').trim();
-              const contributionQq = String(message.payload?.contributionQq || '').trim();
-              await setState({
-                contributionNickname,
-                contributionQq,
-              });
-            }
           }
           const autoRunFlowStateUpdates = buildAutoRunFlowStateUpdates(message.payload || {});
           if (Object.keys(autoRunFlowStateUpdates).length > 0 && typeof setState === 'function') {
@@ -1531,7 +1446,6 @@
             || Object.prototype.hasOwnProperty.call(updates, 'signupMethod')
             || Object.prototype.hasOwnProperty.call(updates, 'targetId')
             || Object.prototype.hasOwnProperty.call(updates, 'activeFlowId')
-            || Object.prototype.hasOwnProperty.call(updates, 'accountContributionEnabled')
           ) {
             const resolvedSignupMethod = resolveSignupMethod(nextSignupState);
             const rawFrozenSignupMethod = String(currentState?.resolvedSignupMethod || '').trim().toLowerCase();
@@ -1660,12 +1574,6 @@
               reason: 'apply_failed',
               error: error?.message || String(error || '代理应用失败'),
             }));
-          }
-          if (Boolean(currentState?.accountContributionEnabled) && typeof setAccountContributionMode === 'function') {
-            await setAccountContributionMode(true, {
-              adapterId: currentState?.contributionAdapterId,
-              flowId: currentState?.activeFlowId || currentState?.flowId,
-            });
           }
           if (Object.keys(stateUpdates).length > 0 && typeof broadcastDataUpdate === 'function') {
             broadcastDataUpdate(stateUpdates);

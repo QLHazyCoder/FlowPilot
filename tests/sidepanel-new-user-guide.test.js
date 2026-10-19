@@ -71,8 +71,8 @@ const localStorage = {
     storage.delete(key);
   },
 };
-const btnContributionMode = { disabled: false };
-let latestState = { accountContributionEnabled: false };
+const btnPortalTutorial = { disabled: false };
+let latestState = {};
 ${bundle}
 return {
   shouldPromptNewUserGuide,
@@ -80,10 +80,7 @@ return {
     setNewUserGuidePromptDismissed(value);
   },
   setButtonDisabled(value) {
-    btnContributionMode.disabled = Boolean(value);
-  },
-  setAccountContributionMode(value) {
-    latestState = { accountContributionEnabled: Boolean(value) };
+    btnPortalTutorial.disabled = Boolean(value);
   },
 };
 `)();
@@ -98,18 +95,17 @@ return {
   assert.equal(api.shouldPromptNewUserGuide(), false);
 
   api.setButtonDisabled(false);
-  api.setAccountContributionMode(true);
-  assert.equal(api.shouldPromptNewUserGuide(), false);
+  assert.equal(api.shouldPromptNewUserGuide(), true);
 });
 
-test('new user guide prompt persists dismissal before awaiting the user choice and opens the contribution page on confirm', async () => {
+test('new user guide prompt persists dismissal before awaiting the user choice and opens the official portal on confirm', async () => {
   const bundle = [
     extractFunction('isPromptDismissed'),
     extractFunction('setPromptDismissed'),
     extractFunction('isNewUserGuidePromptDismissed'),
     extractFunction('setNewUserGuidePromptDismissed'),
     extractFunction('shouldPromptNewUserGuide'),
-    extractFunction('getContributionPortalUrl'),
+    extractFunction('getPortalUrl'),
     extractFunction('openNewUserGuidePrompt'),
     extractFunction('maybeShowNewUserGuidePrompt'),
   ].join('\n');
@@ -128,9 +124,9 @@ const localStorage = {
     storage.delete(key);
   },
 };
-const btnContributionMode = { disabled: false };
-const latestState = { accountContributionEnabled: false };
-const contributionContentService = { portalUrl: 'https://flowpilot.qlhazycoder.top' };
+const btnPortalTutorial = { disabled: false };
+const latestState = {};
+const portalContentService = { portalUrl: 'https://flowpilot.qlhazycoder.top' };
 const openedUrls = [];
 let modalOptions = null;
 let nextChoice = 'confirm';

@@ -137,19 +137,7 @@ test('flow registry exposes canonical flow and target metadata', () => {
     []
   );
   assert.equal(flowRegistry.getPublicationTargetDefinition('kiro', 'kiro-rs')?.label, 'kiro.rs');
-  assert.equal(flowRegistry.getFlowCapabilities('openai').supportsAccountContribution, true);
-  assert.equal(flowRegistry.getFlowCapabilities('kiro').supportsAccountContribution, true);
-  assert.equal(flowRegistry.getFlowCapabilities('grok').supportsAccountContribution, false);
   assert.deepEqual(flowRegistry.getFlowCapabilities('grok').supportedTargetIds, ['webchat2api', 'grok2api', 'sub2api']);
-  assert.deepEqual(
-    flowRegistry.getFlowCapabilities('openai').contributionAdapterIds,
-    ['openai-oauth', 'openai-codex-file', 'openai-sub2api-file']
-  );
-  assert.deepEqual(
-    flowRegistry.getFlowCapabilities('kiro').contributionAdapterIds,
-    ['kiro-builder-id']
-  );
-  assert.deepEqual(flowRegistry.getFlowCapabilities('grok').contributionAdapterIds, []);
 });
 
 test('settings schema normalizes view input into canonical nested namespaces', () => {

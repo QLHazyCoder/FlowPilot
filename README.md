@@ -44,7 +44,7 @@
 - OpenAI 来源支持按目标选择账号交付方式：`CPA` 支持 OAuth / ChatGPT Session，`SUB2API` 支持 OAuth / ChatGPT Session / Agent Identity，其他 OpenAI target 使用各自固定交付 route。
 - 支持 `Hotmail`、`2925`、`QQ Mail`、`163 Mail`、`163 VIP Mail`、`126 Mail`、`Inbucket`、`Cloud Mail`、`YYDS Mail`、`iCloud` 等收码方式。
 - 支持 `DuckDuckGo`、`Cloudflare`、`自定义邮箱池`、`自定义邮箱服务号池`、`Gmail / 2925 别名邮箱` 等注册邮箱生成方式。
-- 支持接码平台、手机号验证、自动重试、执行范围限制、IP 代理、贡献模式和账号记录面板。
+- 支持接码平台、手机号验证、自动重试、执行范围限制、IP 代理和账号记录面板。
 - 支持 `Stop`、暂停后继续、失败后重试，以及本地 helper 快照同步。
 
 ## 支持的来源
@@ -76,7 +76,7 @@
 - `CPA` 可选择 `OAuth` 或 `ChatGPT Session`；`SUB2API` 可选择 `OAuth`、`ChatGPT Session` 或 `Agent Identity`。
 - `Codex2API` 固定使用 `OAuth`；`webchat` 和 `ChatGPT2API` 固定使用 ChatGPT Session，因此不会显示多余的选择控件。
 - `Agent Identity` 会先完成 SUB2API 配置预检，再在内存中生成身份并导入；原始 ChatGPT access token、私钥和完整敏感载荷不会写入持久设置或日志。
-- 账号交付方式在 workflow 运行期间、设置锁定期间以及贡献模式下不可编辑；贡献模式固定使用 OAuth。
+- 账号交付方式在 workflow 运行期间和设置锁定期间不可编辑。
 
 ## Plus 状态
 

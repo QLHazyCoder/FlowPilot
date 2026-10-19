@@ -717,7 +717,6 @@ test('auto-run restarts from confirm-oauth step after transient step10 token_exc
       stepStatuses: { 3: 'completed' },
       stepsVersion: 'ultra2.0',
       visibleStep: 10,
-      accountContributionEnabled: false,
     },
   });
 
@@ -751,7 +750,6 @@ test('auto-run restarts SUB2API expired oauth session from oauth-login and clear
       sub2apiGroupIds: [5],
       sub2apiDraftName: 'draft',
       sub2apiProxyId: 7,
-      accountContributionEnabled: false,
     },
   });
 

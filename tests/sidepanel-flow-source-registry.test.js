@@ -116,10 +116,6 @@ test('sidepanel html exposes flow selector and kiro source fields', () => {
       < sidepanelHtml.indexOf('id="row-account-delivery-mode"')
   );
   assert.ok(
-    sidepanelHtml.indexOf('id="row-account-delivery-mode"')
-      < sidepanelHtml.indexOf('id="contribution-mode-panel"')
-  );
-  assert.ok(
     sidepanelHtml.indexOf('<script src="account-delivery-control.js"></script>')
       < sidepanelHtml.indexOf('<script src="sidepanel.js"></script>')
   );
@@ -615,7 +611,6 @@ return {
       settingsState: undefined,
       signupMethod: 'email',
       phoneSignupReloginAfterBindEmailEnabled: false,
-      accountContributionEnabled: false,
     },
   });
   assert.deepEqual(api.calls[1], { type: 'render', stepIds: [88] });

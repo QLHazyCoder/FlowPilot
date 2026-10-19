@@ -170,7 +170,7 @@ test('account delivery control remains visible but disabled while settings are l
   assert.equal(select.attributes['aria-disabled'], 'true');
 });
 
-test('account delivery control hides contribution mode capability state', () => {
+test('account delivery control hides unavailable delivery capability', () => {
   const { control, row, select } = createHarness();
 
   control.render(createCapabilityState({
@@ -179,7 +179,7 @@ test('account delivery control hides contribution mode capability state', () => 
     canShowAccountDeliveryControl: false,
     effectiveAccountDeliveryMode: 'oauth',
     runtimeLocks: {
-      accountContribution: true,
+      settingsMenuLocked: true,
     },
   }));
 

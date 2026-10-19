@@ -1,7 +1,7 @@
 (() => {
   const PORTAL_BASE_URL = 'https://flowpilot.qlhazycoder.top';
   const CONTENT_SUMMARY_API_URL = `${PORTAL_BASE_URL}/api/content-summary`;
-  const CACHE_KEY_PREFIX = 'multipage-contribution-content-summary-v2';
+  const CACHE_KEY_PREFIX = 'multipage-portal-content-summary-v2';
   const FETCH_TIMEOUT_MS = 6000;
 
   function normalizeScopeId(value = '', fallback = '') {
@@ -177,7 +177,24 @@
     }
   }
 
-  window.SidepanelContributionContentService = {
+  function removeLegacyContributionContentCaches() {
+    try {
+      Object.keys(localStorage).forEach((key) => {
+        if (
+          key.startsWith('multipage-contribution-content-summary-v2:')
+          || key.startsWith('multipage-contribution-content-prompt-dismissed-version:')
+        ) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (error) {
+      // Ignore cleanup failures.
+    }
+  }
+
+  removeLegacyContributionContentCaches();
+
+  window.SidepanelPortalContentService = {
     buildSummaryApiUrl,
     getContentUpdateSnapshot,
     portalUrl: PORTAL_BASE_URL,

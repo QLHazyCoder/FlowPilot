@@ -644,7 +644,6 @@ const window = {
 };
 let latestState = {
   activeFlowId: 'site-a',
-  accountContributionEnabled: false,
   targetId: 'cpa',
 };
 const inputPlusModeEnabled = { checked: false };
@@ -1444,7 +1443,6 @@ test('collectSettingsPayload keeps local helper sync enabled while persisting sm
 const api = new Function('normalizeIcloudTargetMailboxType', 'normalizeIcloudForwardMailProvider', `
 const window = {};
 let latestState = {
-  accountContributionEnabled: false,
   mail2925UseAccountPool: false,
   currentMail2925AccountId: '',
   fiveSimCountryOrder: ['thailand', 'england'],

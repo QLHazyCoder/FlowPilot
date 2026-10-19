@@ -64,14 +64,11 @@ return new Function(`
 const events = [];
 const DEFAULT_ACTIVE_FLOW_ID = 'openai';
 const latestState = {
-  accountContributionEnabled: false,
   activeFlowId: 'openai',
   flowId: 'openai',
   targetId: 'cpa',
 };
 const inputAutoSkipFailures = { checked: false };
-const inputContributionNickname = { value: 'tester' };
-const inputContributionQq = { value: '123456' };
 const inputAutoSkipFailuresThreadIntervalMinutes = { value: '5' };
 const btnAutoRun = { disabled: false, innerHTML: '' };
 const inputRunCount = { disabled: false };
@@ -130,7 +127,7 @@ function shouldWarnAutoRunFallbackRisk() { return false; }
 function isAutoRunFallbackRiskPromptDismissed() { return false; }
 async function openAutoRunFallbackRiskConfirmModal() { throw new Error('should not be called'); }
 function setAutoRunFallbackRiskPromptDismissed() {}
-async function refreshContributionContentHint() {
+async function refreshPortalContentHint() {
   events.push({ type: 'refresh' });
   ${refreshImpl ? 'return (' + refreshImpl + ')();' : 'return null;'}
 }
@@ -144,7 +141,7 @@ return {
 `)();
 }
 
-test('startAutoRunFromCurrentSettings kicks off contribution content refresh without blocking auto run', async () => {
+test('startAutoRunFromCurrentSettings kicks off portal content refresh without blocking auto run', async () => {
   const api = createApi();
 
   const result = await api.startAutoRunFromCurrentSettings();
@@ -157,7 +154,7 @@ test('startAutoRunFromCurrentSettings kicks off contribution content refresh wit
   assert.equal(api.getEvents()[2].message.type, 'AUTO_RUN');
 });
 
-test('startAutoRunFromCurrentSettings continues auto run when contribution content refresh fails', async () => {
+test('startAutoRunFromCurrentSettings continues auto run when portal content refresh fails', async () => {
   const api = createApi({
     refreshImpl: 'async () => { throw new Error("refresh failed"); }',
   });
@@ -171,7 +168,7 @@ test('startAutoRunFromCurrentSettings continues auto run when contribution conte
     ['refresh', 'sync-settings', 'send', 'warn']
   );
   assert.equal(events[2].message.type, 'AUTO_RUN');
-  assert.match(String(events[3].args[0]), /Failed to refresh contribution content hint before auto run/);
+  assert.match(String(events[3].args[0]), /Failed to refresh portal content hint before auto run/);
 });
 
 test('startAutoRunFromCurrentSettings does not wait for a hanging contribution content refresh', async () => {
@@ -188,7 +185,7 @@ test('startAutoRunFromCurrentSettings does not wait for a hanging contribution c
   );
 });
 
-test('startAutoRunFromCurrentSettings does not block auto run when contribution content has updates', async () => {
+test('startAutoRunFromCurrentSettings does not block auto run when portal content has updates', async () => {
   const api = createApi({
     refreshImpl: `async () => ({
       promptVersion: 'questionnaire:2026-04-23T00:00:00Z',
@@ -259,11 +256,8 @@ const latestState = {
   activeFlowId: 'site-a',
   targetId: 'cpa',
   signupMethod: 'phone',
-  accountContributionEnabled: false,
 };
 const inputAutoSkipFailures = { checked: false };
-const inputContributionNickname = { value: 'tester' };
-const inputContributionQq = { value: '123456' };
 const inputAutoSkipFailuresThreadIntervalMinutes = { value: '5' };
 const btnAutoRun = { disabled: false, innerHTML: '' };
 const inputRunCount = { disabled: false, value: '1' };
@@ -314,7 +308,7 @@ function shouldWarnAutoRunFallbackRisk() { return false; }
 function isAutoRunFallbackRiskPromptDismissed() { return false; }
 async function openAutoRunFallbackRiskConfirmModal() { throw new Error('should not be called'); }
 function setAutoRunFallbackRiskPromptDismissed() {}
-async function refreshContributionContentHint() {
+async function refreshPortalContentHint() {
   events.push({ type: 'refresh' });
   return null;
 }

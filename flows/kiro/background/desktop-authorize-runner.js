@@ -342,7 +342,6 @@
       getState = async () => ({}),
       getTabId = async () => null,
       isTabAlive = async () => false,
-      maybeSubmitFlowContribution = async () => null,
       KIRO_REGISTER_INJECT_FILES = null,
       KIRO_DESKTOP_AUTHORIZE_INJECT_FILES = null,
       pollFlowVerificationCode = null,

@@ -119,7 +119,7 @@ function syncAutoRunCountdownTicker() {}
 function updateStopButtonState() {}
 function getStepStatuses() { return {}; }
 function updateConfigMenuControls() {}
-function renderContributionMode() {}
+function renderPortalUpdateHint() {}
 
 ${bundle}
 
@@ -205,7 +205,7 @@ function syncAutoRunCountdownTicker() {}
 function updateStopButtonState() {}
 function getStepStatuses() { return {}; }
 function updateConfigMenuControls() {}
-function renderContributionMode() {}
+function renderPortalUpdateHint() {}
 
 ${bundle}
 

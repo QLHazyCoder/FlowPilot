@@ -18,7 +18,6 @@ test('flow capability registry keeps OpenAI phone signup available while Plus is
       activeFlowId: 'openai',
       targetId: 'cpa',
       plusModeEnabled: false,
-      accountContributionEnabled: false,
       signupMethod: 'phone',
     },
   });
@@ -34,7 +33,6 @@ test('flow capability registry keeps OpenAI phone signup available while Plus is
       activeFlowId: 'openai',
       targetId: 'sub2api',
       plusModeEnabled: true,
-      accountContributionEnabled: false,
       signupMethod: 'phone',
     },
   });
@@ -139,7 +137,7 @@ test('flow capability registry prefers the selected target delivery setting over
   assert.equal(capabilityState.effectiveAccountDeliveryRouteId, 'sub2api-agent-identity');
 });
 
-test('flow capability registry hides fixed delivery controls and locks contribution or running changes', () => {
+test('flow capability registry hides fixed delivery controls and locks running changes', () => {
   const api = loadApi();
   const registry = api.createFlowCapabilityRegistry();
 
@@ -159,21 +157,6 @@ test('flow capability registry hides fixed delivery controls and locks contribut
   assert.equal(webchat.effectiveAccountDeliveryRouteId, 'webchat-session');
   assert.equal(webchat.canShowAccountDeliveryControl, false);
   assert.equal(webchat.canEditAccountDeliveryMode, false);
-
-  const contribution = registry.resolveSidepanelCapabilities({
-    state: {
-      activeFlowId: 'openai',
-      targetId: 'sub2api',
-      accountDeliveryMode: 'agent_identity',
-      accountContributionEnabled: true,
-    },
-  });
-
-  assert.deepEqual(contribution.availableAccountDeliveryModes, ['oauth']);
-  assert.equal(contribution.effectiveAccountDeliveryMode, 'oauth');
-  assert.equal(contribution.effectiveAccountDeliveryRouteId, 'oauth');
-  assert.equal(contribution.canShowAccountDeliveryControl, false);
-  assert.equal(contribution.canEditAccountDeliveryMode, false);
 
   const running = registry.resolveSidepanelCapabilities({
     autoRunLocked: true,
@@ -219,7 +202,6 @@ test('flow capability registry defaults unknown flows to minimal non-phone capab
       activeFlowId: 'site-a',
       targetId: 'codex2api',
       plusModeEnabled: true,
-      accountContributionEnabled: true,
       signupMethod: 'phone',
     },
   });
@@ -250,10 +232,8 @@ test('flow capability registry exposes Kiro as an independent flow with its own 
   assert.equal(capabilityState.activeFlowId, 'kiro');
   assert.equal(capabilityState.canShowPhoneSettings, false);
   assert.equal(capabilityState.canShowPlusSettings, false);
-  assert.equal(capabilityState.canShowContributionMode, true);
   assert.equal(capabilityState.effectiveSignupMethod, 'email');
   assert.equal(capabilityState.effectiveTargetId, 'kiro-rs');
-  assert.deepEqual(capabilityState.flowCapabilities.contributionAdapterIds, ['kiro-builder-id']);
   assert.deepEqual(
     capabilityState.visibleGroupIds,
     ['kiro-runtime-status', 'shared-auto-run', 'kiro-target-kiro-rs', 'service-account', 'service-email', 'service-proxy']
@@ -270,19 +250,16 @@ test('flow capability registry exposes Grok as an independent SSO flow without O
       targetId: 'webchat2api',
       signupMethod: 'phone',
       plusModeEnabled: true,
-      accountContributionEnabled: true,
     },
   });
 
   assert.equal(capabilityState.activeFlowId, 'grok');
   assert.equal(capabilityState.canShowPhoneSettings, false);
   assert.equal(capabilityState.canShowPlusSettings, false);
-  assert.equal(capabilityState.canShowContributionMode, false);
   assert.equal(capabilityState.canShowLuckmail, false);
   assert.equal(capabilityState.effectiveSignupMethod, 'email');
   assert.equal(capabilityState.effectiveTargetId, 'webchat2api');
   assert.deepEqual(capabilityState.supportedTargetIds, ['webchat2api', 'grok2api', 'sub2api']);
-  assert.deepEqual(capabilityState.flowCapabilities.contributionAdapterIds, []);
   assert.deepEqual(
     capabilityState.visibleGroupIds,
     ['grok-runtime-status', 'shared-auto-run', 'grok-target-webchat2api', 'service-account', 'service-email', 'service-proxy']
@@ -362,7 +339,6 @@ test('flow capability registry rejects retired Plus mode and unsupported targets
       targetId: 'cpa',
       signupMethod: 'phone',
       plusModeEnabled: true,
-      accountContributionEnabled: false,
     },
   });
 
@@ -399,9 +375,8 @@ test('flow capability registry normalizes unsupported mode switches back to the 
       targetId: 'sub2api',
       signupMethod: 'phone',
       plusModeEnabled: true,
-      accountContributionEnabled: true,
     },
-    changedKeys: ['targetId', 'signupMethod', 'plusModeEnabled', 'accountContributionEnabled'],
+    changedKeys: ['targetId', 'signupMethod', 'plusModeEnabled'],
   });
 
   assert.equal(validation.ok, false);
@@ -409,14 +384,12 @@ test('flow capability registry normalizes unsupported mode switches back to the 
     targetId: 'cpa',
     signupMethod: 'email',
     plusModeEnabled: false,
-    accountContributionEnabled: false,
   });
   assert.deepEqual(
     validation.errors.map((entry) => entry.code),
     [
       'panel_mode_unsupported',
       'plus_mode_unsupported',
-      'contribution_mode_unsupported',
       'phone_signup_flow_unsupported',
     ]
   );

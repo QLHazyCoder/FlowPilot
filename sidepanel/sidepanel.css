@@ -236,25 +236,19 @@ header {
   justify-content: flex-end;
 }
 
-.btn-contribution-mode {
+.btn-portal-tutorial {
   padding-inline: 10px;
 }
 
-.btn-contribution-mode.is-active {
-  border-color: color-mix(in srgb, var(--orange) 58%, var(--border));
-  background: color-mix(in srgb, var(--orange) 14%, var(--bg-base));
-  color: var(--orange);
-}
-
-.contribution-update-layer {
+.portal-update-layer {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 1400;
 }
 
-.contribution-update-hint {
-  --contribution-update-arrow-left: 20px;
+.portal-update-hint {
+  --portal-update-arrow-left: 20px;
   position: absolute;
   top: 0;
   left: 0;
@@ -270,11 +264,11 @@ header {
   pointer-events: auto;
 }
 
-.contribution-update-hint::before {
+.portal-update-hint::before {
   content: '';
   position: absolute;
   top: -7px;
-  left: calc(var(--contribution-update-arrow-left) - 6px);
+  left: calc(var(--portal-update-arrow-left) - 6px);
   width: 12px;
   height: 12px;
   background: inherit;
@@ -283,13 +277,13 @@ header {
   transform: rotate(45deg);
 }
 
-.contribution-update-hint-text {
+.portal-update-hint-text {
   font-size: 12px;
   line-height: 1.45;
   color: var(--text-primary);
 }
 
-.contribution-update-hint-close {
+.portal-update-hint-close {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -308,12 +302,12 @@ header {
   transition: background var(--transition), color var(--transition);
 }
 
-.contribution-update-hint-close:hover {
+.portal-update-hint-close:hover {
   background: color-mix(in srgb, var(--amber) 16%, transparent);
   color: var(--text-primary);
 }
 
-.contribution-update-hint-close:focus-visible {
+.portal-update-hint-close:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--amber) 34%, transparent);
   outline-offset: 1px;
 }
@@ -674,10 +668,6 @@ header {
   pointer-events: none;
 }
 
-.is-contribution-hidden {
-  display: none !important;
-}
-
 .auto-run-ad-bar {
   position: relative;
   display: flex;
@@ -791,103 +781,6 @@ header {
   }
 }
 
-.contribution-mode-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--orange) 28%, var(--border));
-  border-radius: var(--radius-md);
-  background:
-    linear-gradient(180deg,
-      color-mix(in srgb, var(--orange) 10%, var(--bg-base)),
-      color-mix(in srgb, var(--bg-surface) 96%, var(--bg-base))
-    );
-}
-
-.contribution-mode-panel[hidden] {
-  display: none !important;
-}
-
-.contribution-mode-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.contribution-mode-badge {
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--orange) 16%, var(--bg-base));
-  color: var(--orange);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.contribution-mode-text {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--text-secondary);
-}
-
-.contribution-mode-status-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.contribution-mode-status-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--bg-base) 92%, var(--orange-soft));
-}
-
-.contribution-mode-status-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-}
-
-.contribution-mode-status-value {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.5;
-  color: var(--text-primary);
-}
-
-.contribution-mode-summary {
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--bg-base) 88%, var(--orange-soft));
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.contribution-mode-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.contribution-mode-actions .btn {
-  width: 100%;
-  justify-content: center;
-}
-
-@media (max-width: 540px) {
-  .contribution-mode-status-grid {
-    grid-template-columns: 1fr;
-  }
-}
 
 .section-mini-header {
   display: flex;

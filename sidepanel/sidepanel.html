@@ -34,8 +34,8 @@
     </div>
     <div class="header-btns">
       <div class="run-group">
-        <button id="btn-contribution-mode" class="btn btn-outline btn-sm btn-contribution-mode" type="button"
-          aria-pressed="false" title="进入贡献模式并打开官网页">贡献/使用教程</button>
+        <button id="btn-portal-tutorial" class="btn btn-outline btn-sm btn-portal-tutorial" type="button"
+          title="打开官网使用教程">使用教程</button>
         <input type="number" id="input-run-count" class="run-count-input" value="1" min="1" title="运行次数" />
         <button id="btn-auto-run" class="btn btn-success" title="自动执行全部步骤">自动</button>
         <button id="btn-stop" class="btn btn-danger" title="停止当前流程" disabled>停止</button>
@@ -74,12 +74,12 @@
     <span class="auto-run-ad-badge auto-run-ad-badge--end">售后保障</span>
   </div>
 
-  <div id="contribution-update-layer" class="contribution-update-layer" hidden>
-    <div id="contribution-update-hint" class="contribution-update-hint" aria-live="polite" hidden>
-      <p id="contribution-update-hint-text" class="contribution-update-hint-text">
-        公告 / 使用教程有更新了，可点上方“贡献/使用教程”查看。
+  <div id="portal-update-layer" class="portal-update-layer" hidden>
+    <div id="portal-update-hint" class="portal-update-hint" aria-live="polite" hidden>
+      <p id="portal-update-hint-text" class="portal-update-hint-text">
+        公告 / 使用教程有更新了，可点上方“使用教程”查看。
       </p>
-      <button id="btn-dismiss-contribution-update-hint" class="contribution-update-hint-close" type="button"
+      <button id="btn-dismiss-portal-update-hint" class="portal-update-hint-close" type="button"
         aria-label="关闭更新提示" title="关闭更新提示">×</button>
     </div>
   </div>
@@ -129,39 +129,6 @@
         <div class="setting-field-stack">
           <select id="select-account-delivery-mode" class="data-select" aria-label="账号交付方式"></select>
           <span class="setting-caption" id="account-delivery-mode-caption"></span>
-        </div>
-      </div>
-        <div id="contribution-mode-panel" class="contribution-mode-panel" hidden>
-          <div class="contribution-mode-panel-header">
-            <span class="section-label">贡献模式</span>
-            <span id="contribution-mode-badge" class="contribution-mode-badge">CPA</span>
-          </div>
-        <p id="contribution-mode-text" class="contribution-mode-text">
-          当前账号将用于支持项目维护。扩展会自动申请贡献登录地址并持续跟踪授权状态；如检测到回调地址，会自动提交，无需手动复制。</p>
-        <div class="data-row contribution-mode-field">
-          <span class="data-label">贡献昵称</span>
-          <input type="text" id="input-contribution-nickname" class="data-input" placeholder="可留空，将显示为匿名贡献者" />
-        </div>
-        <div class="data-row contribution-mode-field">
-          <span class="data-label">QQ</span>
-          <input type="text" id="input-contribution-qq" class="data-input" inputmode="numeric"
-            placeholder="可留空，只能填写数字" />
-        </div>
-        <div class="contribution-mode-status-grid">
-          <div class="contribution-mode-status-card">
-            <span id="contribution-primary-status-label" class="contribution-mode-status-label">OAUTH</span>
-            <span id="contribution-oauth-status" class="contribution-mode-status-value">未生成登录地址</span>
-          </div>
-          <div class="contribution-mode-status-card">
-            <span id="contribution-secondary-status-label" class="contribution-mode-status-label">回调</span>
-            <span id="contribution-callback-status" class="contribution-mode-status-value">等待回调</span>
-          </div>
-        </div>
-        <div id="contribution-mode-summary" class="contribution-mode-summary">等待开始贡献</div>
-        <div class="contribution-mode-actions">
-          <button id="btn-start-contribution" class="btn btn-primary btn-sm" type="button">开始贡献</button>
-          <button id="btn-open-contribution-upload" class="btn btn-outline btn-sm" type="button">已有认证文件？前往上传</button>
-          <button id="btn-exit-contribution-mode" class="btn btn-ghost btn-sm" type="button">退出贡献模式</button>
         </div>
       </div>
       <div class="data-row" id="row-vps-url">
@@ -2011,7 +1978,6 @@
   <script src="../flows/grok/workflow.js"></script>
   <script src="../flows/index.js"></script>
   <script src="../core/flow-kernel/flow-registry.js"></script>
-  <script src="../shared/contribution-registry.js"></script>
   <script src="../shared/i18n/catalog.js"></script>
   <script src="../shared/i18n/runtime.js"></script>
   <script src="i18n-static.js"></script>
@@ -2020,7 +1986,7 @@
   <script src="account-delivery-control.js"></script>
   <script src="../data/step-definitions.js"></script>
   <script src="update-service.js"></script>
-  <script src="contribution-content-update-service.js"></script>
+  <script src="portal-content-update-service.js"></script>
   <script src="account-pool-ui.js"></script>
   <script src="form-dialog.js"></script>
   <script src="editable-list-picker.js"></script>
@@ -2030,7 +1996,6 @@
   <script src="icloud-manager.js"></script>
   <script src="luckmail-manager.js"></script>
   <script src="custom-email-pool-manager.js"></script>
-  <script src="contribution-mode.js"></script>
   <script src="ip-proxy-provider-711proxy.js"></script>
   <script src="ip-proxy-panel.js"></script>
   <script src="account-records-manager.js"></script>

@@ -36,19 +36,6 @@ const btnIgnoreRelease = document.getElementById('btn-ignore-release');
 const btnOpenRelease = document.getElementById('btn-open-release');
 const settingsCard = document.getElementById('settings-card');
 const selectFlow = document.getElementById('select-flow');
-const accountContributionPanel = document.getElementById('contribution-mode-panel');
-const accountContributionBadge = document.getElementById('contribution-mode-badge');
-const accountContributionText = document.getElementById('contribution-mode-text');
-const inputContributionNickname = document.getElementById('input-contribution-nickname');
-const inputContributionQq = document.getElementById('input-contribution-qq');
-const contributionPrimaryStatusLabel = document.getElementById('contribution-primary-status-label');
-const contributionSecondaryStatusLabel = document.getElementById('contribution-secondary-status-label');
-const contributionOauthStatus = document.getElementById('contribution-oauth-status');
-const contributionCallbackStatus = document.getElementById('contribution-callback-status');
-const accountContributionSummary = document.getElementById('contribution-mode-summary');
-const btnStartContribution = document.getElementById('btn-start-contribution');
-const btnOpenContributionUpload = document.getElementById('btn-open-contribution-upload');
-const btnExitContributionMode = document.getElementById('btn-exit-contribution-mode');
 const displayOauthUrl = document.getElementById('display-oauth-url');
 const displayLocalhostUrl = document.getElementById('display-localhost-url');
 const displayStatus = document.getElementById('display-status');
@@ -62,11 +49,11 @@ const btnFetchEmail = document.getElementById('btn-fetch-email');
 const btnTogglePassword = document.getElementById('btn-toggle-password');
 const btnStop = document.getElementById('btn-stop');
 const btnReset = document.getElementById('btn-reset');
-const btnContributionMode = document.getElementById('btn-contribution-mode');
-const contributionUpdateLayer = document.getElementById('contribution-update-layer');
-const contributionUpdateHint = document.getElementById('contribution-update-hint');
-const contributionUpdateHintText = document.getElementById('contribution-update-hint-text');
-const btnDismissContributionUpdateHint = document.getElementById('btn-dismiss-contribution-update-hint');
+const btnPortalTutorial = document.getElementById('btn-portal-tutorial');
+const portalUpdateLayer = document.getElementById('portal-update-layer');
+const portalUpdateHint = document.getElementById('portal-update-hint');
+const portalUpdateHintText = document.getElementById('portal-update-hint-text');
+const btnDismissPortalUpdateHint = document.getElementById('btn-dismiss-portal-update-hint');
 const autoRunAdBar = document.getElementById('auto-run-ad-bar');
 const autoRunAdViewport = document.getElementById('auto-run-ad-viewport');
 const autoRunAdTrack = document.getElementById('auto-run-ad-track');
@@ -1149,9 +1136,6 @@ function getStepDefinitionsForMode(plusModeEnabled = false, options = {}) {
   const phoneSignupReloginAfterBindEmailEnabled = typeof options === 'string'
     ? currentPhoneSignupReloginAfterBindEmailEnabled
     : Boolean(options.phoneSignupReloginAfterBindEmailEnabled ?? currentPhoneSignupReloginAfterBindEmailEnabled);
-  const accountContributionEnabled = typeof options === 'string'
-    ? Boolean(typeof latestState !== 'undefined' ? latestState?.accountContributionEnabled : false)
-    : Boolean(options.accountContributionEnabled ?? (typeof latestState !== 'undefined' ? latestState?.accountContributionEnabled : false));
   const activeFlowId = typeof options === 'string'
     ? ((typeof latestState !== 'undefined' ? latestState?.activeFlowId : '') || defaultFlowId)
     : (options.activeFlowId || (typeof latestState !== 'undefined' ? latestState?.activeFlowId : '') || defaultFlowId);
@@ -1184,8 +1168,7 @@ function getStepDefinitionsForMode(plusModeEnabled = false, options = {}) {
     grokSub2apiGrok2ApiUploadEnabled,
     settingsState,
     signupMethod: normalizeSignupMethod(rawSignupMethod),
-    phoneSignupReloginAfterBindEmailEnabled,
-    accountContributionEnabled,
+    phoneSignupReloginAfterBindEmailEnabled
   }) || [])
     .sort((left, right) => {
       const leftOrder = Number.isFinite(left.order) ? left.order : left.id;
@@ -1215,9 +1198,6 @@ function getWorkflowNodesForMode(plusModeEnabled = false, options = {}) {
   const phoneSignupReloginAfterBindEmailEnabled = typeof options === 'string'
     ? currentPhoneSignupReloginAfterBindEmailEnabled
     : Boolean(options.phoneSignupReloginAfterBindEmailEnabled ?? currentPhoneSignupReloginAfterBindEmailEnabled);
-  const accountContributionEnabled = typeof options === 'string'
-    ? Boolean(typeof latestState !== 'undefined' ? latestState?.accountContributionEnabled : false)
-    : Boolean(options.accountContributionEnabled ?? (typeof latestState !== 'undefined' ? latestState?.accountContributionEnabled : false));
   const activeFlowId = typeof options === 'string'
     ? ((typeof latestState !== 'undefined' ? latestState?.activeFlowId : '') || defaultFlowId)
     : (options.activeFlowId || (typeof latestState !== 'undefined' ? latestState?.activeFlowId : '') || defaultFlowId);
@@ -1250,8 +1230,7 @@ function getWorkflowNodesForMode(plusModeEnabled = false, options = {}) {
     grokSub2apiGrok2ApiUploadEnabled,
     settingsState,
     signupMethod: normalizeSignupMethod(rawSignupMethod),
-    phoneSignupReloginAfterBindEmailEnabled,
-    accountContributionEnabled,
+    phoneSignupReloginAfterBindEmailEnabled
   });
   if (Array.isArray(nodes) && nodes.length) {
     return nodes.slice().sort((left, right) => {
@@ -1323,10 +1302,6 @@ function rebuildStepDefinitionState(plusModeEnabled = false, options = {}) {
   const phoneSignupReloginAfterBindEmailEnabled = typeof options === 'string'
     ? currentPhoneSignupReloginAfterBindEmailEnabled
     : Boolean(options.phoneSignupReloginAfterBindEmailEnabled ?? currentPhoneSignupReloginAfterBindEmailEnabled);
-  const accountContributionEnabled = Boolean(
-    options.accountContributionEnabled
-    ?? (typeof latestState !== 'undefined' ? latestState?.accountContributionEnabled : false)
-  );
   const targetId = options.targetId || (typeof latestState !== 'undefined' ? latestState?.targetId : '');
   const openaiWebchatUploadEnabled = Boolean(
     options.openaiWebchatUploadEnabled
@@ -1372,8 +1347,7 @@ function rebuildStepDefinitionState(plusModeEnabled = false, options = {}) {
     grokSub2apiGrok2ApiUploadEnabled,
     settingsState,
     signupMethod: currentSignupMethod,
-    phoneSignupReloginAfterBindEmailEnabled: currentPhoneSignupReloginAfterBindEmailEnabled,
-    accountContributionEnabled,
+    phoneSignupReloginAfterBindEmailEnabled: currentPhoneSignupReloginAfterBindEmailEnabled
   });
   const nextWorkflowNodes = typeof getWorkflowNodesForMode === 'function'
     ? getWorkflowNodesForMode(currentPlusModeEnabled, {
@@ -1386,8 +1360,7 @@ function rebuildStepDefinitionState(plusModeEnabled = false, options = {}) {
       grokSub2apiGrok2ApiUploadEnabled,
       settingsState,
       signupMethod: currentSignupMethod,
-      phoneSignupReloginAfterBindEmailEnabled: currentPhoneSignupReloginAfterBindEmailEnabled,
-      accountContributionEnabled,
+      phoneSignupReloginAfterBindEmailEnabled: currentPhoneSignupReloginAfterBindEmailEnabled
     })
     : stepDefinitions.map((step) => ({
       nodeId: String(step.key || step.id || '').trim(),
@@ -1410,7 +1383,7 @@ function rebuildStepDefinitionState(plusModeEnabled = false, options = {}) {
     SKIPPABLE_NODES = new Set(typeof NODE_IDS !== 'undefined' ? NODE_IDS : []);
   }
 }
-const CONTRIBUTION_CONTENT_PROMPT_DISMISSED_VERSION_STORAGE_KEY = 'multipage-contribution-content-prompt-dismissed-version';
+const PORTAL_CONTENT_PROMPT_DISMISSED_VERSION_STORAGE_KEY = 'multipage-portal-content-prompt-dismissed-version';
 const AUTO_RUN_FALLBACK_RISK_WARNING_MIN_RUNS = 3;
 const HOTMAIL_SERVICE_MODE_REMOTE = 'remote';
 const HOTMAIL_SERVICE_MODE_LOCAL = 'local';
@@ -1425,7 +1398,6 @@ const DEFAULT_LUCKMAIL_EMAIL_TYPE = 'ms_graph';
 const DEFAULT_YYDS_MAIL_BASE_URL = window.YydsMailUtils?.DEFAULT_YYDS_MAIL_BASE_URL || 'https://maliapi.215.im/v1';
 const DISPLAY_TIMEZONE = 'Asia/Shanghai';
 const DEFAULT_ACCOUNT_RUN_HISTORY_HELPER_BASE_URL = 'http://127.0.0.1:17373';
-const CONTRIBUTION_UPLOAD_URL = 'https://flowpilot.qlhazycoder.top/';
 const DEFAULT_HERO_SMS_COUNTRY_ID = 52;
 const DEFAULT_HERO_SMS_COUNTRY_LABEL = 'Thailand';
 const DEFAULT_FIVE_SIM_COUNTRY_ID = 'vietnam';
@@ -1730,8 +1702,8 @@ let autoRunCountdownTimer = null;
 let configMenuOpen = false;
 let configActionInFlight = false;
 let currentReleaseSnapshot = null;
-let currentContributionContentSnapshot = null;
-let contributionContentSnapshotRequestInFlight = null;
+let currentPortalContentSnapshot = null;
+let portalContentSnapshotRequestInFlight = null;
 let autoRunAdScrollSyncFrame = 0;
 
 function normalizeAutomationWindowId(value) {
@@ -1976,7 +1948,6 @@ const TARGET_REPOSITORY_URLS = Object.freeze({
   }),
 });
 const PRIVACY_MASKED_INPUT_IDS = Object.freeze([
-  'input-contribution-qq',
   'input-sub2api-url',
   'input-sub2api-email',
   'input-sub2api-default-proxy',
@@ -2032,7 +2003,7 @@ const normalizeLuckmailTimestampValue = window.LuckMailUtils?.normalizeTimestamp
     return Number.isFinite(timestamp) ? timestamp : 0;
   });
 const sidepanelUpdateService = window.SidepanelUpdateService;
-const contributionContentService = window.SidepanelContributionContentService;
+const portalContentService = window.SidepanelPortalContentService;
 const sharedFormDialog = window.SidepanelFormDialog?.createFormDialog?.({
   overlay: sharedFormModal,
   titleNode: sharedFormModalTitle,
@@ -2437,27 +2408,30 @@ function shouldPromptNewUserGuide() {
   if (isNewUserGuidePromptDismissed()) {
     return false;
   }
-  if (!btnContributionMode || btnContributionMode.disabled) {
-    return false;
-  }
-  if (typeof isContributionModeActiveForFlow === 'function'
-    ? isContributionModeActiveForFlow(latestState)
-    : Boolean(latestState?.accountContributionEnabled)) {
+  if (!btnPortalTutorial || btnPortalTutorial.disabled) {
     return false;
   }
   return true;
 }
 
-function getContributionPortalUrl() {
-  return String(contributionContentService?.portalUrl || 'https://flowpilot.qlhazycoder.top').trim();
+function getPortalUrl() {
+  return String(portalContentService?.portalUrl || 'https://flowpilot.qlhazycoder.top').trim();
 }
 
-function getContributionContentFlowId(state = latestState) {
+function getPortalContentFlowId(state = latestState) {
   return String(state?.activeFlowId || state?.flowId || DEFAULT_ACTIVE_FLOW_ID).trim().toLowerCase() || DEFAULT_ACTIVE_FLOW_ID;
 }
 
-function getContributionContentTargetId(state = latestState) {
-  const flowId = getContributionContentFlowId(state);
+function getPortalTutorialUrl() {
+  const baseUrl = getPortalUrl().replace(/\/+$/, '');
+  const url = new URL('/tutorial', `${baseUrl}/`);
+  url.searchParams.set('flow', getPortalContentFlowId(latestState));
+  url.searchParams.set('target', getPortalContentTargetId(latestState));
+  return url.toString();
+}
+
+function getPortalContentTargetId(state = latestState) {
+  const flowId = getPortalContentFlowId(state);
   if (typeof getSelectedTargetIdForState === 'function') {
     return getSelectedTargetIdForState(state, flowId);
   }
@@ -2486,31 +2460,31 @@ async function maybeShowNewUserGuidePrompt() {
   setNewUserGuidePromptDismissed(true);
   const choice = await openNewUserGuidePrompt();
   if (choice === 'confirm') {
-    openExternalUrl(getContributionPortalUrl());
+    openExternalUrl(getPortalUrl());
     return true;
   }
   return false;
 }
 
-function getContributionContentPromptScope(snapshot = currentContributionContentSnapshot) {
+function getPortalContentPromptScope(snapshot = currentPortalContentSnapshot) {
   return {
-    flowId: String(snapshot?.flowId || getContributionContentFlowId()).trim().toLowerCase() || DEFAULT_ACTIVE_FLOW_ID,
-    targetId: String(snapshot?.targetId || getContributionContentTargetId()).trim().toLowerCase() || 'cpa',
+    flowId: String(snapshot?.flowId || getPortalContentFlowId()).trim().toLowerCase() || DEFAULT_ACTIVE_FLOW_ID,
+    targetId: String(snapshot?.targetId || getPortalContentTargetId()).trim().toLowerCase() || 'cpa',
   };
 }
 
-function getContributionContentPromptDismissedStorageKey(snapshot = currentContributionContentSnapshot) {
-  const scope = getContributionContentPromptScope(snapshot);
-  return `${CONTRIBUTION_CONTENT_PROMPT_DISMISSED_VERSION_STORAGE_KEY}:${scope.flowId}:${scope.targetId}`;
+function getPortalContentPromptDismissedStorageKey(snapshot = currentPortalContentSnapshot) {
+  const scope = getPortalContentPromptScope(snapshot);
+  return `${PORTAL_CONTENT_PROMPT_DISMISSED_VERSION_STORAGE_KEY}:${scope.flowId}:${scope.targetId}`;
 }
 
-function getDismissedContributionContentPromptVersion(snapshot = currentContributionContentSnapshot) {
-  return String(localStorage.getItem(getContributionContentPromptDismissedStorageKey(snapshot)) || '').trim();
+function getDismissedPortalContentPromptVersion(snapshot = currentPortalContentSnapshot) {
+  return String(localStorage.getItem(getPortalContentPromptDismissedStorageKey(snapshot)) || '').trim();
 }
 
-function setDismissedContributionContentPromptVersion(version, snapshot = currentContributionContentSnapshot) {
+function setDismissedPortalContentPromptVersion(version, snapshot = currentPortalContentSnapshot) {
   const normalized = String(version || '').trim();
-  const storageKey = getContributionContentPromptDismissedStorageKey(snapshot);
+  const storageKey = getPortalContentPromptDismissedStorageKey(snapshot);
   if (normalized) {
     localStorage.setItem(storageKey, normalized);
   } else {
@@ -2721,25 +2695,18 @@ async function openAutoRunFallbackRiskConfirmModal(totalRuns) {
 
 function updateConfigMenuControls() {
   const disabled = configActionInFlight || settingsSaveInFlight;
-  const accountContributionEnabled = typeof isContributionModeActiveForFlow === 'function'
-    ? isContributionModeActiveForFlow(latestState)
-    : Boolean(latestState?.accountContributionEnabled);
-  if (accountContributionEnabled && configMenuOpen) {
-    configMenuOpen = false;
-  }
   const importLocked = disabled
-    || accountContributionEnabled
     || currentAutoRun.autoRunning
     || Object.values(getStepStatuses()).some((status) => status === 'running');
   if (btnConfigMenu) {
-    btnConfigMenu.disabled = disabled || accountContributionEnabled;
+    btnConfigMenu.disabled = disabled;
     btnConfigMenu.setAttribute('aria-expanded', String(configMenuOpen));
   }
   if (configMenu) {
-    configMenu.hidden = accountContributionEnabled || !configMenuOpen;
+    configMenu.hidden = !configMenuOpen;
   }
   if (btnExportSettings) {
-    btnExportSettings.disabled = disabled || accountContributionEnabled;
+    btnExportSettings.disabled = disabled;
   }
   if (btnImportSettings) {
     btnImportSettings.disabled = importLocked;
@@ -3493,12 +3460,6 @@ function hasSavedProgress(state = latestState) {
   return Object.values(statuses).some((status) => status !== 'pending' && status !== 'disabled');
 }
 
-function isContributionModeSwitchBlocked(state = latestState) {
-  const statuses = getStepStatuses(state);
-  const anyRunning = Object.values(statuses).some((status) => status === 'running');
-  return anyRunning || isAutoRunLockedPhase() || isAutoRunPausedPhase();
-}
-
 function shouldOfferAutoModeChoice(state = latestState) {
   return hasSavedProgress(state) && getFirstUnfinishedStep(state) !== null;
 }
@@ -3587,19 +3548,6 @@ function syncLatestState(nextState) {
     : selectedTargetId;
 
   renderAccountRecords(latestState);
-}
-
-function isContributionModeActiveForFlow(state = latestState, flowId = undefined) {
-  const rawFlowId = flowId !== undefined
-    ? flowId
-    : (state?.activeFlowId || state?.flowId || DEFAULT_ACTIVE_FLOW_ID);
-  const normalizedFlowId = typeof normalizeFlowId === 'function'
-    ? normalizeFlowId(rawFlowId, DEFAULT_ACTIVE_FLOW_ID)
-    : (String(rawFlowId || DEFAULT_ACTIVE_FLOW_ID).trim().toLowerCase() || DEFAULT_ACTIVE_FLOW_ID);
-  const stateFlowId = typeof normalizeFlowId === 'function'
-    ? normalizeFlowId(state?.activeFlowId || state?.flowId || DEFAULT_ACTIVE_FLOW_ID, DEFAULT_ACTIVE_FLOW_ID)
-    : (String(state?.activeFlowId || state?.flowId || DEFAULT_ACTIVE_FLOW_ID).trim().toLowerCase() || DEFAULT_ACTIVE_FLOW_ID);
-  return normalizedFlowId === stateFlowId && Boolean(state?.accountContributionEnabled);
 }
 
 let accountRunHistoryRefreshTimer = null;
@@ -3982,19 +3930,6 @@ function syncAutoRunState(source = {}) {
     countdownTitle: readAutoRunStateValue(source, ['autoRunCountdownTitle', 'countdownTitle'], currentAutoRun.countdownTitle),
     countdownNote: readAutoRunStateValue(source, ['autoRunCountdownNote', 'countdownNote'], currentAutoRun.countdownNote),
   };
-}
-
-function isContributionButtonLocked() {
-  const autoActive = currentAutoRun.autoRunning
-    || isAutoRunLockedPhase()
-    || isAutoRunPausedPhase();
-  if (autoActive) {
-    return false;
-  }
-
-  const statuses = getStepStatuses();
-  const anyRunning = Object.values(statuses).some((status) => status === 'running');
-  return anyRunning;
 }
 
 function isAutoRunLockedPhase() {
@@ -4604,9 +4539,6 @@ function collectSettingsPayload() {
       }
       return normalized || defaultFlowId;
     })();
-  const accountContributionEnabled = typeof isContributionModeActiveForFlow === 'function'
-    ? isContributionModeActiveForFlow(latestState, activeFlowId)
-    : (activeFlowId === defaultFlowId && Boolean(latestState?.accountContributionEnabled));
   const icloudFetchModeRawValue = typeof selectIcloudFetchMode !== 'undefined'
     ? String(selectIcloudFetchMode?.value || '')
     : '';
@@ -5484,9 +5416,7 @@ function collectSettingsPayload() {
     paypalPassword: String(currentPayPalAccount?.password || latestState?.paypalPassword || ''),
     currentPayPalAccountId: String(latestState?.currentPayPalAccountId || '').trim(),
     paypalAccounts: payPalAccounts,
-    ...(accountContributionEnabled ? {} : {
-      customPassword: inputPassword.value,
-    }),
+    customPassword: inputPassword.value,
     mailProvider: selectMailProvider.value,
     mail2925Mode: getSelectedMail2925Mode(),
     mail2925UseAccountPool,
@@ -5511,10 +5441,8 @@ function collectSettingsPayload() {
     icloudFetchMode: (icloudFetchModeRawValue.trim().toLowerCase() === 'always_new'
       ? 'always_new'
       : 'reuse_existing'),
-    ...(accountContributionEnabled ? {} : {
-      accountRunHistoryTextEnabled: true,
-      accountRunHistoryHelperBaseUrl: normalizeAccountRunHistoryHelperBaseUrlValue(inputAccountRunHistoryHelperBaseUrl?.value),
-    }),
+    accountRunHistoryTextEnabled: true,
+    accountRunHistoryHelperBaseUrl: normalizeAccountRunHistoryHelperBaseUrlValue(inputAccountRunHistoryHelperBaseUrl?.value),
     ...buildManagedAliasBaseEmailPayload(),
     inbucketHost: inputInbucketHost.value.trim(),
     inbucketMailbox: inputInbucketMailbox.value.trim(),
@@ -10632,9 +10560,6 @@ function canSelectPhoneSignupMethod() {
   const plusModeEnabled = typeof inputPlusModeEnabled !== 'undefined' && inputPlusModeEnabled
     ? Boolean(inputPlusModeEnabled.checked)
     : Boolean(latestState?.plusModeEnabled);
-  const accountContributionEnabled = typeof isContributionModeActiveForFlow === 'function'
-    ? isContributionModeActiveForFlow(latestState)
-    : Boolean(latestState?.accountContributionEnabled);
   const capabilityState = typeof resolveCurrentSidepanelCapabilities === 'function'
     ? resolveCurrentSidepanelCapabilities({
       targetId: typeof getSelectedTargetId === 'function'
@@ -10642,8 +10567,7 @@ function canSelectPhoneSignupMethod() {
         : latestState?.targetId,
       state: {
         ...(typeof latestState !== 'undefined' ? latestState : {}),
-        plusModeEnabled,
-        accountContributionEnabled,
+        plusModeEnabled
       },
     })
     : (() => {
@@ -10659,8 +10583,7 @@ function canSelectPhoneSignupMethod() {
             : latestState?.targetId,
           state: {
             ...(typeof latestState !== 'undefined' ? latestState : {}),
-            plusModeEnabled,
-            accountContributionEnabled,
+            plusModeEnabled
           },
         })
         : null;
@@ -10671,7 +10594,7 @@ function canSelectPhoneSignupMethod() {
   if (capabilityState && typeof capabilityState.canSelectPhoneSignup === 'boolean') {
     return capabilityState.canSelectPhoneSignup;
   }
-  return !plusModeEnabled && !accountContributionEnabled;
+  return !plusModeEnabled;
 }
 
 function isSignupMethodSwitchLocked() {
@@ -10700,9 +10623,6 @@ function updateSignupMethodUI(options = {}) {
 
   let selectedMethod = normalizeSignupMethod(getSelectedSignupMethod());
   const phoneSelectable = canSelectPhoneSignupMethod();
-  const accountContributionEnabled = typeof isContributionModeActiveForFlow === 'function'
-    ? isContributionModeActiveForFlow(latestState)
-    : Boolean(latestState?.accountContributionEnabled);
   if (!phoneSelectable && selectedMethod === SIGNUP_METHOD_PHONE) {
     selectedMethod = setSignupMethod(SIGNUP_METHOD_EMAIL);
     if (options.notify && typeof showToast === 'function') {
@@ -10721,14 +10641,12 @@ function updateSignupMethodUI(options = {}) {
     if (method === SIGNUP_METHOD_PHONE) {
       if (typeof inputPlusModeEnabled !== 'undefined' && inputPlusModeEnabled?.checked) {
         button.title = 'Plus 模式暂不支持手机号注册';
-      } else if (accountContributionEnabled) {
-        button.title = '账号贡献开启时不能使用手机号注册';
       } else if (locked) {
         button.title = '自动流程运行中不能切换注册方式';
       } else {
         button.title = '';
       }
-    }
+      }
   });
   const stepDefinitionState = typeof resolveStepDefinitionCapabilityState === 'function'
     ? resolveStepDefinitionCapabilityState({
@@ -11560,7 +11478,7 @@ function applyAutoRunStatus(payload = currentAutoRun) {
   syncAutoRunCountdownTicker();
   updateStopButtonState(paused || locked || Object.values(getStepStatuses()).some(status => status === 'running'));
   updateConfigMenuControls();
-  renderContributionMode();
+  renderPortalUpdateHint();
 }
 
 function initializeManualStepActions() {
@@ -11649,10 +11567,6 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
         ? inputPhoneSignupReloginAfterBindEmail.checked
         : currentPhoneSignupReloginAfterBindEmailEnabled)
   );
-  const nextAccountContributionEnabled = Boolean(
-    options.accountContributionEnabled
-      ?? (typeof latestState !== 'undefined' ? latestState?.accountContributionEnabled : false)
-  );
   const nextTargetId = options.targetId || (typeof latestState !== 'undefined' ? latestState?.targetId : '');
   const nextOpenaiWebchatUploadEnabled = Boolean(
     options.openaiWebchatUploadEnabled
@@ -11708,7 +11622,6 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
     || nextAccountDeliveryRouteId !== currentDeliveryRouteId
     || nextSignupMethod !== currentSignupMethod
     || nextPhoneSignupReloginAfterBindEmailEnabled !== currentPhoneSignupReloginAfterBindEmailEnabled
-    || nextAccountContributionEnabled !== Boolean(typeof latestState !== 'undefined' ? latestState?.accountContributionEnabled : false)
     || nextOpenaiWebchatUploadEnabled !== currentOpenaiWebchatUploadEnabled
     || nextGrokSub2apiGrok2ApiUploadEnabled !== currentGrokSub2apiGrok2ApiUploadEnabled
     || nextActiveFlowId !== currentFlowId
@@ -11729,7 +11642,6 @@ function syncStepDefinitionsForMode(plusModeEnabled = false, plusPaymentMethodOr
     settingsState: nextSettingsState,
     signupMethod: nextSignupMethod,
     phoneSignupReloginAfterBindEmailEnabled: nextPhoneSignupReloginAfterBindEmailEnabled,
-    accountContributionEnabled: nextAccountContributionEnabled,
   });
   renderStepsList();
 }
@@ -11761,8 +11673,7 @@ function syncStepDefinitionsFromUiState(stateOverrides = {}) {
     settingsState: nextState?.settingsState,
     signupMethod: stepDefinitionState.signupMethod,
     phoneSignupReloginAfterBindEmailEnabled: Boolean(nextState?.phoneSignupReloginAfterBindEmailEnabled),
-    accountContributionEnabled: Boolean(nextState?.accountContributionEnabled),
-  });
+      });
   return stepDefinitionState;
 }
 
@@ -11791,8 +11702,7 @@ function applySettingsState(state) {
       grokSub2apiGrok2ApiUploadEnabled: stepDefinitionState.grokSub2apiGrok2ApiUploadEnabled,
       settingsState: state?.settingsState,
       phoneSignupReloginAfterBindEmailEnabled: Boolean(state?.phoneSignupReloginAfterBindEmailEnabled),
-      accountContributionEnabled: Boolean(state?.accountContributionEnabled),
-    });
+          });
   }
   const fallbackIpProxyService = '711proxy';
   const fallbackIpProxyMode = 'account';
@@ -12148,12 +12058,6 @@ function applySettingsState(state) {
   if (inputAccountRunHistoryHelperBaseUrl) {
     inputAccountRunHistoryHelperBaseUrl.value = normalizeAccountRunHistoryHelperBaseUrlValue(state?.accountRunHistoryHelperBaseUrl);
   }
-  if (inputContributionNickname) {
-    inputContributionNickname.value = state?.contributionNickname || '';
-  }
-  if (inputContributionQq) {
-    inputContributionQq.value = state?.contributionQq || '';
-  }
   if (inputMail2925UseAccountPool) {
     inputMail2925UseAccountPool.checked = Boolean(state?.mail2925UseAccountPool);
   }
@@ -12478,7 +12382,7 @@ async function restoreState() {
 
     updateStatusDisplay(latestState);
     updateProgressCounter();
-    renderContributionMode();
+    renderPortalUpdateHint();
   } catch (err) {
     console.error('Failed to restore state:', err);
     if (typeof applyOperationDelayState === 'function') {
@@ -12558,7 +12462,7 @@ function ignoreCurrentReleaseUpdate() {
 }
 
 function openCloudflareTempEmailUsageGuidePage() {
-  const targetUrl = getContributionPortalUrl();
+  const targetUrl = getPortalUrl();
   if (!targetUrl) {
     return;
   }
@@ -12776,8 +12680,8 @@ async function initializeReleaseInfo() {
   renderReleaseSnapshot(snapshot);
 }
 
-function getContributionUpdateHintMessage(snapshot = currentContributionContentSnapshot) {
-  const lines = getContributionUpdatePromptLines(snapshot);
+function getPortalUpdateHintMessage(snapshot = currentPortalContentSnapshot) {
+  const lines = getPortalUpdatePromptLines(snapshot);
   if (!lines.length) {
     return '';
   }
@@ -12787,7 +12691,7 @@ function getContributionUpdateHintMessage(snapshot = currentContributionContentS
   return lines.map((line, index) => `${index + 1}. ${line}`).join('\n');
 }
 
-function getContributionUpdatePromptLines(snapshot = currentContributionContentSnapshot) {
+function getPortalUpdatePromptLines(snapshot = currentPortalContentSnapshot) {
   if (!snapshot?.promptVersion) {
     return [];
   }
@@ -12815,7 +12719,7 @@ function getContributionUpdatePromptLines(snapshot = currentContributionContentS
 
   const lines = [];
   if (hasAnnouncementOrTutorial) {
-    lines.push('公告 / 使用教程有更新了，可点上方“贡献/使用”查看。');
+    lines.push('公告 / 使用教程有更新了，可点上方“使用教程”查看。');
   }
   if (hasQuestionnaire) {
     lines.push('有新的征求意见，请佬友共同参与选择。');
@@ -12823,7 +12727,7 @@ function getContributionUpdatePromptLines(snapshot = currentContributionContentS
   return lines;
 }
 
-function getAutoRunAdConfig(snapshot = currentContributionContentSnapshot) {
+function getAutoRunAdConfig(snapshot = currentPortalContentSnapshot) {
   const items = Array.isArray(snapshot?.items) ? snapshot.items : [];
   const adItem = items.find((item) =>
     item
@@ -12973,19 +12877,19 @@ function renderAutoRunAdSegments(container, segments = [], options = {}) {
   }
 }
 
-function positionContributionUpdateHint() {
-  if (!contributionUpdateLayer || !contributionUpdateHint || !btnContributionMode) {
+function positionPortalUpdateHint() {
+  if (!portalUpdateLayer || !portalUpdateHint || !btnPortalTutorial) {
     return;
   }
-  if (contributionUpdateLayer.hidden || contributionUpdateHint.hidden) {
+  if (portalUpdateLayer.hidden || portalUpdateHint.hidden) {
     return;
   }
 
-  const buttonRect = btnContributionMode.getBoundingClientRect();
+  const buttonRect = btnPortalTutorial.getBoundingClientRect();
   const viewportWidth = Math.max(document.documentElement?.clientWidth || 0, window.innerWidth || 0);
   const viewportHeight = Math.max(document.documentElement?.clientHeight || 0, window.innerHeight || 0);
-  const hintWidth = contributionUpdateHint.offsetWidth || 220;
-  const hintHeight = contributionUpdateHint.offsetHeight || 56;
+  const hintWidth = portalUpdateHint.offsetWidth || 220;
+  const hintHeight = portalUpdateHint.offsetHeight || 56;
   const viewportPadding = 12;
   const gap = 10;
 
@@ -12999,51 +12903,46 @@ function positionContributionUpdateHint() {
   const buttonCenter = Math.round(buttonRect.left + (buttonRect.width / 2));
   const arrowOffset = Math.min(Math.max(16, buttonCenter - left), Math.max(16, hintWidth - 16));
 
-  contributionUpdateHint.style.left = `${left}px`;
-  contributionUpdateHint.style.top = `${top}px`;
-  contributionUpdateHint.style.setProperty('--contribution-update-arrow-left', `${arrowOffset}px`);
+  portalUpdateHint.style.left = `${left}px`;
+  portalUpdateHint.style.top = `${top}px`;
+  portalUpdateHint.style.setProperty('--portal-update-arrow-left', `${arrowOffset}px`);
 }
 
-function shouldShowContributionUpdateHint(snapshot = currentContributionContentSnapshot) {
+function shouldShowPortalUpdateHint(snapshot = currentPortalContentSnapshot) {
   const promptVersion = String(snapshot?.promptVersion || '').trim();
-  if (!contributionUpdateLayer || !contributionUpdateHint || !contributionUpdateHintText || !btnContributionMode) {
+  if (!portalUpdateLayer || !portalUpdateHint || !portalUpdateHintText || !btnPortalTutorial) {
     return false;
   }
   if (!promptVersion) {
     return false;
   }
-  if (!getContributionUpdatePromptLines(snapshot).length) {
+  if (!getPortalUpdatePromptLines(snapshot).length) {
     return false;
   }
-  if (promptVersion === getDismissedContributionContentPromptVersion(snapshot)) {
+  if (promptVersion === getDismissedPortalContentPromptVersion(snapshot)) {
     return false;
   }
-  if (typeof isContributionModeActiveForFlow === 'function'
-    ? isContributionModeActiveForFlow(latestState)
-    : Boolean(latestState?.accountContributionEnabled)) {
-    return false;
-  }
-  return !btnContributionMode.disabled;
+  return !btnPortalTutorial.disabled;
 }
 
-function renderContributionUpdateHint(snapshot = currentContributionContentSnapshot) {
-  if (!contributionUpdateLayer || !contributionUpdateHint) {
+function renderPortalUpdateHint(snapshot = currentPortalContentSnapshot) {
+  if (!portalUpdateLayer || !portalUpdateHint) {
     return;
   }
 
-  const visible = shouldShowContributionUpdateHint(snapshot);
-  contributionUpdateLayer.hidden = !visible;
-  contributionUpdateHint.hidden = !visible;
-  if (!visible || !contributionUpdateHintText) {
+  const visible = shouldShowPortalUpdateHint(snapshot);
+  portalUpdateLayer.hidden = !visible;
+  portalUpdateHint.hidden = !visible;
+  if (!visible || !portalUpdateHintText) {
     return;
   }
 
-  contributionUpdateHintText.textContent = getContributionUpdateHintMessage(snapshot);
+  portalUpdateHintText.textContent = getPortalUpdateHintMessage(snapshot);
   if (typeof window.requestAnimationFrame === 'function') {
-    window.requestAnimationFrame(() => positionContributionUpdateHint());
+    window.requestAnimationFrame(() => positionPortalUpdateHint());
     return;
   }
-  positionContributionUpdateHint();
+  positionPortalUpdateHint();
 }
 
 function resetAutoRunAdScrollState() {
@@ -13102,7 +13001,7 @@ function scheduleAutoRunAdScrollSync() {
   syncAutoRunAdScrollState();
 }
 
-function renderAutoRunAd(snapshot = currentContributionContentSnapshot) {
+function renderAutoRunAd(snapshot = currentPortalContentSnapshot) {
   if (!autoRunAdBar || !autoRunAdText || !autoRunAdTextClone) {
     return;
   }
@@ -13126,53 +13025,50 @@ function renderAutoRunAd(snapshot = currentContributionContentSnapshot) {
   scheduleAutoRunAdScrollSync();
 }
 
-function dismissContributionUpdateHint() {
-  const promptVersion = String(currentContributionContentSnapshot?.promptVersion || '').trim();
+function dismissPortalUpdateHint() {
+  const promptVersion = String(currentPortalContentSnapshot?.promptVersion || '').trim();
   if (promptVersion) {
-    setDismissedContributionContentPromptVersion(promptVersion);
+    setDismissedPortalContentPromptVersion(promptVersion);
   }
-  renderContributionUpdateHint();
+  renderPortalUpdateHint();
 }
 
-async function refreshContributionContentHint() {
-  if (!contributionContentService?.getContentUpdateSnapshot) {
-    currentContributionContentSnapshot = null;
-    renderContributionUpdateHint();
+async function refreshPortalContentHint() {
+  if (!portalContentService?.getContentUpdateSnapshot) {
+    currentPortalContentSnapshot = null;
+    renderPortalUpdateHint();
     renderAutoRunAd();
     return null;
   }
-  if (contributionContentSnapshotRequestInFlight) {
-    return contributionContentSnapshotRequestInFlight;
+  if (portalContentSnapshotRequestInFlight) {
+    return portalContentSnapshotRequestInFlight;
   }
 
-  contributionContentSnapshotRequestInFlight = contributionContentService.getContentUpdateSnapshot({
-    flowId: getContributionContentFlowId(),
-    targetId: getContributionContentTargetId(),
+  portalContentSnapshotRequestInFlight = portalContentService.getContentUpdateSnapshot({
+    flowId: getPortalContentFlowId(),
+    targetId: getPortalContentTargetId(),
   })
     .then((snapshot) => {
-      currentContributionContentSnapshot = snapshot;
-      renderContributionUpdateHint(snapshot);
+      currentPortalContentSnapshot = snapshot;
+      renderPortalUpdateHint(snapshot);
       renderAutoRunAd(snapshot);
       return snapshot;
     })
     .catch((error) => {
-      currentContributionContentSnapshot = null;
-      renderContributionUpdateHint(null);
+      currentPortalContentSnapshot = null;
+      renderPortalUpdateHint(null);
       renderAutoRunAd(null);
       throw error;
     })
     .finally(() => {
-      contributionContentSnapshotRequestInFlight = null;
+      portalContentSnapshotRequestInFlight = null;
     });
 
-  return contributionContentSnapshotRequestInFlight;
+  return portalContentSnapshotRequestInFlight;
 }
 
 function syncPasswordField(state) {
-  const accountContributionEnabled = typeof isContributionModeActiveForFlow === 'function'
-    ? isContributionModeActiveForFlow(state)
-    : Boolean(state?.accountContributionEnabled);
-  inputPassword.value = accountContributionEnabled ? '' : (state.customPassword || state.password || '');
+  inputPassword.value = state.customPassword || state.password || '';
 }
 
 function isCustomMailProvider(provider = selectMailProvider.value) {
@@ -14663,10 +14559,9 @@ function updateButtonStates() {
     selectIcloudFetchMode.disabled = disableIcloudControls || !allowIcloudFetchMode;
   }
   if (checkboxAutoDeleteIcloud) checkboxAutoDeleteIcloud.disabled = disableIcloudControls;
-  if (btnContributionMode) btnContributionMode.disabled = isContributionButtonLocked();
   applyStepExecutionRangeState(latestState);
   updateStopButtonState(anyRunning || isAutoRunPausedPhase() || autoLocked);
-  renderContributionMode();
+  renderPortalUpdateHint();
 }
 
 function updateStopButtonState(active) {
@@ -15420,87 +15315,13 @@ const bindAccountRecordEvents = accountRecordsManager?.bindEvents
 const closeAccountRecordsPanel = accountRecordsManager?.closePanel
   || (() => { });
 bindAccountRecordEvents();
-const accountContributionManager = window.SidepanelContributionMode?.createContributionModeManager({
-  state: {
-    getLatestState: () => latestState,
-  },
-  dom: {
-    btnConfigMenu,
-    btnContributionMode,
-    inputContributionNickname,
-    inputContributionQq,
-    contributionPrimaryStatusLabel,
-    contributionSecondaryStatusLabel,
-    contributionCallbackStatus,
-    btnExitContributionMode,
-    btnOpenAccountRecords,
-    btnOpenContributionUpload,
-    btnStartContribution,
-    accountContributionBadge,
-    accountContributionPanel,
-    accountContributionSummary,
-    accountContributionText,
-    contributionOauthStatus,
-    rowAccountRunHistoryHelperBaseUrl,
-    rowPhoneVerificationSettings,
-    rowCustomPassword,
-    rowLocalCpaStep9Mode,
-    rowSub2ApiAccountPriority,
-    rowSub2ApiDefaultProxy,
-    rowSub2ApiEmail,
-    rowSub2ApiConnectionTest,
-    rowSub2ApiGroup,
-    rowSub2ApiPassword,
-    rowSub2ApiUrl,
-    rowVpsPassword,
-    rowVpsUrl,
-    selectPanelMode,
-  },
-  helpers: {
-    applySettingsState,
-    closeAccountRecordsPanel,
-    closeConfigMenu,
-    getContributionNickname: () => latestState?.email || '',
-    getContributionProfile: () => ({
-      nickname: String(inputContributionNickname?.value || '').trim(),
-      qq: String(inputContributionQq?.value || '').trim(),
-    }),
-    getSelectedFlowId: () => (typeof getSelectedFlowId === 'function'
-      ? getSelectedFlowId(latestState)
-      : String(latestState?.activeFlowId || latestState?.flowId || DEFAULT_ACTIVE_FLOW_ID).trim().toLowerCase() || DEFAULT_ACTIVE_FLOW_ID),
-    getSelectedTargetId: (flowId, state = latestState) => (typeof getSelectedTargetIdForState === 'function'
-      ? getSelectedTargetIdForState(state, flowId)
-      : normalizeTargetIdForFlow(flowId, state?.targetId || '', getDefaultTargetIdForFlow(flowId))),
-    isModeSwitchBlocked: isContributionModeSwitchBlocked,
-    openConfirmModal,
-    openExternalUrl,
-    persistCurrentSettingsForAction,
-    showToast,
-    startContributionAutoRun: () => startAutoRunFromCurrentSettings(),
-    updateAccountRunHistorySettingsUI,
-    updateConfigMenuControls,
-    updatePanelModeUI,
-    updateStatusDisplay,
-  },
-  runtime: {
-    sendMessage: (message) => chrome.runtime.sendMessage(message),
-  },
-  constants: {
-    contributionOauthUrl: `${String(contributionContentService?.portalUrl || 'https://flowpilot.qlhazycoder.top').replace(/\/+$/, '')}/oauth/`,
-    contributionPortalUrl: String(contributionContentService?.portalUrl || 'https://flowpilot.qlhazycoder.top').replace(/\/+$/, ''),
-    contributionUploadUrl: `${String(contributionContentService?.portalUrl || 'https://flowpilot.qlhazycoder.top').replace(/\/+$/, '')}/upload`,
-  },
+btnPortalTutorial?.addEventListener('click', () => {
+  try {
+    openExternalUrl(getPortalTutorialUrl());
+  } catch (error) {
+    showToast('打开官网使用教程失败：' + error.message, 'error');
+  }
 });
-const baseRenderAccountContribution = accountContributionManager?.render
-  || (() => { });
-const renderContributionMode = () => {
-  baseRenderAccountContribution();
-  renderContributionUpdateHint();
-  updateSignupMethodUI({ notify: true });
-};
-const bindAccountContributionEvents = accountContributionManager?.bindEvents
-  || (() => { });
-bindAccountContributionEvents();
 renderStepsList();
 
 async function exportSettingsFile() {
@@ -15911,9 +15732,9 @@ extensionUpdateStatus?.addEventListener('click', () => {
   openReleaseListPage();
 });
 
-btnDismissContributionUpdateHint?.addEventListener('click', (event) => {
+btnDismissPortalUpdateHint?.addEventListener('click', (event) => {
   event.stopPropagation();
-  dismissContributionUpdateHint();
+  dismissPortalUpdateHint();
 });
 
 configMenu?.addEventListener('click', (event) => {
@@ -15980,8 +15801,8 @@ async function startAutoRunFromCurrentSettings() {
   registerPendingAutoRunStartRunCount(requestedTotalRuns);
 
   // 站点内容刷新只影响提示/广告展示，不应阻塞自动流程启动。
-  refreshContributionContentHint().catch((error) => {
-    console.warn('Failed to refresh contribution content hint before auto run:', error);
+  refreshPortalContentHint().catch((error) => {
+    console.warn('Failed to refresh portal content hint before auto run:', error);
   });
 
   if (typeof persistCurrentSettingsForAction === 'function') {
@@ -16004,8 +15825,7 @@ async function startAutoRunFromCurrentSettings() {
       plusModeEnabled: typeof inputPlusModeEnabled !== 'undefined' && inputPlusModeEnabled
         ? Boolean(inputPlusModeEnabled.checked)
         : Boolean(latestState?.plusModeEnabled),
-      accountContributionEnabled: Boolean(latestState?.accountContributionEnabled),
-    };
+          };
     return registry.validateAutoRunStart({
       activeFlowId: validationState.activeFlowId,
       targetId: validationState.targetId,
@@ -16032,8 +15852,6 @@ async function startAutoRunFromCurrentSettings() {
   }
   let mode = 'restart';
   const autoRunSkipFailures = inputAutoSkipFailures.checked;
-  const contributionNickname = String(inputContributionNickname?.value || '').trim();
-  const contributionQq = String(inputContributionQq?.value || '').trim();
   const fallbackThreadIntervalMinutes = normalizeAutoRunThreadIntervalMinutes(
     inputAutoSkipFailuresThreadIntervalMinutes.value
   );
@@ -16085,10 +15903,6 @@ async function startAutoRunFromCurrentSettings() {
         ? Boolean(inputPlusModeEnabled.checked)
         : Boolean(latestState?.plusModeEnabled),
       autoRunSkipFailures,
-      accountContributionEnabled: Boolean(latestState?.accountContributionEnabled),
-      contributionAdapterId: latestState?.contributionAdapterId || '',
-      contributionNickname,
-      contributionQq,
       mode,
     },
   });
@@ -18819,7 +18633,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           applyOperationDelayState(message.payload);
         }
         updateAccountRunHistorySettingsUI();
-        renderContributionMode();
+        renderPortalUpdateHint();
         void syncPlusManualConfirmationDialog();
         break;
       }
@@ -18842,7 +18656,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       if (
         message.payload.password !== undefined
         || message.payload.customPassword !== undefined
-        || message.payload.accountContributionEnabled !== undefined
       ) {
         syncPasswordField(latestState || {});
       }
@@ -19555,7 +19368,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         });
       }
       updateAccountRunHistorySettingsUI();
-      renderContributionMode();
+      renderPortalUpdateHint();
       void syncPlusManualConfirmationDialog();
       break;
     }
@@ -19678,12 +19491,12 @@ document.addEventListener('keydown', (event) => {
 });
 
 window.addEventListener('resize', () => {
-  positionContributionUpdateHint();
+  positionPortalUpdateHint();
   scheduleAutoRunAdScrollSync();
 });
 
 document.addEventListener('scroll', () => {
-  positionContributionUpdateHint();
+  positionPortalUpdateHint();
 }, true);
 
 // ============================================================
@@ -19739,9 +19552,9 @@ Promise.allSettled([
     updatePanelModeUI();
     updateButtonStates();
     updateStatusDisplay(latestState);
-    return refreshContributionContentHint()
+    return refreshPortalContentHint()
       .catch((error) => {
-        console.warn('Failed to refresh contribution content hint during initialization:', error);
+        console.warn('Failed to refresh portal content hint during initialization:', error);
         return null;
       })
       .then(() => maybeShowNewUserGuidePrompt());

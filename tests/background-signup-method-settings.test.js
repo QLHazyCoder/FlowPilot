@@ -59,7 +59,6 @@ let state = {
   targetId: 'cpa',
   signupMethod: 'phone',
   plusModeEnabled: false,
-  accountContributionEnabled: false,
   resolvedSignupMethod: null,
 };
 async function getState() { return { ...state }; }

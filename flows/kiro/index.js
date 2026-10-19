@@ -24,12 +24,6 @@
     "supportsPhoneSignup": false,
     "supportsPhoneVerificationSettings": false,
     "supportsPlusMode": false,
-    "supportsContributionMode": false,
-    "supportsAccountContribution": true,
-    "supportsOpenAiOAuthContribution": false,
-    "contributionAdapterIds": [
-      "kiro-builder-id"
-    ],
     "supportedTargetIds": [
       "kiro-rs"
     ],

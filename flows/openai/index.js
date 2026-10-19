@@ -24,14 +24,6 @@
     "supportsPhoneSignup": true,
     "supportsPhoneVerificationSettings": true,
     "supportsPlusMode": false,
-    "supportsContributionMode": true,
-    "supportsAccountContribution": true,
-    "supportsOpenAiOAuthContribution": true,
-    "contributionAdapterIds": [
-      "openai-oauth",
-      "openai-codex-file",
-      "openai-sub2api-file"
-    ],
     "supportedTargetIds": [
       "cpa",
       "sub2api",

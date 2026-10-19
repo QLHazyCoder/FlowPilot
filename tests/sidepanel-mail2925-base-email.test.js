@@ -154,7 +154,6 @@ test('collectSettingsPayload persists currentMail2925AccountId for 2925 account 
 
   const api = new Function('normalizeIcloudTargetMailboxType', 'normalizeIcloudForwardMailProvider', `
 let latestState = {
-  accountContributionEnabled: false,
   mail2925UseAccountPool: true,
   currentMail2925AccountId: 'acc-2',
 };

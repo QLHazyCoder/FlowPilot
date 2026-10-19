@@ -55,7 +55,7 @@ function createApi(events, lastNodeId = 'platform-verify', initialState = {}, op
   return new Function('events', 'lastNodeId', 'initialState', 'options', `
 let stopRequested = false;
 const LOG_PREFIX = '[test]';
-let currentState = { nodeStatuses: {}, accountContributionEnabled: true, ...initialState };
+let currentState = { nodeStatuses: {}, ...initialState };
 const STOP_ERROR_MESSAGE = '流程已被用户停止。';
 function getErrorMessage(error) {
   return error?.message || String(error || '');
