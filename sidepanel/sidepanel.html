@@ -1400,13 +1400,17 @@
             </div>
             <div class="data-row" id="row-phone-sms-provider" style="display:none;">
               <span class="data-label">接码服务商</span>
-              <select id="select-phone-sms-provider" class="data-select mono">
-                <option value="hero-sms">HeroSMS</option>
-                <option value="5sim">5sim</option>
-                <option value="nexsms">NexSMS</option>
-                <option value="madao">MaDao</option>
-                <option value="custom-url">自定义 URL 接码</option>
-              </select>
+              <div class="data-inline">
+                <select id="select-phone-sms-provider" class="data-select mono">
+                  <option value="hero-sms">HeroSMS</option>
+                  <option value="5sim">5sim</option>
+                  <option value="nexsms">NexSMS</option>
+                  <option value="madao">MaDao</option>
+                  <option value="custom-url">自定义 URL 接码</option>
+                </select>
+                <button id="btn-open-phone-sms-provider-repository" class="btn btn-outline btn-sm data-inline-btn"
+                  type="button" aria-label="打开 MaDao 项目 GitHub 仓库" title="打开 MaDao 项目 GitHub 仓库" hidden>GitHub</button>
+              </div>
             </div>
             <div class="data-row" id="row-phone-sms-provider-order" style="display:none;">
               <span class="data-label">服务商顺序</span>

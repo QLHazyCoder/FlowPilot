@@ -79,6 +79,10 @@ test('sidepanel html exposes mandatory phone verification settings and multi-pro
   assert.match(html, /data-signup-method="phone"/);
   assert.match(html, /id="row-phone-sms-provider"/);
   assert.match(html, /id="select-phone-sms-provider"/);
+  assert.match(
+    html,
+    /id="btn-open-phone-sms-provider-repository"[^>]*class="btn btn-outline btn-sm data-inline-btn"[^>]*hidden>GitHub<\/button>/
+  );
   assert.match(html, /id="row-phone-sms-provider-order"/);
   assert.match(html, /id="select-phone-sms-provider-order"[^>]*multiple/);
   assert.match(html, /id="btn-phone-sms-provider-order-menu"/);
@@ -187,6 +191,60 @@ test('sidepanel html exposes mandatory phone verification settings and multi-pro
   assert.match(html, /id="input-madao-max-price"/);
   assert.doesNotMatch(html, /id="btn-open-madao-github"/);
   assert.doesNotMatch(html, /id="input-account-run-history-text-enabled"/);
+});
+
+test('MaDao provider shows a repository button and opens the configured project URL', () => {
+  assert.match(sidepanelSource, /\[PHONE_SMS_PROVIDER_MADAO\]:\s*'https:\/\/github\.com\/QLHazyCoder\/MaDao'/);
+  assert.match(sidepanelSource, /btnOpenPhoneSmsProviderRepository\?\.addEventListener\('click'/);
+
+  const bundle = [
+    extractFunction('getPhoneSmsProviderRepositoryUrl'),
+    extractFunction('updatePhoneSmsProviderRepositoryButton'),
+  ].join('\n');
+
+  const api = new Function(`
+const PHONE_SMS_PROVIDER_MADAO = 'madao';
+const PHONE_SMS_PROVIDER_REPOSITORY_URLS = Object.freeze({
+  [PHONE_SMS_PROVIDER_MADAO]: 'https://github.com/QLHazyCoder/MaDao',
+});
+const button = {
+  hidden: false,
+  disabled: true,
+  dataset: {},
+  title: '',
+  setAttribute(name, value) { this[name] = value; },
+};
+const btnOpenPhoneSmsProviderRepository = button;
+function normalizePhoneSmsProvider(value) {
+  return String(value || '').trim().toLowerCase() || 'hero-sms';
+}
+function getSelectedPhoneSmsProvider() {
+  return 'madao';
+}
+function getPhoneSmsProviderLabel(value) {
+  return value === 'madao' ? 'MaDao' : value;
+}
+${bundle}
+return {
+  button,
+  getPhoneSmsProviderRepositoryUrl,
+  updatePhoneSmsProviderRepositoryButton,
+};
+`)();
+
+  assert.equal(api.getPhoneSmsProviderRepositoryUrl('madao'), 'https://github.com/QLHazyCoder/MaDao');
+  assert.equal(api.getPhoneSmsProviderRepositoryUrl('5sim'), '');
+
+  api.updatePhoneSmsProviderRepositoryButton('madao');
+  assert.equal(api.button.hidden, false);
+  assert.equal(api.button.disabled, false);
+  assert.equal(api.button.dataset.repositoryUrl, 'https://github.com/QLHazyCoder/MaDao');
+  assert.equal(api.button['aria-label'], '打开 MaDao 项目 GitHub 仓库');
+
+  api.updatePhoneSmsProviderRepositoryButton('5sim');
+  assert.equal(api.button.hidden, true);
+  assert.equal(api.button.disabled, true);
+  assert.equal(api.button.dataset.repositoryUrl, '');
 });
 
 test('sidepanel loads live SMS country lists silently during startup', () => {

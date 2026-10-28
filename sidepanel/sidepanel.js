@@ -453,6 +453,7 @@ const rowHeroSmsOperator = document.getElementById('row-hero-sms-operator');
 const rowHeroSmsApiKey = document.getElementById('row-hero-sms-api-key');
 const rowHeroSmsMaxPrice = document.getElementById('row-hero-sms-max-price');
 const rowPhoneSmsProvider = document.getElementById('row-phone-sms-provider');
+const btnOpenPhoneSmsProviderRepository = document.getElementById('btn-open-phone-sms-provider-repository');
 const rowPhoneSmsProviderOrder = document.getElementById('row-phone-sms-provider-order');
 const rowPhoneSmsProviderOrderActions = document.getElementById('row-phone-sms-provider-order-actions');
 const rowFiveSimApiKey = document.getElementById('row-five-sim-api-key');
@@ -1946,6 +1947,9 @@ const TARGET_REPOSITORY_URLS = Object.freeze({
     grok2api: 'https://github.com/jiujiu532/grok2api',
     sub2api: 'https://github.com/Wei-Shaw/sub2api',
   }),
+});
+const PHONE_SMS_PROVIDER_REPOSITORY_URLS = Object.freeze({
+  [PHONE_SMS_PROVIDER_MADAO]: 'https://github.com/QLHazyCoder/MaDao',
 });
 const PRIVACY_MASKED_INPUT_IDS = Object.freeze([
   'input-sub2api-url',
@@ -10311,6 +10315,28 @@ function updateTargetRepositoryButton(flowId = getSelectedFlowId(), targetId = g
   btnOpenTargetRepository.title = title;
 }
 
+function getPhoneSmsProviderRepositoryUrl(provider = getSelectedPhoneSmsProvider()) {
+  const normalizedProvider = normalizePhoneSmsProvider(provider);
+  return PHONE_SMS_PROVIDER_REPOSITORY_URLS[normalizedProvider] || '';
+}
+
+function updatePhoneSmsProviderRepositoryButton(provider = getSelectedPhoneSmsProvider()) {
+  if (!btnOpenPhoneSmsProviderRepository) {
+    return;
+  }
+  const repositoryUrl = getPhoneSmsProviderRepositoryUrl(provider);
+  const hasRepositoryUrl = Boolean(repositoryUrl);
+  btnOpenPhoneSmsProviderRepository.hidden = !hasRepositoryUrl;
+  btnOpenPhoneSmsProviderRepository.disabled = !hasRepositoryUrl;
+  btnOpenPhoneSmsProviderRepository.dataset.repositoryUrl = repositoryUrl;
+  const providerLabel = getPhoneSmsProviderLabel(provider);
+  const title = hasRepositoryUrl
+    ? `打开 ${providerLabel} 项目 GitHub 仓库`
+    : `${providerLabel} 暂未配置项目仓库`;
+  btnOpenPhoneSmsProviderRepository.setAttribute('aria-label', title);
+  btnOpenPhoneSmsProviderRepository.title = title;
+}
+
 function renderFlowSelectorOptions(selectedFlowId = getSelectedFlowId()) {
   if (!selectFlow) {
     return [];
@@ -10808,6 +10834,9 @@ function updatePhoneVerificationSettingsUI() {
   getProviderUiRows(provider).forEach((row) => {
     row.style.display = showSettings ? '' : 'none';
   });
+  if (typeof updatePhoneSmsProviderRepositoryButton === 'function') {
+    updatePhoneSmsProviderRepositoryButton();
+  }
   updateProviderPriceControls(provider, showSettings);
   if (typeof rowPhoneSignupReloginAfterBindEmail !== 'undefined' && rowPhoneSignupReloginAfterBindEmail) {
     rowPhoneSignupReloginAfterBindEmail.style.display = showPhoneSignupReloginAfterBindEmail ? '' : 'none';
@@ -16175,6 +16204,14 @@ btnOpenTargetRepository?.addEventListener('click', () => {
   }
 });
 
+btnOpenPhoneSmsProviderRepository?.addEventListener('click', () => {
+  const repositoryUrl = btnOpenPhoneSmsProviderRepository.dataset.repositoryUrl
+    || getPhoneSmsProviderRepositoryUrl();
+  if (repositoryUrl) {
+    openExternalUrl(repositoryUrl);
+  }
+});
+
 btnTestKiroRs?.addEventListener('click', async () => {
   const defaultLabel = btnTestKiroRs.textContent || '测试';
   btnTestKiroRs.disabled = true;
@@ -17769,6 +17806,9 @@ async function switchPhoneSmsProvider(nextProvider) {
 
   syncLatestState(patch);
   setPhoneSmsProviderSelectValue(normalizedNextProvider);
+  if (typeof updatePhoneSmsProviderRepositoryButton === 'function') {
+    updatePhoneSmsProviderRepositoryButton(normalizedNextProvider);
+  }
   const nextProviderOrder = setPhoneSmsProviderOrderPrimary(normalizedNextProvider);
   syncLatestState({ phoneSmsProviderOrder: nextProviderOrder });
   heroSmsCountrySelectionOrder = [];
