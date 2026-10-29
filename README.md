@@ -1,14 +1,8 @@
 # FlowPilot
 
-`FlowPilot` 是一个 Chrome 侧边栏扩展，用来批量处理 ChatGPT / OpenAI 账号注册、授权和多目标账号交付流程。
+`FlowPilot` 是一个 Chrome 侧边栏扩展，用来处理 ChatGPT / OpenAI /Kiro / Grok 账号注册、授权和多目标账号交付流程。
 
-它的定位不是“单个按钮脚本”，而是把注册、验证码、OAuth、账号交付、自动重试和记录管理放进同一套可持续使用的工具里；Plus 底层流程暂存，但当前不提供用户入口。
-
-## 插件效果
-
-一百五十个号，一个 401：
-
-<div align="center">
+它的定位不是“单个按钮脚本”，而是把注册、验证码、OAuth、账号交付、自动重试和记录管理放进同一套可持续使用的工具里。
 
 # 交流群请进官网查看
 
@@ -77,10 +71,6 @@
 - `Codex2API` 固定使用 `OAuth`；`webchat` 和 `ChatGPT2API` 固定使用 ChatGPT Session，因此不会显示多余的选择控件。
 - `Agent Identity` 会先完成 SUB2API 配置预检，再在内存中生成身份并导入；原始 ChatGPT access token、私钥和完整敏感载荷不会写入持久设置或日志。
 - 账号交付方式在 workflow 运行期间和设置锁定期间不可编辑。
-
-## Plus 状态
-
-Plus 当前暂时不可用：侧边栏和启动入口均隐藏/关闭 Plus，旧配置也会被强制归一为关闭。PayPal、Hosted 和免支付底层实现仅作为后续恢复所需的 dormant 代码保留。
 
 ## 自动化能力
 
