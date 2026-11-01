@@ -6813,6 +6813,26 @@ function summarizeCloudflareTempEmailMessagesForLog(messages) {
     .join(' || ');
 }
 
+function buildCloudflareTempEmailMailSearchParams(options = {}) {
+  const {
+    address = '',
+    originalRecipient = '',
+    limit,
+    offset,
+    useRegistrationLookup = false,
+  } = options;
+  const searchParams = {
+    limit: Number(limit) || CLOUDFLARE_TEMP_EMAIL_DEFAULT_PAGE_SIZE,
+    offset: Number(offset) || 0,
+    address: useRegistrationLookup ? '' : normalizeCloudflareTempEmailAddress(address),
+  };
+  const normalizedOriginalRecipient = normalizeCloudflareTempEmailReceiveMailbox(originalRecipient);
+  if (useRegistrationLookup && normalizedOriginalRecipient) {
+    searchParams.original_recipient = normalizedOriginalRecipient;
+  }
+  return searchParams;
+}
+
 async function deleteCloudflareTempEmailMail(config, mailId) {
   const normalizedMailId = String(mailId || '').trim();
   if (!normalizedMailId) return false;
@@ -6834,14 +6854,16 @@ async function listCloudflareTempEmailMessages(state, options = {}) {
   );
   const useRegistrationLookup = lookupMode === CLOUDFLARE_TEMP_EMAIL_LOOKUP_MODE_REGISTRATION_EMAIL
     && Boolean(originalRecipient);
-  const queryAddress = useRegistrationLookup ? '' : address;
+  const searchParams = buildCloudflareTempEmailMailSearchParams({
+    address,
+    originalRecipient,
+    limit: options.limit,
+    offset: options.offset,
+    useRegistrationLookup,
+  });
   const payload = await requestCloudflareTempEmailJson(config, '/admin/mails', {
     method: 'GET',
-    searchParams: {
-      limit: Number(options.limit) || CLOUDFLARE_TEMP_EMAIL_DEFAULT_PAGE_SIZE,
-      offset: Number(options.offset) || 0,
-      address: queryAddress,
-    },
+    searchParams,
   });
 
   const normalizedMessages = normalizeCloudflareTempEmailMailApiMessages(payload);
@@ -6902,7 +6924,7 @@ async function pollCloudflareTempEmailVerificationCode(step, state, pollPayload 
         offset: pollPayload.offset || 0,
       });
       if (useRegistrationLookup && missingOriginalRecipient) {
-        throw new Error('Cloudflare Temp Email 当前接口未返回 original_recipient，注册邮箱查信需要部署本扩展作者修改后的 Cloudflare Temp Email，或切回“邮件接收”。');
+        throw new Error('Cloudflare Temp Email 当前接口未返回 original_recipient；注册邮箱模式需要支持该字段的部署。旧部署可切换到“邮件接收”模式。');
       }
       const matchResult = pickVerificationMessageWithTimeFallback(messages, {
         afterTimestamp: pollPayload.filterAfterTimestamp || 0,

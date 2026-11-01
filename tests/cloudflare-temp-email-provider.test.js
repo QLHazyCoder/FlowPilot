@@ -73,13 +73,14 @@ function createProviderApi(options = {}) {
     extractFunction('resolveCloudflareTempEmailEffectiveLookupMode'),
     extractFunction('resolveCloudflareTempEmailPollTargetEmail'),
     extractFunction('summarizeCloudflareTempEmailMessagesForLog'),
+    extractFunction('buildCloudflareTempEmailMailSearchParams'),
     extractFunction('pollCloudflareTempEmailVerificationCode'),
   ].join('\n');
 
   return new Function('options', `
 let stopRequested = false;
 const STOP_ERROR_MESSAGE = '流程已被用户停止。';
-const CLOUDFLARE_TEMP_EMAIL_DEFAULT_PAGE_SIZE = 20;
+const CLOUDFLARE_TEMP_EMAIL_DEFAULT_PAGE_SIZE = 5;
 const CLOUDFLARE_TEMP_EMAIL_LOOKUP_MODE_RECEIVE_MAILBOX = 'receive-mailbox';
 const CLOUDFLARE_TEMP_EMAIL_LOOKUP_MODE_REGISTRATION_EMAIL = 'registration-email';
 const DEFAULT_CLOUDFLARE_TEMP_EMAIL_LOOKUP_MODE = CLOUDFLARE_TEMP_EMAIL_LOOKUP_MODE_RECEIVE_MAILBOX;
@@ -143,6 +144,7 @@ async function deleteCloudflareTempEmailMail() {
 ${bundle}
 
 return {
+  buildCloudflareTempEmailMailSearchParams,
   pollCloudflareTempEmailVerificationCode,
   snapshot() {
     return { logs, listCalls };
@@ -155,6 +157,35 @@ return {
   deleteShouldFail,
 });
 }
+
+test('registration lookup adds original_recipient while receive lookup keeps address filtering', () => {
+  const api = createProviderApi({ messages: [] });
+
+  assert.deepEqual(
+    api.buildCloudflareTempEmailMailSearchParams({
+      address: 'forward-box@email.example.com',
+      originalRecipient: ' Target@Duck.com ',
+      useRegistrationLookup: true,
+    }),
+    {
+      limit: 5,
+      offset: 0,
+      address: '',
+      original_recipient: 'target@duck.com',
+    },
+  );
+  assert.deepEqual(
+    api.buildCloudflareTempEmailMailSearchParams({
+      address: 'Forward-Box@Email.Example.com',
+      originalRecipient: 'target@duck.com',
+    }),
+    {
+      limit: 5,
+      offset: 0,
+      address: 'forward-box@email.example.com',
+    },
+  );
+});
 
 test('pollCloudflareTempEmailVerificationCode returns code even if delete fails', async () => {
   const api = createProviderApi({ deleteShouldFail: true });

@@ -6,7 +6,7 @@
 
   root.CloudflareTempEmailUtils = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createCloudflareTempEmailUtils() {
-  const DEFAULT_MAIL_PAGE_SIZE = 20;
+  const DEFAULT_MAIL_PAGE_SIZE = 5;
 
   function firstNonEmptyString(values) {
     for (const value of values) {

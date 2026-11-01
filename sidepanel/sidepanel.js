@@ -2649,7 +2649,7 @@ async function confirmCpaPhoneSignupIfNeeded(options = {}) {
 
 function buildCloudflareTempEmailRegistrationLookupPromptHtml() {
   const repositoryUrl = escapeHtml(CLOUDFLARE_TEMP_EMAIL_REPOSITORY_URL);
-  return `需要部署本扩展作者修改后的 <a href="${repositoryUrl}" target="_blank" rel="noopener noreferrer" data-external-url="${repositoryUrl}">Cloudflare Temp Email</a>；部署后可支持多线程收码。`;
+  return `注册邮箱模式会优先按 <code>original_recipient</code> 精确筛选；支持该字段的 <a href="${repositoryUrl}" target="_blank" rel="noopener noreferrer" data-external-url="${repositoryUrl}">Cloudflare Temp Email</a> 部署可减少无关邮件解压。旧部署会保留本地兼容筛选；如果没有该字段，请切换到“邮件接收”模式。`;
 }
 
 async function confirmCloudflareTempEmailRegistrationLookupIfNeeded() {

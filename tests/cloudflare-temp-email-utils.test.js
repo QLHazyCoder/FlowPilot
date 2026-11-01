@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  DEFAULT_MAIL_PAGE_SIZE,
   buildCloudflareTempEmailEffectiveDomain,
   buildCloudflareTempEmailHeaders,
   getCloudflareTempEmailAddressFromResponse,
@@ -14,6 +15,10 @@ const {
 const {
   pickVerificationMessageWithTimeFallback,
 } = require('../hotmail-utils.js');
+
+test('Cloudflare Temp Email uses a five-message default page', () => {
+  assert.equal(DEFAULT_MAIL_PAGE_SIZE, 5);
+});
 
 test('normalizeCloudflareTempEmailBaseUrl normalizes host and preserves path', () => {
   assert.equal(
