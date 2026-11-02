@@ -1,4 +1,4 @@
-// background.js — Service Worker: orchestration, state, tab management, message routing
+﻿// background.js 鈥?Service Worker: orchestration, state, tab management, message routing
 
 importScripts(
   'flows/openai/account-delivery.js',
@@ -424,9 +424,9 @@ const CLOUD_MAIL_GENERATOR = 'cloudmail';
 const YYDS_MAIL_GENERATOR = YYDS_MAIL_PROVIDER;
 const CUSTOM_EMAIL_POOL_GENERATOR = 'custom-pool';
 const HOTMAIL_MAILBOXES = ['INBOX', 'Junk'];
-const STOP_ERROR_MESSAGE = '流程已被用户停止。';
+const STOP_ERROR_MESSAGE = '娴佺▼宸茶鐢ㄦ埛鍋滄銆?;
 const CLOUDFLARE_SECURITY_BLOCK_ERROR_PREFIX = 'CF_SECURITY_BLOCKED::';
-const CLOUDFLARE_SECURITY_BLOCK_USER_MESSAGE = '您已触发Cloudflare 安全防护系统，已完全停止流程，请不要短时间内多次进行重新发送验证码，连续刷新、反复点击重试会加重风控；请先关闭页面等待 15-30 分钟，让系统的临时限制自动解除。或者更换浏览器';
+const CLOUDFLARE_SECURITY_BLOCK_USER_MESSAGE = '鎮ㄥ凡瑙﹀彂Cloudflare 瀹夊叏闃叉姢绯荤粺锛屽凡瀹屽叏鍋滄娴佺▼锛岃涓嶈鐭椂闂村唴澶氭杩涜閲嶆柊鍙戦€侀獙璇佺爜锛岃繛缁埛鏂般€佸弽澶嶇偣鍑婚噸璇曚細鍔犻噸椋庢帶锛涜鍏堝叧闂〉闈㈢瓑寰?15-30 鍒嗛挓锛岃绯荤粺鐨勪复鏃堕檺鍒惰嚜鍔ㄨВ闄ゃ€傛垨鑰呮洿鎹㈡祻瑙堝櫒';
 const BROWSER_SWITCH_REQUIRED_ERROR_PREFIX = 'BROWSER_SWITCH_REQUIRED::';
 const HUMAN_STEP_DELAY_MIN = 700;
 const HUMAN_STEP_DELAY_MAX = 2200;
@@ -534,6 +534,7 @@ const DEFAULT_MAIL_2925_MODE = MAIL_2925_MODE_PROVIDE;
 const CLOUDFLARE_TEMP_EMAIL_LOOKUP_MODE_RECEIVE_MAILBOX = 'receive-mailbox';
 const CLOUDFLARE_TEMP_EMAIL_LOOKUP_MODE_REGISTRATION_EMAIL = 'registration-email';
 const DEFAULT_CLOUDFLARE_TEMP_EMAIL_LOOKUP_MODE = CLOUDFLARE_TEMP_EMAIL_LOOKUP_MODE_RECEIVE_MAILBOX;
+const MAX_CLOUDFLARE_TEMP_EMAIL_SCAN_PAGES = 5;
 const HOTMAIL_SERVICE_MODE_REMOTE = 'remote';
 const HOTMAIL_SERVICE_MODE_LOCAL = 'local';
 const DEFAULT_HOTMAIL_REMOTE_BASE_URL = '';
@@ -579,7 +580,7 @@ const HERO_SMS_ACQUIRE_PRIORITY_PRICE = 'price';
 const HERO_SMS_ACQUIRE_PRIORITY_PRICE_HIGH = 'price_high';
 const DEFAULT_HERO_SMS_ACQUIRE_PRIORITY = HERO_SMS_ACQUIRE_PRIORITY_COUNTRY;
 const FIVE_SIM_COUNTRY_ID = 'vietnam';
-const FIVE_SIM_COUNTRY_LABEL = '越南 (Vietnam)';
+const FIVE_SIM_COUNTRY_LABEL = '瓒婂崡 (Vietnam)';
 const FIVE_SIM_SUPPORTED_COUNTRY_IDS = ['indonesia', 'thailand', 'vietnam'];
 const FIVE_SIM_SUPPORTED_COUNTRY_ID_SET = new Set(FIVE_SIM_SUPPORTED_COUNTRY_IDS);
 const HERO_SMS_SUPPORTED_COUNTRY_IDS = [6, 52, 187, 16, 151, 43, 73, 10];
@@ -936,7 +937,7 @@ function setupDeclarativeNetRequestRules() {
 }
 
 // ============================================================
-// 状态管理（chrome.storage.session + chrome.storage.local）
+// 鐘舵€佺鐞嗭紙chrome.storage.session + chrome.storage.local锛?
 // ============================================================
 
 const PERSISTED_SETTING_DEFAULTS = {
@@ -1183,14 +1184,14 @@ const DEFAULT_STATE = {
   currentNodeId: '',
   nodeStatuses: { ...DEFAULT_NODE_STATUSES },
   runtimeState: runtimeStateHelpers?.buildDefaultRuntimeState?.() || null,
-  accounts: [], // 已生成账号记录：{ email, password, createdAt }。
-  accountRunHistory: [], // 账号运行历史快照，实际持久化在 chrome.storage.local。
+  accounts: [], // 宸茬敓鎴愯处鍙疯褰曪細{ email, password, createdAt }銆?
+  accountRunHistory: [], // 璐﹀彿杩愯鍘嗗彶蹇収锛屽疄闄呮寔涔呭寲鍦?chrome.storage.local銆?
   manualAliasUsage: {},
   preservedAliases: {},
   icloudAliasCache: [],
   icloudAliasCacheAt: 0,
-  logs: [], // 侧边栏展示的运行日志。
-  ...PERSISTED_SETTING_DEFAULTS, // 合并 chrome.storage.local 中持久化保存的用户配置。
+  logs: [], // 渚ц竟鏍忓睍绀虹殑杩愯鏃ュ織銆?
+  ...PERSISTED_SETTING_DEFAULTS, // 鍚堝苟 chrome.storage.local 涓寔涔呭寲淇濆瓨鐨勭敤鎴烽厤缃€?
   luckmailApiKey: '',
   luckmailBaseUrl: DEFAULT_LUCKMAIL_BASE_URL,
   luckmailEmailType: DEFAULT_LUCKMAIL_EMAIL_TYPE,
@@ -1204,14 +1205,14 @@ const DEFAULT_STATE = {
   heroSmsLastPriceUserLimit: '',
   heroSmsLastPriceAt: 0,
   pendingPhoneActivationConfirmation: null,
-  autoRunning: false, // 当前是否处于自动运行中。
-  autoRunPhase: 'idle', // 当前自动运行阶段。
-  autoRunCurrentRun: 0, // 自动运行当前执行到第几轮。
-  autoRunTotalRuns: 1, // 自动运行计划总轮数。
-  autoRunAttemptRun: 0, // 当前轮次的重试序号。
+  autoRunning: false, // 褰撳墠鏄惁澶勪簬鑷姩杩愯涓€?
+  autoRunPhase: 'idle', // 褰撳墠鑷姩杩愯闃舵銆?
+  autoRunCurrentRun: 0, // 鑷姩杩愯褰撳墠鎵ц鍒扮鍑犺疆銆?
+  autoRunTotalRuns: 1, // 鑷姩杩愯璁″垝鎬昏疆鏁般€?
+  autoRunAttemptRun: 0, // 褰撳墠杞鐨勯噸璇曞簭鍙枫€?
   autoRunSessionId: 0,
-  autoRunRoundSummaries: [], // 自动运行轮次摘要。
-  autoRunTimerPlan: null, // 自动运行可恢复计时计划快照。
+  autoRunRoundSummaries: [], // 鑷姩杩愯杞鎽樿銆?
+  autoRunTimerPlan: null, // 鑷姩杩愯鍙仮澶嶈鏃惰鍒掑揩鐓с€?
   autoRunCountdownAt: null,
   autoRunCountdownTitle: '',
   autoRunCountdownNote: '',
@@ -1455,7 +1456,7 @@ function normalizeHeroSmsCountryFallback(value = []) {
   const source = Array.isArray(value)
     ? value
     : String(value || '')
-      .split(/[\r\n,，;；]+/)
+      .split(/[\r\n,锛?锛沒+/)
       .map((entry) => String(entry || '').trim())
       .filter(Boolean);
   const seenIds = new Set();
@@ -1720,7 +1721,7 @@ async function ensureResolvedSignupMethodForRun(options = {}) {
   });
   await setState({ resolvedSignupMethod: resolvedMethod });
   if (configuredMethod === SIGNUP_METHOD_PHONE && resolvedMethod !== SIGNUP_METHOD_PHONE) {
-    await addLog('当前模式暂不支持手机号注册，本轮已固定为邮箱注册。', 'warn');
+    await addLog('褰撳墠妯″紡鏆備笉鏀寔鎵嬫満鍙锋敞鍐岋紝鏈疆宸插浐瀹氫负閭娉ㄥ唽銆?, 'warn');
   }
   return resolvedMethod;
 }
@@ -1771,7 +1772,7 @@ function normalizeFiveSimCountryOrder(value = []) {
   const source = Array.isArray(value)
     ? value
     : String(value || '')
-      .split(/[\r\n,，;；]+/)
+      .split(/[\r\n,锛?锛沒+/)
       .map((entry) => String(entry || '').trim())
       .filter(Boolean);
   const normalized = [];
@@ -1810,7 +1811,7 @@ function normalizeNexSmsCountryOrder(value = []) {
   const source = Array.isArray(value)
     ? value
     : String(value || '')
-      .split(/[\r\n,，;；]+/)
+      .split(/[\r\n,锛?锛沒+/)
       .map((entry) => String(entry || '').trim())
       .filter(Boolean);
   const normalized = [];
@@ -1968,7 +1969,7 @@ function normalizeFiveSimCountryFallback(value = []) {
   const source = Array.isArray(value)
     ? value
     : String(value || '')
-      .split(/[\r\n,，;；]+/)
+      .split(/[\r\n,锛?锛沒+/)
       .map((entry) => String(entry || '').trim())
       .filter(Boolean);
   const seenIds = new Set();
@@ -2127,8 +2128,8 @@ function normalizeAutoRunTimerPlan(plan) {
       attemptRun: normalizedAttemptRun,
       autoRunSessionId,
       roundSummaries,
-      countdownTitle: countdownTitle || '线程间隔中',
-      countdownNote: countdownNote || `第 ${Math.min(normalizedCurrentRun + 1, totalRuns)}/${totalRuns} 轮即将开始`,
+      countdownTitle: countdownTitle || '绾跨▼闂撮殧涓?,
+      countdownNote: countdownNote || `绗?${Math.min(normalizedCurrentRun + 1, totalRuns)}/${totalRuns} 杞嵆灏嗗紑濮媊,
     };
   }
 
@@ -2144,8 +2145,8 @@ function normalizeAutoRunTimerPlan(plan) {
     attemptRun: normalizedAttemptRun,
     autoRunSessionId,
     roundSummaries,
-    countdownTitle: countdownTitle || '线程间隔中',
-    countdownNote: countdownNote || `第 ${normalizedCurrentRun}/${totalRuns} 轮第 ${normalizedAttemptRun} 次尝试即将开始`,
+    countdownTitle: countdownTitle || '绾跨▼闂撮殧涓?,
+    countdownNote: countdownNote || `绗?${normalizedCurrentRun}/${totalRuns} 杞 ${normalizedAttemptRun} 娆″皾璇曞嵆灏嗗紑濮媊,
   };
 }
 
@@ -2319,8 +2320,8 @@ async function markCurrentCustomEmailPoolEntryUsed(state = {}, options = {}) {
   broadcastDataUpdate({
     customEmailPoolEntries: nextEntries,
   });
-  const logPrefix = String(options.logPrefix || '').trim() || '自定义邮箱池：流程成功后';
-  await addLog(`${logPrefix}已将 ${currentEmail} 标记为已用。`, options.level || 'ok');
+  const logPrefix = String(options.logPrefix || '').trim() || '鑷畾涔夐偖绠辨睜锛氭祦绋嬫垚鍔熷悗';
+  await addLog(`${logPrefix}宸插皢 ${currentEmail} 鏍囪涓哄凡鐢ㄣ€俙, options.level || 'ok');
   return {
     updated: true,
     customEmailPoolEntries: nextEntries,
@@ -2334,7 +2335,7 @@ async function markCurrentRegistrationAccountUsed(state = {}, options = {}) {
     ...providedState,
     ...(currentState && typeof currentState === 'object' ? currentState : {}),
   };
-  const reasonPrefix = String(options.logPrefix || '').trim() || '当前账号';
+  const reasonPrefix = String(options.logPrefix || '').trim() || '褰撳墠璐﹀彿';
   let updated = false;
 
   if (latestState.currentHotmailAccountId && isHotmailProvider(latestState)) {
@@ -2342,7 +2343,7 @@ async function markCurrentRegistrationAccountUsed(state = {}, options = {}) {
       used: true,
       lastUsedAt: Date.now(),
     });
-    await addLog(`${reasonPrefix}：Hotmail 账号已标记为已用。`, options.level || 'warn');
+    await addLog(`${reasonPrefix}锛欻otmail 璐﹀彿宸叉爣璁颁负宸茬敤銆俙, options.level || 'warn');
     updated = true;
   }
 
@@ -2351,7 +2352,7 @@ async function markCurrentRegistrationAccountUsed(state = {}, options = {}) {
     if (currentPurchase?.id) {
       await setLuckmailPurchaseUsedState(currentPurchase.id, true);
       await clearLuckmailRuntimeState({ clearEmail: true });
-      await addLog(`${reasonPrefix}：LuckMail 邮箱 ${currentPurchase.email_address} 已标记为已用。`, options.level || 'warn');
+      await addLog(`${reasonPrefix}锛歀uckMail 閭 ${currentPurchase.email_address} 宸叉爣璁颁负宸茬敤銆俙, options.level || 'warn');
       updated = true;
     }
   }
@@ -2360,7 +2361,7 @@ async function markCurrentRegistrationAccountUsed(state = {}, options = {}) {
     const currentInbox = normalizeYydsMailCurrentInbox(latestState.currentYydsMailInbox);
     if (currentInbox?.address) {
       await clearYydsMailRuntimeState({ clearEmail: true });
-      await addLog(`${reasonPrefix}：YYDS Mail 邮箱 ${currentInbox.address} 运行态已清空。`, options.level || 'warn');
+      await addLog(`${reasonPrefix}锛歒YDS Mail 閭 ${currentInbox.address} 杩愯鎬佸凡娓呯┖銆俙, options.level || 'warn');
       updated = true;
     }
   }
@@ -2370,7 +2371,7 @@ async function markCurrentRegistrationAccountUsed(state = {}, options = {}) {
       lastUsedAt: Date.now(),
       lastError: '',
     });
-    await addLog(`${reasonPrefix}：2925 账号已记录最近使用时间。`, options.level || 'warn');
+    await addLog(`${reasonPrefix}锛?925 璐﹀彿宸茶褰曟渶杩戜娇鐢ㄦ椂闂淬€俙, options.level || 'warn');
     updated = true;
   }
 
@@ -2379,7 +2380,7 @@ async function markCurrentRegistrationAccountUsed(state = {}, options = {}) {
 
   if (typeof markCurrentCustomEmailPoolEntryUsed === 'function') {
     const result = await markCurrentCustomEmailPoolEntryUsed(latestState, {
-      logPrefix: `${reasonPrefix}：自定义邮箱池`,
+      logPrefix: `${reasonPrefix}锛氳嚜瀹氫箟閭姹燻,
       level: options.level || 'warn',
     });
     updated = Boolean(result?.updated) || updated;
@@ -2741,7 +2742,7 @@ const {
 function normalizeSub2ApiGroupNames(value = '') {
   const source = Array.isArray(value)
     ? value
-    : String(value || '').split(/[\r\n,，、]+/);
+    : String(value || '').split(/[\r\n,锛屻€乚+/);
   const names = [];
   const seen = new Set();
   for (const item of source) {
@@ -4147,7 +4148,7 @@ async function clearGrokSsoCookies() {
   await setState(patch);
   const nextState = await getState();
   broadcastDataUpdate(patch);
-  await addLog('Grok SSO Cookie 已清空。', 'info', { nodeId: 'grok-extract-sso-cookie' });
+  await addLog('Grok SSO Cookie 宸叉竻绌恒€?, 'info', { nodeId: 'grok-extract-sso-cookie' });
   return { ok: true, state: nextState };
 }
 
@@ -4267,7 +4268,7 @@ async function clearSignupPhoneIdentityBeforeFinalNodeNotify(completionState = {
 
   await setState(updates);
   broadcastDataUpdate(updates);
-  await addLog('手机号注册：最终节点完成前已清空本轮注册手机号，避免下一轮复用。', 'ok', {
+  await addLog('鎵嬫満鍙锋敞鍐岋細鏈€缁堣妭鐐瑰畬鎴愬墠宸叉竻绌烘湰杞敞鍐屾墜鏈哄彿锛岄伩鍏嶄笅涓€杞鐢ㄣ€?, 'ok', {
     nodeId: options?.nodeId || '',
   });
   return { cleared: true, phoneNumber: currentPhone };
@@ -4316,7 +4317,7 @@ async function setEmailState(email, options = {}) {
       await appendManualAccountRunRecordIfNeeded(
         'node:submit-signup-email:stopped',
         latestState,
-        '节点 submit-signup-email 已使用邮箱，流程尚未完成。'
+        '鑺傜偣 submit-signup-email 宸蹭娇鐢ㄩ偖绠憋紝娴佺▼灏氭湭瀹屾垚銆?
       );
     }
     await resumeAutoRunIfWaitingForEmail();
@@ -4401,7 +4402,7 @@ async function setSignupPhoneState(phoneNumber) {
       await appendManualAccountRunRecordIfNeeded(
         'node:submit-signup-email:stopped',
         latestState,
-        '节点 submit-signup-email 已使用手机号，流程尚未完成。'
+        '鑺傜偣 submit-signup-email 宸蹭娇鐢ㄦ墜鏈哄彿锛屾祦绋嬪皻鏈畬鎴愩€?
       );
     }
   }
@@ -4440,7 +4441,7 @@ async function setLuckmailUsedPurchasesState(usedPurchases) {
 async function setLuckmailPurchaseUsedState(purchaseId, used) {
   const normalizedPurchaseId = normalizeLuckmailPurchaseId(purchaseId);
   if (!normalizedPurchaseId) {
-    throw new Error('LuckMail 邮箱 ID 无效。');
+    throw new Error('LuckMail 閭 ID 鏃犳晥銆?);
   }
 
   const state = await getState();
@@ -4595,7 +4596,7 @@ function buildIcloudAliasFallbackFromLocalState(state = {}) {
 async function setIcloudAliasUsedState(payload = {}, options = {}) {
   const email = String(payload.email || '').trim().toLowerCase();
   if (!email) {
-    throw new Error('未提供 iCloud 隐私邮箱地址。');
+    throw new Error('鏈彁渚?iCloud 闅愮閭鍦板潃銆?);
   }
 
   const used = Boolean(payload.used);
@@ -4604,7 +4605,7 @@ async function setIcloudAliasUsedState(payload = {}, options = {}) {
   manualAliasUsage[email] = used;
   await setState({ manualAliasUsage });
   if (!options.silentLog) {
-    await addLog(`iCloud：已将 ${email} 标记为${used ? '已用' : '未用'}`, 'ok');
+    await addLog(`iCloud锛氬凡灏?${email} 鏍囪涓?{used ? '宸茬敤' : '鏈敤'}`, 'ok');
   }
   broadcastIcloudAliasesChanged({ reason: 'used-updated', email, used });
   return { email, used };
@@ -4613,7 +4614,7 @@ async function setIcloudAliasUsedState(payload = {}, options = {}) {
 async function setIcloudAliasPreservedState(payload = {}) {
   const email = String(payload.email || '').trim().toLowerCase();
   if (!email) {
-    throw new Error('未提供 iCloud 隐私邮箱地址。');
+    throw new Error('鏈彁渚?iCloud 闅愮閭鍦板潃銆?);
   }
 
   const preserved = Boolean(payload.preserved);
@@ -4621,7 +4622,7 @@ async function setIcloudAliasPreservedState(payload = {}) {
   const preservedAliases = getPreservedAliasMap(state);
   preservedAliases[email] = preserved;
   await setState({ preservedAliases });
-  await addLog(`iCloud：已将 ${email} ${preserved ? '设为保留' : '取消保留'}`, 'ok');
+  await addLog(`iCloud锛氬凡灏?${email} ${preserved ? '璁句负淇濈暀' : '鍙栨秷淇濈暀'}`, 'ok');
   broadcastIcloudAliasesChanged({ reason: 'preserved-updated', email, preserved });
   return { email, preserved };
 }
@@ -4959,7 +4960,7 @@ async function patchHotmailAccount(accountId, updates = {}) {
   const accounts = normalizeHotmailAccounts(state.hotmailAccounts);
   const account = findHotmailAccount(accounts, accountId);
   if (!account) {
-    throw new Error('未找到对应的 Hotmail 账号。');
+    throw new Error('鏈壘鍒板搴旂殑 Hotmail 璐﹀彿銆?);
   }
 
   const nextAccount = normalizeHotmailAccount({
@@ -4987,7 +4988,7 @@ async function setCurrentHotmailAccount(accountId, options = {}) {
   const accounts = normalizeHotmailAccounts(state.hotmailAccounts);
   const account = findHotmailAccount(accounts, accountId);
   if (!account) {
-    throw new Error('未找到对应的 Hotmail 账号。');
+    throw new Error('鏈壘鍒板搴旂殑 Hotmail 璐﹀彿銆?);
   }
 
   if (markUsed) {
@@ -5072,10 +5073,10 @@ async function ensureHotmailAccountForFlow(options = {}) {
   }
 
   if (!account) {
-    throw new Error('没有可用的 Hotmail 账号。请先在侧边栏添加至少一个带刷新令牌（refresh token）的账号。');
+    throw new Error('娌℃湁鍙敤鐨?Hotmail 璐﹀彿銆傝鍏堝湪渚ц竟鏍忔坊鍔犺嚦灏戜竴涓甫鍒锋柊浠ょ墝锛坮efresh token锛夌殑璐﹀彿銆?);
   }
   if (!isAuthorizedHotmailRunAccount(account)) {
-    throw new Error(`Hotmail 账号 ${account.email || account.id} 尚未就绪，无法读取邮件。`);
+    throw new Error(`Hotmail 璐﹀彿 ${account.email || account.id} 灏氭湭灏辩华锛屾棤娉曡鍙栭偖浠躲€俙);
   }
 
   return setCurrentHotmailAccount(account.id, { markUsed, syncEmail: true });
@@ -5122,9 +5123,9 @@ async function requestCustomMailLocalCode(state = {}, pollPayload = {}) {
     });
   } catch (err) {
     if (err?.name === 'AbortError') {
-      throw new Error(`自定义邮箱本地助手请求超时（>${Math.round(requestTimeoutMs / 1000)} 秒）`);
+      throw new Error(`鑷畾涔夐偖绠辨湰鍦板姪鎵嬭姹傝秴鏃讹紙>${Math.round(requestTimeoutMs / 1000)} 绉掞級`);
     }
-    throw new Error(`自定义邮箱本地助手请求失败：${err.message}`);
+    throw new Error(`鑷畾涔夐偖绠辨湰鍦板姪鎵嬭姹傚け璐ワ細${err.message}`);
   } finally {
     clearTimeout(timeoutId);
   }
@@ -5139,7 +5140,7 @@ async function requestCustomMailLocalCode(state = {}, pollPayload = {}) {
 
   if (!response.ok || payload?.ok === false) {
     const errorText = payload?.error || payload?.message || text || `HTTP ${response.status}`;
-    throw new Error(`自定义邮箱本地助手返回失败：${errorText}`);
+    throw new Error(`鑷畾涔夐偖绠辨湰鍦板姪鎵嬭繑鍥炲け璐ワ細${errorText}`);
   }
 
   return {
@@ -5151,7 +5152,7 @@ async function requestCustomMailLocalCode(state = {}, pollPayload = {}) {
 
 async function pollCustomMailVerificationCode(step, state, pollPayload = {}) {
   if (!shouldUseCustomMailHelper(state)) {
-    throw new Error(`步骤 ${step}：自定义邮箱当前为手动确认模式，未启用本地助手自动收码。`);
+    throw new Error(`姝ラ ${step}锛氳嚜瀹氫箟閭褰撳墠涓烘墜鍔ㄧ‘璁ゆā寮忥紝鏈惎鐢ㄦ湰鍦板姪鎵嬭嚜鍔ㄦ敹鐮併€俙);
   }
 
   const maxAttempts = Math.max(1, Math.floor(Number(pollPayload.maxAttempts) || 5));
@@ -5161,7 +5162,7 @@ async function pollCustomMailVerificationCode(step, state, pollPayload = {}) {
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     throwIfStopped();
     try {
-      await addLog(`步骤 ${step}：正在通过自定义邮箱本地助手轮询验证码（${attempt}/${maxAttempts}）...`, 'info');
+      await addLog(`姝ラ ${step}锛氭鍦ㄩ€氳繃鑷畾涔夐偖绠辨湰鍦板姪鎵嬭疆璇㈤獙璇佺爜锛?{attempt}/${maxAttempts}锛?..`, 'info');
       const fetchResult = await requestCustomMailLocalCode(state, {
         ...pollPayload,
         targetEmail: pollPayload.targetEmail || state?.email || '',
@@ -5169,9 +5170,9 @@ async function pollCustomMailVerificationCode(step, state, pollPayload = {}) {
 
       if (fetchResult.code) {
         if (fetchResult.usedTimeFallback) {
-          await addLog(`步骤 ${step}：自定义邮箱本地助手使用时间回退后命中验证码。`, 'warn');
+          await addLog(`姝ラ ${step}锛氳嚜瀹氫箟閭鏈湴鍔╂墜浣跨敤鏃堕棿鍥為€€鍚庡懡涓獙璇佺爜銆俙, 'warn');
         }
-        await addLog(`步骤 ${step}：已通过自定义邮箱本地助手找到验证码：${fetchResult.code}`, 'ok');
+        await addLog(`姝ラ ${step}锛氬凡閫氳繃鑷畾涔夐偖绠辨湰鍦板姪鎵嬫壘鍒伴獙璇佺爜锛?{fetchResult.code}`, 'ok');
         return {
           ok: true,
           code: fetchResult.code,
@@ -5180,11 +5181,11 @@ async function pollCustomMailVerificationCode(step, state, pollPayload = {}) {
         };
       }
 
-      lastError = new Error(`步骤 ${step}：自定义邮箱本地助手暂未返回匹配验证码（${attempt}/${maxAttempts}）。`);
+      lastError = new Error(`姝ラ ${step}锛氳嚜瀹氫箟閭鏈湴鍔╂墜鏆傛湭杩斿洖鍖归厤楠岃瘉鐮侊紙${attempt}/${maxAttempts}锛夈€俙);
       await addLog(lastError.message, attempt === maxAttempts ? 'warn' : 'info');
     } catch (err) {
       lastError = err;
-      await addLog(`步骤 ${step}：自定义邮箱本地助手轮询失败：${err.message}`, 'warn');
+      await addLog(`姝ラ ${step}锛氳嚜瀹氫箟閭鏈湴鍔╂墜杞澶辫触锛?{err.message}`, 'warn');
     }
 
     if (attempt < maxAttempts) {
@@ -5192,18 +5193,18 @@ async function pollCustomMailVerificationCode(step, state, pollPayload = {}) {
     }
   }
 
-  throw lastError || new Error(`步骤 ${step}：自定义邮箱本地助手未返回新的匹配验证码。`);
+  throw lastError || new Error(`姝ラ ${step}锛氳嚜瀹氫箟閭鏈湴鍔╂墜鏈繑鍥炴柊鐨勫尮閰嶉獙璇佺爜銆俙);
 }
 
 async function requestHotmailRemoteMailbox(account, mailbox = 'INBOX') {
   if (!account?.email) {
-    throw new Error('Hotmail 账号缺少邮箱地址。');
+    throw new Error('Hotmail 璐﹀彿缂哄皯閭鍦板潃銆?);
   }
   if (!account?.clientId) {
-    throw new Error(`Hotmail 账号 ${account.email || account.id} 缺少客户端 ID。`);
+    throw new Error(`Hotmail 璐﹀彿 ${account.email || account.id} 缂哄皯瀹㈡埛绔?ID銆俙);
   }
   if (!account?.refreshToken) {
-    throw new Error(`Hotmail 账号 ${account.email || account.id} 缺少刷新令牌（refresh token）。`);
+    throw new Error(`Hotmail 璐﹀彿 ${account.email || account.id} 缂哄皯鍒锋柊浠ょ墝锛坮efresh token锛夈€俙);
   }
 
   const { timeoutMs } = getHotmailMailApiRequestConfig();
@@ -5234,9 +5235,9 @@ async function requestHotmailRemoteMailbox(account, mailbox = 'INBOX') {
     };
   } catch (err) {
     if (err?.name === 'AbortError') {
-      throw new Error(`Hotmail API 对接请求超时（>${Math.round(timeoutMs / 1000)} 秒）：${mailbox}`);
+      throw new Error(`Hotmail API 瀵规帴璇锋眰瓒呮椂锛?${Math.round(timeoutMs / 1000)} 绉掞級锛?{mailbox}`);
     }
-    throw new Error(`Hotmail API 对接请求失败：${err.message}`);
+    throw new Error(`Hotmail API 瀵规帴璇锋眰澶辫触锛?{err.message}`);
   } finally {
     clearTimeout(timeoutId);
   }
@@ -5294,13 +5295,13 @@ async function fetchHotmailMailboxMessagesFromRemoteService(account, mailboxes =
 
 async function requestHotmailLocalMessages(account, mailboxes = HOTMAIL_MAILBOXES) {
   if (!account?.email) {
-    throw new Error('Hotmail 账号缺少邮箱地址。');
+    throw new Error('Hotmail 璐﹀彿缂哄皯閭鍦板潃銆?);
   }
   if (!account?.clientId) {
-    throw new Error(`Hotmail 账号 ${account.email || account.id} 缺少客户端 ID。`);
+    throw new Error(`Hotmail 璐﹀彿 ${account.email || account.id} 缂哄皯瀹㈡埛绔?ID銆俙);
   }
   if (!account?.refreshToken) {
-    throw new Error(`Hotmail 账号 ${account.email || account.id} 缺少刷新令牌（refresh token）。`);
+    throw new Error(`Hotmail 璐﹀彿 ${account.email || account.id} 缂哄皯鍒锋柊浠ょ墝锛坮efresh token锛夈€俙);
   }
 
   const serviceSettings = getHotmailServiceSettings(await getState());
@@ -5328,9 +5329,9 @@ async function requestHotmailLocalMessages(account, mailboxes = HOTMAIL_MAILBOXE
     });
   } catch (err) {
     if (err?.name === 'AbortError') {
-      throw new Error(`Hotmail 本地助手请求超时（>${Math.round(requestTimeoutMs / 1000)} 秒）`);
+      throw new Error(`Hotmail 鏈湴鍔╂墜璇锋眰瓒呮椂锛?${Math.round(requestTimeoutMs / 1000)} 绉掞級`);
     }
-    throw new Error(`Hotmail 本地助手请求失败：${err.message}`);
+    throw new Error(`Hotmail 鏈湴鍔╂墜璇锋眰澶辫触锛?{err.message}`);
   } finally {
     clearTimeout(timeoutId);
   }
@@ -5345,7 +5346,7 @@ async function requestHotmailLocalMessages(account, mailboxes = HOTMAIL_MAILBOXE
 
   if (!response.ok || payload?.ok === false) {
     const errorText = payload?.error || payload?.message || text || `HTTP ${response.status}`;
-    throw new Error(`Hotmail 本地助手返回失败：${errorText}`);
+    throw new Error(`Hotmail 鏈湴鍔╂墜杩斿洖澶辫触锛?{errorText}`);
   }
 
   const rawMessages = Array.isArray(payload?.messages) ? payload.messages : [];
@@ -5379,13 +5380,13 @@ async function requestHotmailLocalMessages(account, mailboxes = HOTMAIL_MAILBOXE
 
 async function requestHotmailLocalCode(account, pollPayload = {}) {
   if (!account?.email) {
-    throw new Error('Hotmail 账号缺少邮箱地址。');
+    throw new Error('Hotmail 璐﹀彿缂哄皯閭鍦板潃銆?);
   }
   if (!account?.clientId) {
-    throw new Error(`Hotmail 账号 ${account.email || account.id} 缺少客户端 ID。`);
+    throw new Error(`Hotmail 璐﹀彿 ${account.email || account.id} 缂哄皯瀹㈡埛绔?ID銆俙);
   }
   if (!account?.refreshToken) {
-    throw new Error(`Hotmail 账号 ${account.email || account.id} 缺少刷新令牌（refresh token）。`);
+    throw new Error(`Hotmail 璐﹀彿 ${account.email || account.id} 缂哄皯鍒锋柊浠ょ墝锛坮efresh token锛夈€俙);
   }
 
   const serviceSettings = getHotmailServiceSettings(await getState());
@@ -5419,9 +5420,9 @@ async function requestHotmailLocalCode(account, pollPayload = {}) {
     });
   } catch (err) {
     if (err?.name === 'AbortError') {
-      throw new Error(`Hotmail 本地助手请求超时（>${Math.round(requestTimeoutMs / 1000)} 秒）`);
+      throw new Error(`Hotmail 鏈湴鍔╂墜璇锋眰瓒呮椂锛?${Math.round(requestTimeoutMs / 1000)} 绉掞級`);
     }
-    throw new Error(`Hotmail 本地助手请求失败：${err.message}`);
+    throw new Error(`Hotmail 鏈湴鍔╂墜璇锋眰澶辫触锛?{err.message}`);
   } finally {
     clearTimeout(timeoutId);
   }
@@ -5436,7 +5437,7 @@ async function requestHotmailLocalCode(account, pollPayload = {}) {
 
   if (!response.ok || payload?.ok === false) {
     const errorText = payload?.error || payload?.message || text || `HTTP ${response.status}`;
-    throw new Error(`Hotmail 本地助手返回失败：${errorText}`);
+    throw new Error(`Hotmail 鏈湴鍔╂墜杩斿洖澶辫触锛?{errorText}`);
   }
 
   const normalizedMessage = payload?.message
@@ -5468,16 +5469,16 @@ async function pollHotmailVerificationCodeViaLocalHelper(step, account, pollPayl
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     throwIfStopped();
     try {
-      await addLog(`步骤 ${step}：正在通过本地助手轮询 Hotmail 验证码（${attempt}/${maxAttempts}）...`, 'info');
+      await addLog(`姝ラ ${step}锛氭鍦ㄩ€氳繃鏈湴鍔╂墜杞 Hotmail 楠岃瘉鐮侊紙${attempt}/${maxAttempts}锛?..`, 'info');
       const fetchResult = await requestHotmailLocalCode(workingAccount, pollPayload);
       workingAccount = fetchResult.account;
 
       if (fetchResult.code) {
         const mailboxLabel = fetchResult.message?.mailbox || 'INBOX';
         if (fetchResult.usedTimeFallback) {
-          await addLog(`步骤 ${step}：本地助手使用时间回退后命中 Hotmail ${mailboxLabel} 验证码。`, 'warn');
+          await addLog(`姝ラ ${step}锛氭湰鍦板姪鎵嬩娇鐢ㄦ椂闂村洖閫€鍚庡懡涓?Hotmail ${mailboxLabel} 楠岃瘉鐮併€俙, 'warn');
         }
-        await addLog(`步骤 ${step}：已通过本地助手在 Hotmail ${mailboxLabel} 中找到验证码：${fetchResult.code}`, 'ok');
+        await addLog(`姝ラ ${step}锛氬凡閫氳繃鏈湴鍔╂墜鍦?Hotmail ${mailboxLabel} 涓壘鍒伴獙璇佺爜锛?{fetchResult.code}`, 'ok');
         return {
           ok: true,
           code: fetchResult.code,
@@ -5486,11 +5487,11 @@ async function pollHotmailVerificationCodeViaLocalHelper(step, account, pollPayl
         };
       }
 
-      lastError = new Error(`步骤 ${step}：本地助手暂未返回匹配验证码（${attempt}/${maxAttempts}）。`);
+      lastError = new Error(`姝ラ ${step}锛氭湰鍦板姪鎵嬫殏鏈繑鍥炲尮閰嶉獙璇佺爜锛?{attempt}/${maxAttempts}锛夈€俙);
       await addLog(lastError.message, attempt === maxAttempts ? 'warn' : 'info');
     } catch (err) {
       lastError = err;
-      await addLog(`步骤 ${step}：本地助手轮询 Hotmail 失败：${err.message}`, 'warn');
+      await addLog(`姝ラ ${step}锛氭湰鍦板姪鎵嬭疆璇?Hotmail 澶辫触锛?{err.message}`, 'warn');
     }
 
     if (attempt < maxAttempts) {
@@ -5498,7 +5499,7 @@ async function pollHotmailVerificationCodeViaLocalHelper(step, account, pollPayl
     }
   }
 
-  throw lastError || new Error(`步骤 ${step}：本地助手未返回新的匹配验证码。`);
+  throw lastError || new Error(`姝ラ ${step}锛氭湰鍦板姪鎵嬫湭杩斿洖鏂扮殑鍖归厤楠岃瘉鐮併€俙);
 }
 
 async function fetchHotmailMailboxMessages(account, mailboxes = HOTMAIL_MAILBOXES) {
@@ -5513,7 +5514,7 @@ async function verifyHotmailAccount(accountId) {
   const state = await getState();
   const account = findHotmailAccount(state.hotmailAccounts, accountId);
   if (!account) {
-    throw new Error('未找到需要校验的 Hotmail 账号。');
+    throw new Error('鏈壘鍒伴渶瑕佹牎楠岀殑 Hotmail 璐﹀彿銆?);
   }
 
   const result = await fetchHotmailMailboxMessages(account, ['INBOX']);
@@ -5536,9 +5537,9 @@ async function ensureHotmailMailboxReadyForAutoRunRound(options = {}) {
 
   const buildRoundLabel = () => {
     if (targetRun > 0 && totalRuns > 0) {
-      return `第 ${targetRun}/${totalRuns} 轮`;
+      return `绗?${targetRun}/${totalRuns} 杞甡;
     }
-    return '当前轮';
+    return '褰撳墠杞?;
   };
   const exhaustedAccountIds = new Set();
   let preferredAccountId = state.currentHotmailAccountId || null;
@@ -5554,9 +5555,9 @@ async function ensureHotmailMailboxReadyForAutoRunRound(options = {}) {
       .filter((candidate) => isPendingHotmailVerificationCandidate(candidate) && !exhaustedAccountIds.has(candidate.id));
     if (!remainingAuthorizedAccounts.length && !remainingPendingAccounts.length) {
       if (lastError) {
-        throw new Error(`自动运行${buildRoundLabel()}开始前未找到可通过校验的 Hotmail 账号：${lastError.message}`);
+        throw new Error(`鑷姩杩愯${buildRoundLabel()}寮€濮嬪墠鏈壘鍒板彲閫氳繃鏍￠獙鐨?Hotmail 璐﹀彿锛?{lastError.message}`);
       }
-      throw new Error('没有可用的 Hotmail 账号。请先在侧边栏添加至少一个带刷新令牌（refresh token）的账号。');
+      throw new Error('娌℃湁鍙敤鐨?Hotmail 璐﹀彿銆傝鍏堝湪渚ц竟鏍忔坊鍔犺嚦灏戜竴涓甫鍒锋柊浠ょ墝锛坮efresh token锛夌殑璐﹀彿銆?);
     }
 
     let account = null;
@@ -5573,26 +5574,26 @@ async function ensureHotmailMailboxReadyForAutoRunRound(options = {}) {
         excludeIds: [...exhaustedAccountIds],
       });
       if (!pendingAccount) {
-        throw new Error('没有可用的 Hotmail 账号。请先在侧边栏添加至少一个带刷新令牌（refresh token）的账号。');
+        throw new Error('娌℃湁鍙敤鐨?Hotmail 璐﹀彿銆傝鍏堝湪渚ц竟鏍忔坊鍔犺嚦灏戜竴涓甫鍒锋柊浠ょ墝锛坮efresh token锛夌殑璐﹀彿銆?);
       }
       account = await setCurrentHotmailAccount(pendingAccount.id, {
         markUsed: false,
         syncEmail: true,
       });
       await addLog(
-        `自动运行${buildRoundLabel()}开始前未找到已校验 Hotmail 账号，正在尝试校验待校验账号 ${account.email}。`,
+        `鑷姩杩愯${buildRoundLabel()}寮€濮嬪墠鏈壘鍒板凡鏍￠獙 Hotmail 璐﹀彿锛屾鍦ㄥ皾璇曟牎楠屽緟鏍￠獙璐﹀彿 ${account.email}銆俙,
         'warn'
       );
     }
 
     try {
       await addLog(
-        `自动运行${buildRoundLabel()}第 ${attemptRun} 次尝试开始前，正在校验 Hotmail 账号 ${account.email} 的邮箱可用性。`,
+        `鑷姩杩愯${buildRoundLabel()}绗?${attemptRun} 娆″皾璇曞紑濮嬪墠锛屾鍦ㄦ牎楠?Hotmail 璐﹀彿 ${account.email} 鐨勯偖绠卞彲鐢ㄦ€с€俙,
         'info'
       );
       const result = await verifyHotmailAccount(account.id);
       await addLog(
-        `自动运行${buildRoundLabel()}开始前已校验 Hotmail 账号 ${result.account?.email || account.email}，INBOX 当前 ${result.messageCount} 封邮件。`,
+        `鑷姩杩愯${buildRoundLabel()}寮€濮嬪墠宸叉牎楠?Hotmail 璐﹀彿 ${result.account?.email || account.email}锛孖NBOX 褰撳墠 ${result.messageCount} 灏侀偖浠躲€俙,
         'ok'
       );
       return result.account;
@@ -5600,9 +5601,9 @@ async function ensureHotmailMailboxReadyForAutoRunRound(options = {}) {
       lastError = error;
       exhaustedAccountIds.add(account.id);
       preferredAccountId = null;
-      const latestErrorMessage = error?.message || '未知错误';
+      const latestErrorMessage = error?.message || '鏈煡閿欒';
       await addLog(
-        `自动运行${buildRoundLabel()}开始前校验 Hotmail 账号 ${account.email} 失败：${latestErrorMessage}`,
+        `鑷姩杩愯${buildRoundLabel()}寮€濮嬪墠鏍￠獙 Hotmail 璐﹀彿 ${account.email} 澶辫触锛?{latestErrorMessage}`,
         'warn'
       );
       const nextState = await getState();
@@ -5611,7 +5612,7 @@ async function ensureHotmailMailboxReadyForAutoRunRound(options = {}) {
           isAuthorizedHotmailRunAccount(candidate) || isPendingHotmailVerificationCandidate(candidate)
         ) && !exhaustedAccountIds.has(candidate.id));
       if (hasRemainingAccounts) {
-        await addLog(`自动运行${buildRoundLabel()}开始前将切换下一个 Hotmail 账号并重试。`, 'warn');
+        await addLog(`鑷姩杩愯${buildRoundLabel()}寮€濮嬪墠灏嗗垏鎹笅涓€涓?Hotmail 璐﹀彿骞堕噸璇曘€俙, 'warn');
       }
     }
   }
@@ -5621,7 +5622,7 @@ async function testHotmailAccountMailAccess(accountId) {
   const state = await getState();
   const account = findHotmailAccount(state.hotmailAccounts, accountId);
   if (!account) {
-    throw new Error('未找到需要测试的 Hotmail 账号。');
+    throw new Error('鏈壘鍒伴渶瑕佹祴璇曠殑 Hotmail 璐﹀彿銆?);
   }
 
   const result = await fetchHotmailMailboxMessages(account, HOTMAIL_MAILBOXES);
@@ -5642,13 +5643,13 @@ async function testHotmailAccountMailAccess(accountId) {
 }
 
 async function pollHotmailVerificationCode(step, state, pollPayload = {}) {
-  await addLog(`步骤 ${step}：正在确定 Hotmail 收信账号...`, 'info');
+  await addLog(`姝ラ ${step}锛氭鍦ㄧ‘瀹?Hotmail 鏀朵俊璐﹀彿...`, 'info');
   let account = await ensureHotmailAccountForFlow({
     allowAllocate: true,
     markUsed: false,
     preferredAccountId: state.currentHotmailAccountId || null,
   });
-  await addLog(`步骤 ${step}：当前使用 Hotmail 账号 ${account.email} 轮询收件箱。`, 'info');
+  await addLog(`姝ラ ${step}锛氬綋鍓嶄娇鐢?Hotmail 璐﹀彿 ${account.email} 杞鏀朵欢绠便€俙, 'info');
 
   const serviceSettings = getHotmailServiceSettings(state);
   if (serviceSettings.mode === HOTMAIL_SERVICE_MODE_LOCAL) {
@@ -5669,9 +5670,9 @@ async function pollHotmailVerificationCode(step, state, pollPayload = {}) {
       })
       .slice(0, 3)
       .map((message) => {
-        const receivedAt = message?.receivedDateTime || '未知时间';
-        const sender = message?.from?.emailAddress?.address || '未知发件人';
-        const subject = message?.subject || '（无主题）';
+        const receivedAt = message?.receivedDateTime || '鏈煡鏃堕棿';
+        const sender = message?.from?.emailAddress?.address || '鏈煡鍙戜欢浜?;
+        const subject = message?.subject || '锛堟棤涓婚锛?;
         const preview = String(message?.bodyPreview || '').replace(/\s+/g, ' ').trim().slice(0, 80);
         return `[${message.mailbox || 'INBOX'}] ${receivedAt} | ${sender} | ${subject} | ${preview}`;
       })
@@ -5681,7 +5682,7 @@ async function pollHotmailVerificationCode(step, state, pollPayload = {}) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     throwIfStopped();
     try {
-      await addLog(`步骤 ${step}：正在通过 API对接 轮询 Hotmail 邮件（${attempt}/${maxAttempts}）...`, 'info');
+      await addLog(`姝ラ ${step}锛氭鍦ㄩ€氳繃 API瀵规帴 杞 Hotmail 閭欢锛?{attempt}/${maxAttempts}锛?..`, 'info');
       const fetchResult = await fetchHotmailMailboxMessages(account, HOTMAIL_MAILBOXES);
       account = fetchResult.account;
       const matchResult = pickVerificationMessageWithTimeFallback(fetchResult.messages, {
@@ -5697,10 +5698,10 @@ async function pollHotmailVerificationCode(step, state, pollPayload = {}) {
       if (match?.code) {
         const mailboxLabel = match.message?.mailbox || 'INBOX';
         if (matchResult.usedRelaxedFilters) {
-          const fallbackLabel = matchResult.usedTimeFallback ? '宽松匹配 + 时间回退' : '宽松匹配';
-          await addLog(`步骤 ${step}：严格规则未命中，已改用 ${fallbackLabel} 并命中 Hotmail ${mailboxLabel} 验证码。`, 'warn');
+          const fallbackLabel = matchResult.usedTimeFallback ? '瀹芥澗鍖归厤 + 鏃堕棿鍥為€€' : '瀹芥澗鍖归厤';
+          await addLog(`姝ラ ${step}锛氫弗鏍艰鍒欐湭鍛戒腑锛屽凡鏀圭敤 ${fallbackLabel} 骞跺懡涓?Hotmail ${mailboxLabel} 楠岃瘉鐮併€俙, 'warn');
         }
-        await addLog(`步骤 ${step}：已通过 API对接 在 Hotmail ${mailboxLabel} 中找到验证码：${match.code}`, 'ok');
+        await addLog(`姝ラ ${step}锛氬凡閫氳繃 API瀵规帴 鍦?Hotmail ${mailboxLabel} 涓壘鍒伴獙璇佺爜锛?{match.code}`, 'ok');
         return {
           ok: true,
           code: match.code,
@@ -5709,15 +5710,15 @@ async function pollHotmailVerificationCode(step, state, pollPayload = {}) {
         };
       }
 
-      lastError = new Error(`步骤 ${step}：暂未在 Hotmail 收件箱中找到匹配验证码（${attempt}/${maxAttempts}）。`);
+      lastError = new Error(`姝ラ ${step}锛氭殏鏈湪 Hotmail 鏀朵欢绠变腑鎵惧埌鍖归厤楠岃瘉鐮侊紙${attempt}/${maxAttempts}锛夈€俙);
       await addLog(lastError.message, attempt === maxAttempts ? 'warn' : 'info');
       const mailSummary = summarizeMessagesForLog(fetchResult.messages);
       if (mailSummary) {
-        await addLog(`步骤 ${step}：最近邮件样本：${mailSummary}`, 'info');
+        await addLog(`姝ラ ${step}锛氭渶杩戦偖浠舵牱鏈細${mailSummary}`, 'info');
       }
     } catch (err) {
       lastError = err;
-      await addLog(`步骤 ${step}：Hotmail API 对接轮询失败：${err.message}`, 'warn');
+      await addLog(`姝ラ ${step}锛欻otmail API 瀵规帴杞澶辫触锛?{err.message}`, 'warn');
     }
 
     if (attempt < maxAttempts) {
@@ -5725,7 +5726,7 @@ async function pollHotmailVerificationCode(step, state, pollPayload = {}) {
     }
   }
 
-  throw lastError || new Error(`步骤 ${step}：未在 Hotmail 收件箱中找到新的匹配验证码。`);
+  throw lastError || new Error(`姝ラ ${step}锛氭湭鍦?Hotmail 鏀朵欢绠变腑鎵惧埌鏂扮殑鍖归厤楠岃瘉鐮併€俙);
 }
 
 function generateRandomSuffix(length = 6) {
@@ -5812,24 +5813,24 @@ function buildGeneratedAliasEmail(state) {
 
   if (provider === GMAIL_PROVIDER) {
     if (!emailPrefix) {
-      throw new Error('Gmail 原邮箱未设置，请先在侧边栏填写。');
+      throw new Error('Gmail 鍘熼偖绠辨湭璁剧疆锛岃鍏堝湪渚ц竟鏍忓～鍐欍€?);
     }
     const parsed = parseGmailBaseEmail(emailPrefix);
     if (!parsed) {
-      throw new Error('Gmail 原邮箱格式不正确，请填写类似 name@gmail.com 的地址。');
+      throw new Error('Gmail 鍘熼偖绠辨牸寮忎笉姝ｇ‘锛岃濉啓绫讳技 name@gmail.com 鐨勫湴鍧€銆?);
     }
     return `${parsed.localPart}+${generateRandomWordAliasTag()}@${parsed.domain}`;
   }
 
   if (!emailPrefix) {
-    throw new Error('2925 邮箱前缀未设置，请先在侧边栏填写。');
+    throw new Error('2925 閭鍓嶇紑鏈缃紝璇峰厛鍦ㄤ晶杈规爮濉啓銆?);
   }
 
   if (provider === '2925' && isGeneratedAliasProvider(state)) {
     return `${emailPrefix}${generateRandomSuffix(6)}@2925.com`;
   }
 
-  throw new Error(`未支持的别名邮箱类型：${provider}`);
+  throw new Error(`鏈敮鎸佺殑鍒悕閭绫诲瀷锛?{provider}`);
 }
 
 function getManagedAliasUtils() {
@@ -5986,15 +5987,15 @@ function isReusableGeneratedAliasEmail(state = {}, email = state?.email) {
 function buildGeneratedAliasEmail(state) {
   const provider = state.mailProvider || '163';
   const baseEmail = getManagedAliasBaseEmail(state, provider);
-  const baseLabel = provider === GMAIL_PROVIDER ? 'Gmail 原邮箱' : '2925 基邮箱';
+  const baseLabel = provider === GMAIL_PROVIDER ? 'Gmail 鍘熼偖绠? : '2925 鍩洪偖绠?;
   const exampleEmail = provider === GMAIL_PROVIDER ? 'name@gmail.com' : 'name@2925.com';
 
   if (!baseEmail) {
-    throw new Error(`${baseLabel}未设置，请先在侧边栏填写，或直接在“注册邮箱”中手动填写完整邮箱。`);
+    throw new Error(`${baseLabel}鏈缃紝璇峰厛鍦ㄤ晶杈规爮濉啓锛屾垨鐩存帴鍦ㄢ€滄敞鍐岄偖绠扁€濅腑鎵嬪姩濉啓瀹屾暣閭銆俙);
   }
 
   if (!parseManagedAliasBaseEmail(baseEmail, provider)) {
-    throw new Error(`${baseLabel}格式不正确，请填写类似 ${exampleEmail} 的地址。`);
+    throw new Error(`${baseLabel}鏍煎紡涓嶆纭紝璇峰～鍐欑被浼?${exampleEmail} 鐨勫湴鍧€銆俙);
   }
 
   const utils = getManagedAliasUtils();
@@ -6014,7 +6015,7 @@ function buildGeneratedAliasEmail(state) {
     return `${parsedBaseEmail.localPart}${generateRandomSuffix(6)}@${parsedBaseEmail.domain}`;
   }
 
-  throw new Error(`未支持的别名邮箱类型：${provider}`);
+  throw new Error(`鏈敮鎸佺殑鍒悕閭绫诲瀷锛?{provider}`);
 }
 
 function getLuckmailSessionConfig(state = {}) {
@@ -6029,7 +6030,7 @@ function getLuckmailSessionConfig(state = {}) {
 function ensureLuckmailApiKey(state = {}) {
   const apiKey = String(state.luckmailApiKey || '').trim();
   if (!apiKey) {
-    throw new Error('LuckMail API Key 为空，请先在侧边栏填写。');
+    throw new Error('LuckMail API Key 涓虹┖锛岃鍏堝湪渚ц竟鏍忓～鍐欍€?);
   }
   return apiKey;
 }
@@ -6068,9 +6069,9 @@ async function requestLuckmail(method, path, { baseUrl, apiKey, params, jsonData
     response = await fetch(requestUrl.toString(), fetchOptions);
   } catch (err) {
     if (err?.name === 'AbortError') {
-      throw new Error(`LuckMail 请求超时：${path}`);
+      throw new Error(`LuckMail 璇锋眰瓒呮椂锛?{path}`);
     }
-    throw new Error(`LuckMail 请求失败：${err.message}`);
+    throw new Error(`LuckMail 璇锋眰澶辫触锛?{err.message}`);
   } finally {
     clearTimeout(timeoutId);
   }
@@ -6079,21 +6080,21 @@ async function requestLuckmail(method, path, { baseUrl, apiKey, params, jsonData
   try {
     payload = await response.json();
   } catch {
-    throw new Error(`LuckMail 返回了无法解析的响应：${path}`);
+    throw new Error(`LuckMail 杩斿洖浜嗘棤娉曡В鏋愮殑鍝嶅簲锛?{path}`);
   }
 
   if (!response.ok) {
     const errorText = String(payload?.message || response.statusText || 'HTTP error');
-    throw new Error(`LuckMail 请求失败：${errorText}`);
+    throw new Error(`LuckMail 璇锋眰澶辫触锛?{errorText}`);
   }
 
   if (!payload || typeof payload !== 'object') {
-    throw new Error(`LuckMail 返回数据无效：${path}`);
+    throw new Error(`LuckMail 杩斿洖鏁版嵁鏃犳晥锛?{path}`);
   }
 
   if (payload.code !== 0) {
     const errorText = String(payload.message || 'Unknown error');
-    throw new Error(`LuckMail 接口返回失败：${errorText}`);
+    throw new Error(`LuckMail 鎺ュ彛杩斿洖澶辫触锛?{errorText}`);
   }
 
   return payload.data;
@@ -6312,13 +6313,13 @@ async function listLuckmailPurchasesByProject(state, options = {}) {
 async function getLuckmailPurchaseById(state, purchaseId, options = {}) {
   const normalizedPurchaseId = Number(normalizeLuckmailPurchaseId(purchaseId)) || 0;
   if (!normalizedPurchaseId) {
-    throw new Error('LuckMail 邮箱 ID 无效。');
+    throw new Error('LuckMail 閭 ID 鏃犳晥銆?);
   }
 
   const purchases = await listLuckmailPurchasesByProject(state, options);
   const purchase = purchases.find((item) => item.id === normalizedPurchaseId) || null;
   if (!purchase) {
-    throw new Error(`未找到 ID=${normalizedPurchaseId} 的 openai LuckMail 邮箱。`);
+    throw new Error(`鏈壘鍒?ID=${normalizedPurchaseId} 鐨?openai LuckMail 閭銆俙);
   }
   return purchase;
 }
@@ -6347,7 +6348,7 @@ async function ensureLuckmailPreserveTag(client, state = null) {
     preserveTag = await client.user.createTag(
       DEFAULT_LUCKMAIL_PRESERVE_TAG_NAME,
       0,
-      '保留邮箱（不参与自动复用）'
+      '淇濈暀閭锛堜笉鍙備笌鑷姩澶嶇敤锛?
     );
   }
 
@@ -6361,7 +6362,7 @@ async function ensureLuckmailPreserveTag(client, state = null) {
 async function activateLuckmailPurchaseForFlow(state, client, purchase, options = {}) {
   const normalizedPurchase = normalizeLuckmailPurchase(purchase);
   if (!normalizedPurchase?.email_address || !normalizedPurchase?.token) {
-    throw new Error('LuckMail 邮箱缺少 email/token，无法用于当前流程。');
+    throw new Error('LuckMail 閭缂哄皯 email/token锛屾棤娉曠敤浜庡綋鍓嶆祦绋嬨€?);
   }
 
   let baselineCursor = null;
@@ -6402,14 +6403,14 @@ async function findReusableLuckmailPurchaseForFlow(state, client) {
       const aliveResult = await client.user.checkTokenAlive(candidate.token);
       if (!aliveResult?.alive) {
         await addLog(
-          `LuckMail：跳过不可复用邮箱 ${candidate.email_address}：${aliveResult?.message || aliveResult?.status || 'token 不可用'}`,
+          `LuckMail锛氳烦杩囦笉鍙鐢ㄩ偖绠?${candidate.email_address}锛?{aliveResult?.message || aliveResult?.status || 'token 涓嶅彲鐢?}`,
           'warn'
         );
         continue;
       }
       return candidate;
     } catch (err) {
-      await addLog(`LuckMail：检测复用邮箱 ${candidate.email_address} 失败：${err.message}`, 'warn');
+      await addLog(`LuckMail锛氭娴嬪鐢ㄩ偖绠?${candidate.email_address} 澶辫触锛?{err.message}`, 'warn');
     }
   }
 
@@ -6417,7 +6418,7 @@ async function findReusableLuckmailPurchaseForFlow(state, client) {
 }
 
 async function selectLuckmailPurchase(purchaseId) {
-  const state = await ensureManualInteractionAllowed('切换 LuckMail 邮箱');
+  const state = await ensureManualInteractionAllowed('鍒囨崲 LuckMail 閭');
   const client = createLuckmailClient(state);
   const purchase = await getLuckmailPurchaseById(state, purchaseId, {
     client,
@@ -6425,24 +6426,24 @@ async function selectLuckmailPurchase(purchaseId) {
   });
 
   if (purchase.user_disabled === 1) {
-    throw new Error(`LuckMail 邮箱 ${purchase.email_address} 已禁用，无法使用。`);
+    throw new Error(`LuckMail 閭 ${purchase.email_address} 宸茬鐢紝鏃犳硶浣跨敤銆俙);
   }
 
   const aliveResult = await client.user.checkTokenAlive(purchase.token);
   if (!aliveResult?.alive) {
-    throw new Error(`LuckMail 邮箱 ${purchase.email_address} 当前不可用：${aliveResult?.message || aliveResult?.status || 'token 已失效'}`);
+    throw new Error(`LuckMail 閭 ${purchase.email_address} 褰撳墠涓嶅彲鐢細${aliveResult?.message || aliveResult?.status || 'token 宸插け鏁?}`);
   }
 
   const activatedPurchase = await activateLuckmailPurchaseForFlow(state, client, purchase, {
     initializeCursor: true,
-    logMessage: `LuckMail：已切换当前邮箱为 ${purchase.email_address}`,
+    logMessage: `LuckMail锛氬凡鍒囨崲褰撳墠閭涓?${purchase.email_address}`,
   });
   const nextState = await getState();
   return buildLuckmailPurchaseView(activatedPurchase, nextState);
 }
 
 async function setLuckmailPurchasePreservedState(purchaseId, preserved) {
-  const state = await ensureManualInteractionAllowed('设置 LuckMail 邮箱保留状态');
+  const state = await ensureManualInteractionAllowed('璁剧疆 LuckMail 閭淇濈暀鐘舵€?);
   const client = createLuckmailClient(state);
   const purchase = await getLuckmailPurchaseById(state, purchaseId, {
     client,
@@ -6456,7 +6457,7 @@ async function setLuckmailPurchasePreservedState(purchaseId, preserved) {
     await client.user.setPurchaseTag(purchase.id, { tagId: 0 });
   }
 
-  await addLog(`LuckMail：已将 ${purchase.email_address} ${preserved ? '设为保留' : '取消保留'}`, 'ok');
+  await addLog(`LuckMail锛氬凡灏?${purchase.email_address} ${preserved ? '璁句负淇濈暀' : '鍙栨秷淇濈暀'}`, 'ok');
   const refreshedState = await getState();
   const refreshedPurchase = await getLuckmailPurchaseById(refreshedState, purchase.id, {
     client,
@@ -6466,7 +6467,7 @@ async function setLuckmailPurchasePreservedState(purchaseId, preserved) {
 }
 
 async function setLuckmailPurchaseDisabledState(purchaseId, disabled) {
-  const state = await ensureManualInteractionAllowed(disabled ? '禁用 LuckMail 邮箱' : '启用 LuckMail 邮箱');
+  const state = await ensureManualInteractionAllowed(disabled ? '绂佺敤 LuckMail 閭' : '鍚敤 LuckMail 閭');
   const client = createLuckmailClient(state);
   const purchase = await getLuckmailPurchaseById(state, purchaseId, {
     client,
@@ -6480,7 +6481,7 @@ async function setLuckmailPurchaseDisabledState(purchaseId, disabled) {
     await clearLuckmailRuntimeState({ clearEmail: isLuckmailProvider(await getState()) });
   }
 
-  await addLog(`LuckMail：已将 ${purchase.email_address} ${disabled ? '禁用' : '启用'}`, 'ok');
+  await addLog(`LuckMail锛氬凡灏?${purchase.email_address} ${disabled ? '绂佺敤' : '鍚敤'}`, 'ok');
   const refreshedState = await getState();
   const refreshedPurchase = await getLuckmailPurchaseById(refreshedState, purchase.id, {
     client,
@@ -6495,10 +6496,10 @@ async function batchUpdateLuckmailPurchases(input = {}) {
     ? [...new Set(input.ids.map((id) => Number(normalizeLuckmailPurchaseId(id)) || 0).filter((id) => id > 0))]
     : [];
   if (!selectedIds.length) {
-    throw new Error('请先选择至少一个 LuckMail 邮箱。');
+    throw new Error('璇峰厛閫夋嫨鑷冲皯涓€涓?LuckMail 閭銆?);
   }
 
-  const state = await ensureManualInteractionAllowed('批量更新 LuckMail 邮箱');
+  const state = await ensureManualInteractionAllowed('鎵归噺鏇存柊 LuckMail 閭');
   const client = createLuckmailClient(state);
   const purchases = await listLuckmailPurchasesByProject(state, {
     client,
@@ -6508,7 +6509,7 @@ async function batchUpdateLuckmailPurchases(input = {}) {
   const targetPurchases = selectedIds.map((id) => purchaseMap.get(id)).filter(Boolean);
 
   if (!targetPurchases.length) {
-    throw new Error('未找到可批量处理的 openai LuckMail 邮箱。');
+    throw new Error('鏈壘鍒板彲鎵归噺澶勭悊鐨?openai LuckMail 閭銆?);
   }
 
   const targetIds = targetPurchases.map((purchase) => purchase.id);
@@ -6525,7 +6526,7 @@ async function batchUpdateLuckmailPurchases(input = {}) {
       }
     });
     await setLuckmailUsedPurchasesState(nextUsedState);
-    await addLog(`LuckMail：已批量${action === 'used' ? '标记已用' : '标记未用'} ${targetIds.length} 个邮箱`, 'ok');
+    await addLog(`LuckMail锛氬凡鎵归噺${action === 'used' ? '鏍囪宸茬敤' : '鏍囪鏈敤'} ${targetIds.length} 涓偖绠盽, 'ok');
   } else if (action === 'preserve' || action === 'unpreserve') {
     if (action === 'preserve') {
       const preserveTag = await ensureLuckmailPreserveTag(client, state);
@@ -6533,16 +6534,16 @@ async function batchUpdateLuckmailPurchases(input = {}) {
     } else {
       await client.user.batchSetPurchaseTag(targetIds, { tagId: 0 });
     }
-    await addLog(`LuckMail：已批量${action === 'preserve' ? '保留' : '取消保留'} ${targetIds.length} 个邮箱`, 'ok');
+    await addLog(`LuckMail锛氬凡鎵归噺${action === 'preserve' ? '淇濈暀' : '鍙栨秷淇濈暀'} ${targetIds.length} 涓偖绠盽, 'ok');
   } else if (action === 'disable' || action === 'enable') {
     await client.user.batchSetPurchaseDisabled(targetIds, action === 'disable' ? 1 : 0);
     const currentPurchase = getCurrentLuckmailPurchase(await getState());
     if (action === 'disable' && currentPurchase?.id && targetIds.includes(currentPurchase.id)) {
       await clearLuckmailRuntimeState({ clearEmail: isLuckmailProvider(await getState()) });
     }
-    await addLog(`LuckMail：已批量${action === 'disable' ? '禁用' : '启用'} ${targetIds.length} 个邮箱`, 'ok');
+    await addLog(`LuckMail锛氬凡鎵归噺${action === 'disable' ? '绂佺敤' : '鍚敤'} ${targetIds.length} 涓偖绠盽, 'ok');
   } else {
-    throw new Error(`不支持的 LuckMail 批量操作：${action}`);
+    throw new Error(`涓嶆敮鎸佺殑 LuckMail 鎵归噺鎿嶄綔锛?{action}`);
   }
 
   return {
@@ -6551,7 +6552,7 @@ async function batchUpdateLuckmailPurchases(input = {}) {
 }
 
 async function disableUsedLuckmailPurchases() {
-  const state = await ensureManualInteractionAllowed('禁用已用 LuckMail 邮箱');
+  const state = await ensureManualInteractionAllowed('绂佺敤宸茬敤 LuckMail 閭');
   const usedPurchases = getLuckmailUsedPurchases(state);
   const preserveTagInfo = getLuckmailPreserveTagInfo(state);
   const client = createLuckmailClient(state);
@@ -6579,7 +6580,7 @@ async function disableUsedLuckmailPurchases() {
   if (currentPurchase?.id && targetIds.includes(currentPurchase.id)) {
     await clearLuckmailRuntimeState({ clearEmail: isLuckmailProvider(await getState()) });
   }
-  await addLog(`LuckMail：已禁用 ${targetIds.length} 个本地已用邮箱`, 'ok');
+  await addLog(`LuckMail锛氬凡绂佺敤 ${targetIds.length} 涓湰鍦板凡鐢ㄩ偖绠盽, 'ok');
   return { disabledIds: targetIds };
 }
 
@@ -6601,7 +6602,7 @@ async function ensureLuckmailPurchaseForFlow(options = {}) {
     if (reusablePurchase) {
       return activateLuckmailPurchaseForFlow(state, client, reusablePurchase, {
         initializeCursor: true,
-        logMessage: `LuckMail：已复用 openai 邮箱 ${reusablePurchase.email_address}`,
+        logMessage: `LuckMail锛氬凡澶嶇敤 openai 閭 ${reusablePurchase.email_address}`,
       });
     }
   }
@@ -6613,12 +6614,12 @@ async function ensureLuckmailPurchaseForFlow(options = {}) {
   const purchases = normalizeLuckmailPurchases(result);
   const purchase = purchases[0] || null;
   if (!purchase?.email_address || !purchase?.token) {
-    throw new Error('LuckMail 购邮成功，但未返回可用邮箱或 token。');
+    throw new Error('LuckMail 璐偖鎴愬姛锛屼絾鏈繑鍥炲彲鐢ㄩ偖绠辨垨 token銆?);
   }
 
   return activateLuckmailPurchaseForFlow(state, client, purchase, {
     initializeCursor: false,
-    logMessage: `LuckMail：已购买邮箱 ${purchase.email_address}（类型：${config.emailType}，项目：${DEFAULT_LUCKMAIL_PROJECT_CODE}）`,
+    logMessage: `LuckMail锛氬凡璐拱閭 ${purchase.email_address}锛堢被鍨嬶細${config.emailType}锛岄」鐩細${DEFAULT_LUCKMAIL_PROJECT_CODE}锛塦,
   });
 }
 
@@ -6649,7 +6650,7 @@ async function resolveLuckmailVerificationMail(client, token, filters = {}, toke
 async function legacyPollLuckmailVerificationCode(step, state, pollPayload = {}) {
   const purchase = getCurrentLuckmailPurchase(state);
   if (!purchase?.token) {
-    throw new Error('LuckMail 当前没有可用 token，请先执行步骤 3 购买邮箱。');
+    throw new Error('LuckMail 褰撳墠娌℃湁鍙敤 token锛岃鍏堟墽琛屾楠?3 璐拱閭銆?);
   }
 
   const client = createLuckmailClient(state);
@@ -6663,20 +6664,20 @@ async function legacyPollLuckmailVerificationCode(step, state, pollPayload = {})
     const baselineCursor = buildLuckmailBaselineCursor(mailList?.mails || []);
     await setLuckmailMailCursorState(baselineCursor);
     if (baselineCursor?.messageId || baselineCursor?.receivedAt) {
-      await addLog(`步骤 ${step}：LuckMail 已保存当前邮箱旧邮件快照，后续仅使用新收到的验证码。`, 'info');
+      await addLog(`姝ラ ${step}锛歀uckMail 宸蹭繚瀛樺綋鍓嶉偖绠辨棫閭欢蹇収锛屽悗缁粎浣跨敤鏂版敹鍒扮殑楠岃瘉鐮併€俙, 'info');
     }
   }
 
   let lastError = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     throwIfStopped();
-    await addLog(`步骤 ${step}：正在通过 LuckMail 轮询验证码（${attempt}/${maxAttempts}）...`, 'info');
+    await addLog(`姝ラ ${step}锛氭鍦ㄩ€氳繃 LuckMail 杞楠岃瘉鐮侊紙${attempt}/${maxAttempts}锛?..`, 'info');
 
     try {
       const tokenCode = await client.user.getTokenCode(purchase.token);
       const cursor = normalizeLuckmailMailCursor((await getState()).currentLuckmailMailCursor);
       if (tokenCode.verification_code && tokenCode.mail && !isLuckmailMailNewerThanCursor(tokenCode.mail, cursor)) {
-        throw new Error(`步骤 ${step}：LuckMail 返回的最新邮件仍是旧验证码。`);
+        throw new Error(`姝ラ ${step}锛歀uckMail 杩斿洖鐨勬渶鏂伴偖浠朵粛鏄棫楠岃瘉鐮併€俙);
       }
 
       let match = null;
@@ -6690,7 +6691,7 @@ async function legacyPollLuckmailVerificationCode(step, state, pollPayload = {})
       if (match?.mail) {
         const cursor = normalizeLuckmailMailCursor((await getState()).currentLuckmailMailCursor);
         if (!isLuckmailMailNewerThanCursor(match.mail, cursor)) {
-          throw new Error(`步骤 ${step}：LuckMail 命中的邮件不是新邮件。`);
+          throw new Error(`姝ラ ${step}锛歀uckMail 鍛戒腑鐨勯偖浠朵笉鏄柊閭欢銆俙);
         }
 
         await setLuckmailMailCursorState(buildLuckmailMailCursor(match.mail));
@@ -6702,13 +6703,13 @@ async function legacyPollLuckmailVerificationCode(step, state, pollPayload = {})
         };
       }
 
-      lastError = new Error(`步骤 ${step}：暂未在 LuckMail 邮箱中找到新的匹配验证码。`);
+      lastError = new Error(`姝ラ ${step}锛氭殏鏈湪 LuckMail 閭涓壘鍒版柊鐨勫尮閰嶉獙璇佺爜銆俙);
     } catch (err) {
       if (isStopError(err)) {
         throw err;
       }
       lastError = err;
-      await addLog(`步骤 ${step}：LuckMail 轮询失败：${err.message}`, 'warn');
+      await addLog(`姝ラ ${step}锛歀uckMail 杞澶辫触锛?{err.message}`, 'warn');
     }
 
     if (attempt < maxAttempts) {
@@ -6716,13 +6717,13 @@ async function legacyPollLuckmailVerificationCode(step, state, pollPayload = {})
     }
   }
 
-  throw lastError || new Error(`步骤 ${step}：未在 LuckMail 邮箱中找到新的匹配验证码。`);
+  throw lastError || new Error(`姝ラ ${step}锛氭湭鍦?LuckMail 閭涓壘鍒版柊鐨勫尮閰嶉獙璇佺爜銆俙);
 }
 
 async function pollLuckmailVerificationCode(step, state, pollPayload = {}) {
   const purchase = getCurrentLuckmailPurchase(state);
   if (!purchase?.token) {
-    throw new Error('LuckMail 当前没有可用 token，请先执行步骤 3 购买邮箱。');
+    throw new Error('LuckMail 褰撳墠娌℃湁鍙敤 token锛岃鍏堟墽琛屾楠?3 璐拱閭銆?);
   }
 
   const client = createLuckmailClient(state);
@@ -6736,21 +6737,21 @@ async function pollLuckmailVerificationCode(step, state, pollPayload = {}) {
     const baselineCursor = buildLuckmailBaselineCursor(mailList?.mails || []);
     await setLuckmailMailCursorState(baselineCursor);
     if (baselineCursor?.messageId || baselineCursor?.receivedAt) {
-      await addLog(`步骤 ${step}：LuckMail 已保存当前邮箱旧邮件快照，后续仅使用新收到的验证码。`, 'info');
+      await addLog(`姝ラ ${step}锛歀uckMail 宸蹭繚瀛樺綋鍓嶉偖绠辨棫閭欢蹇収锛屽悗缁粎浣跨敤鏂版敹鍒扮殑楠岃瘉鐮併€俙, 'info');
     }
   }
 
   let lastError = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     throwIfStopped();
-    await addLog(`步骤 ${step}：正在通过 LuckMail /code 接口轮询验证码（${attempt}/${maxAttempts}）...`, 'info');
+    await addLog(`姝ラ ${step}锛氭鍦ㄩ€氳繃 LuckMail /code 鎺ュ彛杞楠岃瘉鐮侊紙${attempt}/${maxAttempts}锛?..`, 'info');
 
     try {
       const tokenCode = await client.user.getTokenCode(purchase.token);
       const remoteEmail = String(tokenCode?.email_address || '').trim().toLowerCase();
       const expectedEmail = String(purchase.email_address || state?.email || '').trim().toLowerCase();
       if (remoteEmail && expectedEmail && remoteEmail !== expectedEmail) {
-        throw new Error(`步骤 ${step}：LuckMail token 对应邮箱与当前邮箱不一致。当前邮箱：${expectedEmail}；token 邮箱：${remoteEmail}`);
+        throw new Error(`姝ラ ${step}锛歀uckMail token 瀵瑰簲閭涓庡綋鍓嶉偖绠变笉涓€鑷淬€傚綋鍓嶉偖绠憋細${expectedEmail}锛泃oken 閭锛?{remoteEmail}`);
       }
 
       const tokenMail = tokenCode.verification_code && tokenCode.mail && !tokenCode.mail.verification_code
@@ -6763,11 +6764,11 @@ async function pollLuckmailVerificationCode(step, state, pollPayload = {}) {
       const cursor = normalizeLuckmailMailCursor((await getState()).currentLuckmailMailCursor);
 
       if (!code || !tokenMail) {
-        lastError = new Error(`步骤 ${step}：LuckMail /code 接口暂未返回新的验证码。`);
+        lastError = new Error(`姝ラ ${step}锛歀uckMail /code 鎺ュ彛鏆傛湭杩斿洖鏂扮殑楠岃瘉鐮併€俙);
       } else if (excludedCodes.has(code)) {
-        lastError = new Error(`步骤 ${step}：LuckMail 返回的验证码 ${code} 已试过，等待 15 秒后再次轮询。`);
+        lastError = new Error(`姝ラ ${step}锛歀uckMail 杩斿洖鐨勯獙璇佺爜 ${code} 宸茶瘯杩囷紝绛夊緟 15 绉掑悗鍐嶆杞銆俙);
       } else if (!isLuckmailMailNewerThanCursor(tokenMail, cursor)) {
-        lastError = new Error(`步骤 ${step}：LuckMail /code 返回的最新邮件仍是旧验证码。`);
+        lastError = new Error(`姝ラ ${step}锛歀uckMail /code 杩斿洖鐨勬渶鏂伴偖浠朵粛鏄棫楠岃瘉鐮併€俙);
       } else {
         await setLuckmailMailCursorState(buildLuckmailMailCursor(tokenMail));
         return {
@@ -6782,7 +6783,7 @@ async function pollLuckmailVerificationCode(step, state, pollPayload = {}) {
         throw err;
       }
       lastError = err;
-      await addLog(`步骤 ${step}：LuckMail /code 轮询失败：${err.message}`, 'warn');
+      await addLog(`姝ラ ${step}锛歀uckMail /code 杞澶辫触锛?{err.message}`, 'warn');
     }
 
     if (attempt < maxAttempts) {
@@ -6790,7 +6791,7 @@ async function pollLuckmailVerificationCode(step, state, pollPayload = {}) {
     }
   }
 
-  throw lastError || new Error(`步骤 ${step}：未在 LuckMail /code 接口中获取到新的验证码。`);
+  throw lastError || new Error(`姝ラ ${step}锛氭湭鍦?LuckMail /code 鎺ュ彛涓幏鍙栧埌鏂扮殑楠岃瘉鐮併€俙);
 }
 
 function summarizeCloudflareTempEmailMessagesForLog(messages) {
@@ -6803,11 +6804,11 @@ function summarizeCloudflareTempEmailMessagesForLog(messages) {
     })
     .slice(0, 3)
     .map((message) => {
-      const receivedAt = message?.receivedDateTime || '未知时间';
-      const sender = message?.from?.emailAddress?.address || '未知发件人';
-      const subject = message?.subject || '（无主题）';
+      const receivedAt = message?.receivedDateTime || '鏈煡鏃堕棿';
+      const sender = message?.from?.emailAddress?.address || '鏈煡鍙戜欢浜?;
+      const subject = message?.subject || '锛堟棤涓婚锛?;
       const preview = String(message?.bodyPreview || '').replace(/\s+/g, ' ').trim().slice(0, 80);
-      const address = message?.address || '未知地址';
+      const address = message?.address || '鏈煡鍦板潃';
       return `[${address}] ${receivedAt} | ${sender} | ${subject} | ${preview}`;
     })
     .join(' || ');
@@ -6842,7 +6843,6 @@ async function deleteCloudflareTempEmailMail(config, mailId) {
   });
   return true;
 }
-
 async function listCloudflareTempEmailMessages(state, options = {}) {
   const config = ensureCloudflareTempEmailConfig(state, { requireAdminAuth: true });
   const address = normalizeCloudflareTempEmailAddress(options.address);
@@ -6854,35 +6854,60 @@ async function listCloudflareTempEmailMessages(state, options = {}) {
   );
   const useRegistrationLookup = lookupMode === CLOUDFLARE_TEMP_EMAIL_LOOKUP_MODE_REGISTRATION_EMAIL
     && Boolean(originalRecipient);
-  const searchParams = buildCloudflareTempEmailMailSearchParams({
-    address,
-    originalRecipient,
-    limit: options.limit,
-    offset: options.offset,
-    useRegistrationLookup,
-  });
-  const payload = await requestCloudflareTempEmailJson(config, '/admin/mails', {
-    method: 'GET',
-    searchParams,
-  });
+  
+  const allMessages = [];
+  const requestLimit = Number(options.limit) || CLOUDFLARE_TEMP_EMAIL_DEFAULT_PAGE_SIZE;
+  const maxPages = options.maxPages || MAX_CLOUDFLARE_TEMP_EMAIL_SCAN_PAGES;
+  let hasOriginalRecipient = false;
+  
+  for (let page = 0; page < maxPages; page++) {
+    const currentOffset = (Number(options.offset) || 0) + page * requestLimit;
+    const searchParams = buildCloudflareTempEmailMailSearchParams({
+      address,
+      originalRecipient,
+      limit: requestLimit,
+      offset: currentOffset,
+      useRegistrationLookup,
+    });
+    
+    const payload = await requestCloudflareTempEmailJson(config, '/admin/mails', {
+      method: 'GET',
+      searchParams,
+    });
 
-  const normalizedMessages = normalizeCloudflareTempEmailMailApiMessages(payload);
-  const hasOriginalRecipient = normalizedMessages.some((message) => normalizeCloudflareTempEmailReceiveMailbox(message.originalRecipient));
-  const messages = normalizedMessages.filter((message) => {
-    if (useRegistrationLookup) {
-      return normalizeCloudflareTempEmailReceiveMailbox(message.originalRecipient) === originalRecipient;
+    const normalizedMessages = normalizeCloudflareTempEmailMailApiMessages(payload);
+    
+    if (normalizedMessages.length === 0) break;
+    
+    if (!hasOriginalRecipient) {
+      hasOriginalRecipient = normalizedMessages.some((message) => 
+        normalizeCloudflareTempEmailReceiveMailbox(message.originalRecipient)
+      );
     }
-    if (!address) return true;
-    return !message.address || normalizeCloudflareTempEmailAddress(message.address) === address;
-  });
+    
+    const filteredMessages = normalizedMessages.filter((message) => {
+      if (useRegistrationLookup) {
+        return normalizeCloudflareTempEmailReceiveMailbox(message.originalRecipient) === originalRecipient;
+      }
+      if (!address) return true;
+      return !message.address || normalizeCloudflareTempEmailAddress(message.address) === address;
+    });
+    
+    allMessages.push(...filteredMessages);
+    
+    if (filteredMessages.length > 0 || normalizedMessages.length < requestLimit) {
+      break;
+    }
+  }
 
   return {
     config,
-    messages,
+    messages: allMessages,
     lookupMode,
     originalRecipient,
-    missingOriginalRecipient: useRegistrationLookup && normalizedMessages.length > 0 && !hasOriginalRecipient,
+    missingOriginalRecipient: useRegistrationLookup && allMessages.length === 0 && hasOriginalRecipient === false,
   };
+}
 }
 
 async function pollCloudflareTempEmailVerificationCode(step, state, pollPayload = {}) {
@@ -6899,15 +6924,15 @@ async function pollCloudflareTempEmailVerificationCode(step, state, pollPayload 
   );
   const useRegistrationLookup = lookupMode === CLOUDFLARE_TEMP_EMAIL_LOOKUP_MODE_REGISTRATION_EMAIL;
   if (!targetEmail) {
-    throw new Error('Cloudflare Temp Email 轮询前缺少目标邮箱地址，请先填写注册邮箱或“邮件接收”邮箱。');
+    throw new Error('Cloudflare Temp Email 杞鍓嶇己灏戠洰鏍囬偖绠卞湴鍧€锛岃鍏堝～鍐欐敞鍐岄偖绠辨垨鈥滈偖浠舵帴鏀垛€濋偖绠便€?);
   }
 
   if (useRegistrationLookup) {
-    await addLog(`步骤 ${step}：正在按注册邮箱筛选 Cloudflare Temp Email 邮件（${originalRecipient}）...`, 'info');
+    await addLog(`姝ラ ${step}锛氭鍦ㄦ寜娉ㄥ唽閭绛涢€?Cloudflare Temp Email 閭欢锛?{originalRecipient}锛?..`, 'info');
   } else if (registrationEmail && registrationEmail !== targetEmail) {
-    await addLog(`步骤 ${step}：正在轮询 Cloudflare Temp Email 收件邮箱（${targetEmail}），注册邮箱为 ${registrationEmail}...`, 'info');
+    await addLog(`姝ラ ${step}锛氭鍦ㄨ疆璇?Cloudflare Temp Email 鏀朵欢閭锛?{targetEmail}锛夛紝娉ㄥ唽閭涓?${registrationEmail}...`, 'info');
   } else {
-    await addLog(`步骤 ${step}：正在轮询 Cloudflare Temp Email 邮件（${targetEmail}）...`, 'info');
+    await addLog(`姝ラ ${step}锛氭鍦ㄨ疆璇?Cloudflare Temp Email 閭欢锛?{targetEmail}锛?..`, 'info');
   }
   const maxAttempts = Number(pollPayload.maxAttempts) || 5;
   const intervalMs = Number(pollPayload.intervalMs) || 3000;
@@ -6924,7 +6949,7 @@ async function pollCloudflareTempEmailVerificationCode(step, state, pollPayload 
         offset: pollPayload.offset || 0,
       });
       if (useRegistrationLookup && missingOriginalRecipient) {
-        throw new Error('Cloudflare Temp Email 当前接口未返回 original_recipient；注册邮箱模式需要支持该字段的部署。旧部署可切换到“邮件接收”模式。');
+        throw new Error('Cloudflare Temp Email 褰撳墠鎺ュ彛鏈繑鍥?original_recipient锛涙敞鍐岄偖绠辨ā寮忛渶瑕佹敮鎸佽瀛楁鐨勯儴缃层€傛棫閮ㄧ讲鍙垏鎹㈠埌鈥滈偖浠舵帴鏀垛€濇ā寮忋€?);
       }
       const matchResult = pickVerificationMessageWithTimeFallback(messages, {
         afterTimestamp: pollPayload.filterAfterTimestamp || 0,
@@ -6938,13 +6963,13 @@ async function pollCloudflareTempEmailVerificationCode(step, state, pollPayload 
 
       if (match?.code) {
         if (matchResult.usedRelaxedFilters) {
-          const fallbackLabel = matchResult.usedTimeFallback ? '宽松匹配 + 时间回退' : '宽松匹配';
-          await addLog(`步骤 ${step}：严格规则未命中，已改用 ${fallbackLabel} 并命中 Cloudflare Temp Email 验证码。`, 'warn');
+          const fallbackLabel = matchResult.usedTimeFallback ? '瀹芥澗鍖归厤 + 鏃堕棿鍥為€€' : '瀹芥澗鍖归厤';
+          await addLog(`姝ラ ${step}锛氫弗鏍艰鍒欐湭鍛戒腑锛屽凡鏀圭敤 ${fallbackLabel} 骞跺懡涓?Cloudflare Temp Email 楠岃瘉鐮併€俙, 'warn');
         }
         try {
           await deleteCloudflareTempEmailMail(config, match.message?.id);
         } catch (err) {
-          await addLog(`步骤 ${step}：删除 Cloudflare Temp Email 邮件失败：${err.message}`, 'warn');
+          await addLog(`姝ラ ${step}锛氬垹闄?Cloudflare Temp Email 閭欢澶辫触锛?{err.message}`, 'warn');
         }
         return {
           ok: true,
@@ -6954,15 +6979,15 @@ async function pollCloudflareTempEmailVerificationCode(step, state, pollPayload 
         };
       }
 
-      lastError = new Error(`步骤 ${step}：暂未在 Cloudflare Temp Email 中找到匹配验证码（${attempt}/${maxAttempts}）。`);
+      lastError = new Error(`姝ラ ${step}锛氭殏鏈湪 Cloudflare Temp Email 涓壘鍒板尮閰嶉獙璇佺爜锛?{attempt}/${maxAttempts}锛夈€俙);
       await addLog(lastError.message, attempt === maxAttempts ? 'warn' : 'info');
       const sample = summarizeCloudflareTempEmailMessagesForLog(messages);
       if (sample) {
-        await addLog(`步骤 ${step}：最近邮件样本：${sample}`, 'info');
+        await addLog(`姝ラ ${step}锛氭渶杩戦偖浠舵牱鏈細${sample}`, 'info');
       }
     } catch (err) {
       lastError = err;
-      await addLog(`步骤 ${step}：Cloudflare Temp Email 轮询失败：${err.message}`, 'warn');
+      await addLog(`姝ラ ${step}锛欳loudflare Temp Email 杞澶辫触锛?{err.message}`, 'warn');
     }
 
     if (attempt < maxAttempts) {
@@ -6970,7 +6995,7 @@ async function pollCloudflareTempEmailVerificationCode(step, state, pollPayload 
     }
   }
 
-  throw lastError || new Error(`步骤 ${step}：未在 Cloudflare Temp Email 中找到新的匹配验证码。`);
+  throw lastError || new Error(`姝ラ ${step}锛氭湭鍦?Cloudflare Temp Email 涓壘鍒版柊鐨勫尮閰嶉獙璇佺爜銆俙);
 }
 
 async function getOpenIcloudHostPreference() {
@@ -7057,10 +7082,10 @@ function isIcloudLoginRequiredError(error) {
     || message.includes('re-authentication required')
     || message.includes('unauthenticated')
     || message.includes('authentication required')
-    || message.includes('需要先登录')
-    || message.includes('请先登录');
-  const hasSelfPromptHint = message.includes('请先在新打开的 icloud 页面中完成登录')
-    || message.includes('请先在当前浏览器登录');
+    || message.includes('闇€瑕佸厛鐧诲綍')
+    || message.includes('璇峰厛鐧诲綍');
+  const hasSelfPromptHint = message.includes('璇峰厛鍦ㄦ柊鎵撳紑鐨?icloud 椤甸潰涓畬鎴愮櫥褰?)
+    || message.includes('璇峰厛鍦ㄥ綋鍓嶆祻瑙堝櫒鐧诲綍');
   const hasAuthStatusWithExplicitLoginHint = (hasAuthStatus401 || hasAuthStatus403)
     && hasExplicitLoginHint;
 
@@ -7151,7 +7176,7 @@ async function openIcloudLoginPage(preferredUrl) {
   return created.id;
 }
 
-async function promptIcloudLogin(error, actionLabel = 'iCloud 操作') {
+async function promptIcloudLogin(error, actionLabel = 'iCloud 鎿嶄綔') {
   const now = Date.now();
   const preferredUrl = await getPreferredIcloudLoginUrl(error);
   const originalError = getErrorMessage(error);
@@ -7161,7 +7186,7 @@ async function promptIcloudLogin(error, actionLabel = 'iCloud 操作') {
     payload: {
       actionLabel,
       loginUrl: preferredUrl,
-      message: '需要先登录 iCloud，我已经为你打开登录页。',
+      message: '闇€瑕佸厛鐧诲綍 iCloud锛屾垜宸茬粡涓轰綘鎵撳紑鐧诲綍椤点€?,
       detail: originalError,
     },
   }).catch(() => { });
@@ -7171,17 +7196,17 @@ async function promptIcloudLogin(error, actionLabel = 'iCloud 操作') {
   }
   lastIcloudLoginPromptAt = now;
 
-  await addLog(`iCloud：${actionLabel}时需要登录，正在打开 ${new URL(preferredUrl).host} ...`, 'warn');
+  await addLog(`iCloud锛?{actionLabel}鏃堕渶瑕佺櫥褰曪紝姝ｅ湪鎵撳紑 ${new URL(preferredUrl).host} ...`, 'warn');
 
   try {
     await openIcloudLoginPage(preferredUrl);
   } catch (tabErr) {
-    await addLog(`iCloud：自动打开登录页失败：${getErrorMessage(tabErr)}`, 'warn');
+    await addLog(`iCloud锛氳嚜鍔ㄦ墦寮€鐧诲綍椤靛け璐ワ細${getErrorMessage(tabErr)}`, 'warn');
   }
 }
 
 async function withIcloudLoginHelp(actionLabel, action) {
-  const safeActionLabel = String(actionLabel || 'iCloud 操作').trim() || 'iCloud 操作';
+  const safeActionLabel = String(actionLabel || 'iCloud 鎿嶄綔').trim() || 'iCloud 鎿嶄綔';
   const maxTransientAttempts = Math.max(1, Number(ICLOUD_TRANSIENT_RETRY_MAX_ATTEMPTS) || 1);
   const retryDelayMs = Math.max(300, Number(ICLOUD_TRANSIENT_RETRY_DELAY_MS) || 1200);
   for (let attempt = 1; attempt <= maxTransientAttempts; attempt += 1) {
@@ -7190,20 +7215,20 @@ async function withIcloudLoginHelp(actionLabel, action) {
     } catch (err) {
       if (isIcloudLoginRequiredError(err)) {
         await promptIcloudLogin(err, actionLabel);
-        throw new Error('请先在新打开的 iCloud 页面中完成登录，再回来点击“我已登录”。');
+        throw new Error('璇峰厛鍦ㄦ柊鎵撳紑鐨?iCloud 椤甸潰涓畬鎴愮櫥褰曪紝鍐嶅洖鏉ョ偣鍑烩€滄垜宸茬櫥褰曗€濄€?);
       }
       if (isIcloudTransientContextError(err)) {
         if (attempt < maxTransientAttempts) {
           if (shouldEmitIcloudTransientLog(`${safeActionLabel}:retry:${attempt}/${maxTransientAttempts}`)) {
-            await addLog(`iCloud：${safeActionLabel}受网络/上下文波动影响，正在重试（${attempt}/${maxTransientAttempts}）...`, 'warn');
+            await addLog(`iCloud锛?{safeActionLabel}鍙楃綉缁?涓婁笅鏂囨尝鍔ㄥ奖鍝嶏紝姝ｅ湪閲嶈瘯锛?{attempt}/${maxTransientAttempts}锛?..`, 'warn');
           }
           await new Promise((resolve) => setTimeout(resolve, retryDelayMs * attempt));
           continue;
         }
         if (shouldEmitIcloudTransientLog(`${safeActionLabel}:final`)) {
-          await addLog(`iCloud：${safeActionLabel}受网络/上下文波动影响：${getErrorMessage(err)}`, 'warn');
+          await addLog(`iCloud锛?{safeActionLabel}鍙楃綉缁?涓婁笅鏂囨尝鍔ㄥ奖鍝嶏細${getErrorMessage(err)}`, 'warn');
         }
-        const transientError = new Error(`iCloud：${safeActionLabel}受网络/上下文波动影响，请稍后重试。`);
+        const transientError = new Error(`iCloud锛?{safeActionLabel}鍙楃綉缁?涓婁笅鏂囨尝鍔ㄥ奖鍝嶏紝璇风◢鍚庨噸璇曘€俙);
         transientError.code = 'ICLOUD_TRANSIENT_CONTEXT';
         transientError.actionLabel = safeActionLabel;
         transientError.cause = err;
@@ -7212,7 +7237,7 @@ async function withIcloudLoginHelp(actionLabel, action) {
       throw err;
     }
   }
-  throw new Error('iCloud 操作失败：未知错误。');
+  throw new Error('iCloud 鎿嶄綔澶辫触锛氭湭鐭ラ敊璇€?);
 }
 
 function isIcloudApiUrl(url = '') {
@@ -7646,8 +7671,8 @@ async function icloudRequest(method, url, options = {}) {
 
         const error = new Error(
           responseText
-            ? `iCloud 请求失败：${method} ${requestUrl}，status ${response.status}，body: ${responseText}`
-            : `iCloud 请求失败：${method} ${requestUrl}，status ${response.status}`
+            ? `iCloud 璇锋眰澶辫触锛?{method} ${requestUrl}锛宻tatus ${response.status}锛宐ody: ${responseText}`
+            : `iCloud 璇锋眰澶辫触锛?{method} ${requestUrl}锛宻tatus ${response.status}`
         );
         error.status = response.status;
         throw error;
@@ -7661,7 +7686,7 @@ async function icloudRequest(method, url, options = {}) {
       try {
         return JSON.parse(rawText);
       } catch (err) {
-        throw new Error(`iCloud 返回的 JSON 无法解析：${method} ${requestUrl}，${err.message}`);
+        throw new Error(`iCloud 杩斿洖鐨?JSON 鏃犳硶瑙ｆ瀽锛?{method} ${requestUrl}锛?{err.message}`);
       }
     } catch (err) {
       if (stopRequested) {
@@ -7670,7 +7695,7 @@ async function icloudRequest(method, url, options = {}) {
 
       let requestError = err;
       if (timeoutTriggered || err?.name === 'AbortError') {
-        requestError = new Error(`iCloud 请求超时：${method} ${url}，${timeoutMs}ms`);
+        requestError = new Error(`iCloud 璇锋眰瓒呮椂锛?{method} ${url}锛?{timeoutMs}ms`);
         requestError.name = 'IcloudTimeoutError';
         requestError.timedOut = true;
       } else if (!requestError?.status) {
@@ -7681,7 +7706,7 @@ async function icloudRequest(method, url, options = {}) {
       }
 
       const directErrorMessage = getErrorMessage(requestError)
-        || `iCloud 请求失败：${method} ${requestUrl}`;
+        || `iCloud 璇锋眰澶辫触锛?{method} ${requestUrl}`;
       const shouldTryPageContext = shouldTryIcloudRequestPageContextFallback(
         requestUrl,
         Number(requestError?.status) || 0,
@@ -7714,7 +7739,7 @@ async function icloudRequest(method, url, options = {}) {
       if (logRetries) {
         const delayMs = getIcloudRetryDelay(attempt);
         await addLog(
-          `iCloud：${retryLabel || getIcloudRequestTargetLabel(requestUrl)} 第 ${attempt}/${totalAttempts} 次失败：${getErrorMessage(requestError)}，${Math.round(delayMs / 1000)} 秒后重试...`,
+          `iCloud锛?{retryLabel || getIcloudRequestTargetLabel(requestUrl)} 绗?${attempt}/${totalAttempts} 娆″け璐ワ細${getErrorMessage(requestError)}锛?{Math.round(delayMs / 1000)} 绉掑悗閲嶈瘯...`,
           'warn'
         );
       }
@@ -7728,7 +7753,7 @@ async function icloudRequest(method, url, options = {}) {
     }
   }
 
-  throw lastError || new Error(`iCloud 请求失败：${method} ${requestUrl}`);
+  throw lastError || new Error(`iCloud 璇锋眰澶辫触锛?{method} ${requestUrl}`);
 }
 
 async function validateIcloudSession(setupUrl) {
@@ -7912,7 +7937,7 @@ async function resolveIcloudPremiumMailService(options = {}) {
       if (preferredIcloudHost && preferredIcloudHost !== normalizeIcloudHost(state.preferredIcloudHost)) {
         await setState({ preferredIcloudHost });
       }
-      await addLog(`iCloud：后台会话校验失败，已切换页面上下文校验（${new URL(service.setupUrl).host}）。`, 'warn');
+      await addLog(`iCloud锛氬悗鍙颁細璇濇牎楠屽け璐ワ紝宸插垏鎹㈤〉闈笂涓嬫枃鏍￠獙锛?{new URL(service.setupUrl).host}锛夈€俙, 'warn');
       return {
         ...service,
         serviceUrl: rememberIcloudServiceUrl(service.serviceUrl),
@@ -7925,7 +7950,7 @@ async function resolveIcloudPremiumMailService(options = {}) {
 
   throw new Error(errors.length
     ? `Could not validate iCloud session. ${errors.join(' | ')}`
-    : `Could not validate iCloud session. 请先在当前浏览器登录 ${effectiveHost || 'icloud.com 或 icloud.com.cn'}。`);
+    : `Could not validate iCloud session. 璇峰厛鍦ㄥ綋鍓嶆祻瑙堝櫒鐧诲綍 ${effectiveHost || 'icloud.com 鎴?icloud.com.cn'}銆俙);
 }
 
 function getIcloudAliasLabel() {
@@ -7935,11 +7960,11 @@ function getIcloudAliasLabel() {
 }
 
 async function checkIcloudSession(options = {}) {
-  const actionLabel = String(options?.actionLabel || '检查 iCloud 会话').trim() || '检查 iCloud 会话';
+  const actionLabel = String(options?.actionLabel || '妫€鏌?iCloud 浼氳瘽').trim() || '妫€鏌?iCloud 浼氳瘽';
   const { actionLabel: _ignoredActionLabel, ...resolveOptions } = options || {};
   return withIcloudLoginHelp(actionLabel, async () => {
     const { setupUrl } = await resolveIcloudPremiumMailService(resolveOptions);
-    await addLog(`iCloud：会话校验通过（${new URL(setupUrl).host}）`, 'ok');
+    await addLog(`iCloud锛氫細璇濇牎楠岄€氳繃锛?{new URL(setupUrl).host}锛塦, 'ok');
     return { ok: true, setupUrl };
   });
 }
@@ -7964,12 +7989,12 @@ async function loadNormalizedIcloudAliases(options = {}) {
 
     try {
       if (!silent) {
-        await addLog(`iCloud：正在从 ${new URL(serviceUrl).host} 加载 Hide My Email 别名列表...`, 'info');
+        await addLog(`iCloud锛氭鍦ㄤ粠 ${new URL(serviceUrl).host} 鍔犺浇 Hide My Email 鍒悕鍒楄〃...`, 'info');
       }
       const response = await icloudRequest('GET', `${serviceUrl}/v2/hme/list`, {
         timeoutMs: ICLOUD_REQUEST_TIMEOUT_MS,
         maxAttempts: ICLOUD_LIST_MAX_ATTEMPTS,
-        retryLabel: '加载 iCloud 别名列表',
+        retryLabel: '鍔犺浇 iCloud 鍒悕鍒楄〃',
         logRetries: true,
       });
       const state = await getState();
@@ -7985,17 +8010,17 @@ async function loadNormalizedIcloudAliases(options = {}) {
       if (endpointAttempt >= 2 || !isIcloudRetryableError(err)) {
         throw err;
       }
-      await addLog(`iCloud：${new URL(serviceUrl).host} 别名列表请求失败，正在刷新服务节点后重试...`, 'warn');
+      await addLog(`iCloud锛?{new URL(serviceUrl).host} 鍒悕鍒楄〃璇锋眰澶辫触锛屾鍦ㄥ埛鏂版湇鍔¤妭鐐瑰悗閲嶈瘯...`, 'warn');
       serviceUrl = '';
     }
   }
 
-  throw lastError || new Error('加载 iCloud 别名列表失败。');
+  throw lastError || new Error('鍔犺浇 iCloud 鍒悕鍒楄〃澶辫触銆?);
 }
 
 async function listIcloudAliases(options = {}) {
   try {
-    return await withIcloudLoginHelp('加载 iCloud 隐私邮箱列表', async () => {
+    return await withIcloudLoginHelp('鍔犺浇 iCloud 闅愮閭鍒楄〃', async () => {
       const { serviceUrl } = await resolveIcloudPremiumMailService(options);
       const response = await icloudRequest('GET', `${serviceUrl}/v2/hme/list`);
       const state = await getState();
@@ -8012,26 +8037,26 @@ async function listIcloudAliases(options = {}) {
   } catch (err) {
     const message = getErrorMessage(err);
     const transientContextError = err?.code === 'ICLOUD_TRANSIENT_CONTEXT'
-      || message.includes('网络/上下文波动');
+      || message.includes('缃戠粶/涓婁笅鏂囨尝鍔?);
     if (!transientContextError) {
       throw err;
     }
     const state = await getState();
     const freshCachedAliases = getIcloudAliasCacheFromState(state);
     if (freshCachedAliases.length) {
-      await addLog(`iCloud：加载别名失败，已回退最近缓存（${freshCachedAliases.length} 条）。`, 'warn');
+      await addLog(`iCloud锛氬姞杞藉埆鍚嶅け璐ワ紝宸插洖閫€鏈€杩戠紦瀛橈紙${freshCachedAliases.length} 鏉★級銆俙, 'warn');
       return freshCachedAliases;
     }
 
     const staleCachedAliases = getIcloudAliasCacheFromState(state, { maxAgeMs: 0 });
     if (staleCachedAliases.length) {
-      await addLog(`iCloud：加载别名失败，已回退历史缓存（${staleCachedAliases.length} 条）。`, 'warn');
+      await addLog(`iCloud锛氬姞杞藉埆鍚嶅け璐ワ紝宸插洖閫€鍘嗗彶缂撳瓨锛?{staleCachedAliases.length} 鏉★級銆俙, 'warn');
       return staleCachedAliases;
     }
 
     const localFallbackAliases = buildIcloudAliasFallbackFromLocalState(state);
     if (localFallbackAliases.length) {
-      await addLog(`iCloud：加载别名失败，已回退本地别名记录（${localFallbackAliases.length} 条）。`, 'warn');
+      await addLog(`iCloud锛氬姞杞藉埆鍚嶅け璐ワ紝宸插洖閫€鏈湴鍒悕璁板綍锛?{localFallbackAliases.length} 鏉★級銆俙, 'warn');
       return localFallbackAliases;
     }
 
@@ -8040,7 +8065,7 @@ async function listIcloudAliases(options = {}) {
 }
 
 async function deleteIcloudAlias(payload) {
-  return withIcloudLoginHelp('删除 iCloud 隐私邮箱', async () => {
+  return withIcloudLoginHelp('鍒犻櫎 iCloud 闅愮閭', async () => {
     const alias = typeof payload === 'string'
       ? { email: String(payload).trim().toLowerCase(), anonymousId: '' }
       : {
@@ -8049,10 +8074,10 @@ async function deleteIcloudAlias(payload) {
         };
 
     if (!alias.email) {
-      throw new Error('未提供需要删除的 iCloud 隐私邮箱。');
+      throw new Error('鏈彁渚涢渶瑕佸垹闄ょ殑 iCloud 闅愮閭銆?);
     }
     if (!alias.anonymousId) {
-      throw new Error(`缺少 ${alias.email} 的 anonymousId，请先刷新 iCloud 别名列表。`);
+      throw new Error(`缂哄皯 ${alias.email} 鐨?anonymousId锛岃鍏堝埛鏂?iCloud 鍒悕鍒楄〃銆俙);
     }
 
     let serviceUrl = '';
@@ -8065,7 +8090,7 @@ async function deleteIcloudAlias(payload) {
         throw resolveErr;
       }
       serviceUrl = lastResolvedIcloudServiceUrl;
-      await addLog(`iCloud：会话校验暂时不可用，已回退最近可用服务节点 ${new URL(serviceUrl).host} 继续删除。`, 'warn');
+      await addLog(`iCloud锛氫細璇濇牎楠屾殏鏃朵笉鍙敤锛屽凡鍥為€€鏈€杩戝彲鐢ㄦ湇鍔¤妭鐐?${new URL(serviceUrl).host} 缁х画鍒犻櫎銆俙, 'warn');
     }
 
     try {
@@ -8076,20 +8101,20 @@ async function deleteIcloudAlias(payload) {
         throw new Error(directDelete?.error?.errorMessage || 'delete failed');
       }
     } catch (err) {
-      await addLog(`iCloud：直接删除 ${alias.email} 失败，尝试先停用再删除...`, 'warn');
+      await addLog(`iCloud锛氱洿鎺ュ垹闄?${alias.email} 澶辫触锛屽皾璇曞厛鍋滅敤鍐嶅垹闄?..`, 'warn');
 
       const deactivated = await icloudRequest('POST', `${serviceUrl}/v1/hme/deactivate`, {
         data: { anonymousId: alias.anonymousId },
       });
       if (deactivated?.success === false) {
-        throw new Error(deactivated?.error?.errorMessage || `停用 ${alias.email} 失败`);
+        throw new Error(deactivated?.error?.errorMessage || `鍋滅敤 ${alias.email} 澶辫触`);
       }
 
       const deleted = await icloudRequest('POST', `${serviceUrl}/v1/hme/delete`, {
         data: { anonymousId: alias.anonymousId },
       });
       if (deleted?.success === false) {
-        throw new Error(deleted?.error?.errorMessage || `删除 ${alias.email} 失败`);
+        throw new Error(deleted?.error?.errorMessage || `鍒犻櫎 ${alias.email} 澶辫触`);
       }
     }
 
@@ -8100,7 +8125,7 @@ async function deleteIcloudAlias(payload) {
     delete preservedAliases[alias.email];
     await setState({ manualAliasUsage, preservedAliases });
 
-    await addLog(`iCloud：已删除 ${alias.email}`, 'ok');
+    await addLog(`iCloud锛氬凡鍒犻櫎 ${alias.email}`, 'ok');
     broadcastIcloudAliasesChanged({ reason: 'deleted', email: alias.email });
     return { email: alias.email };
   });
@@ -8131,7 +8156,7 @@ async function deleteUsedIcloudAliases() {
 }
 
 async function fetchIcloudHideMyEmail(options = {}) {
-  return withIcloudLoginHelp('获取 iCloud 隐私邮箱', async () => {
+  return withIcloudLoginHelp('鑾峰彇 iCloud 闅愮閭', async () => {
     throwIfStopped();
     const generateNew = Boolean(options?.generateNew);
     const preferredHost = String(options?.hostPreference || options?.preferredHost || '').trim();
@@ -8145,13 +8170,13 @@ async function fetchIcloudHideMyEmail(options = {}) {
       }
       await setEmailState(email, options?.source ? { source: options.source } : {});
     };
-    await addLog('iCloud：正在加载别名列表并校验当前浏览器登录状态...', 'info');
+    await addLog('iCloud锛氭鍦ㄥ姞杞藉埆鍚嶅垪琛ㄥ苟鏍￠獙褰撳墠娴忚鍣ㄧ櫥褰曠姸鎬?..', 'info');
 
     const { serviceUrl, setupUrl } = await resolveIcloudPremiumMailService(
       preferredHost ? { hostPreference: preferredHost } : {}
     );
-    await addLog(`iCloud：已通过 ${new URL(setupUrl).host} 验证会话`, 'ok');
-    await addLog(`iCloud：当前 Hide My Email 服务节点 ${new URL(serviceUrl).host}`, 'info');
+    await addLog(`iCloud锛氬凡閫氳繃 ${new URL(setupUrl).host} 楠岃瘉浼氳瘽`, 'ok');
+    await addLog(`iCloud锛氬綋鍓?Hide My Email 鏈嶅姟鑺傜偣 ${new URL(serviceUrl).host}`, 'info');
 
     let activeServiceUrl = serviceUrl;
     const existingAliases = await listIcloudAliases();
@@ -8165,16 +8190,16 @@ async function fetchIcloudHideMyEmail(options = {}) {
       const reusableAlias = pickReusableIcloudAlias(existingAliases);
       if (reusableAlias) {
         await persistSelectedIcloudEmail(reusableAlias.email);
-        await addLog(`iCloud：复用未使用别名 ${reusableAlias.email}`, 'ok');
+        await addLog(`iCloud锛氬鐢ㄦ湭浣跨敤鍒悕 ${reusableAlias.email}`, 'ok');
         broadcastIcloudAliasesChanged({ reason: 'selected', email: reusableAlias.email });
         return reusableAlias.email;
       }
     } else {
-      await addLog('iCloud：已启用“始终创建新别名”，本次将跳过复用。', 'info');
+      await addLog('iCloud锛氬凡鍚敤鈥滃缁堝垱寤烘柊鍒悕鈥濓紝鏈灏嗚烦杩囧鐢ㄣ€?, 'info');
     }
 
-    await addLog('iCloud：没有可复用别名，开始生成新的 Hide My Email 地址...', 'warn');
-    await addLog(`iCloud：正在向 ${new URL(activeServiceUrl).host} 请求新的 Hide My Email 候选地址...`, 'info');
+    await addLog('iCloud锛氭病鏈夊彲澶嶇敤鍒悕锛屽紑濮嬬敓鎴愭柊鐨?Hide My Email 鍦板潃...', 'warn');
+    await addLog(`iCloud锛氭鍦ㄥ悜 ${new URL(activeServiceUrl).host} 璇锋眰鏂扮殑 Hide My Email 鍊欓€夊湴鍧€...`, 'info');
 
     try {
       let generated = null;
@@ -8182,14 +8207,14 @@ async function fetchIcloudHideMyEmail(options = {}) {
         generated = await icloudRequest('POST', `${activeServiceUrl}/v1/hme/generate`, {
           timeoutMs: ICLOUD_REQUEST_TIMEOUT_MS,
           maxAttempts: ICLOUD_WRITE_MAX_ATTEMPTS,
-          retryLabel: '生成 Hide My Email 地址',
+          retryLabel: '鐢熸垚 Hide My Email 鍦板潃',
           logRetries: true,
         });
       } catch (err) {
         if (!isIcloudRetryableError(err)) {
           throw err;
         }
-        await addLog('iCloud：生成候选别名失败，正在刷新服务节点后再试一次...', 'warn');
+        await addLog('iCloud锛氱敓鎴愬€欓€夊埆鍚嶅け璐ワ紝姝ｅ湪鍒锋柊鏈嶅姟鑺傜偣鍚庡啀璇曚竴娆?..', 'warn');
         const refreshedService = await resolveIcloudPremiumMailService(
           preferredHost ? { hostPreference: preferredHost } : {}
         );
@@ -8197,13 +8222,13 @@ async function fetchIcloudHideMyEmail(options = {}) {
         generated = await icloudRequest('POST', `${activeServiceUrl}/v1/hme/generate`, {
           timeoutMs: ICLOUD_REQUEST_TIMEOUT_MS,
           maxAttempts: ICLOUD_WRITE_MAX_ATTEMPTS,
-          retryLabel: '生成 Hide My Email 地址',
+          retryLabel: '鐢熸垚 Hide My Email 鍦板潃',
           logRetries: true,
         });
       }
 
       if (!generated?.success || !generated?.result?.hme) {
-        throw new Error(generated?.error?.errorMessage || 'iCloud 隐私邮箱生成失败。');
+        throw new Error(generated?.error?.errorMessage || 'iCloud 闅愮閭鐢熸垚澶辫触銆?);
       }
 
       const generatedHmeRaw = generated.result.hme;
@@ -8217,9 +8242,9 @@ async function fetchIcloudHideMyEmail(options = {}) {
             || '')
       ).trim().toLowerCase();
       if (!generatedAlias) {
-        throw new Error('iCloud 隐私邮箱生成失败：未返回可用别名。');
+        throw new Error('iCloud 闅愮閭鐢熸垚澶辫触锛氭湭杩斿洖鍙敤鍒悕銆?);
       }
-      await addLog(`iCloud：已生成候选别名 ${generatedAlias}，正在保留...`, 'info');
+      await addLog(`iCloud锛氬凡鐢熸垚鍊欓€夊埆鍚?${generatedAlias}锛屾鍦ㄤ繚鐣?..`, 'info');
 
       const reserveData = {
         ...(generatedHmeRaw && typeof generatedHmeRaw === 'object' && !Array.isArray(generatedHmeRaw)
@@ -8239,7 +8264,7 @@ async function fetchIcloudHideMyEmail(options = {}) {
         });
 
         if (!reserved?.success || !reserved?.result?.hme?.hme) {
-          throw new Error(reserved?.error?.errorMessage || 'iCloud 隐私邮箱保留失败。');
+          throw new Error(reserved?.error?.errorMessage || 'iCloud 闅愮閭淇濈暀澶辫触銆?);
         }
 
         alias = String(reserved.result.hme.hme || '').trim().toLowerCase();
@@ -8252,7 +8277,7 @@ async function fetchIcloudHideMyEmail(options = {}) {
           throw reserveErr;
         }
 
-        await addLog('iCloud：保留别名返回鉴权/网络异常，正在回查别名列表确认是否已创建...', 'warn');
+        await addLog('iCloud锛氫繚鐣欏埆鍚嶈繑鍥為壌鏉?缃戠粶寮傚父锛屾鍦ㄥ洖鏌ュ埆鍚嶅垪琛ㄧ‘璁ゆ槸鍚﹀凡鍒涘缓...', 'warn');
         const { aliases: aliasesAfterReserveFailure, serviceUrl: refreshedListServiceUrl } = await loadNormalizedIcloudAliases({
           serviceUrl: activeServiceUrl,
           silent: true,
@@ -8268,9 +8293,9 @@ async function fetchIcloudHideMyEmail(options = {}) {
 
         if (recoveredAlias?.email) {
           alias = String(recoveredAlias.email || '').trim().toLowerCase();
-          await addLog(`iCloud：保留请求异常，但已在列表确认别名 ${alias}，继续使用。`, 'warn');
+          await addLog(`iCloud锛氫繚鐣欒姹傚紓甯革紝浣嗗凡鍦ㄥ垪琛ㄧ‘璁ゅ埆鍚?${alias}锛岀户缁娇鐢ㄣ€俙, 'warn');
         } else if (isIcloudRetryableError(reserveErr)) {
-          await addLog(`iCloud：列表中尚未出现 ${generatedAlias}，正在刷新服务节点后重试保留一次...`, 'warn');
+          await addLog(`iCloud锛氬垪琛ㄤ腑灏氭湭鍑虹幇 ${generatedAlias}锛屾鍦ㄥ埛鏂版湇鍔¤妭鐐瑰悗閲嶈瘯淇濈暀涓€娆?..`, 'warn');
           const refreshedService = await resolveIcloudPremiumMailService(
             preferredHost ? { hostPreference: preferredHost } : {}
           );
@@ -8281,17 +8306,17 @@ async function fetchIcloudHideMyEmail(options = {}) {
             maxAttempts: 1,
           });
           if (!reservedRetry?.success || !reservedRetry?.result?.hme?.hme) {
-            throw new Error(reservedRetry?.error?.errorMessage || 'iCloud 隐私邮箱保留失败。');
+            throw new Error(reservedRetry?.error?.errorMessage || 'iCloud 闅愮閭淇濈暀澶辫触銆?);
           }
           alias = String(reservedRetry.result.hme.hme || '').trim().toLowerCase();
         } else {
           alias = generatedAlias;
-          await addLog(`iCloud：保留请求异常，已回退使用生成别名 ${alias}。`, 'warn');
+          await addLog(`iCloud锛氫繚鐣欒姹傚紓甯革紝宸插洖閫€浣跨敤鐢熸垚鍒悕 ${alias}銆俙, 'warn');
         }
       }
 
       await persistSelectedIcloudEmail(alias);
-      await addLog(`iCloud：已创建并保留新别名 ${alias}`, 'ok');
+      await addLog(`iCloud锛氬凡鍒涘缓骞朵繚鐣欐柊鍒悕 ${alias}`, 'ok');
       broadcastIcloudAliasesChanged({ reason: 'created', email: alias });
       return alias;
     } catch (err) {
@@ -8303,7 +8328,7 @@ async function fetchIcloudHideMyEmail(options = {}) {
       if (reusableAlias) {
         await persistSelectedIcloudEmail(reusableAlias.email);
         await addLog(
-          `iCloud：当前网络/上下文波动，暂无法创建新别名，已临时回退复用 ${reusableAlias.email}。`,
+          `iCloud锛氬綋鍓嶇綉缁?涓婁笅鏂囨尝鍔紝鏆傛棤娉曞垱寤烘柊鍒悕锛屽凡涓存椂鍥為€€澶嶇敤 ${reusableAlias.email}銆俙,
           'warn'
         );
         broadcastIcloudAliasesChanged({ reason: 'selected', email: reusableAlias.email });
@@ -8311,7 +8336,7 @@ async function fetchIcloudHideMyEmail(options = {}) {
       }
 
       throw new Error(
-        `iCloud 当前无法创建新别名：${getErrorMessage(err)}。请先确认 iCloud 页面已登录且网络可访问，再重试。`
+        `iCloud 褰撳墠鏃犳硶鍒涘缓鏂板埆鍚嶏細${getErrorMessage(err)}銆傝鍏堢‘璁?iCloud 椤甸潰宸茬櫥褰曚笖缃戠粶鍙闂紝鍐嶉噸璇曘€俙
       );
     }
   });
@@ -8331,14 +8356,14 @@ async function finalizeIcloudAliasAfterSuccessfulFlow(state) {
   }
 
   await setIcloudAliasUsedState({ email, used: true }, { silentLog: true });
-  await addLog(`iCloud：流程成功后已标记 ${email} 为已用。`, 'ok');
+  await addLog(`iCloud锛氭祦绋嬫垚鍔熷悗宸叉爣璁?${email} 涓哄凡鐢ㄣ€俙, 'ok');
 
   if (!state.autoDeleteUsedIcloudAlias) {
     return { handled: true, deleted: false };
   }
 
   if (isAliasPreserved(state, email)) {
-    await addLog(`iCloud：${email} 已被标记为保留，跳过自动删除。`, 'info');
+    await addLog(`iCloud锛?{email} 宸茶鏍囪涓轰繚鐣欙紝璺宠繃鑷姩鍒犻櫎銆俙, 'info');
     return { handled: true, deleted: false };
   }
 
@@ -8346,25 +8371,25 @@ async function finalizeIcloudAliasAfterSuccessfulFlow(state) {
     const aliases = await listIcloudAliases();
     const alias = findIcloudAliasByEmail(aliases, email);
     if (!alias) {
-      await addLog(`iCloud：自动删除跳过，列表中未找到 ${email}。`, 'warn');
+      await addLog(`iCloud锛氳嚜鍔ㄥ垹闄よ烦杩囷紝鍒楄〃涓湭鎵惧埌 ${email}銆俙, 'warn');
       return { handled: true, deleted: false };
     }
     if (alias.preserved) {
-      await addLog(`iCloud：${email} 在最新别名列表中已是保留状态，跳过自动删除。`, 'info');
+      await addLog(`iCloud锛?{email} 鍦ㄦ渶鏂板埆鍚嶅垪琛ㄤ腑宸叉槸淇濈暀鐘舵€侊紝璺宠繃鑷姩鍒犻櫎銆俙, 'info');
       return { handled: true, deleted: false };
     }
     if (!alias.anonymousId) {
-      await addLog(`iCloud：自动删除跳过，${email} 缺少 anonymousId，请先刷新列表后重试。`, 'warn');
+      await addLog(`iCloud锛氳嚜鍔ㄥ垹闄よ烦杩囷紝${email} 缂哄皯 anonymousId锛岃鍏堝埛鏂板垪琛ㄥ悗閲嶈瘯銆俙, 'warn');
       return { handled: true, deleted: false };
     }
     await deleteIcloudAlias(alias);
-    await addLog(`iCloud：流程成功后已自动删除 ${email}。`, 'ok');
+    await addLog(`iCloud锛氭祦绋嬫垚鍔熷悗宸茶嚜鍔ㄥ垹闄?${email}銆俙, 'ok');
     return { handled: true, deleted: true };
   } catch (err) {
     if (isIcloudTransientContextError(err)) {
-      await addLog(`iCloud：自动删除 ${email} 暂时跳过（网络/上下文波动），可稍后手动删除。`, 'info');
+      await addLog(`iCloud锛氳嚜鍔ㄥ垹闄?${email} 鏆傛椂璺宠繃锛堢綉缁?涓婁笅鏂囨尝鍔級锛屽彲绋嶅悗鎵嬪姩鍒犻櫎銆俙, 'info');
     } else {
-      await addLog(`iCloud：自动删除 ${email} 失败：${getErrorMessage(err)}`, 'warn');
+      await addLog(`iCloud锛氳嚜鍔ㄥ垹闄?${email} 澶辫触锛?{getErrorMessage(err)}`, 'warn');
     }
     return { handled: true, deleted: false };
   }
@@ -8384,7 +8409,7 @@ async function clearFreeReusablePhoneActivation() {
   }
   await setState({ freeReusablePhoneActivation: null });
   broadcastDataUpdate({ freeReusablePhoneActivation: null });
-  await addLog('已清除白嫖复用手机号记录。', 'ok');
+  await addLog('宸叉竻闄ょ櫧瀚栧鐢ㄦ墜鏈哄彿璁板綍銆?, 'ok');
   return { ok: true, freeReusablePhoneActivation: null };
 }
 
@@ -8473,7 +8498,7 @@ function findLocalPhoneSmsActivationForPhone(state = {}, phoneNumber = '', provi
 async function setFreeReusablePhoneActivation(record = {}) {
   const phoneNumber = String(record.phoneNumber || record.number || record.phone || '').trim();
   if (!phoneNumber) {
-    throw new Error('请先填写白嫖复用手机号。');
+    throw new Error('璇峰厛濉啓鐧藉珫澶嶇敤鎵嬫満鍙枫€?);
   }
   const state = await getState();
   if (isPhoneSignupIdentityStateForReuse(state)) {
@@ -8481,7 +8506,7 @@ async function setFreeReusablePhoneActivation(record = {}) {
   }
   const provider = normalizePhoneSmsProvider(record.provider || state.phoneSmsProvider || DEFAULT_PHONE_SMS_PROVIDER);
   if (provider !== PHONE_SMS_PROVIDER_HERO && provider !== PHONE_SMS_PROVIDER_FIVE_SIM) {
-    throw new Error(`${provider} 当前不支持本地白嫖号码复用。`);
+    throw new Error(`${provider} 褰撳墠涓嶆敮鎸佹湰鍦扮櫧瀚栧彿鐮佸鐢ㄣ€俙);
   }
   const localActivation = findLocalPhoneSmsActivationForPhone(state, phoneNumber, provider);
   const activationProvider = normalizePhoneSmsProvider(
@@ -8491,7 +8516,7 @@ async function setFreeReusablePhoneActivation(record = {}) {
     || DEFAULT_PHONE_SMS_PROVIDER
   );
   if (activationProvider !== PHONE_SMS_PROVIDER_HERO && activationProvider !== PHONE_SMS_PROVIDER_FIVE_SIM) {
-    throw new Error(`${activationProvider} 当前不支持本地白嫖号码复用。`);
+    throw new Error(`${activationProvider} 褰撳墠涓嶆敮鎸佹湰鍦扮櫧瀚栧彿鐮佸鐢ㄣ€俙);
   }
   const activationId = String(
     record.activationId
@@ -8553,8 +8578,8 @@ async function setFreeReusablePhoneActivation(record = {}) {
   const providerLabel = activationProvider === PHONE_SMS_PROVIDER_FIVE_SIM ? '5sim' : 'HeroSMS';
   await addLog(
     activationId
-      ? `已手动记录白嫖复用手机号 ${phoneNumber}（#${activationId}）。`
-      : `已手动记录白嫖复用手机号 ${phoneNumber}。未填写 ${providerLabel} 激活 ID，仅支持手动填号复用。`,
+      ? `宸叉墜鍔ㄨ褰曠櫧瀚栧鐢ㄦ墜鏈哄彿 ${phoneNumber}锛?${activationId}锛夈€俙
+      : `宸叉墜鍔ㄨ褰曠櫧瀚栧鐢ㄦ墜鏈哄彿 ${phoneNumber}銆傛湭濉啓 ${providerLabel} 婵€娲?ID锛屼粎鏀寔鎵嬪姩濉彿澶嶇敤銆俙,
     'ok'
   );
   return { ok: true, freeReusablePhoneActivation: activation };
@@ -8856,7 +8881,7 @@ async function waitForTabUrlMatchUntilStopped(tabId, matcher, options = {}) {
     throwIfStopped();
     const tab = await chrome.tabs.get(tabId).catch(() => null);
     if (!tab) {
-      throw new Error('目标标签页已关闭，无法继续等待页面跳转。');
+      throw new Error('鐩爣鏍囩椤靛凡鍏抽棴锛屾棤娉曠户缁瓑寰呴〉闈㈣烦杞€?);
     }
     if (typeof matcher === 'function' && matcher(tab.url || '', tab)) {
       return tab;
@@ -8879,7 +8904,7 @@ async function waitForTabCompleteUntilStopped(tabId, options = {}) {
     throwIfStopped();
     const tab = await chrome.tabs.get(tabId).catch(() => null);
     if (!tab) {
-      throw new Error('目标标签页已关闭，无法继续等待页面加载完成。');
+      throw new Error('鐩爣鏍囩椤靛凡鍏抽棴锛屾棤娉曠户缁瓑寰呴〉闈㈠姞杞藉畬鎴愩€?);
     }
     if (tab.status === 'complete') {
       return tab;
@@ -8923,7 +8948,7 @@ async function ensureContentScriptReadyOnTabUntilStopped(source, tabId, options 
     }
 
     if (!inject || !inject.length) {
-      throw new Error(`${getSourceLabel(source)} 内容脚本未就绪，且未提供可用的注入文件。`);
+      throw new Error(`${getSourceLabel(source)} 鍐呭鑴氭湰鏈氨缁紝涓旀湭鎻愪緵鍙敤鐨勬敞鍏ユ枃浠躲€俙);
     }
 
     try {
@@ -8943,7 +8968,7 @@ async function ensureContentScriptReadyOnTabUntilStopped(source, tabId, options 
     } catch (error) {
       console.warn(LOG_PREFIX, `[ensureContentScriptReadyOnTabUntilStopped] inject failed for ${source}:`, error?.message || error);
       if (isUnrecoverableContentScriptInjectError(error)) {
-        throw new Error(`${getSourceLabel(source)} 内容脚本文件加载失败：${error?.message || error}。请在扩展管理页重新加载当前扩展，确认文件已包含在已加载的扩展目录中。`);
+        throw new Error(`${getSourceLabel(source)} 鍐呭鑴氭湰鏂囦欢鍔犺浇澶辫触锛?{error?.message || error}銆傝鍦ㄦ墿灞曠鐞嗛〉閲嶆柊鍔犺浇褰撳墠鎵╁睍锛岀‘璁ゆ枃浠跺凡鍖呭惈鍦ㄥ凡鍔犺浇鐨勬墿灞曠洰褰曚腑銆俙);
       }
     }
 
@@ -9085,26 +9110,26 @@ function getSourceLabel(source) {
     return loggingStatus.getSourceLabel(source);
   }
   const labels = {
-    'openai-auth': '认证页',
-    'gmail-mail': 'Gmail 邮箱',
-    'sidepanel': '侧边栏',
-    'vps-panel': 'CPA 面板',
-    'sub2api-panel': 'SUB2API 后台',
-    'codex2api-panel': 'Codex2API 后台',
-    'qq-mail': 'QQ 邮箱',
-    'mail-163': '163 邮箱',
-    'mail-2925': '2925 邮箱',
-    'inbucket-mail': 'Inbucket 邮箱',
-    'duck-mail': 'Duck 邮箱',
-    'hotmail-api': 'Hotmail（API对接/本地助手）',
-    'luckmail-api': 'LuckMail（API 购邮）',
+    'openai-auth': '璁よ瘉椤?,
+    'gmail-mail': 'Gmail 閭',
+    'sidepanel': '渚ц竟鏍?,
+    'vps-panel': 'CPA 闈㈡澘',
+    'sub2api-panel': 'SUB2API 鍚庡彴',
+    'codex2api-panel': 'Codex2API 鍚庡彴',
+    'qq-mail': 'QQ 閭',
+    'mail-163': '163 閭',
+    'mail-2925': '2925 閭',
+    'inbucket-mail': 'Inbucket 閭',
+    'duck-mail': 'Duck 閭',
+    'hotmail-api': 'Hotmail锛圓PI瀵规帴/鏈湴鍔╂墜锛?,
+    'luckmail-api': 'LuckMail锛圓PI 璐偖锛?,
     'cloudflare-temp-email': 'Cloudflare Temp Email',
     'cloudmail': 'Cloud Mail',
     'plus-checkout': 'Plus Checkout',
-    'paypal-flow': 'PayPal 授权页',
-    'unknown-source': '未知来源',
+    'paypal-flow': 'PayPal 鎺堟潈椤?,
+    'unknown-source': '鏈煡鏉ユ簮',
   };
-  return labels[source] || source || '未知来源';
+  return labels[source] || source || '鏈煡鏉ユ簮';
 }
 
 // ============================================================
@@ -9114,7 +9139,7 @@ function getSourceLabel(source) {
 async function setNodeStatus(nodeId, status) {
   const normalizedNodeId = String(nodeId || '').trim();
   if (!normalizedNodeId) {
-    throw new Error('setNodeStatus 缺少 nodeId。');
+    throw new Error('setNodeStatus 缂哄皯 nodeId銆?);
   }
   const state = await getState();
   const nodeStatuses = { ...(state.nodeStatuses || {}) };
@@ -9136,7 +9161,7 @@ function isStopError(error) {
 
 function isRetryableContentScriptTransportError(error) {
   const message = String(typeof error === 'string' ? error : error?.message || '');
-  return /back\/forward cache|message channel is closed|Receiving end does not exist|port closed before a response was received|A listener indicated an asynchronous response|内容脚本\s+\d+(?:\.\d+)?\s*秒内未响应|did not respond in \d+s|页面刚完成跳转或刷新，内容脚本还没有重新接回|failed to fetch|networkerror|network error|fetch failed|load failed/i.test(message);
+  return /back\/forward cache|message channel is closed|Receiving end does not exist|port closed before a response was received|A listener indicated an asynchronous response|鍐呭鑴氭湰\s+\d+(?:\.\d+)?\s*绉掑唴鏈搷搴攟did not respond in \d+s|椤甸潰鍒氬畬鎴愯烦杞垨鍒锋柊锛屽唴瀹硅剼鏈繕娌℃湁閲嶆柊鎺ュ洖|failed to fetch|networkerror|network error|fetch failed|load failed/i.test(message);
 }
 
 function isStepTransientTransportRetryableError(error) {
@@ -9234,11 +9259,11 @@ function getTerminalSecurityBlockedMessage(error) {
 }
 
 function getTerminalSecurityBlockedAlertText(error) {
-  return '检测到 Cloudflare 风控，请暂停当前操作。';
+  return '妫€娴嬪埌 Cloudflare 椋庢帶锛岃鏆傚仠褰撳墠鎿嶄綔銆?;
 }
 
 function getTerminalSecurityBlockedTitle(error) {
-  return 'Cloudflare 风控拦截';
+  return 'Cloudflare 椋庢帶鎷︽埅';
 }
 
 function isBrowserSwitchRequiredError(error) {
@@ -9252,7 +9277,7 @@ function getBrowserSwitchRequiredMessage(error) {
     : message;
 }
 
-function broadcastSecurityBlockedAlert(title = '流程已完全停止', message = CLOUDFLARE_SECURITY_BLOCK_USER_MESSAGE, alertText = '检测到 Cloudflare 风控，请暂停当前操作。') {
+function broadcastSecurityBlockedAlert(title = '娴佺▼宸插畬鍏ㄥ仠姝?, message = CLOUDFLARE_SECURITY_BLOCK_USER_MESSAGE, alertText = '妫€娴嬪埌 Cloudflare 椋庢帶锛岃鏆傚仠褰撳墠鎿嶄綔銆?) {
   chrome.runtime.sendMessage({
     type: 'SECURITY_BLOCKED_ALERT',
     payload: {
@@ -9277,7 +9302,7 @@ async function handleCloudflareSecurityBlocked(error) {
 
 async function handleBrowserSwitchRequired(error) {
   const message = getBrowserSwitchRequiredMessage(error)
-    || '检测到第 10 步的特殊冲突状态，请更换浏览器后重新进行注册登录。';
+    || '妫€娴嬪埌绗?10 姝ョ殑鐗规畩鍐茬獊鐘舵€侊紝璇锋洿鎹㈡祻瑙堝櫒鍚庨噸鏂拌繘琛屾敞鍐岀櫥褰曘€?;
   await requestStop({ logMessage: message });
   return message;
 }
@@ -9287,7 +9312,7 @@ function isVerificationMailPollingError(error) {
     return loggingStatus.isVerificationMailPollingError(error);
   }
   const message = getErrorMessage(error);
-  return /未在 .*邮箱中找到新的匹配邮件|未在 Hotmail 收件箱中找到新的匹配验证码|邮箱轮询结束，但未获取到验证码|无法获取新的(?:注册|登录)验证码|页面未能重新就绪|页面通信异常|did not respond in \d+s/i.test(message);
+  return /鏈湪 .*閭涓壘鍒版柊鐨勫尮閰嶉偖浠秥鏈湪 Hotmail 鏀朵欢绠变腑鎵惧埌鏂扮殑鍖归厤楠岃瘉鐮亅閭杞缁撴潫锛屼絾鏈幏鍙栧埌楠岃瘉鐮亅鏃犳硶鑾峰彇鏂扮殑(?:娉ㄥ唽|鐧诲綍)楠岃瘉鐮亅椤甸潰鏈兘閲嶆柊灏辩华|椤甸潰閫氫俊寮傚父|did not respond in \d+s/i.test(message);
 }
 
 function isAddPhoneAuthFailure(error) {
@@ -9306,16 +9331,16 @@ function getLoginAuthStateLabel(state) {
     return loggingStatus.getLoginAuthStateLabel(state);
   }
   switch (state) {
-    case 'verification_page': return '登录验证码页';
-    case 'phone_verification_page': return '手机验证码页';
-    case 'password_page': return '密码页';
-    case 'email_page': return '邮箱输入页';
-    case 'phone_entry_page': return '手机号输入页';
-    case 'login_timeout_error_page': return '登录超时报错页';
-    case 'oauth_consent_page': return 'OAuth 授权页';
-    case 'add_phone_page': return '手机号页';
-    case 'add_email_page': return '添加邮箱页';
-    default: return '未知页面';
+    case 'verification_page': return '鐧诲綍楠岃瘉鐮侀〉';
+    case 'phone_verification_page': return '鎵嬫満楠岃瘉鐮侀〉';
+    case 'password_page': return '瀵嗙爜椤?;
+    case 'email_page': return '閭杈撳叆椤?;
+    case 'phone_entry_page': return '鎵嬫満鍙疯緭鍏ラ〉';
+    case 'login_timeout_error_page': return '鐧诲綍瓒呮椂鎶ラ敊椤?;
+    case 'oauth_consent_page': return 'OAuth 鎺堟潈椤?;
+    case 'add_phone_page': return '鎵嬫満鍙烽〉';
+    case 'add_email_page': return '娣诲姞閭椤?;
+    default: return '鏈煡椤甸潰';
   }
 }
 
@@ -9324,7 +9349,7 @@ function isRestartCurrentAttemptError(error) {
     return loggingStatus.isRestartCurrentAttemptError(error);
   }
   const message = String(typeof error === 'string' ? error : error?.message || '');
-  return /当前邮箱已存在，需要重新开始新一轮|SIGNUP_PHONE_PASSWORD_MISMATCH::/i.test(message);
+  return /褰撳墠閭宸插瓨鍦紝闇€瑕侀噸鏂板紑濮嬫柊涓€杞畖SIGNUP_PHONE_PASSWORD_MISMATCH::/i.test(message);
 }
 
 function buildAutoRunTimerParkedError(message = '') {
@@ -9390,32 +9415,32 @@ async function restartSignupPhonePasswordMismatchAttemptFromNode(nodeId, restart
     restorePayload,
     shouldClearSignupPhoneRuntime,
   } = getSignupPhonePasswordMismatchRestartPayload(preservedState);
-  const emailSuffix = preservedEmail ? `当前邮箱：${preservedEmail}；` : '';
-  const phoneSuffix = activeSignupPhoneNumber ? `当前手机号：${activeSignupPhoneNumber}；` : '';
+  const emailSuffix = preservedEmail ? `褰撳墠閭锛?{preservedEmail}锛沗 : '';
+  const phoneSuffix = activeSignupPhoneNumber ? `褰撳墠鎵嬫満鍙凤細${activeSignupPhoneNumber}锛沗 : '';
   const errorMessage = getErrorMessage(error);
-  const reasonLabel = /PHONE_RESEND_BANNED_NUMBER::|无法向此(?:电话|手机)号码发送短信|无法发送短信到此(?:电话|手机)号码|unable\s+to\s+send\s+(?:an?\s+)?(?:sms|text(?:\s+message)?)\s+to\s+(?:this|that)\s+(?:phone\s+)?number/i
+  const reasonLabel = /PHONE_RESEND_BANNED_NUMBER::|鏃犳硶鍚戞(?:鐢佃瘽|鎵嬫満)鍙风爜鍙戦€佺煭淇鏃犳硶鍙戦€佺煭淇″埌姝??:鐢佃瘽|鎵嬫満)鍙风爜|unable\s+to\s+send\s+(?:an?\s+)?(?:sms|text(?:\s+message)?)\s+to\s+(?:this|that)\s+(?:phone\s+)?number/i
     .test(errorMessage)
-    ? '当前注册手机号无法接收短信'
-    : (/与此(?:电话|手机)号码相关联的帐户已存在|account\s+associated\s+with\s+this\s+phone\s+number\s+already\s+exists/i
+    ? '褰撳墠娉ㄥ唽鎵嬫満鍙锋棤娉曟帴鏀剁煭淇?
+    : (/涓庢(?:鐢佃瘽|鎵嬫満)鍙风爜鐩稿叧鑱旂殑甯愭埛宸插瓨鍦▅account\s+associated\s+with\s+this\s+phone\s+number\s+already\s+exists/i
       .test(errorMessage)
-      ? '注册手机号异常'
-      : '手机号/密码不匹配');
+      ? '娉ㄥ唽鎵嬫満鍙峰紓甯?
+      : '鎵嬫満鍙?瀵嗙爜涓嶅尮閰?);
   const normalizedNodeId = String(nodeId || '').trim() || 'fetch-signup-code';
   await addLog(
-    `节点 ${normalizedNodeId}：检测到${reasonLabel}，准备丢弃当前注册手机号并回到节点 open-chatgpt 重新开始（第 ${restartCount} 次重开）。${phoneSuffix}${emailSuffix}原因：${errorMessage}`,
+    `鑺傜偣 ${normalizedNodeId}锛氭娴嬪埌${reasonLabel}锛屽噯澶囦涪寮冨綋鍓嶆敞鍐屾墜鏈哄彿骞跺洖鍒拌妭鐐?open-chatgpt 閲嶆柊寮€濮嬶紙绗?${restartCount} 娆￠噸寮€锛夈€?{phoneSuffix}${emailSuffix}鍘熷洜锛?{errorMessage}`,
     'warn'
   );
   if (typeof invalidateDownstreamAfterNodeRestart === 'function') {
     await invalidateDownstreamAfterNodeRestart('open-chatgpt', {
-      logLabel: `节点 ${normalizedNodeId} 检测到${reasonLabel}后准备回到 open-chatgpt 重新获取手机号重试（第 ${restartCount} 次重开）`,
+      logLabel: `鑺傜偣 ${normalizedNodeId} 妫€娴嬪埌${reasonLabel}鍚庡噯澶囧洖鍒?open-chatgpt 閲嶆柊鑾峰彇鎵嬫満鍙烽噸璇曪紙绗?${restartCount} 娆￠噸寮€锛塦,
     });
   } else {
     await invalidateDownstreamAfterStepRestart(1, {
-      logLabel: `节点 ${normalizedNodeId} 检测到${reasonLabel}后准备回到 open-chatgpt 重新获取手机号重试（第 ${restartCount} 次重开）`,
+      logLabel: `鑺傜偣 ${normalizedNodeId} 妫€娴嬪埌${reasonLabel}鍚庡噯澶囧洖鍒?open-chatgpt 閲嶆柊鑾峰彇鎵嬫満鍙烽噸璇曪紙绗?${restartCount} 娆￠噸寮€锛塦,
     });
   }
   if (shouldClearSignupPhoneRuntime) {
-    await addLog(`节点 ${normalizedNodeId}：已清空本轮注册手机号与接码订单，下一次重开将重新获取号码。`, 'warn');
+    await addLog(`鑺傜偣 ${normalizedNodeId}锛氬凡娓呯┖鏈疆娉ㄥ唽鎵嬫満鍙蜂笌鎺ョ爜璁㈠崟锛屼笅涓€娆￠噸寮€灏嗛噸鏂拌幏鍙栧彿鐮併€俙, 'warn');
   }
   if (Object.keys(restorePayload).length) {
     await setState(restorePayload);
@@ -9444,7 +9469,7 @@ function isKiroProxyFailure(error) {
     return loggingStatus.isKiroProxyFailure(error);
   }
   const message = getErrorMessage(error);
-  return /Kiro\s*(?:注册页|桌面授权页).*(?:CloudFront\s*拒绝请求|AWS\s*请求异常)|(?:当前代理\s*IP|出口区域异常).*(?:切换代理|更换代理)|AWS\s*风控.*(?:切换代理|更换代理)/i.test(message);
+  return /Kiro\s*(?:娉ㄥ唽椤祙妗岄潰鎺堟潈椤?.*(?:CloudFront\s*鎷掔粷璇锋眰|AWS\s*璇锋眰寮傚父)|(?:褰撳墠浠ｇ悊\s*IP|鍑哄彛鍖哄煙寮傚父).*(?:鍒囨崲浠ｇ悊|鏇存崲浠ｇ悊)|AWS\s*椋庢帶.*(?:鍒囨崲浠ｇ悊|鏇存崲浠ｇ悊)/i.test(message);
 }
 
 function isDuckDdgDailyLimitFailure(error) {
@@ -9453,22 +9478,22 @@ function isDuckDdgDailyLimitFailure(error) {
     return true;
   }
   const message = getErrorMessage(error);
-  return /DDG_DAILY_LIMIT::|DuckDuckGo[\s\S]*(?:每日|每天|今日|日上限|日限|单日|一天)[\s\S]*(?:限制|限额|上限|额度|次数|数量|已达|达到|超出|超过|用完)|DuckDuckGo[\s\S]*(?:daily|quota|limit|maximum|max)/i.test(message);
+  return /DDG_DAILY_LIMIT::|DuckDuckGo[\s\S]*(?:姣忔棩|姣忓ぉ|浠婃棩|鏃ヤ笂闄恷鏃ラ檺|鍗曟棩|涓€澶?[\s\S]*(?:闄愬埗|闄愰|涓婇檺|棰濆害|娆℃暟|鏁伴噺|宸茶揪|杈惧埌|瓒呭嚭|瓒呰繃|鐢ㄥ畬)|DuckDuckGo[\s\S]*(?:daily|quota|limit|maximum|max)/i.test(message);
 }
 
 function isStep4Route405RecoveryLimitFailure(error) {
   const message = getErrorMessage(error);
-  return /STEP4_405_RECOVERY_LIMIT::|步骤\s*4：检测到\s*405\s*错误页面，已连续点击“重试”恢复/i.test(message);
+  return /STEP4_405_RECOVERY_LIMIT::|姝ラ\s*4锛氭娴嬪埌\s*405\s*閿欒椤甸潰锛屽凡杩炵画鐐瑰嚮鈥滈噸璇曗€濇仮澶?i.test(message);
 }
 
 function isPhoneSmsPlatformRateLimitFailure(error) {
   const message = getErrorMessage(error);
-  return /FIVE_SIM_RATE_LIMIT::|5sim[\s\S]*(?:限流|rate\s*limit)/i.test(message);
+  return /FIVE_SIM_RATE_LIMIT::|5sim[\s\S]*(?:闄愭祦|rate\s*limit)/i.test(message);
 }
 
 function isPlusCheckoutNonFreeTrialFailure(error) {
   const message = getErrorMessage(error);
-  return /PLUS_CHECKOUT_NON_FREE_TRIAL::|今日应付金额不是\s*0|(?:没有|无|不具备)[\s:：-]*(?:免费\s*|Plus\s*)?试用资格|更换有试用资格的账号\s*Token|not\s+eligible\s+for\s+(?:a\s+)?Plus\s+trial|no\s+Plus\s+trial\s+eligibility|该账号已经开通过\s*ChatGPT\s*订阅套餐，不能重复订阅(?:。)?(?:（\s*checkout_order\s*）|\(\s*checkout_order\s*\))?/i.test(message);
+  return /PLUS_CHECKOUT_NON_FREE_TRIAL::|浠婃棩搴斾粯閲戦涓嶆槸\s*0|(?:娌℃湁|鏃爘涓嶅叿澶?[\s:锛?]*(?:鍏嶈垂\s*|Plus\s*)?璇曠敤璧勬牸|鏇存崲鏈夎瘯鐢ㄨ祫鏍肩殑璐﹀彿\s*Token|not\s+eligible\s+for\s+(?:a\s+)?Plus\s+trial|no\s+Plus\s+trial\s+eligibility|璇ヨ处鍙峰凡缁忓紑閫氳繃\s*ChatGPT\s*璁㈤槄濂楅锛屼笉鑳介噸澶嶈闃??:銆??(?:锛圽s*checkout_order\s*锛墊\(\s*checkout_order\s*\))?/i.test(message);
 }
 
 function isPlusCheckoutRestartStep(step, stepExecutionKey = '', state = {}) {
@@ -9490,7 +9515,7 @@ function isStep9RecoverableAuthError(error) {
 
 function isLegacyStep9RecoverableAuthError(error) {
   const message = String(typeof error === 'string' ? error : error?.message || '');
-  return /STEP9_OAUTH_TIMEOUT::|认证失败:\s*(?:Timeout waiting for OAuth callback|timeout of \d+ms exceeded)/i.test(message);
+  return /STEP9_OAUTH_TIMEOUT::|璁よ瘉澶辫触:\s*(?:Timeout waiting for OAuth callback|timeout of \d+ms exceeded)/i.test(message);
 }
 
 function isStepDoneStatus(status) {
@@ -9535,15 +9560,15 @@ function getExecutionAllowedNodeIdsForState(state = {}) {
   return nodeIds.filter((nodeId) => isNodeExecutionAllowedForState(nodeId, state));
 }
 
-function assertNodeExecutionAllowedForState(nodeId, state = {}, actionLabel = '执行节点') {
+function assertNodeExecutionAllowedForState(nodeId, state = {}, actionLabel = '鎵ц鑺傜偣') {
   const normalizedNodeId = String(nodeId || '').trim();
   if (isNodeExecutionAllowedForState(normalizedNodeId, state)) {
     return;
   }
   const range = getStepExecutionRangeForState(state);
   const step = getStepIdByNodeIdForState(normalizedNodeId, state);
-  const stepLabel = Number.isInteger(Number(step)) && Number(step) > 0 ? `步骤 ${step}` : `节点 ${normalizedNodeId}`;
-  throw new Error(`${actionLabel}已被当前 flow 的执行范围禁用：${stepLabel} 不在 ${range.fromStep}-${range.toStep} 内。`);
+  const stepLabel = Number.isInteger(Number(step)) && Number(step) > 0 ? `姝ラ ${step}` : `鑺傜偣 ${normalizedNodeId}`;
+  throw new Error(`${actionLabel}宸茶褰撳墠 flow 鐨勬墽琛岃寖鍥寸鐢細${stepLabel} 涓嶅湪 ${range.fromStep}-${range.toStep} 鍐呫€俙);
 }
 
 function normalizeStatusMapForNodes(statuses = {}, state = {}) {
@@ -9825,7 +9850,7 @@ function getDownstreamStateResets(step, state = {}) {
 }
 
 async function invalidateDownstreamAfterStepRestart(step, options = {}) {
-  const { logLabel = `步骤 ${step} 重新执行` } = options;
+  const { logLabel = `姝ラ ${step} 閲嶆柊鎵ц` } = options;
   const state = await getState();
   const nodeStatuses = { ...(state.nodeStatuses || {}) };
   const changedNodes = [];
@@ -9852,7 +9877,7 @@ async function invalidateDownstreamAfterStepRestart(step, options = {}) {
         payload: { nodeId, status: 'pending' },
       }).catch(() => { });
     }
-    await addLog(`${logLabel}，已重置后续节点状态：${changedNodes.join(', ')}`, 'warn');
+    await addLog(`${logLabel}锛屽凡閲嶇疆鍚庣画鑺傜偣鐘舵€侊細${changedNodes.join(', ')}`, 'warn');
   }
 
   const resets = getDownstreamStateResets(step, state);
@@ -9870,7 +9895,7 @@ async function invalidateDownstreamAfterNodeRestart(nodeId, options = {}) {
   }
 
   const normalizedNodeId = String(nodeId || '').trim();
-  const logLabel = options.logLabel || `节点 ${normalizedNodeId} 重新执行`;
+  const logLabel = options.logLabel || `鑺傜偣 ${normalizedNodeId} 閲嶆柊鎵ц`;
   const nodeStatuses = { ...(state.nodeStatuses || {}) };
   const activeNodeIds = getNodeIdsForState(state);
   const currentIndex = activeNodeIds.indexOf(normalizedNodeId);
@@ -9893,7 +9918,7 @@ async function invalidateDownstreamAfterNodeRestart(nodeId, options = {}) {
         payload: { nodeId: changedNodeId, status: 'pending' },
       }).catch(() => { });
     }
-    await addLog(`${logLabel}，已重置后续节点状态：${changedNodes.join(', ')}`, 'warn');
+    await addLog(`${logLabel}锛屽凡閲嶇疆鍚庣画鑺傜偣鐘舵€侊細${changedNodes.join(', ')}`, 'warn');
   }
 }
 
@@ -9977,11 +10002,11 @@ function resolveAccountRunRecordReasonForStop(status, reason = '') {
   const text = String(reason || '').trim();
   const stoppedNodeId = extractStoppedNodeFromRecordStatus(status);
   if (stoppedNodeId) {
-    if (!text || text === STOP_ERROR_MESSAGE || /^流程已被用户停止。?$/.test(text)) {
-      return `节点 ${stoppedNodeId} 已被用户停止。`;
+    if (!text || text === STOP_ERROR_MESSAGE || /^娴佺▼宸茶鐢ㄦ埛鍋滄銆?$/.test(text)) {
+      return `鑺傜偣 ${stoppedNodeId} 宸茶鐢ㄦ埛鍋滄銆俙;
     }
-    if (/流程尚未完成/.test(text) || /已使用(?:邮箱|手机号)/.test(text)) {
-      return text.replace(/^步骤\s*\d+/, `节点 ${stoppedNodeId}`);
+    if (/娴佺▼灏氭湭瀹屾垚/.test(text) || /宸蹭娇鐢??:閭|鎵嬫満鍙?/.test(text)) {
+      return text.replace(/^姝ラ\s*\d+/, `鑺傜偣 ${stoppedNodeId}`);
     }
     return text;
   }
@@ -9989,22 +10014,22 @@ function resolveAccountRunRecordReasonForStop(status, reason = '') {
   const stoppedStep = extractStoppedStepFromRecordStatus(status);
 
   if (!stoppedStep) {
-    if (!text || text === STOP_ERROR_MESSAGE || /^流程已被用户停止。?$/.test(text)) {
-      return '流程已停止。';
+    if (!text || text === STOP_ERROR_MESSAGE || /^娴佺▼宸茶鐢ㄦ埛鍋滄銆?$/.test(text)) {
+      return '娴佺▼宸插仠姝€?;
     }
     return text;
   }
 
-  if (!text || text === STOP_ERROR_MESSAGE || /^流程已被用户停止。?$/.test(text)) {
-    return `步骤 ${stoppedStep} 已被用户停止。`;
+  if (!text || text === STOP_ERROR_MESSAGE || /^娴佺▼宸茶鐢ㄦ埛鍋滄銆?$/.test(text)) {
+    return `姝ラ ${stoppedStep} 宸茶鐢ㄦ埛鍋滄銆俙;
   }
 
-  if (/流程尚未完成/.test(text) || /已使用邮箱/.test(text)) {
-    return `步骤 ${stoppedStep} 已停止：邮箱已设置，流程尚未完成。`;
+  if (/娴佺▼灏氭湭瀹屾垚/.test(text) || /宸蹭娇鐢ㄩ偖绠?.test(text)) {
+    return `姝ラ ${stoppedStep} 宸插仠姝細閭宸茶缃紝娴佺▼灏氭湭瀹屾垚銆俙;
   }
 
-  if (/步骤\s*\d+\s*已(?:被用户)?停止/.test(text)) {
-    return text.replace(/步骤\s*\d+/, `步骤 ${stoppedStep}`);
+  if (/姝ラ\s*\d+\s*宸??:琚敤鎴??鍋滄/.test(text)) {
+    return text.replace(/姝ラ\s*\d+/, `姝ラ ${stoppedStep}`);
   }
 
   return text;
@@ -10100,7 +10125,7 @@ async function clearAutoRunTimerAlarm() {
 async function persistAutoRunTimerPlan(plan, extraState = {}) {
   const normalizedPlan = normalizeAutoRunTimerPlan(plan);
   if (!normalizedPlan) {
-    throw new Error('自动运行计时计划无效。');
+    throw new Error('鑷姩杩愯璁℃椂璁″垝鏃犳晥銆?);
   }
 
   const statusPayload = getAutoRunTimerStatusPayload(normalizedPlan);
@@ -10221,17 +10246,17 @@ async function launchAutoRunTimerPlan(trigger = 'alarm', options = {}) {
       return false;
     }
     clearStopRequest();
-    let logMessage = '倒计时结束，自动运行开始执行。';
+    let logMessage = '鍊掕鏃剁粨鏉燂紝鑷姩杩愯寮€濮嬫墽琛屻€?;
     if (plan.kind === AUTO_RUN_TIMER_KIND_BETWEEN_ROUNDS) {
       logMessage = trigger === 'manual'
-        ? '已手动跳过线程间隔，自动流程立即开始下一轮。'
-        : '线程间隔结束，自动流程开始下一轮。';
+        ? '宸叉墜鍔ㄨ烦杩囩嚎绋嬮棿闅旓紝鑷姩娴佺▼绔嬪嵆寮€濮嬩笅涓€杞€?
+        : '绾跨▼闂撮殧缁撴潫锛岃嚜鍔ㄦ祦绋嬪紑濮嬩笅涓€杞€?;
     } else if (plan.kind === AUTO_RUN_TIMER_KIND_BEFORE_RETRY) {
       logMessage = trigger === 'manual'
-        ? `已手动跳过线程间隔，立即开始第 ${plan.currentRun}/${plan.totalRuns} 轮第 ${plan.attemptRun} 次尝试。`
-        : `线程间隔结束，开始第 ${plan.currentRun}/${plan.totalRuns} 轮第 ${plan.attemptRun} 次尝试。`;
+        ? `宸叉墜鍔ㄨ烦杩囩嚎绋嬮棿闅旓紝绔嬪嵆寮€濮嬬 ${plan.currentRun}/${plan.totalRuns} 杞 ${plan.attemptRun} 娆″皾璇曘€俙
+        : `绾跨▼闂撮殧缁撴潫锛屽紑濮嬬 ${plan.currentRun}/${plan.totalRuns} 杞 ${plan.attemptRun} 娆″皾璇曘€俙;
     } else if (trigger === 'manual') {
-      logMessage = '已手动跳过倒计时，自动运行立即开始。';
+      logMessage = '宸叉墜鍔ㄨ烦杩囧€掕鏃讹紝鑷姩杩愯绔嬪嵆寮€濮嬨€?;
     }
     await addLog(logMessage, 'info');
     if (plan.autoRunSessionId && !isCurrentAutoRunSessionId(plan.autoRunSessionId)) {
@@ -10302,39 +10327,39 @@ async function ensureManualInteractionAllowed(actionLabel) {
   const state = await getState();
 
   if (isAutoRunLockedState(state)) {
-    throw new Error(`自动流程运行中，请先停止后再${actionLabel}。`);
+    throw new Error(`鑷姩娴佺▼杩愯涓紝璇峰厛鍋滄鍚庡啀${actionLabel}銆俙);
   }
   if (isAutoRunPausedState(state)) {
-    throw new Error(`自动流程当前已暂停。请点击“继续”，或先确认接管自动流程后再${actionLabel}。`);
+    throw new Error(`鑷姩娴佺▼褰撳墠宸叉殏鍋溿€傝鐐瑰嚮鈥滅户缁€濓紝鎴栧厛纭鎺ョ鑷姩娴佺▼鍚庡啀${actionLabel}銆俙);
   }
 
   return state;
 }
 
 async function skipNode(nodeId) {
-  const state = await ensureManualInteractionAllowed('跳过步骤');
+  const state = await ensureManualInteractionAllowed('璺宠繃姝ラ');
   const normalizedNodeId = String(nodeId || '').trim();
   const activeNodeIds = getNodeIdsForState(state);
 
   if (!normalizedNodeId || !activeNodeIds.includes(normalizedNodeId)) {
-    throw new Error(`无效节点：${normalizedNodeId || nodeId}`);
+    throw new Error(`鏃犳晥鑺傜偣锛?{normalizedNodeId || nodeId}`);
   }
 
   const statuses = normalizeStatusMapForNodes(state.nodeStatuses || {}, state);
   const currentStatus = statuses[normalizedNodeId];
   if (currentStatus === 'running') {
-    throw new Error(`节点 ${normalizedNodeId} 正在运行中，不能跳过。`);
+    throw new Error(`鑺傜偣 ${normalizedNodeId} 姝ｅ湪杩愯涓紝涓嶈兘璺宠繃銆俙);
   }
   if (isStepDoneStatus(currentStatus)) {
-    throw new Error(`节点 ${normalizedNodeId} 已完成，无需再跳过。`);
+    throw new Error(`鑺傜偣 ${normalizedNodeId} 宸插畬鎴愶紝鏃犻渶鍐嶈烦杩囥€俙);
   }
   if (typeof assertNodeExecutionAllowedForState === 'function') {
-    assertNodeExecutionAllowedForState(normalizedNodeId, state, '跳过节点');
+    assertNodeExecutionAllowedForState(normalizedNodeId, state, '璺宠繃鑺傜偣');
   }
 
   // Skipping is an explicit operator override. Node executors still validate their real inputs.
   await setNodeStatus(normalizedNodeId, 'skipped');
-  await addLog(`节点 ${normalizedNodeId} 已跳过`, 'warn');
+  await addLog(`鑺傜偣 ${normalizedNodeId} 宸茶烦杩嘸, 'warn');
 
   const linkedSkipNodeIdsByRoot = {
     'open-chatgpt': ['submit-signup-email', 'fill-password', 'fetch-signup-code', 'fill-profile', 'wait-registration-success'],
@@ -10356,7 +10381,7 @@ async function skipNode(nodeId) {
       }
     }
     if (skippedNodes.length) {
-      await addLog(`节点 ${normalizedNodeId} 已跳过，节点 ${skippedNodes.join('、')} 也已同时跳过。`, 'warn');
+      await addLog(`鑺傜偣 ${normalizedNodeId} 宸茶烦杩囷紝鑺傜偣 ${skippedNodes.join('銆?)} 涔熷凡鍚屾椂璺宠繃銆俙, 'warn');
     }
   }
 
@@ -10390,10 +10415,10 @@ async function clickWithDebugger(tabId, rect, options = {}) {
   const visibleStep = Math.floor(Number(options.visibleStep) || 0) || 9;
   throwIfStopped();
   if (!tabId) {
-    throw new Error('未找到用于调试点击的认证页面标签页。');
+    throw new Error('鏈壘鍒扮敤浜庤皟璇曠偣鍑荤殑璁よ瘉椤甸潰鏍囩椤点€?);
   }
   if (!rect || !Number.isFinite(rect.centerX) || !Number.isFinite(rect.centerY)) {
-    throw new Error(`步骤 ${visibleStep} 的调试器兜底点击需要有效的按钮坐标。`);
+    throw new Error(`姝ラ ${visibleStep} 鐨勮皟璇曞櫒鍏滃簳鐐瑰嚮闇€瑕佹湁鏁堢殑鎸夐挳鍧愭爣銆俙);
   }
 
   const target = { tabId };
@@ -10401,8 +10426,8 @@ async function clickWithDebugger(tabId, rect, options = {}) {
     await chrome.debugger.attach(target, '1.3');
   } catch (err) {
     throw new Error(
-      `步骤 ${visibleStep} 的调试器兜底点击附加失败：${err.message}。` +
-      '如果认证页标签已打开 DevTools，请先关闭后重试。'
+      `姝ラ ${visibleStep} 鐨勮皟璇曞櫒鍏滃簳鐐瑰嚮闄勫姞澶辫触锛?{err.message}銆俙 +
+      '濡傛灉璁よ瘉椤垫爣绛惧凡鎵撳紑 DevTools锛岃鍏堝叧闂悗閲嶈瘯銆?
     );
   }
 
@@ -10561,8 +10586,8 @@ async function handleStepData(step, payload) {
         const step3Status = step3NodeId ? latestState.nodeStatuses?.[step3NodeId] : '';
         if (step3NodeId && step3Status !== 'running' && step3Status !== 'completed' && step3Status !== 'manual_completed') {
           await setNodeStatus(step3NodeId, 'skipped');
-          const identityLabel = payload.accountIdentifierType === 'phone' ? '手机号' : '邮箱';
-          await addLog(`步骤 2：提交${identityLabel}后页面直接进入验证码页，已自动跳过步骤 3。`, 'warn');
+          const identityLabel = payload.accountIdentifierType === 'phone' ? '鎵嬫満鍙? : '閭';
+          await addLog(`姝ラ 2锛氭彁浜?{identityLabel}鍚庨〉闈㈢洿鎺ヨ繘鍏ラ獙璇佺爜椤碉紝宸茶嚜鍔ㄨ烦杩囨楠?3銆俙, 'warn');
         }
       }
       break;
@@ -10577,7 +10602,7 @@ async function handleStepData(step, payload) {
         const step5Status = step5NodeId ? latestState.nodeStatuses?.[step5NodeId] : '';
         if (step5NodeId && step5Status !== 'running' && step5Status !== 'completed' && step5Status !== 'manual_completed') {
           await setNodeStatus(step5NodeId, 'skipped');
-          await addLog('步骤 3：页面已直接进入已登录态，已自动跳过步骤 5。', 'warn');
+          await addLog('姝ラ 3锛氶〉闈㈠凡鐩存帴杩涘叆宸茬櫥褰曟€侊紝宸茶嚜鍔ㄨ烦杩囨楠?5銆?, 'warn');
         }
       }
       if (payload.loginVerificationRequestedAt) {
@@ -10625,7 +10650,7 @@ async function handleStepData(step, payload) {
     case 9:
       if (payload.localhostUrl) {
         if (!isLocalhostOAuthCallbackUrl(payload.localhostUrl)) {
-          throw new Error('步骤 9 返回了无效的 localhost OAuth 回调地址。');
+          throw new Error('姝ラ 9 杩斿洖浜嗘棤鏁堢殑 localhost OAuth 鍥炶皟鍦板潃銆?);
         }
         await setState({
           localhostUrl: payload.localhostUrl,
@@ -10744,7 +10769,7 @@ function waitForNodeComplete(nodeId, timeoutMs = 120000) {
   throwIfStopped();
   const normalizedNodeId = String(nodeId || '').trim();
   if (!normalizedNodeId) {
-    return Promise.reject(new Error('等待节点完成失败：缺少 nodeId。'));
+    return Promise.reject(new Error('绛夊緟鑺傜偣瀹屾垚澶辫触锛氱己灏?nodeId銆?));
   }
   const existingWaiter = nodeWaiters.get(normalizedNodeId);
   if (existingWaiter?.promise) {
@@ -10765,7 +10790,7 @@ function waitForNodeComplete(nodeId, timeoutMs = 120000) {
         nodeWaiters.delete(normalizedNodeId);
       }
       console.warn(LOG_PREFIX, `[waitForNodeComplete] timeout for node ${normalizedNodeId} after ${timeoutMs}ms`);
-      reject(new Error(`节点 ${normalizedNodeId} 等待超时（>${timeoutMs / 1000} 秒）`));
+      reject(new Error(`鑺傜偣 ${normalizedNodeId} 绛夊緟瓒呮椂锛?${timeoutMs / 1000} 绉掞級`));
     }, timeoutMs);
 
     waiter.resolve = (data) => {
@@ -10792,7 +10817,7 @@ function waitForStepComplete(step, timeoutMs = 120000) {
   return getState().then((state) => {
     const nodeId = getNodeIdByStepForState(step, state);
     if (!nodeId) {
-      throw new Error(`等待步骤 ${step} 完成失败：当前 flow 中未找到对应节点。`);
+      throw new Error(`绛夊緟姝ラ ${step} 瀹屾垚澶辫触锛氬綋鍓?flow 涓湭鎵惧埌瀵瑰簲鑺傜偣銆俙);
     }
     return waitForNodeComplete(nodeId, timeoutMs);
   });
@@ -10905,13 +10930,13 @@ async function runCompletedNodeSideEffects(nodeId, payload, completionState, las
 async function reportCompletedNodeSideEffectError(nodeId, error) {
   const message = getErrorMessage(error);
   console.warn(LOG_PREFIX, `[completeNodeFromBackground] node ${nodeId} post-completion side effect failed:`, error);
-  await addLog(`已完成，但完成后的收尾处理失败：${message}`, 'warn', { nodeId });
+  await addLog(`宸插畬鎴愶紝浣嗗畬鎴愬悗鐨勬敹灏惧鐞嗗け璐ワ細${message}`, 'warn', { nodeId });
 }
 
 async function completeNodeFromBackground(nodeId, payload = {}) {
   const normalizedNodeId = String(nodeId || '').trim();
   if (!normalizedNodeId) {
-    throw new Error('completeNodeFromBackground 缺少 nodeId。');
+    throw new Error('completeNodeFromBackground 缂哄皯 nodeId銆?);
   }
   if (stopRequested) {
     await setNodeStatus(normalizedNodeId, 'stopped');
@@ -10924,7 +10949,7 @@ async function completeNodeFromBackground(nodeId, payload = {}) {
   const lastNodeId = getLastNodeIdForState(latestState);
   const completionState = normalizedNodeId === lastNodeId ? latestState : null;
   await setNodeStatus(normalizedNodeId, 'completed');
-  await addLog('已完成', 'ok', { nodeId: normalizedNodeId });
+  await addLog('宸插畬鎴?, 'ok', { nodeId: normalizedNodeId });
 
   if (normalizedNodeId === lastNodeId) {
     try {
@@ -10932,7 +10957,7 @@ async function completeNodeFromBackground(nodeId, payload = {}) {
         nodeId: normalizedNodeId,
       });
     } catch (error) {
-      await addLog(`手机号注册：最终节点完成前清理手机号身份失败：${getErrorMessage(error)}`, 'warn', {
+      await addLog(`鎵嬫満鍙锋敞鍐岋細鏈€缁堣妭鐐瑰畬鎴愬墠娓呯悊鎵嬫満鍙疯韩浠藉け璐ワ細${getErrorMessage(error)}`, 'warn', {
         nodeId: normalizedNodeId,
       });
     }
@@ -10965,13 +10990,13 @@ async function finalizeDeferredNodeExecutionError(nodeId, error) {
 
   if (isStopError(error)) {
     await setNodeStatus(normalizedNodeId, 'stopped');
-    await addLog('已被用户停止', 'warn', { nodeId: normalizedNodeId });
+    await addLog('宸茶鐢ㄦ埛鍋滄', 'warn', { nodeId: normalizedNodeId });
     await appendManualAccountRunRecordIfNeeded(`node:${normalizedNodeId}:stopped`, latestState, getErrorMessage(error));
     return;
   }
 
   await setNodeStatus(normalizedNodeId, 'failed');
-  await addLog(`失败：${getErrorMessage(error)}`, 'error', { nodeId: normalizedNodeId });
+  await addLog(`澶辫触锛?{getErrorMessage(error)}`, 'error', { nodeId: normalizedNodeId });
   await appendManualAccountRunRecordIfNeeded(`node:${normalizedNodeId}:failed`, latestState, getErrorMessage(error));
 }
 
@@ -10988,7 +11013,7 @@ async function executeNodeViaCompletionSignal(nodeId, timeoutMs = 0) {
   const normalizedNodeId = String(nodeId || '').trim();
   const executionState = await getState();
   if (typeof assertNodeExecutionAllowedForState === 'function') {
-    assertNodeExecutionAllowedForState(normalizedNodeId, executionState, '执行节点');
+    assertNodeExecutionAllowedForState(normalizedNodeId, executionState, '鎵ц鑺傜偣');
   }
   const resolvedTimeoutMs = Number(timeoutMs) > 0
     ? timeoutMs
@@ -11037,7 +11062,7 @@ async function executeNodeViaCompletionSignal(nodeId, timeoutMs = 0) {
         }
       }
     }).catch(() => {});
-    if (/等待超时/.test(getErrorMessage(completionResult.error)) && normalizedNodeId === 'fill-profile') {
+    if (/绛夊緟瓒呮椂/.test(getErrorMessage(completionResult.error)) && normalizedNodeId === 'fill-profile') {
       const recoveredPayload = await completeStep5FromTabUrlAfterTransportError(completionResult.error).catch(() => null);
       if (recoveredPayload) {
         notifyNodeComplete(normalizedNodeId, recoveredPayload);
@@ -11074,7 +11099,7 @@ async function executeNodeViaCompletionSignal(nodeId, timeoutMs = 0) {
 
   if (executeResult && !executeResult.ok && isRetryableContentScriptTransportError(executeResult.error)) {
     const completionMessage = getErrorMessage(completionResult.error);
-    if (/等待超时/.test(completionMessage)) {
+    if (/绛夊緟瓒呮椂/.test(completionMessage)) {
       if (normalizedNodeId === 'fill-profile') {
         const recoveredPayload = await completeStep5FromTabUrlAfterTransportError(executeResult.error).catch(() => null);
         if (recoveredPayload) {
@@ -11099,7 +11124,7 @@ async function executeStepViaCompletionSignal(step, timeoutMs = 0) {
   const state = await getState();
   const nodeId = getNodeIdByStepForState(step, state);
   if (!nodeId) {
-    throw new Error(`执行步骤 ${step} 失败：当前 flow 中未找到对应节点。`);
+    throw new Error(`鎵ц姝ラ ${step} 澶辫触锛氬綋鍓?flow 涓湭鎵惧埌瀵瑰簲鑺傜偣銆俙);
   }
   return executeNodeViaCompletionSignal(nodeId, timeoutMs);
 }
@@ -11129,7 +11154,7 @@ async function completeStep5FromTabUrlAfterTransportError(sourceError = null) {
     recoveredFromTransportError: true,
   };
   await addLog(
-    `步骤 5 [调试] 内容脚本通信中断，但后台确认标签页已进入 chatgpt.com，按提交成功收尾。原始错误：${getErrorMessage(sourceError)}`,
+    `姝ラ 5 [璋冭瘯] 鍐呭鑴氭湰閫氫俊涓柇锛屼絾鍚庡彴纭鏍囩椤靛凡杩涘叆 chatgpt.com锛屾寜鎻愪氦鎴愬姛鏀跺熬銆傚師濮嬮敊璇細${getErrorMessage(sourceError)}`,
     'warn',
     { step: 5, stepKey: 'fill-profile' }
   );
@@ -11149,7 +11174,7 @@ function getLatestLogTimestamp(logs = [], fallback = 0) {
 function buildAutoRunNodeIdleRestartError(nodeId, idleMs = AUTO_RUN_STEP_IDLE_LOG_TIMEOUT_MS) {
   const seconds = Math.max(1, Math.round((Number(idleMs) || AUTO_RUN_STEP_IDLE_LOG_TIMEOUT_MS) / 1000));
   const normalizedNodeId = String(nodeId || '').trim();
-  const error = new Error(`${AUTO_RUN_STEP_IDLE_RESTART_ERROR_PREFIX}节点 ${normalizedNodeId} 已连续 ${seconds} 秒没有新日志，准备重新开始当前节点。`);
+  const error = new Error(`${AUTO_RUN_STEP_IDLE_RESTART_ERROR_PREFIX}鑺傜偣 ${normalizedNodeId} 宸茶繛缁?${seconds} 绉掓病鏈夋柊鏃ュ織锛屽噯澶囬噸鏂板紑濮嬪綋鍓嶈妭鐐广€俙);
   error.autoRunStepIdleRestart = true;
   error.failedNodeId = normalizedNodeId;
   return error;
@@ -11230,7 +11255,7 @@ async function runAutoNodeActionWithIdleLogWatchdog(nodeId, action, options = {}
         if (!lateMessage || isStopError(lateError) || isAutoRunStepIdleRestartError(lateError)) {
           return;
         }
-        addLog(`节点 ${normalizedNodeId}：无日志重开后收到原执行失败：${lateMessage}`, 'warn').catch(() => {});
+        addLog(`鑺傜偣 ${normalizedNodeId}锛氭棤鏃ュ織閲嶅紑鍚庢敹鍒板師鎵ц澶辫触锛?{lateMessage}`, 'warn').catch(() => {});
       });
     }
     throw error;
@@ -11254,7 +11279,7 @@ async function waitForRunningNodesToFinish(payload = {}) {
     return currentState;
   }
 
-  await addLog(`自动继续：检测到节点 ${runningNodes.join(', ')} 正在运行，等待完成后再继续自动流程...`, 'info');
+  await addLog(`鑷姩缁х画锛氭娴嬪埌鑺傜偣 ${runningNodes.join(', ')} 姝ｅ湪杩愯锛岀瓑寰呭畬鎴愬悗鍐嶇户缁嚜鍔ㄦ祦绋?..`, 'info');
   await broadcastAutoRunStatus('waiting_step', payload);
 
   while (runningNodes.length) {
@@ -11263,7 +11288,7 @@ async function waitForRunningNodesToFinish(payload = {}) {
     runningNodes = getRunningNodeIds(currentState.nodeStatuses, currentState);
   }
 
-  await addLog('自动继续：当前运行节点已结束，准备按最新进度继续自动流程...', 'info');
+  await addLog('鑷姩缁х画锛氬綋鍓嶈繍琛岃妭鐐瑰凡缁撴潫锛屽噯澶囨寜鏈€鏂拌繘搴︾户缁嚜鍔ㄦ祦绋?..', 'info');
   return currentState;
 }
 
@@ -11305,7 +11330,7 @@ async function acquireTopLevelAuthChainExecutionForNode(nodeId, state = {}) {
   if (activeTopLevelAuthChainExecution) {
     const activeExecution = activeTopLevelAuthChainExecution;
     await addLog(
-      `节点 ${normalizedNodeId}：检测到节点 ${activeExecution.nodeId} 正在运行，本次请求将复用当前授权链，不再重复启动。`,
+      `鑺傜偣 ${normalizedNodeId}锛氭娴嬪埌鑺傜偣 ${activeExecution.nodeId} 姝ｅ湪杩愯锛屾湰娆¤姹傚皢澶嶇敤褰撳墠鎺堟潈閾撅紝涓嶅啀閲嶅鍚姩銆俙,
       'warn'
     );
     const result = await activeExecution.promise;
@@ -11353,7 +11378,7 @@ async function markRunningStepsStopped() {
 }
 
 async function requestStop(options = {}) {
-  const { logMessage = '已收到停止请求，正在取消当前操作...' } = options;
+  const { logMessage = '宸叉敹鍒板仠姝㈣姹傦紝姝ｅ湪鍙栨秷褰撳墠鎿嶄綔...' } = options;
   const state = await getState();
   const runningNodes = getRunningNodeIds(state.nodeStatuses, state);
   const inferredStopNode = inferStoppedRecordNode(state);
@@ -11365,7 +11390,7 @@ async function requestStop(options = {}) {
     autoRunAttemptRun = timerPlan.attemptRun;
     clearCurrentAutoRunSessionId(timerPlan.autoRunSessionId);
     if (options.logMessage !== false) {
-      await addLog(options.logMessage || '已停止等待中的自动流程。', 'warn');
+      await addLog(options.logMessage || '宸插仠姝㈢瓑寰呬腑鐨勮嚜鍔ㄦ祦绋嬨€?, 'warn');
     }
     await broadcastAutoRunStatus('stopped', {
       currentRun: timerPlan.currentRun,
@@ -11449,12 +11474,12 @@ async function executeNode(nodeId, options = {}) {
   const { deferRetryableTransportError = false } = options;
   const normalizedNodeId = String(nodeId || '').trim();
   if (!normalizedNodeId) {
-    throw new Error('executeNode 缺少 nodeId。');
+    throw new Error('executeNode 缂哄皯 nodeId銆?);
   }
   console.log(LOG_PREFIX, `Executing node ${normalizedNodeId}`);
   let state = await getState();
   if (typeof assertNodeExecutionAllowedForState === 'function') {
-    assertNodeExecutionAllowedForState(normalizedNodeId, state, '执行节点');
+    assertNodeExecutionAllowedForState(normalizedNodeId, state, '鎵ц鑺傜偣');
   }
   const step = getStepIdByNodeIdForState(normalizedNodeId, state);
   const authChainClaim = await acquireTopLevelAuthChainExecutionForNode(normalizedNodeId, state);
@@ -11466,7 +11491,7 @@ async function executeNode(nodeId, options = {}) {
   throwIfStopped();
   try {
     await setNodeStatus(normalizedNodeId, 'running');
-    await addLog('开始执行', 'info', { nodeId: normalizedNodeId });
+    await addLog('寮€濮嬫墽琛?, 'info', { nodeId: normalizedNodeId });
     await humanStepDelay();
     const transientTransportRetryPolicy = typeof getStepTransientTransportRetryPolicy === 'function'
       ? getStepTransientTransportRetryPolicy(step)
@@ -11492,7 +11517,7 @@ async function executeNode(nodeId, options = {}) {
 
       const activeStepRegistry = getStepRegistryForState(state);
       if (!activeStepRegistry?.getNodeDefinition?.(normalizedNodeId)) {
-        throw new Error(`当前模式下不存在节点：${normalizedNodeId}`);
+        throw new Error(`褰撳墠妯″紡涓嬩笉瀛樺湪鑺傜偣锛?{normalizedNodeId}`);
       }
 
       try {
@@ -11506,7 +11531,7 @@ async function executeNode(nodeId, options = {}) {
 
         if (attempt > 1) {
           await addLog(
-            `[TRANSIENT_TRANSPORT_RETRY] 节点 ${normalizedNodeId}：页面跳转后的通信异常已恢复，当前重试成功（${attempt}/${transientTransportRetryPolicy?.maxAttempts || attempt}）。`,
+            `[TRANSIENT_TRANSPORT_RETRY] 鑺傜偣 ${normalizedNodeId}锛氶〉闈㈣烦杞悗鐨勯€氫俊寮傚父宸叉仮澶嶏紝褰撳墠閲嶈瘯鎴愬姛锛?{attempt}/${transientTransportRetryPolicy?.maxAttempts || attempt}锛夈€俙,
             'ok'
           );
         }
@@ -11520,7 +11545,7 @@ async function executeNode(nodeId, options = {}) {
         const cooldownMs = transientTransportRetryPolicy.cooldownMs;
         const cooldownSeconds = Math.max(1, Math.ceil(cooldownMs / 1000));
         await addLog(
-          `[TRANSIENT_TRANSPORT_RETRY] 节点 ${normalizedNodeId}：检测到页面跳转后的通信异常（${getErrorMessage(attemptError)}），${cooldownSeconds} 秒后重新确认当前节点（${nextAttempt}/${transientTransportRetryPolicy.maxAttempts}）。`,
+          `[TRANSIENT_TRANSPORT_RETRY] 鑺傜偣 ${normalizedNodeId}锛氭娴嬪埌椤甸潰璺宠浆鍚庣殑閫氫俊寮傚父锛?{getErrorMessage(attemptError)}锛夛紝${cooldownSeconds} 绉掑悗閲嶆柊纭褰撳墠鑺傜偣锛?{nextAttempt}/${transientTransportRetryPolicy.maxAttempts}锛夈€俙,
           'warn'
         );
         if (cooldownMs > 0) {
@@ -11534,7 +11559,7 @@ async function executeNode(nodeId, options = {}) {
     const errorState = await getState();
     if (isStopError(err)) {
       await setNodeStatus(normalizedNodeId, 'stopped');
-      await addLog('已被用户停止', 'warn', { nodeId: normalizedNodeId });
+      await addLog('宸茶鐢ㄦ埛鍋滄', 'warn', { nodeId: normalizedNodeId });
       await appendManualAccountRunRecordIfNeeded(`node:${normalizedNodeId}:stopped`, errorState, getErrorMessage(err));
       throw err;
     }
@@ -11548,7 +11573,7 @@ async function executeNode(nodeId, options = {}) {
     }
     if (!(deferRetryableTransportError && doesNodeUseCompletionSignal(normalizedNodeId, errorState) && isRetryableContentScriptTransportError(err))) {
       await setNodeStatus(normalizedNodeId, 'failed');
-      await addLog(`失败：${err.message}`, 'error', { nodeId: normalizedNodeId });
+      await addLog(`澶辫触锛?{err.message}`, 'error', { nodeId: normalizedNodeId });
       await appendManualAccountRunRecordIfNeeded(`node:${normalizedNodeId}:failed`, errorState, getErrorMessage(err));
     } else {
       console.warn(
@@ -11566,19 +11591,19 @@ async function executeNodeAndWait(nodeId, delayAfter = 2000) {
   throwIfStopped();
   const normalizedNodeId = String(nodeId || '').trim();
   if (!normalizedNodeId) {
-    throw new Error('executeNodeAndWait 缺少 nodeId。');
+    throw new Error('executeNodeAndWait 缂哄皯 nodeId銆?);
   }
   let completionPayload = null;
 
   let executionState = await getState();
   if (typeof assertNodeExecutionAllowedForState === 'function') {
-    assertNodeExecutionAllowedForState(normalizedNodeId, executionState, '自动执行节点');
+    assertNodeExecutionAllowedForState(normalizedNodeId, executionState, '鑷姩鎵ц鑺傜偣');
   }
 
   const delaySeconds = normalizeAutoStepDelaySeconds(executionState.autoStepDelaySeconds, null);
   if (delaySeconds > 0) {
     await addLog(
-      `自动运行：节点 ${normalizedNodeId} 执行前额外等待 ${delaySeconds} 秒，避免节奏过快。`,
+      `鑷姩杩愯锛氳妭鐐?${normalizedNodeId} 鎵ц鍓嶉澶栫瓑寰?${delaySeconds} 绉掞紝閬垮厤鑺傚杩囧揩銆俙,
       'info'
     );
     await sleepWithStop(delaySeconds * 1000);
@@ -11588,7 +11613,7 @@ async function executeNodeAndWait(nodeId, delayAfter = 2000) {
   const preExecutionDelayMs = getAutoRunPreExecutionDelayMsForNode(normalizedNodeId, executionState);
   if (preExecutionDelayMs > 0) {
     await addLog(
-      `自动运行：节点 ${normalizedNodeId} 执行前固定等待 ${Math.round(preExecutionDelayMs / 1000)} 秒。`,
+      `鑷姩杩愯锛氳妭鐐?${normalizedNodeId} 鎵ц鍓嶅浐瀹氱瓑寰?${Math.round(preExecutionDelayMs / 1000)} 绉掋€俙,
       'info'
     );
     await sleepWithStop(preExecutionDelayMs);
@@ -11596,22 +11621,22 @@ async function executeNodeAndWait(nodeId, delayAfter = 2000) {
   }
 
   if (doesNodeUseBackgroundCompletion(normalizedNodeId, executionState)) {
-    await addLog(`自动运行：节点 ${normalizedNodeId} 由后台流程负责收尾，执行函数返回后将直接进入下一步。`, 'info');
+    await addLog(`鑷姩杩愯锛氳妭鐐?${normalizedNodeId} 鐢卞悗鍙版祦绋嬭礋璐ｆ敹灏撅紝鎵ц鍑芥暟杩斿洖鍚庡皢鐩存帴杩涘叆涓嬩竴姝ャ€俙, 'info');
     await executeNode(normalizedNodeId);
     const latestState = await getState();
-    await addLog(`自动运行：节点 ${normalizedNodeId} 已执行返回，当前状态为 ${latestState.nodeStatuses?.[normalizedNodeId] || 'pending'}，准备继续后续节点。`, 'info');
+    await addLog(`鑷姩杩愯锛氳妭鐐?${normalizedNodeId} 宸叉墽琛岃繑鍥烇紝褰撳墠鐘舵€佷负 ${latestState.nodeStatuses?.[normalizedNodeId] || 'pending'}锛屽噯澶囩户缁悗缁妭鐐广€俙, 'info');
   } else if (doesNodeUseCompletionSignal(normalizedNodeId, executionState)) {
     const completionSignalTimeoutMs = getNodeCompletionSignalTimeoutMs(normalizedNodeId, executionState);
-    await addLog(`自动运行：节点 ${normalizedNodeId} 已发起，正在等待完成信号（超时 ${Math.round(completionSignalTimeoutMs / 1000)} 秒）。`, 'info');
+    await addLog(`鑷姩杩愯锛氳妭鐐?${normalizedNodeId} 宸插彂璧凤紝姝ｅ湪绛夊緟瀹屾垚淇″彿锛堣秴鏃?${Math.round(completionSignalTimeoutMs / 1000)} 绉掞級銆俙, 'info');
     completionPayload = await executeNodeViaCompletionSignal(normalizedNodeId, completionSignalTimeoutMs);
     if (normalizedNodeId === 'fill-profile') {
       await addLog(
-        `步骤 5 [调试] 已收到资料页完成信号 | outcome=${String(completionPayload?.outcome || 'none')} | navigationStarted=${Boolean(completionPayload?.navigationStarted)} | url=${String(completionPayload?.url || '') || 'unknown'}`,
+        `姝ラ 5 [璋冭瘯] 宸叉敹鍒拌祫鏂欓〉瀹屾垚淇″彿 | outcome=${String(completionPayload?.outcome || 'none')} | navigationStarted=${Boolean(completionPayload?.navigationStarted)} | url=${String(completionPayload?.url || '') || 'unknown'}`,
         'info',
         { step: 5, stepKey: 'fill-profile' }
       );
     }
-    await addLog(`自动运行：节点 ${normalizedNodeId} 已收到完成信号，准备继续后续节点。`, 'info');
+    await addLog(`鑷姩杩愯锛氳妭鐐?${normalizedNodeId} 宸叉敹鍒板畬鎴愪俊鍙凤紝鍑嗗缁х画鍚庣画鑺傜偣銆俙, 'info');
   } else {
     await executeNode(normalizedNodeId);
   }
@@ -11619,7 +11644,7 @@ async function executeNodeAndWait(nodeId, delayAfter = 2000) {
   if (normalizedNodeId === 'fill-profile') {
     const signupTabId = await getTabId('openai-auth');
     if (signupTabId) {
-      await addLog('自动运行：填写资料节点已收到完成信号，正在等待当前页面完成加载并稳定...', 'info');
+      await addLog('鑷姩杩愯锛氬～鍐欒祫鏂欒妭鐐瑰凡鏀跺埌瀹屾垚淇″彿锛屾鍦ㄧ瓑寰呭綋鍓嶉〉闈㈠畬鎴愬姞杞藉苟绋冲畾...', 'info');
       await waitForTabStableComplete(signupTabId, {
         timeoutMs: 120000,
         retryDelayMs: 300,
@@ -11630,15 +11655,15 @@ async function executeNodeAndWait(nodeId, delayAfter = 2000) {
         await validateStep5PostCompletion(signupTabId, completionPayload || {});
         await setState(clearStep5ProfileStatePatch());
         await setNodeStatus(normalizedNodeId, 'completed');
-        await addLog('已完成', 'ok', { nodeId: normalizedNodeId });
-        await addLog('步骤 5 [调试] 资料页完成信号已通过后台复核。', 'ok', {
+        await addLog('宸插畬鎴?, 'ok', { nodeId: normalizedNodeId });
+        await addLog('姝ラ 5 [璋冭瘯] 璧勬枡椤靛畬鎴愪俊鍙峰凡閫氳繃鍚庡彴澶嶆牳銆?, 'ok', {
           step: 5,
           stepKey: 'fill-profile',
         });
       } catch (step5ValidationError) {
         await setState(clearStep5ProfileStatePatch());
         await setNodeStatus(normalizedNodeId, 'failed');
-        await addLog(`失败：${getErrorMessage(step5ValidationError)}`, 'error', { nodeId: normalizedNodeId });
+        await addLog(`澶辫触锛?{getErrorMessage(step5ValidationError)}`, 'error', { nodeId: normalizedNodeId });
         throw step5ValidationError;
       }
     }
@@ -11661,22 +11686,22 @@ function getEmailGeneratorLabel(generator) {
     ? YYDS_MAIL_GENERATOR
     : 'yyds-mail';
   if (generator === 'custom') {
-    return '自定义邮箱';
+    return '鑷畾涔夐偖绠?;
   }
   if (generator === gmailAliasGenerator) {
-    return 'Gmail +tag 邮箱';
+    return 'Gmail +tag 閭';
   }
   if (generator === customEmailPoolGenerator) {
-    return '自定义邮箱池';
+    return '鑷畾涔夐偖绠辨睜';
   }
   if (generator === 'icloud') {
-    return 'iCloud 隐私邮箱';
+    return 'iCloud 闅愮閭';
   }
-  if (generator === 'cloudflare') return 'Cloudflare 邮箱';
+  if (generator === 'cloudflare') return 'Cloudflare 閭';
   if (generator === CLOUDFLARE_TEMP_EMAIL_GENERATOR) return 'Cloudflare Temp Email';
   if (generator === CLOUD_MAIL_GENERATOR) return 'Cloud Mail';
   if (generator === yydsMailGenerator) return 'YYDS Mail';
-  return 'Duck 邮箱';
+  return 'Duck 閭';
 }
 const mail2925SessionManager = self.MultiPageBackgroundMail2925Session?.createMail2925SessionManager({
   addLog,
@@ -11747,7 +11772,7 @@ function isMail2925LimitReachedError(error) {
   }
   const message = String(typeof error === 'string' ? error : error?.message || '');
   return /^MAIL2925_LIMIT_REACHED::/.test(message)
-    || /子邮箱.{0,12}已达上限|已达上限邮箱|子邮箱上限|邮箱已达上限/i.test(message);
+    || /瀛愰偖绠?{0,12}宸茶揪涓婇檺|宸茶揪涓婇檺閭|瀛愰偖绠变笂闄恷閭宸茶揪涓婇檺/i.test(message);
 }
 
 function isMail2925ThreadTerminatedError(error) {
@@ -11783,14 +11808,14 @@ async function syncPayPalAccounts(accounts) {
 
 async function upsertPayPalAccount(input = {}) {
   if (!payPalAccountStore?.upsertPayPalAccount) {
-    throw new Error('PayPal 账号存储能力尚未接入。');
+    throw new Error('PayPal 璐﹀彿瀛樺偍鑳藉姏灏氭湭鎺ュ叆銆?);
   }
   return payPalAccountStore.upsertPayPalAccount(input);
 }
 
 async function setCurrentPayPalAccount(accountId) {
   if (!payPalAccountStore?.setCurrentPayPalAccount) {
-    throw new Error('PayPal 账号选择能力尚未接入。');
+    throw new Error('PayPal 璐﹀彿閫夋嫨鑳藉姏灏氭湭鎺ュ叆銆?);
   }
   return payPalAccountStore.setCurrentPayPalAccount(accountId);
 }
@@ -12057,8 +12082,8 @@ async function runIpProxyAutoSync(trigger = 'alarm') {
       const display = String(result?.display || '').trim();
       await addLog(
         display
-          ? `IP 代理自动同步完成（${trigger}）：${display}`
-          : `IP 代理自动同步完成（${trigger}）。`,
+          ? `IP 浠ｇ悊鑷姩鍚屾瀹屾垚锛?{trigger}锛夛細${display}`
+          : `IP 浠ｇ悊鑷姩鍚屾瀹屾垚锛?{trigger}锛夈€俙,
         'info'
       ).catch(() => {});
     }
@@ -12066,11 +12091,11 @@ async function runIpProxyAutoSync(trigger = 'alarm') {
   } catch (error) {
     if (typeof addLog === 'function') {
       await addLog(
-        `IP 代理自动同步失败：${error?.message || String(error || '未知错误')}`,
+        `IP 浠ｇ悊鑷姩鍚屾澶辫触锛?{error?.message || String(error || '鏈煡閿欒')}`,
         'warn'
       ).catch(() => {});
     }
-    return { skipped: true, reason: 'error', error: error?.message || String(error || '未知错误') };
+    return { skipped: true, reason: 'error', error: error?.message || String(error || '鏈煡閿欒') };
   } finally {
     ipProxyAutoSyncRunning = false;
   }
@@ -12106,7 +12131,7 @@ async function maybeSwitchIpProxyAfterAutoRunRoundSuccess(payload = {}) {
   const candidateCount = resolveIpProxyCandidateCountForAutoSwitch(state, mode, provider);
   if (candidateCount <= 1) {
     await addLog(
-      `任务切换阈值命中（成功 ${successfulRuns} 轮 / 阈值 ${threshold}），但当前仅 ${candidateCount} 条可切换代理，已跳过自动切换。`,
+      `浠诲姟鍒囨崲闃堝€煎懡涓紙鎴愬姛 ${successfulRuns} 杞?/ 闃堝€?${threshold}锛夛紝浣嗗綋鍓嶄粎 ${candidateCount} 鏉″彲鍒囨崲浠ｇ悊锛屽凡璺宠繃鑷姩鍒囨崲銆俙,
       'info'
     );
     return {
@@ -12130,8 +12155,8 @@ async function maybeSwitchIpProxyAfterAutoRunRoundSuccess(payload = {}) {
   const routingApplied = Boolean(switchResult?.proxyRouting?.applied);
   await addLog(
     routingApplied
-      ? `任务切换阈值命中（成功 ${successfulRuns} 轮 / 阈值 ${threshold}），已自动切换代理：${display || '已切换到下一条'}。`
-      : `任务切换阈值命中（成功 ${successfulRuns} 轮 / 阈值 ${threshold}），已尝试自动切换代理，但连通性仍异常。`,
+      ? `浠诲姟鍒囨崲闃堝€煎懡涓紙鎴愬姛 ${successfulRuns} 杞?/ 闃堝€?${threshold}锛夛紝宸茶嚜鍔ㄥ垏鎹唬鐞嗭細${display || '宸插垏鎹㈠埌涓嬩竴鏉?}銆俙
+      : `浠诲姟鍒囨崲闃堝€煎懡涓紙鎴愬姛 ${successfulRuns} 杞?/ 闃堝€?${threshold}锛夛紝宸插皾璇曡嚜鍔ㄥ垏鎹唬鐞嗭紝浣嗚繛閫氭€т粛寮傚父銆俙,
     routingApplied ? 'ok' : 'warn'
   );
   return switchResult;
@@ -12210,7 +12235,7 @@ async function resumeAutoRunIfWaitingForEmail(options = {}) {
 
   if (resumeWaiter) {
     if (!silent) {
-      await addLog('邮箱已就绪，自动继续后续步骤...', 'info');
+      await addLog('閭宸插氨缁紝鑷姩缁х画鍚庣画姝ラ...', 'info');
     }
     resumeWaiter.resolve();
     resumeWaiter = null;
@@ -12230,10 +12255,10 @@ function shouldStopIcloudAutoFetchRetries(error) {
   }
 
   const message = getErrorMessage(error).toLowerCase();
-  if (message.includes('请先在新打开的 icloud 页面中完成登录')) {
+  if (message.includes('璇峰厛鍦ㄦ柊鎵撳紑鐨?icloud 椤甸潰涓畬鎴愮櫥褰?)) {
     return true;
   }
-  return message.includes('网络/上下文波动')
+  return message.includes('缃戠粶/涓婁笅鏂囨尝鍔?)
     || message.includes('could not validate icloud session')
     || message.includes('status 421')
     || message.includes('failed to fetch')
@@ -12250,10 +12275,10 @@ function shouldStopEmailAutoFetchRetries(generator, error) {
     return true;
   }
   const message = String(error?.message || '');
-  if (generator === 'cloudflare' && /域名/.test(message)) {
+  if (generator === 'cloudflare' && /鍩熷悕/.test(message)) {
     return true;
   }
-  return generator === CLOUDFLARE_TEMP_EMAIL_GENERATOR && /(服务地址|Admin Auth|域名)/.test(message);
+  return generator === CLOUDFLARE_TEMP_EMAIL_GENERATOR && /(鏈嶅姟鍦板潃|Admin Auth|鍩熷悕)/.test(message);
 }
 
 async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
@@ -12264,34 +12289,34 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
       markUsed: true,
       preferredAccountId: null,
     });
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：已分配 Hotmail 账号 ${account.email}（第 ${attemptRuns} 次尝试）===`, 'ok');
+    await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細宸插垎閰?Hotmail 璐﹀彿 ${account.email}锛堢 ${attemptRuns} 娆″皾璇曪級===`, 'ok');
     return account.email;
   }
 
   if (isLuckmailProvider(currentState)) {
     const purchase = await ensureLuckmailPurchaseForFlow({ allowReuse: true });
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：LuckMail 邮箱已就绪：${purchase.email_address}（第 ${attemptRuns} 次尝试）===`, 'ok');
+    await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細LuckMail 閭宸插氨缁細${purchase.email_address}锛堢 ${attemptRuns} 娆″皾璇曪級===`, 'ok');
     return purchase.email_address;
   }
 
   if (isYydsMailProvider(currentState)) {
     const email = await fetchYydsMailAddress(currentState, { generateNew: true });
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：YYDS Mail 邮箱已就绪：${email}（第 ${attemptRuns} 次尝试）===`, 'ok');
+    await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細YYDS Mail 閭宸插氨缁細${email}锛堢 ${attemptRuns} 娆″皾璇曪級===`, 'ok');
     return email;
   }
 
   if (isGeneratedAliasProvider(currentState)) {
     if (currentState.mailProvider === GMAIL_PROVIDER) {
       if (!currentState.emailPrefix) {
-        throw new Error('Gmail 原邮箱未设置，请先在侧边栏填写。');
+        throw new Error('Gmail 鍘熼偖绠辨湭璁剧疆锛岃鍏堝湪渚ц竟鏍忓～鍐欍€?);
       }
-      await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：Gmail +tag 模式已启用，将在步骤 3 自动生成邮箱（第 ${attemptRuns} 次尝试）===`, 'info');
+      await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細Gmail +tag 妯″紡宸插惎鐢紝灏嗗湪姝ラ 3 鑷姩鐢熸垚閭锛堢 ${attemptRuns} 娆″皾璇曪級===`, 'info');
       return null;
     }
     if (!currentState.emailPrefix) {
-      throw new Error('2925 邮箱前缀未设置，请先在侧边栏填写。');
+      throw new Error('2925 閭鍓嶇紑鏈缃紝璇峰厛鍦ㄤ晶杈规爮濉啓銆?);
     }
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：2925 模式已启用，将在步骤 3 自动生成邮箱（第 ${attemptRuns} 次尝试）===`, 'info');
+    await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細2925 妯″紡宸插惎鐢紝灏嗗湪姝ラ 3 鑷姩鐢熸垚閭锛堢 ${attemptRuns} 娆″皾璇曪級===`, 'info');
     return null;
   }
 
@@ -12305,17 +12330,17 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
       const poolSize = getCustomEmailPool(currentState).length;
       throw new Error(
         poolSize > 0
-          ? `自定义邮箱池第 ${targetRun} 个邮箱不存在，请检查邮箱池数量是否与自动轮数一致。`
-          : '自定义邮箱池为空，请先至少填写 1 个邮箱。'
+          ? `鑷畾涔夐偖绠辨睜绗?${targetRun} 涓偖绠变笉瀛樺湪锛岃妫€鏌ラ偖绠辨睜鏁伴噺鏄惁涓庤嚜鍔ㄨ疆鏁颁竴鑷淬€俙
+          : '鑷畾涔夐偖绠辨睜涓虹┖锛岃鍏堣嚦灏戝～鍐?1 涓偖绠便€?
       );
     }
     await setEmailState(queuedEmail);
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试）===`, 'ok');
+    await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細鑷畾涔夐偖绠辨睜宸插氨缁細${queuedEmail}锛堢 ${attemptRuns} 娆″皾璇曪級===`, 'ok');
     return queuedEmail;
   }
 
   if (shouldUseCustomRegistrationEmail(currentState)) {
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮已暂停：请先填写自定义注册邮箱，然后继续 ===`, 'warn');
+    await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞凡鏆傚仠锛氳鍏堝～鍐欒嚜瀹氫箟娉ㄥ唽閭锛岀劧鍚庣户缁?===`, 'warn');
     await broadcastAutoRunStatus('waiting_email', {
       currentRun: targetRun,
       totalRuns,
@@ -12326,7 +12351,7 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
 
     const resumedState = await getState();
     if (!resumedState.email) {
-      throw new Error('无法继续：当前没有注册邮箱。');
+      throw new Error('鏃犳硶缁х画锛氬綋鍓嶆病鏈夋敞鍐岄偖绠便€?);
     }
     return resumedState.email;
   }
@@ -12339,22 +12364,22 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
     attemptedFetches = attempt;
     try {
       if (attempt > 1) {
-        await addLog(`${generatorLabel}：正在进行第 ${attempt}/${EMAIL_FETCH_MAX_ATTEMPTS} 次自动获取重试...`, 'warn');
+        await addLog(`${generatorLabel}锛氭鍦ㄨ繘琛岀 ${attempt}/${EMAIL_FETCH_MAX_ATTEMPTS} 娆¤嚜鍔ㄨ幏鍙栭噸璇?..`, 'warn');
       }
       const generatedEmail = await fetchGeneratedEmail(currentState, {
         generateNew: generator !== 'icloud' || normalizeIcloudFetchMode(currentState.icloudFetchMode) === 'always_new',
         generator,
       });
       await addLog(
-        `=== 目标 ${targetRun}/${totalRuns} 轮：${generatorLabel}已就绪：${generatedEmail}（第 ${attemptRuns} 次尝试，第 ${attempt}/${EMAIL_FETCH_MAX_ATTEMPTS} 次获取）===`,
+        `=== 鐩爣 ${targetRun}/${totalRuns} 杞細${generatorLabel}宸插氨缁細${generatedEmail}锛堢 ${attemptRuns} 娆″皾璇曪紝绗?${attempt}/${EMAIL_FETCH_MAX_ATTEMPTS} 娆¤幏鍙栵級===`,
         'ok'
       );
       return generatedEmail;
     } catch (err) {
       lastError = err;
-      await addLog(`${generatorLabel}自动获取失败（${attempt}/${EMAIL_FETCH_MAX_ATTEMPTS}）：${err.message}`, 'warn');
+      await addLog(`${generatorLabel}鑷姩鑾峰彇澶辫触锛?{attempt}/${EMAIL_FETCH_MAX_ATTEMPTS}锛夛細${err.message}`, 'warn');
       if (generator === 'icloud' && shouldStopIcloudAutoFetchRetries(err)) {
-        await addLog('iCloud：检测到会话/网络异常，本轮将停止重复重试。请先确认 iCloud 页面已登录，再点击“我已登录”或手动粘贴邮箱继续。', 'warn');
+        await addLog('iCloud锛氭娴嬪埌浼氳瘽/缃戠粶寮傚父锛屾湰杞皢鍋滄閲嶅閲嶈瘯銆傝鍏堢‘璁?iCloud 椤甸潰宸茬櫥褰曪紝鍐嶇偣鍑烩€滄垜宸茬櫥褰曗€濇垨鎵嬪姩绮樿创閭缁х画銆?, 'warn');
       }
       if (shouldStopEmailAutoFetchRetries(generator, err)) {
         break;
@@ -12363,8 +12388,8 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
   }
 
   const totalAttempts = Math.max(1, attemptedFetches);
-  await addLog(`${generatorLabel}自动获取已连续失败 ${totalAttempts} 次：${lastError?.message || '未知错误'}`, 'error');
-  await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮已暂停：请先自动获取邮箱或手动粘贴邮箱，然后继续 ===`, 'warn');
+  await addLog(`${generatorLabel}鑷姩鑾峰彇宸茶繛缁け璐?${totalAttempts} 娆★細${lastError?.message || '鏈煡閿欒'}`, 'error');
+  await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞凡鏆傚仠锛氳鍏堣嚜鍔ㄨ幏鍙栭偖绠辨垨鎵嬪姩绮樿创閭锛岀劧鍚庣户缁?===`, 'warn');
   await broadcastAutoRunStatus('waiting_email', {
     currentRun: targetRun,
     totalRuns,
@@ -12375,7 +12400,7 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
 
   const resumedState = await getState();
   if (!resumedState.email) {
-    throw new Error('无法继续：当前没有邮箱地址。');
+    throw new Error('鏃犳硶缁х画锛氬綋鍓嶆病鏈夐偖绠卞湴鍧€銆?);
   }
   return resumedState.email;
 }
@@ -12388,25 +12413,25 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
       markUsed: true,
       preferredAccountId: null,
     });
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：已分配 Hotmail 账号 ${account.email}（第 ${attemptRuns} 次尝试）===`, 'ok');
+    await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細宸插垎閰?Hotmail 璐﹀彿 ${account.email}锛堢 ${attemptRuns} 娆″皾璇曪級===`, 'ok');
     return account.email;
   }
 
   if (isLuckmailProvider(currentState)) {
     const purchase = await ensureLuckmailPurchaseForFlow({ allowReuse: true });
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：LuckMail 邮箱已就绪：${purchase.email_address}（第 ${attemptRuns} 次尝试）===`, 'ok');
+    await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細LuckMail 閭宸插氨缁細${purchase.email_address}锛堢 ${attemptRuns} 娆″皾璇曪級===`, 'ok');
     return purchase.email_address;
   }
 
   if (isYydsMailProvider(currentState)) {
     const email = await fetchYydsMailAddress(currentState, { generateNew: true });
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：YYDS Mail 邮箱已就绪：${email}（第 ${attemptRuns} 次尝试）===`, 'ok');
+    await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細YYDS Mail 閭宸插氨缁細${email}锛堢 ${attemptRuns} 娆″皾璇曪級===`, 'ok');
     return email;
   }
 
   if (isGeneratedAliasProvider(currentState)) {
     if (isReusableGeneratedAliasEmail(currentState)) {
-      await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：当前已复用 ${currentState.email}，将直接继续执行（第 ${attemptRuns} 次尝试）===`, 'info');
+      await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細褰撳墠宸插鐢?${currentState.email}锛屽皢鐩存帴缁х画鎵ц锛堢 ${attemptRuns} 娆″皾璇曪級===`, 'info');
       return currentState.email;
     }
 
@@ -12424,17 +12449,17 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
         ...(await getState()),
         currentMail2925AccountId: account.id,
       };
-      await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：已分配 2925 账号 ${account.email}（第 ${attemptRuns} 次尝试）===`, 'ok');
+      await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細宸插垎閰?2925 璐﹀彿 ${account.email}锛堢 ${attemptRuns} 娆″皾璇曪級===`, 'ok');
     }
 
     const baseEmail = getManagedAliasBaseEmail(managedAliasState);
     if (!baseEmail && !managedAliasState.email) {
-      const baseLabel = currentState.mailProvider === GMAIL_PROVIDER ? 'Gmail 原邮箱' : '2925 基邮箱';
-      throw new Error(`${baseLabel}未设置，请先填写，或直接在“注册邮箱”中手动填写完整邮箱。`);
+      const baseLabel = currentState.mailProvider === GMAIL_PROVIDER ? 'Gmail 鍘熼偖绠? : '2925 鍩洪偖绠?;
+      throw new Error(`${baseLabel}鏈缃紝璇峰厛濉啓锛屾垨鐩存帴鍦ㄢ€滄敞鍐岄偖绠扁€濅腑鎵嬪姩濉啓瀹屾暣閭銆俙);
     }
 
     await addLog(
-      `=== 目标 ${targetRun}/${totalRuns} 轮：${currentState.mailProvider === GMAIL_PROVIDER ? 'Gmail +tag' : '2925'} 模式已启用，将在步骤 3 自动生成邮箱（第 ${attemptRuns} 次尝试）===`,
+      `=== 鐩爣 ${targetRun}/${totalRuns} 杞細${currentState.mailProvider === GMAIL_PROVIDER ? 'Gmail +tag' : '2925'} 妯″紡宸插惎鐢紝灏嗗湪姝ラ 3 鑷姩鐢熸垚閭锛堢 ${attemptRuns} 娆″皾璇曪級===`,
       'info'
     );
     return null;
@@ -12450,17 +12475,17 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
       const poolSize = getCustomEmailPool(currentState).length;
       throw new Error(
         poolSize > 0
-          ? `自定义邮箱池第 ${targetRun} 个邮箱不存在，请检查邮箱池数量是否与自动轮数一致。`
-          : '自定义邮箱池为空，请先至少填写 1 个邮箱。'
+          ? `鑷畾涔夐偖绠辨睜绗?${targetRun} 涓偖绠变笉瀛樺湪锛岃妫€鏌ラ偖绠辨睜鏁伴噺鏄惁涓庤嚜鍔ㄨ疆鏁颁竴鑷淬€俙
+          : '鑷畾涔夐偖绠辨睜涓虹┖锛岃鍏堣嚦灏戝～鍐?1 涓偖绠便€?
       );
     }
     await setEmailState(queuedEmail);
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试）===`, 'ok');
+    await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細鑷畾涔夐偖绠辨睜宸插氨缁細${queuedEmail}锛堢 ${attemptRuns} 娆″皾璇曪級===`, 'ok');
     return queuedEmail;
   }
 
   if (shouldUseCustomRegistrationEmail(currentState)) {
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮已暂停：请先填写自定义注册邮箱，然后继续 ===`, 'warn');
+    await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞凡鏆傚仠锛氳鍏堝～鍐欒嚜瀹氫箟娉ㄥ唽閭锛岀劧鍚庣户缁?===`, 'warn');
     await broadcastAutoRunStatus('waiting_email', {
       currentRun: targetRun,
       totalRuns,
@@ -12471,7 +12496,7 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
 
     const resumedState = await getState();
     if (!resumedState.email) {
-      throw new Error('无法继续：当前没有注册邮箱。');
+      throw new Error('鏃犳硶缁х画锛氬綋鍓嶆病鏈夋敞鍐岄偖绠便€?);
     }
     return resumedState.email;
   }
@@ -12484,22 +12509,22 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
     attemptedFetches = attempt;
     try {
       if (attempt > 1) {
-        await addLog(`${generatorLabel}：正在进行第 ${attempt}/${EMAIL_FETCH_MAX_ATTEMPTS} 次自动获取重试...`, 'warn');
+        await addLog(`${generatorLabel}锛氭鍦ㄨ繘琛岀 ${attempt}/${EMAIL_FETCH_MAX_ATTEMPTS} 娆¤嚜鍔ㄨ幏鍙栭噸璇?..`, 'warn');
       }
       const generatedEmail = await fetchGeneratedEmail(currentState, {
         generateNew: generator !== 'icloud' || normalizeIcloudFetchMode(currentState.icloudFetchMode) === 'always_new',
         generator,
       });
       await addLog(
-        `=== 目标 ${targetRun}/${totalRuns} 轮：${generatorLabel}已就绪：${generatedEmail}（第 ${attemptRuns} 次尝试，第 ${attempt}/${EMAIL_FETCH_MAX_ATTEMPTS} 次获取）===`,
+        `=== 鐩爣 ${targetRun}/${totalRuns} 杞細${generatorLabel}宸插氨缁細${generatedEmail}锛堢 ${attemptRuns} 娆″皾璇曪紝绗?${attempt}/${EMAIL_FETCH_MAX_ATTEMPTS} 娆¤幏鍙栵級===`,
         'ok'
       );
       return generatedEmail;
     } catch (err) {
       lastError = err;
-      await addLog(`${generatorLabel}自动获取失败（${attempt}/${EMAIL_FETCH_MAX_ATTEMPTS}）：${err.message}`, 'warn');
+      await addLog(`${generatorLabel}鑷姩鑾峰彇澶辫触锛?{attempt}/${EMAIL_FETCH_MAX_ATTEMPTS}锛夛細${err.message}`, 'warn');
       if (generator === 'icloud' && shouldStopIcloudAutoFetchRetries(err)) {
-        await addLog('iCloud：检测到会话/网络异常，本轮将停止重复重试。请先确认 iCloud 页面已登录，再点击“我已登录”或手动粘贴邮箱继续。', 'warn');
+        await addLog('iCloud锛氭娴嬪埌浼氳瘽/缃戠粶寮傚父锛屾湰杞皢鍋滄閲嶅閲嶈瘯銆傝鍏堢‘璁?iCloud 椤甸潰宸茬櫥褰曪紝鍐嶇偣鍑烩€滄垜宸茬櫥褰曗€濇垨鎵嬪姩绮樿创閭缁х画銆?, 'warn');
       }
       if (shouldStopEmailAutoFetchRetries(generator, err)) {
         break;
@@ -12508,8 +12533,8 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
   }
 
   const totalAttempts = Math.max(1, attemptedFetches);
-  await addLog(`${generatorLabel}自动获取已连续失败 ${totalAttempts} 次：${lastError?.message || '未知错误'}`, 'error');
-  await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮已暂停：请先自动获取邮箱或手动粘贴邮箱，然后继续 ===`, 'warn');
+  await addLog(`${generatorLabel}鑷姩鑾峰彇宸茶繛缁け璐?${totalAttempts} 娆★細${lastError?.message || '鏈煡閿欒'}`, 'error');
+  await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞凡鏆傚仠锛氳鍏堣嚜鍔ㄨ幏鍙栭偖绠辨垨鎵嬪姩绮樿创閭锛岀劧鍚庣户缁?===`, 'warn');
   await broadcastAutoRunStatus('waiting_email', {
     currentRun: targetRun,
     totalRuns,
@@ -12520,7 +12545,7 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
 
   const resumedState = await getState();
   if (!resumedState.email) {
-    throw new Error('无法继续：当前没有邮箱地址。');
+    throw new Error('鏃犳硶缁х画锛氬綋鍓嶆病鏈夐偖绠卞湴鍧€銆?);
   }
   return resumedState.email;
 }
@@ -12529,7 +12554,7 @@ async function runAutoSequenceFromNode(startNodeId, context = {}) {
   const state = await getState();
   const normalizedStartNodeId = String(startNodeId || '').trim();
   if (!normalizedStartNodeId || !getAutoRunWorkflowNodeIds(state).includes(normalizedStartNodeId)) {
-    throw new Error(`自动运行无法从未知节点继续：${startNodeId}`);
+    throw new Error(`鑷姩杩愯鏃犳硶浠庢湭鐭ヨ妭鐐圭户缁細${startNodeId}`);
   }
   const allowedNodeIds = typeof getExecutionAllowedNodeIdsForState === 'function'
     ? getExecutionAllowedNodeIdsForState(state)
@@ -12538,7 +12563,7 @@ async function runAutoSequenceFromNode(startNodeId, context = {}) {
     const range = typeof getStepExecutionRangeForState === 'function'
       ? getStepExecutionRangeForState(state)
       : { fromStep: 1, toStep: 1 };
-    throw new Error(`当前执行范围 ${range.fromStep}-${range.toStep} 未包含任何可执行节点。`);
+    throw new Error(`褰撳墠鎵ц鑼冨洿 ${range.fromStep}-${range.toStep} 鏈寘鍚换浣曞彲鎵ц鑺傜偣銆俙);
   }
   return runAutoSequenceFromNodeGraph(normalizedStartNodeId, context);
 }
@@ -12590,7 +12615,7 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
     const title = typeof getNodeTitleForState === 'function'
       ? getNodeTitleForState(nodeId, state)
       : '';
-    return title && title !== nodeId ? `${nodeId}（${title}）` : nodeId;
+    return title && title !== nodeId ? `${nodeId}锛?{title}锛塦 : nodeId;
   };
   const getNodeIndex = (state, nodeId) => getAutoRunWorkflowNodeIds(state).indexOf(nodeId);
   const shouldRunNamedNode = async (nodeId) => {
@@ -12660,7 +12685,7 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
     nodeIdleRestartCounts.set(nodeId, idleRestartCount);
     if (idleRestartCount > AUTO_RUN_STEP_IDLE_RESTART_MAX_ATTEMPTS) {
       await addLog(
-        `节点 ${nodeId}：已连续 ${AUTO_RUN_STEP_IDLE_RESTART_MAX_ATTEMPTS} 次因 5 分钟无新日志而重开，停止自动重试。原因：${getErrorMessage(error)}`,
+        `鑺傜偣 ${nodeId}锛氬凡杩炵画 ${AUTO_RUN_STEP_IDLE_RESTART_MAX_ATTEMPTS} 娆″洜 5 鍒嗛挓鏃犳柊鏃ュ織鑰岄噸寮€锛屽仠姝㈣嚜鍔ㄩ噸璇曘€傚師鍥狅細${getErrorMessage(error)}`,
         'error'
       );
       throw error;
@@ -12668,19 +12693,19 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
 
     const reason = getErrorMessage(error);
     if (typeof cancelPendingCommands === 'function') {
-      cancelPendingCommands(`节点 ${nodeId} 5 分钟没有新日志，准备重开当前节点。`);
+      cancelPendingCommands(`鑺傜偣 ${nodeId} 5 鍒嗛挓娌℃湁鏂版棩蹇楋紝鍑嗗閲嶅紑褰撳墠鑺傜偣銆俙);
     }
     if (typeof broadcastStopToContentScripts === 'function') {
       await broadcastStopToContentScripts();
     }
     await addLog(
-      `节点 ${nodeId}：5 分钟没有新日志，准备重新开始当前节点（第 ${idleRestartCount}/${AUTO_RUN_STEP_IDLE_RESTART_MAX_ATTEMPTS} 次）。原因：${reason}`,
+      `鑺傜偣 ${nodeId}锛? 鍒嗛挓娌℃湁鏂版棩蹇楋紝鍑嗗閲嶆柊寮€濮嬪綋鍓嶈妭鐐癸紙绗?${idleRestartCount}/${AUTO_RUN_STEP_IDLE_RESTART_MAX_ATTEMPTS} 娆★級銆傚師鍥狅細${reason}`,
       'warn'
     );
     const latestState = await getState();
     const resetAnchorNodeId = getPreviousNodeId(nodeId, latestState) || nodeId;
     await invalidateDownstreamAfterAutoRunNodeRestart(resetAnchorNodeId, {
-      logLabel: `节点 ${nodeId} 因 5 分钟无新日志准备重开（第 ${idleRestartCount}/${AUTO_RUN_STEP_IDLE_RESTART_MAX_ATTEMPTS} 次）`,
+      logLabel: `鑺傜偣 ${nodeId} 鍥?5 鍒嗛挓鏃犳柊鏃ュ織鍑嗗閲嶅紑锛堢 ${idleRestartCount}/${AUTO_RUN_STEP_IDLE_RESTART_MAX_ATTEMPTS} 娆★級`,
     });
     setRestartNode(nodeId);
     return true;
@@ -12703,9 +12728,9 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
 
     while (true) {
       if (continueCurrentAttempt) {
-        await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：继续当前进度，从节点 ${currentStartNodeId} 开始（第 ${attemptRuns} 次尝试）===`, 'info');
+        await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細缁х画褰撳墠杩涘害锛屼粠鑺傜偣 ${currentStartNodeId} 寮€濮嬶紙绗?${attemptRuns} 娆″皾璇曪級===`, 'info');
       } else {
-        await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：第 ${attemptRuns} 次尝试，开始执行 ${activeFlowLabel} 流程 ===`, 'info');
+        await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細绗?${attemptRuns} 娆″皾璇曪紝寮€濮嬫墽琛?${activeFlowLabel} 娴佺▼ ===`, 'info');
       }
 
       let latestState = await getState();
@@ -12727,7 +12752,7 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
 
         const currentStatus = getNodeStatusForNode(latestState, nodeId);
         if (isStepDoneStatus(currentStatus)) {
-          await addLog(`自动运行：节点 ${nodeId} 当前状态为 ${currentStatus}，将直接继续后续流程。`, 'info');
+          await addLog(`鑷姩杩愯锛氳妭鐐?${nodeId} 褰撳墠鐘舵€佷负 ${currentStatus}锛屽皢鐩存帴缁х画鍚庣画娴佺▼銆俙, 'info');
           nodeIndex += 1;
           continue;
         }
@@ -12759,9 +12784,9 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
   while (true) {
 
   if (continueCurrentAttempt) {
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：继续当前进度，从节点 ${currentStartNodeId} 开始（第 ${attemptRuns} 次尝试）===`, 'info');
+    await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細缁х画褰撳墠杩涘害锛屼粠鑺傜偣 ${currentStartNodeId} 寮€濮嬶紙绗?${attemptRuns} 娆″皾璇曪級===`, 'info');
   } else {
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：第 ${attemptRuns} 次尝试，阶段 1，打开官网并进入密码页 ===`, 'info');
+    await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細绗?${attemptRuns} 娆″皾璇曪紝闃舵 1锛屾墦寮€瀹樼綉骞惰繘鍏ュ瘑鐮侀〉 ===`, 'info');
   }
 
   if (await shouldRunNamedNode('open-chatgpt')) {
@@ -12783,7 +12808,7 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
     try {
       await runAutoNodeActionWithIdleLogWatchdog('submit-signup-email', async () => {
         if (resolvedSignupMethod === SIGNUP_METHOD_PHONE) {
-          await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：本轮注册方式为手机号注册，将跳过邮箱预获取 ===`, 'info');
+          await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細鏈疆娉ㄥ唽鏂瑰紡涓烘墜鏈哄彿娉ㄥ唽锛屽皢璺宠繃閭棰勮幏鍙?===`, 'info');
         } else {
           await ensureAutoEmailReady(targetRun, totalRuns, attemptRuns);
         }
@@ -12806,14 +12831,14 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
   if (await shouldRunNamedNode('fill-password')) {
     const latestState = await getState();
     const fillPasswordStatus = getNodeStatusForNode(latestState, 'fill-password');
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：阶段 2，填写密码、验证、登录并完成授权（第 ${attemptRuns} 次尝试）===`, 'info');
+    await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細闃舵 2锛屽～鍐欏瘑鐮併€侀獙璇併€佺櫥褰曞苟瀹屾垚鎺堟潈锛堢 ${attemptRuns} 娆″皾璇曪級===`, 'info');
     await broadcastAutoRunStatus('running', {
       currentRun: targetRun,
       totalRuns,
       attemptRun: attemptRuns,
     });
     if (isStepDoneStatus(fillPasswordStatus)) {
-      await addLog(`自动运行：节点 fill-password 当前状态为 ${fillPasswordStatus}，将直接继续后续流程。`, 'info');
+      await addLog(`鑷姩杩愯锛氳妭鐐?fill-password 褰撳墠鐘舵€佷负 ${fillPasswordStatus}锛屽皢鐩存帴缁х画鍚庣画娴佺▼銆俙, 'info');
     } else {
       try {
         await executeNodeAndWaitWithAutoRunIdleLogWatchdog('fill-password', getAutoRunNodeDelayMs('fill-password'));
@@ -12836,7 +12861,7 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
       }
     }
   } else {
-    await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：继续执行剩余流程（第 ${attemptRuns} 次尝试）===`, 'info');
+    await addLog(`=== 鐩爣 ${targetRun}/${totalRuns} 杞細缁х画鎵ц鍓╀綑娴佺▼锛堢 ${attemptRuns} 娆″皾璇曪級===`, 'info');
   }
 
   if (restartFromStep1WithCurrentEmail) {
@@ -12870,7 +12895,7 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
     }
     const currentStatus = getNodeStatusForNode(latestState, nodeId);
     if (isStepDoneStatus(currentStatus)) {
-      await addLog(`自动运行：节点 ${nodeId} 当前状态为 ${currentStatus}，将直接继续后续流程。`, 'info');
+      await addLog(`鑷姩杩愯锛氳妭鐐?${nodeId} 褰撳墠鐘舵€佷负 ${currentStatus}锛屽皢鐩存帴缁х画鍚庣画娴佺▼銆俙, 'info');
       nodeIndex += 1;
       continue;
     }
@@ -12893,12 +12918,12 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
         && isPlusCheckoutRestartRequiredFailure(err)) {
         plusCheckoutRestartCount += 1;
         await addLog(
-          `节点 ${getNodeLabel(nodeId, latestState)}：检测到 Plus Checkout 失败/卡住，准备回到节点 plus-checkout-create 重新创建 Plus Checkout（第 ${plusCheckoutRestartCount} 次）。原因：${getErrorMessage(err)}`,
+          `鑺傜偣 ${getNodeLabel(nodeId, latestState)}锛氭娴嬪埌 Plus Checkout 澶辫触/鍗′綇锛屽噯澶囧洖鍒拌妭鐐?plus-checkout-create 閲嶆柊鍒涘缓 Plus Checkout锛堢 ${plusCheckoutRestartCount} 娆★級銆傚師鍥狅細${getErrorMessage(err)}`,
           'warn'
         );
         const checkoutResetAnchorNodeId = getPreviousNodeId('plus-checkout-create', latestState) || 'fill-profile';
         await invalidateDownstreamAfterAutoRunNodeRestart(checkoutResetAnchorNodeId, {
-          logLabel: `节点 ${nodeId} Plus Checkout失败后准备回到 plus-checkout-create 重试（第 ${plusCheckoutRestartCount} 次）`,
+          logLabel: `鑺傜偣 ${nodeId} Plus Checkout澶辫触鍚庡噯澶囧洖鍒?plus-checkout-create 閲嶈瘯锛堢 ${plusCheckoutRestartCount} 娆★級`,
         });
         nodeIndex = Math.max(0, getNodeIndex(await getState(), 'plus-checkout-create'));
         continue;
@@ -12909,7 +12934,7 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
           throw err;
         }
         if (isMail2925ThreadTerminatedError(err)) {
-          await addLog(`节点 fetch-signup-code：2925 已切换账号并要求结束当前尝试：${getErrorMessage(err)}`, 'warn');
+          await addLog(`鑺傜偣 fetch-signup-code锛?925 宸插垏鎹㈣处鍙峰苟瑕佹眰缁撴潫褰撳墠灏濊瘯锛?{getErrorMessage(err)}`, 'warn');
           throw err;
         }
         step4RestartCount += 1;
@@ -12922,13 +12947,13 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
           const preservedState = await getState();
           const preservedEmail = String(preservedState.email || '').trim();
           const preservedPassword = String(preservedState.password || '').trim();
-          const emailSuffix = preservedEmail ? `当前邮箱：${preservedEmail}；` : '';
+          const emailSuffix = preservedEmail ? `褰撳墠閭锛?{preservedEmail}锛沗 : '';
           await addLog(
-            `节点 fetch-signup-code：执行失败，准备沿用当前邮箱回到节点 open-chatgpt 重新开始（第 ${step4RestartCount} 次重开）。${emailSuffix}原因：${getErrorMessage(err)}`,
+            `鑺傜偣 fetch-signup-code锛氭墽琛屽け璐ワ紝鍑嗗娌跨敤褰撳墠閭鍥炲埌鑺傜偣 open-chatgpt 閲嶆柊寮€濮嬶紙绗?${step4RestartCount} 娆￠噸寮€锛夈€?{emailSuffix}鍘熷洜锛?{getErrorMessage(err)}`,
             'warn'
           );
           await invalidateDownstreamAfterAutoRunNodeRestart('open-chatgpt', {
-            logLabel: `节点 fetch-signup-code 报错后准备回到 open-chatgpt 沿用当前邮箱重试（第 ${step4RestartCount} 次重开）`,
+            logLabel: `鑺傜偣 fetch-signup-code 鎶ラ敊鍚庡噯澶囧洖鍒?open-chatgpt 娌跨敤褰撳墠閭閲嶈瘯锛堢 ${step4RestartCount} 娆￠噸寮€锛塦,
           });
           const restorePayload = {};
           if (preservedEmail) restorePayload.email = preservedEmail;
@@ -12947,7 +12972,7 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
         emailSignupPhoneVerificationRestartCount += 1;
         if (emailSignupPhoneVerificationRestartCount > EMAIL_SIGNUP_PHONE_VERIFICATION_RESTART_MAX_ATTEMPTS) {
           await addLog(
-            `节点 ${getNodeLabel(nodeId, latestState)}：手机号验证失败后已自动重新开始 ${EMAIL_SIGNUP_PHONE_VERIFICATION_RESTART_MAX_ATTEMPTS} 次，停止继续重试。原因：${restartDecision.errorMessage || getErrorMessage(err)}`,
+            `鑺傜偣 ${getNodeLabel(nodeId, latestState)}锛氭墜鏈哄彿楠岃瘉澶辫触鍚庡凡鑷姩閲嶆柊寮€濮?${EMAIL_SIGNUP_PHONE_VERIFICATION_RESTART_MAX_ATTEMPTS} 娆★紝鍋滄缁х画閲嶈瘯銆傚師鍥狅細${restartDecision.errorMessage || getErrorMessage(err)}`,
             'error'
           );
           throw err;
@@ -12957,18 +12982,18 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
         const restartNodeId = String(getNodeIdByStepForState(restartStep, restartState) || 'oauth-login').trim();
         const resetAfterNodeId = getPreviousNodeId(restartNodeId, restartState) || restartNodeId;
         const authState = restartDecision.authState;
-        const authStateLabel = authState?.state ? getLoginAuthStateLabel(authState.state) : '未知页面';
+        const authStateLabel = authState?.state ? getLoginAuthStateLabel(authState.state) : '鏈煡椤甸潰';
         const authStateSuffix = authState?.url
-          ? `当前认证页：${authStateLabel}（${authState.url}）`
+          ? `褰撳墠璁よ瘉椤碉細${authStateLabel}锛?{authState.url}锛塦
           : authState?.state
-            ? `当前认证页：${authStateLabel}`
-            : '未获取到认证页状态';
+            ? `褰撳墠璁よ瘉椤碉細${authStateLabel}`
+            : '鏈幏鍙栧埌璁よ瘉椤电姸鎬?;
         await addLog(
-          `节点 ${getNodeLabel(nodeId, latestState)}：手机号验证失败，准备回到节点 ${restartNodeId} 重新开始授权流程（第 ${emailSignupPhoneVerificationRestartCount}/${EMAIL_SIGNUP_PHONE_VERIFICATION_RESTART_MAX_ATTEMPTS} 次重开）。${authStateSuffix}；原因：${restartDecision.errorMessage || '未知错误'}`,
+          `鑺傜偣 ${getNodeLabel(nodeId, latestState)}锛氭墜鏈哄彿楠岃瘉澶辫触锛屽噯澶囧洖鍒拌妭鐐?${restartNodeId} 閲嶆柊寮€濮嬫巿鏉冩祦绋嬶紙绗?${emailSignupPhoneVerificationRestartCount}/${EMAIL_SIGNUP_PHONE_VERIFICATION_RESTART_MAX_ATTEMPTS} 娆￠噸寮€锛夈€?{authStateSuffix}锛涘師鍥狅細${restartDecision.errorMessage || '鏈煡閿欒'}`,
           'warn'
         );
         await invalidateDownstreamAfterAutoRunNodeRestart(resetAfterNodeId, {
-          logLabel: `节点 ${nodeId} 手机号验证失败后准备回到 ${restartNodeId} 重试（第 ${emailSignupPhoneVerificationRestartCount}/${EMAIL_SIGNUP_PHONE_VERIFICATION_RESTART_MAX_ATTEMPTS} 次重开）`,
+          logLabel: `鑺傜偣 ${nodeId} 鎵嬫満鍙烽獙璇佸け璐ュ悗鍑嗗鍥炲埌 ${restartNodeId} 閲嶈瘯锛堢 ${emailSignupPhoneVerificationRestartCount}/${EMAIL_SIGNUP_PHONE_VERIFICATION_RESTART_MAX_ATTEMPTS} 娆￠噸寮€锛塦,
         });
         nodeIndex = Math.max(0, getNodeIndex(await getState(), restartNodeId));
         continue;
@@ -12980,18 +13005,18 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
         const restartNodeId = String(getNodeIdByStepForState(restartStep, restartState) || 'oauth-login').trim();
         const resetAfterNodeId = getPreviousNodeId(restartNodeId, restartState) || restartNodeId;
         const authState = restartDecision.authState;
-        const authStateLabel = authState?.state ? getLoginAuthStateLabel(authState.state) : '未知页面';
+        const authStateLabel = authState?.state ? getLoginAuthStateLabel(authState.state) : '鏈煡椤甸潰';
         const authStateSuffix = authState?.url
-          ? `当前认证页：${authStateLabel}（${authState.url}）`
+          ? `褰撳墠璁よ瘉椤碉細${authStateLabel}锛?{authState.url}锛塦
           : authState?.state
-            ? `当前认证页：${authStateLabel}`
-            : '未获取到认证页状态';
+            ? `褰撳墠璁よ瘉椤碉細${authStateLabel}`
+            : '鏈幏鍙栧埌璁よ瘉椤电姸鎬?;
         await addLog(
-          `节点 ${getNodeLabel(nodeId, latestState)}：检测到认证链路失败，正在回到节点 ${restartNodeId} 重新开始授权流程（第 ${postStep7RestartCount} 次重开）。${authStateSuffix}；原因：${restartDecision.errorMessage || '未知错误'}`,
+          `鑺傜偣 ${getNodeLabel(nodeId, latestState)}锛氭娴嬪埌璁よ瘉閾捐矾澶辫触锛屾鍦ㄥ洖鍒拌妭鐐?${restartNodeId} 閲嶆柊寮€濮嬫巿鏉冩祦绋嬶紙绗?${postStep7RestartCount} 娆￠噸寮€锛夈€?{authStateSuffix}锛涘師鍥狅細${restartDecision.errorMessage || '鏈煡閿欒'}`,
           'warn'
         );
         await invalidateDownstreamAfterAutoRunNodeRestart(resetAfterNodeId, {
-          logLabel: `节点 ${nodeId} 报错后准备回到 ${restartNodeId} 重试（第 ${postStep7RestartCount} 次重开）`,
+          logLabel: `鑺傜偣 ${nodeId} 鎶ラ敊鍚庡噯澶囧洖鍒?${restartNodeId} 閲嶈瘯锛堢 ${postStep7RestartCount} 娆￠噸寮€锛塦,
         });
         nodeIndex = Math.max(0, getNodeIndex(await getState(), restartNodeId));
         continue;
@@ -13000,7 +13025,7 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
       if (restartDecision.blockedByAddPhone) {
         const addPhoneUrl = restartDecision.authState?.url || 'https://auth.openai.com/add-phone';
         const authChainStartNodeId = String(getNodeIdByStepForState(restartDecision.restartStep, await getState()) || 'oauth-login').trim();
-        await addLog(`节点 ${getNodeLabel(nodeId, latestState)}：检测到认证流程进入 add-phone（${addPhoneUrl}），停止自动回到节点 ${authChainStartNodeId} 重开。`, 'warn');
+        await addLog(`鑺傜偣 ${getNodeLabel(nodeId, latestState)}锛氭娴嬪埌璁よ瘉娴佺▼杩涘叆 add-phone锛?{addPhoneUrl}锛夛紝鍋滄鑷姩鍥炲埌鑺傜偣 ${authChainStartNodeId} 閲嶅紑銆俙, 'warn');
       }
 
       throw err;
@@ -13019,7 +13044,7 @@ async function waitForResume() {
   throwIfStopped();
   const state = await getState();
   if (state.email) {
-    await addLog('邮箱已就绪，自动继续后续步骤...', 'info');
+    await addLog('閭宸插氨缁紝鑷姩缁х画鍚庣画姝ラ...', 'info');
     return;
   }
 
@@ -13084,7 +13109,7 @@ async function resumeAutoRun() {
   throwIfStopped();
   const state = await getState();
   if (!state.email) {
-    await addLog('无法继续：当前没有邮箱地址，请先在侧边栏填写邮箱。', 'error');
+    await addLog('鏃犳硶缁х画锛氬綋鍓嶆病鏈夐偖绠卞湴鍧€锛岃鍏堝湪渚ц竟鏍忓～鍐欓偖绠便€?, 'error');
     return false;
   }
 
@@ -13105,7 +13130,7 @@ async function resumeAutoRun() {
   const currentRun = state.autoRunCurrentRun || 1;
   const attemptRun = state.autoRunAttemptRun || 1;
 
-  await addLog('检测到自动流程暂停上下文已丢失，正在从当前进度恢复自动运行...', 'warn');
+  await addLog('妫€娴嬪埌鑷姩娴佺▼鏆傚仠涓婁笅鏂囧凡涓㈠け锛屾鍦ㄤ粠褰撳墠杩涘害鎭㈠鑷姩杩愯...', 'warn');
   startAutoRunLoop(totalRuns, {
     autoRunSessionId: normalizeAutoRunSessionId(state.autoRunSessionId),
     autoRunSkipFailures: Boolean(state.autoRunSkipFailures),
@@ -13302,7 +13327,7 @@ const phoneVerificationHelpers = self.MultiPageBackgroundPhoneVerification?.crea
       timeoutMs,
       visibleStep,
       logStepKey: options.logStepKey || 'phone-verification',
-      logMessage: options.logMessage || '步骤 9：认证页已失联，直接打开添加手机号页面后等待脚本恢复。',
+      logMessage: options.logMessage || '姝ラ 9锛氳璇侀〉宸插け鑱旓紝鐩存帴鎵撳紑娣诲姞鎵嬫満鍙烽〉闈㈠悗绛夊緟鑴氭湰鎭㈠銆?,
     });
     return {
       addPhonePage: true,
@@ -13368,7 +13393,7 @@ async function ensureIcloudMailSessionForVerification(options = {}) {
     || normalizeIcloudHost(flowState?.preferredIcloudHost);
   return checkIcloudSession({
     ...(hostPreference ? { hostPreference } : {}),
-    actionLabel: options?.actionLabel || '检查 iCloud 会话',
+    actionLabel: options?.actionLabel || '妫€鏌?iCloud 浼氳瘽',
   });
 }
 
@@ -13762,9 +13787,9 @@ async function executeReloginBoundEmail(state = {}) {
   const visibleStep = Math.floor(Number(state?.visibleStep) || 0) || 10;
   const boundEmail = resolveBoundEmailForReloginState(state);
   if (!boundEmail) {
-    throw new Error(`步骤 ${visibleStep}：缺少绑定邮箱，无法在绑定邮箱后切入邮箱模式 OAuth 登录。`);
+    throw new Error(`姝ラ ${visibleStep}锛氱己灏戠粦瀹氶偖绠憋紝鏃犳硶鍦ㄧ粦瀹氶偖绠卞悗鍒囧叆閭妯″紡 OAuth 鐧诲綍銆俙);
   }
-  await addLog(`步骤 ${visibleStep}：绑定邮箱已提交，正在刷新 OAuth 并使用绑定邮箱 ${boundEmail} 登录...`, 'info', {
+  await addLog(`姝ラ ${visibleStep}锛氱粦瀹氶偖绠卞凡鎻愪氦锛屾鍦ㄥ埛鏂?OAuth 骞朵娇鐢ㄧ粦瀹氶偖绠?${boundEmail} 鐧诲綍...`, 'info', {
     step: visibleStep,
     stepKey: 'relogin-bound-email',
   });
@@ -13870,7 +13895,7 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   finalizePhoneActivationAfterSuccessfulFlow,
   testKiroRsConnection: async (baseUrl, apiKey) => {
     if (typeof self.MultiPageBackgroundKiroPublisherKiroRs?.checkKiroRsConnection !== 'function') {
-      throw new Error('kiro.rs 连接测试能力尚未接入。');
+      throw new Error('kiro.rs 杩炴帴娴嬭瘯鑳藉姏灏氭湭鎺ュ叆銆?);
     }
     return self.MultiPageBackgroundKiroPublisherKiroRs.checkKiroRsConnection(
       baseUrl,
@@ -13891,7 +13916,7 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   finalizeStep5Completion: async (completionPayload = {}) => {
     const signupTabId = await getTabId('openai-auth');
     if (!signupTabId) {
-      throw new Error('步骤 5：缺少认证页标签页，无法确认是否已跳转到 https://chatgpt.com。');
+      throw new Error('姝ラ 5锛氱己灏戣璇侀〉鏍囩椤碉紝鏃犳硶纭鏄惁宸茶烦杞埌 https://chatgpt.com銆?);
     }
     await waitForTabStableComplete(signupTabId, {
       timeoutMs: 120000,
@@ -13902,7 +13927,7 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
     await validateStep5PostCompletion(signupTabId, completionPayload || {});
     await setState(clearStep5ProfileStatePatch());
     await setNodeStatus('fill-profile', 'completed');
-    await addLog('已完成', 'ok', { nodeId: 'fill-profile' });
+    await addLog('宸插畬鎴?, 'ok', { nodeId: 'fill-profile' });
   },
   finalizeIcloudAliasAfterSuccessfulFlow,
   findHotmailAccount,
@@ -14126,10 +14151,10 @@ function getMailConfig(state) {
     ? YYDS_MAIL_PROVIDER
     : 'yyds-mail';
   if (provider === 'custom') {
-    return { provider: 'custom', label: '自定义邮箱' };
+    return { provider: 'custom', label: '鑷畾涔夐偖绠? };
   }
   if (provider === HOTMAIL_PROVIDER) {
-    return { provider: HOTMAIL_PROVIDER, label: 'Hotmail（API对接/本地助手）' };
+    return { provider: HOTMAIL_PROVIDER, label: 'Hotmail锛圓PI瀵规帴/鏈湴鍔╂墜锛? };
   }
   if (provider === ICLOUD_PROVIDER) {
     const configuredHost = getConfiguredIcloudHostPreference(state)
@@ -14142,7 +14167,7 @@ function getMailConfig(state) {
       const forwardConfig = getSharedIcloudForwardMailConfig(forwardProvider);
       return {
         ...forwardConfig,
-        label: `iCloud 转发（${forwardConfig.label}）`,
+        label: `iCloud 杞彂锛?{forwardConfig.label}锛塦,
         icloudForwarding: true,
       };
     }
@@ -14151,7 +14176,7 @@ function getMailConfig(state) {
     return {
       source: 'icloud-mail',
       url: mailUrl,
-      label: 'iCloud 邮箱',
+      label: 'iCloud 閭',
       navigateOnReuse: true,
     };
   }
@@ -14159,13 +14184,13 @@ function getMailConfig(state) {
     return {
       source: 'gmail-mail',
       url: 'https://mail.google.com/mail/u/0/#inbox',
-      label: 'Gmail 邮箱',
+      label: 'Gmail 閭',
       inject: ['content/activation-utils.js', 'content/utils.js', 'content/gmail-mail.js'],
       injectSource: 'gmail-mail',
     };
   }
   if (provider === LUCKMAIL_PROVIDER) {
-    return { provider: LUCKMAIL_PROVIDER, label: 'LuckMail（API 购邮）' };
+    return { provider: LUCKMAIL_PROVIDER, label: 'LuckMail锛圓PI 璐偖锛? };
   }
   if (provider === CLOUDFLARE_TEMP_EMAIL_PROVIDER) {
     return { provider: CLOUDFLARE_TEMP_EMAIL_PROVIDER, label: 'Cloudflare Temp Email' };
@@ -14177,27 +14202,27 @@ function getMailConfig(state) {
     return { provider: yydsMailProvider, label: 'YYDS Mail' };
   }
   if (provider === '163') {
-    return { source: 'mail-163', url: 'https://mail.163.com/js6/main.jsp?df=mail163_letter#module=mbox.ListModule%7C%7B%22fid%22%3A1%2C%22order%22%3A%22date%22%2C%22desc%22%3Atrue%7D', label: '163 邮箱' };
+    return { source: 'mail-163', url: 'https://mail.163.com/js6/main.jsp?df=mail163_letter#module=mbox.ListModule%7C%7B%22fid%22%3A1%2C%22order%22%3A%22date%22%2C%22desc%22%3Atrue%7D', label: '163 閭' };
   }
   if (provider === '163-vip') {
-    return { source: 'mail-163', url: 'https://webmail.vip.163.com/js6/main.jsp?df=mail163_letter#module=mbox.ListModule%7C%7B%22fid%22%3A1%2C%22order%22%3A%22date%22%2C%22desc%22%3Atrue%7D', label: '163 VIP 邮箱' };
+    return { source: 'mail-163', url: 'https://webmail.vip.163.com/js6/main.jsp?df=mail163_letter#module=mbox.ListModule%7C%7B%22fid%22%3A1%2C%22order%22%3A%22date%22%2C%22desc%22%3Atrue%7D', label: '163 VIP 閭' };
   }
   if (provider === '126') {
-    return { source: 'mail-163', url: 'https://mail.126.com/js6/main.jsp?df=mail163_letter#module=mbox.ListModule%7C%7B%22fid%22%3A1%2C%22order%22%3A%22date%22%2C%22desc%22%3Atrue%7D', label: '126 邮箱' };
+    return { source: 'mail-163', url: 'https://mail.126.com/js6/main.jsp?df=mail163_letter#module=mbox.ListModule%7C%7B%22fid%22%3A1%2C%22order%22%3A%22date%22%2C%22desc%22%3Atrue%7D', label: '126 閭' };
   }
   if (provider === 'inbucket') {
     const host = normalizeInbucketOrigin(state.inbucketHost);
     const mailbox = (state.inbucketMailbox || '').trim();
     if (!host) {
-      return { error: 'Inbucket 主机地址为空或无效。' };
+      return { error: 'Inbucket 涓绘満鍦板潃涓虹┖鎴栨棤鏁堛€? };
     }
     if (!mailbox) {
-      return { error: 'Inbucket 邮箱名称为空。' };
+      return { error: 'Inbucket 閭鍚嶇О涓虹┖銆? };
     }
     return {
       source: 'inbucket-mail',
       url: `${host}/m/${encodeURIComponent(mailbox)}/`,
-      label: `Inbucket 邮箱（${mailbox}）`,
+      label: `Inbucket 閭锛?{mailbox}锛塦,
       navigateOnReuse: true,
       inject: ['content/activation-utils.js', 'content/utils.js', 'content/inbucket-mail.js'],
       injectSource: 'inbucket-mail',
@@ -14208,12 +14233,12 @@ function getMailConfig(state) {
       provider: '2925',
       source: 'mail-2925',
       url: 'https://2925.com/#/mailList',
-      label: '2925 邮箱',
+      label: '2925 閭',
       inject: ['content/utils.js', 'content/operation-delay.js', 'content/mail-2925.js'],
       injectSource: 'mail-2925',
     };
   }
-  return { source: 'qq-mail', url: 'https://wx.mail.qq.com/', label: 'QQ 邮箱' };
+  return { source: 'qq-mail', url: 'https://wx.mail.qq.com/', label: 'QQ 閭' };
 }
 
 function normalizeInbucketOrigin(rawValue) {
@@ -14284,27 +14309,27 @@ async function executeStep5(state) {
 
 async function refreshOAuthUrlBeforeStep6(state, options = {}) {
   const visibleStep = Number(options.visibleStep) || Number(state?.visibleStep) || 7;
-  await addLog(`走普通 CPA / SUB2API / Codex2API 链路（当前面板：${getPanelModeLabel(state)}），正在刷新 OAuth 登录地址...`, 'info', {
+  await addLog(`璧版櫘閫?CPA / SUB2API / Codex2API 閾捐矾锛堝綋鍓嶉潰鏉匡細${getPanelModeLabel(state)}锛夛紝姝ｅ湪鍒锋柊 OAuth 鐧诲綍鍦板潃...`, 'info', {
     step: visibleStep,
     stepKey: 'oauth-login',
   });
   console.log(LOG_PREFIX, '[refreshOAuthUrlBeforeStep6] requesting fresh OAuth directly from panel');
-  const refreshResult = await requestOAuthUrlFromPanel(state, { logLabel: `步骤 ${visibleStep}` });
+  const refreshResult = await requestOAuthUrlFromPanel(state, { logLabel: `姝ラ ${visibleStep}` });
   await handleStepData(1, refreshResult);
 
   if (!refreshResult?.oauthUrl) {
-    throw new Error('刷新 OAuth 链接后仍未拿到可用链接。');
+    throw new Error('鍒锋柊 OAuth 閾炬帴鍚庝粛鏈嬁鍒板彲鐢ㄩ摼鎺ャ€?);
   }
 
   return refreshResult.oauthUrl;
 }
 
-function buildOAuthFlowTimeoutError(step, actionLabel = '后续授权流程', state = {}) {
+function buildOAuthFlowTimeoutError(step, actionLabel = '鍚庣画鎺堟潈娴佺▼', state = {}) {
   const restartStep = typeof getAuthChainStartStepId === 'function'
     ? getAuthChainStartStepId(state)
     : FINAL_OAUTH_CHAIN_START_STEP;
   return new Error(
-    `步骤 ${step}：从拿到 OAuth 登录地址开始，${Math.round(OAUTH_FLOW_TIMEOUT_MS / 60000)} 分钟内未完成${actionLabel}，结束当前链路，准备从步骤 ${restartStep} 重新开始。`
+    `姝ラ ${step}锛氫粠鎷垮埌 OAuth 鐧诲綍鍦板潃寮€濮嬶紝${Math.round(OAUTH_FLOW_TIMEOUT_MS / 60000)} 鍒嗛挓鍐呮湭瀹屾垚${actionLabel}锛岀粨鏉熷綋鍓嶉摼璺紝鍑嗗浠庢楠?${restartStep} 閲嶆柊寮€濮嬨€俙
   );
 }
 
@@ -14369,13 +14394,13 @@ async function startOAuthFlowTimeoutWindow(options = {}) {
     oauthFlowDeadlineAt: deadlineAt,
     oauthFlowDeadlineSourceUrl: normalizeOAuthFlowSourceUrl(options.oauthUrl),
   });
-  await addLog(`步骤 ${step}：已拿到新的 OAuth 登录地址，开始 ${Math.round(OAUTH_FLOW_TIMEOUT_MS / 60000)} 分钟倒计时。`, 'info');
+  await addLog(`姝ラ ${step}锛氬凡鎷垮埌鏂扮殑 OAuth 鐧诲綍鍦板潃锛屽紑濮?${Math.round(OAUTH_FLOW_TIMEOUT_MS / 60000)} 鍒嗛挓鍊掕鏃躲€俙, 'info');
   return deadlineAt;
 }
 
 async function getOAuthFlowRemainingMs(options = {}) {
   const step = Number(options.step) || 7;
-  const actionLabel = String(options.actionLabel || '后续授权流程').trim() || '后续授权流程';
+  const actionLabel = String(options.actionLabel || '鍚庣画鎺堟潈娴佺▼').trim() || '鍚庣画鎺堟潈娴佺▼';
   const state = options.state || await getState();
   if (!shouldUseOAuthTimeoutBudget(state)) {
     return null;
@@ -14419,7 +14444,7 @@ async function getOAuthFlowStepTimeoutMs(defaultTimeoutMs, options = {}) {
     const stateForError = options.state || await getState();
     throw buildOAuthFlowTimeoutError(
       Number(options.step) || 7,
-      String(options.actionLabel || '后续授权流程').trim() || '后续授权流程',
+      String(options.actionLabel || '鍚庣画鎺堟潈娴佺▼').trim() || '鍚庣画鎺堟潈娴佺▼',
       stateForError
     );
   }
@@ -14482,14 +14507,14 @@ async function getPostStep6AutoRestartDecision(step, error) {
   };
   const isPlatformVerifyOAuthSessionExpiredError = (errorMessage = '') => {
     const normalizedMessage = String(errorMessage || '');
-    return /OPENAI_OAUTH_SESSION_NOT_FOUND|session\s+not\s+found\s+or\s+expired|oauth\s+session\s+(?:not\s+found|expired)|missing\s+SUB2API\s+session_id|缺少\s*SUB2API\s*(?:session_id|会话信息)|SUB2API[\s\S]*(?:会话|session)[\s\S]*(?:过期|失效|不存在|not\s+found|expired)/i.test(normalizedMessage);
+    return /OPENAI_OAUTH_SESSION_NOT_FOUND|session\s+not\s+found\s+or\s+expired|oauth\s+session\s+(?:not\s+found|expired)|missing\s+SUB2API\s+session_id|缂哄皯\s*SUB2API\s*(?:session_id|浼氳瘽淇℃伅)|SUB2API[\s\S]*(?:浼氳瘽|session)[\s\S]*(?:杩囨湡|澶辨晥|涓嶅瓨鍦▅not\s+found|expired)/i.test(normalizedMessage);
   };
   const isPhoneVerificationLocalFailure = (errorMessage = '') => {
     const normalizedMessage = String(errorMessage || '');
     if (isPhoneSmsPlatformRateLimitFailure(normalizedMessage)) {
       return false;
     }
-    return /HeroSMS|phone verification did not succeed|number replacements|sms_timeout_after(?:_[a-z0-9_]+)?|phone number is already linked|add-phone keeps rejecting current number|手机验证码|短信验证码|接码|步骤\s*9[：:][\s\S]*(?:手机号验证|手机验证码|接码|没有可用手机号|无可用手机号)|(?:手机号验证|手机号码验证|手机号接码|手机号码接码)[\s\S]*(?:失败|超时|未成功|不可用|拒绝)|(?:手机号|手机号码)[\s\S]*(?:已绑定|被占用|不可用|拒绝|失败|超时|没有可用|无可用)|Step\s*9.*phone verification/i.test(normalizedMessage);
+    return /HeroSMS|phone verification did not succeed|number replacements|sms_timeout_after(?:_[a-z0-9_]+)?|phone number is already linked|add-phone keeps rejecting current number|鎵嬫満楠岃瘉鐮亅鐭俊楠岃瘉鐮亅鎺ョ爜|姝ラ\s*9[锛?][\s\S]*(?:鎵嬫満鍙烽獙璇亅鎵嬫満楠岃瘉鐮亅鎺ョ爜|娌℃湁鍙敤鎵嬫満鍙穦鏃犲彲鐢ㄦ墜鏈哄彿)|(?:鎵嬫満鍙烽獙璇亅鎵嬫満鍙风爜楠岃瘉|鎵嬫満鍙锋帴鐮亅鎵嬫満鍙风爜鎺ョ爜)[\s\S]*(?:澶辫触|瓒呮椂|鏈垚鍔焲涓嶅彲鐢▅鎷掔粷)|(?:鎵嬫満鍙穦鎵嬫満鍙风爜)[\s\S]*(?:宸茬粦瀹殀琚崰鐢▅涓嶅彲鐢▅鎷掔粷|澶辫触|瓒呮椂|娌℃湁鍙敤|鏃犲彲鐢?|Step\s*9.*phone verification/i.test(normalizedMessage);
   };
 
   const normalizedStep = Number(step);
@@ -14611,7 +14636,7 @@ async function getPostStep6AutoRestartDecision(step, error) {
   let authState = null;
   try {
     authState = await getLoginAuthStateFromContent({
-      logMessage: `步骤 ${normalizedStep}：正在确认当前认证页状态，以决定是否回到步骤 ${restartAnchorStep} 重开...`,
+      logMessage: `姝ラ ${normalizedStep}锛氭鍦ㄧ‘璁ゅ綋鍓嶈璇侀〉鐘舵€侊紝浠ュ喅瀹氭槸鍚﹀洖鍒版楠?${restartAnchorStep} 閲嶅紑...`,
     });
   } catch (inspectError) {
     console.warn(LOG_PREFIX, '[AutoRun] failed to inspect login auth state after post-step6 error', {
@@ -14655,7 +14680,7 @@ async function getPostStep6AutoRestartDecision(step, error) {
 async function getLoginAuthStateFromContent(options = {}) {
   const visibleStep = Math.floor(Number(options.visibleStep || options.logStep || options.step) || 0);
   const logStep = visibleStep > 0 ? visibleStep : null;
-  const { logMessage = '认证页正在切换，等待页面重新就绪后继续确认验证码页状态...' } = options;
+  const { logMessage = '璁よ瘉椤垫鍦ㄥ垏鎹紝绛夊緟椤甸潰閲嶆柊灏辩华鍚庣户缁‘璁ら獙璇佺爜椤电姸鎬?..' } = options;
   const result = await sendToContentScriptResilient(
     'openai-auth',
     {
@@ -14692,7 +14717,7 @@ async function getStep5SubmitStateFromContent(options = {}) {
       timeoutMs: options.timeoutMs ?? 15000,
       retryDelayMs: options.retryDelayMs ?? 600,
       responseTimeoutMs: options.responseTimeoutMs ?? (options.timeoutMs ?? 15000),
-      logMessage: options.logMessage || '步骤 5：资料页正在切换，等待页面恢复后确认提交结果...',
+      logMessage: options.logMessage || '姝ラ 5锛氳祫鏂欓〉姝ｅ湪鍒囨崲锛岀瓑寰呴〉闈㈡仮澶嶅悗纭鎻愪氦缁撴灉...',
       logStep: 5,
       logStepKey: options.logStepKey || 'fill-profile',
     }
@@ -14720,7 +14745,7 @@ async function recoverStep5SubmitRetryPageOnTab(options = {}) {
       timeoutMs: options.timeoutMs ?? 15000,
       retryDelayMs: options.retryDelayMs ?? 600,
       responseTimeoutMs: options.responseTimeoutMs ?? (options.timeoutMs ?? 15000),
-      logMessage: options.logMessage || '步骤 5：资料提交后正在尝试恢复认证重试页...',
+      logMessage: options.logMessage || '姝ラ 5锛氳祫鏂欐彁浜ゅ悗姝ｅ湪灏濊瘯鎭㈠璁よ瘉閲嶈瘯椤?..',
       logStep: 5,
       logStepKey: options.logStepKey || 'fill-profile',
     }
@@ -14738,7 +14763,7 @@ async function addStep5PostCompletionDebugLog(message, details = {}) {
     ? details.pageState
     : null;
   const summary = [
-    `步骤 5 [调试] ${message}`,
+    `姝ラ 5 [璋冭瘯] ${message}`,
     details?.completionOutcome ? `completionOutcome=${details.completionOutcome}` : null,
     `navigationStarted=${Boolean(details?.navigationStarted)}`,
     details?.tabUrl ? `tabUrl=${details.tabUrl}` : null,
@@ -14765,13 +14790,13 @@ async function addStep5PostCompletionDebugLog(message, details = {}) {
 
 async function validateStep5PostCompletion(tabId, completionPayload = {}) {
   if (!Number.isInteger(tabId)) {
-    throw new Error('步骤 5：缺少有效的资料页标签页，无法确认提交后的最终状态。');
+    throw new Error('姝ラ 5锛氱己灏戞湁鏁堢殑璧勬枡椤垫爣绛鹃〉锛屾棤娉曠‘璁ゆ彁浜ゅ悗鐨勬渶缁堢姸鎬併€?);
   }
   const debugLog = typeof addStep5PostCompletionDebugLog === 'function'
     ? addStep5PostCompletionDebugLog
     : async (message, details = {}) => {
         if (typeof addLog === 'function') {
-          await addLog(`步骤 5 [调试] ${message}`, details?.level || 'info', {
+          await addLog(`姝ラ 5 [璋冭瘯] ${message}`, details?.level || 'info', {
             step: 5,
             stepKey: 'fill-profile',
           });
@@ -14798,20 +14823,20 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
       ...replayPatch,
     };
     await setState(replayPatch);
-    await debugLog(`步骤 5 [调试] 后台检测到资料页恢复现场，准备重放 step 5（第 ${nextReplayCount} 次）。`, {
+    await debugLog(`姝ラ 5 [璋冭瘯] 鍚庡彴妫€娴嬪埌璧勬枡椤垫仮澶嶇幇鍦猴紝鍑嗗閲嶆斁 step 5锛堢 ${nextReplayCount} 娆★級銆俙, {
       completionOutcome: String(completionPayload?.outcome || '').trim(),
       completionUrl: String(completionPayload?.url || '').trim(),
       navigationStarted: Boolean(completionPayload?.navigationStarted),
       level: 'warn',
     });
-    await addLog(`步骤 5：资料页恢复后仍停留在 about-you，正在自动重提第 ${nextReplayCount} 次...${reason ? ` 原因：${reason}` : ''}`, 'warn', {
+    await addLog(`姝ラ 5锛氳祫鏂欓〉鎭㈠鍚庝粛鍋滅暀鍦?about-you锛屾鍦ㄨ嚜鍔ㄩ噸鎻愮 ${nextReplayCount} 娆?..${reason ? ` 鍘熷洜锛?{reason}` : ''}`, 'warn', {
       step: 5,
       stepKey: 'fill-profile',
     });
     await stepExecutorsByKey['fill-profile'](replayState);
     return true;
   };
-  await debugLog('后台已收到资料页完成信号，准备开始最终状态复核。', {
+  await debugLog('鍚庡彴宸叉敹鍒拌祫鏂欓〉瀹屾垚淇″彿锛屽噯澶囧紑濮嬫渶缁堢姸鎬佸鏍搞€?, {
     completionOutcome: String(completionPayload?.outcome || '').trim(),
     completionUrl: String(completionPayload?.url || '').trim(),
     navigationStarted: Boolean(completionPayload?.navigationStarted),
@@ -14821,7 +14846,7 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
     const tab = await chrome.tabs.get(tabId).catch(() => null);
     const currentUrl = String(tab?.url || completionPayload?.url || '').trim();
     if (currentUrl && isRegistrationCompletionChatgptUrl(currentUrl)) {
-      await debugLog('后台直接通过标签页 URL 确认已进入 chatgpt.com，步骤 5 完成。', {
+      await debugLog('鍚庡彴鐩存帴閫氳繃鏍囩椤?URL 纭宸茶繘鍏?chatgpt.com锛屾楠?5 瀹屾垚銆?, {
         completionOutcome: String(completionPayload?.outcome || '').trim(),
         completionUrl: String(completionPayload?.url || '').trim(),
         navigationStarted: Boolean(completionPayload?.navigationStarted),
@@ -14838,9 +14863,9 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
       timeoutMs: 15000,
       responseTimeoutMs: 15000,
       retryDelayMs: 500,
-      logMessage: '步骤 5：资料提交已触发页面跳转，正在确认最终页面状态...',
+      logMessage: '姝ラ 5锛氳祫鏂欐彁浜ゅ凡瑙﹀彂椤甸潰璺宠浆锛屾鍦ㄧ‘璁ゆ渶缁堥〉闈㈢姸鎬?..',
     });
-    await debugLog('后台复核当前页面状态。', {
+    await debugLog('鍚庡彴澶嶆牳褰撳墠椤甸潰鐘舵€併€?, {
       completionOutcome: String(completionPayload?.outcome || '').trim(),
       completionUrl: String(completionPayload?.url || '').trim(),
       navigationStarted: Boolean(completionPayload?.navigationStarted),
@@ -14849,7 +14874,7 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
     });
 
     if (pageState.userAlreadyExistsBlocked) {
-      throw new Error('SIGNUP_USER_ALREADY_EXISTS::步骤 5：检测到 user_already_exists，当前轮将直接停止。');
+      throw new Error('SIGNUP_USER_ALREADY_EXISTS::姝ラ 5锛氭娴嬪埌 user_already_exists锛屽綋鍓嶈疆灏嗙洿鎺ュ仠姝€?);
     }
     if (pageState.maxCheckAttemptsBlocked) {
       throw new Error('AUTH_MAX_CHECK_ATTEMPTS::max_check_attempts on step 5 auth retry page; restart the current auth step without clicking Retry.');
@@ -14857,10 +14882,10 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
 
     if (pageState.retryPage) {
       if (authRetryRecoveryCount >= maxAuthRetryRecoveries) {
-        throw new Error(`步骤 5：资料提交后连续进入认证重试页 ${maxAuthRetryRecoveries} 次，页面仍未恢复。URL: ${pageState.url || currentUrl || 'unknown'}`);
+        throw new Error(`姝ラ 5锛氳祫鏂欐彁浜ゅ悗杩炵画杩涘叆璁よ瘉閲嶈瘯椤?${maxAuthRetryRecoveries} 娆★紝椤甸潰浠嶆湭鎭㈠銆俇RL: ${pageState.url || currentUrl || 'unknown'}`);
       }
       authRetryRecoveryCount += 1;
-      await debugLog(`后台复核检测到认证重试页，准备恢复（${authRetryRecoveryCount}/${maxAuthRetryRecoveries}）。`, {
+      await debugLog(`鍚庡彴澶嶆牳妫€娴嬪埌璁よ瘉閲嶈瘯椤碉紝鍑嗗鎭㈠锛?{authRetryRecoveryCount}/${maxAuthRetryRecoveries}锛夈€俙, {
         completionOutcome: String(completionPayload?.outcome || '').trim(),
         completionUrl: String(completionPayload?.url || '').trim(),
         navigationStarted: Boolean(completionPayload?.navigationStarted),
@@ -14868,14 +14893,14 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
         pageState,
         level: 'warn',
       });
-      await addLog(`步骤 5：提交完成信号后检测到认证重试页，正在自动恢复（${authRetryRecoveryCount}/${maxAuthRetryRecoveries}）...`, 'warn', {
+      await addLog(`姝ラ 5锛氭彁浜ゅ畬鎴愪俊鍙峰悗妫€娴嬪埌璁よ瘉閲嶈瘯椤碉紝姝ｅ湪鑷姩鎭㈠锛?{authRetryRecoveryCount}/${maxAuthRetryRecoveries}锛?..`, 'warn', {
         step: 5,
         stepKey: 'fill-profile',
       });
       await recoverStep5SubmitRetryPageOnTab({
         timeoutMs: 15000,
         retryDelayMs: 600,
-        logMessage: '步骤 5：资料提交后的认证重试页正在恢复，等待“重试”按钮重新就绪...',
+        logMessage: '姝ラ 5锛氳祫鏂欐彁浜ゅ悗鐨勮璇侀噸璇曢〉姝ｅ湪鎭㈠锛岀瓑寰呪€滈噸璇曗€濇寜閽噸鏂板氨缁?..',
       });
       await waitForTabStableComplete(tabId, {
         timeoutMs: 30000,
@@ -14887,7 +14912,7 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
     }
 
     if (pageState.successState === 'logged_in_home' && isRegistrationCompletionChatgptUrl(pageState.url)) {
-      await debugLog(`后台复核确认成功状态：${pageState.successState}`, {
+      await debugLog(`鍚庡彴澶嶆牳纭鎴愬姛鐘舵€侊細${pageState.successState}`, {
         completionOutcome: String(completionPayload?.outcome || '').trim(),
         completionUrl: String(completionPayload?.url || '').trim(),
         navigationStarted: Boolean(completionPayload?.navigationStarted),
@@ -14899,7 +14924,7 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
     }
 
     if (pageState.successState) {
-      await debugLog('后台复核发现非 chatgpt.com 的步骤 5 完成候选，按未完成处理。', {
+      await debugLog('鍚庡彴澶嶆牳鍙戠幇闈?chatgpt.com 鐨勬楠?5 瀹屾垚鍊欓€夛紝鎸夋湭瀹屾垚澶勭悊銆?, {
         completionOutcome: String(completionPayload?.outcome || '').trim(),
         completionUrl: String(completionPayload?.url || '').trim(),
         navigationStarted: Boolean(completionPayload?.navigationStarted),
@@ -14907,11 +14932,11 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
         pageState,
         level: 'error',
       });
-      throw new Error(`步骤 5：资料提交后尚未跳转到 https://chatgpt.com，不能标记完成。当前状态：${pageState.successState}，URL: ${pageState.url || currentUrl || 'unknown'}`);
+      throw new Error(`姝ラ 5锛氳祫鏂欐彁浜ゅ悗灏氭湭璺宠浆鍒?https://chatgpt.com锛屼笉鑳芥爣璁板畬鎴愩€傚綋鍓嶇姸鎬侊細${pageState.successState}锛孶RL: ${pageState.url || currentUrl || 'unknown'}`);
     }
 
     if (pageState.errorText) {
-      await debugLog('后台复核发现页面错误文本，准备按失败结束。', {
+      await debugLog('鍚庡彴澶嶆牳鍙戠幇椤甸潰閿欒鏂囨湰锛屽噯澶囨寜澶辫触缁撴潫銆?, {
         completionOutcome: String(completionPayload?.outcome || '').trim(),
         completionUrl: String(completionPayload?.url || '').trim(),
         navigationStarted: Boolean(completionPayload?.navigationStarted),
@@ -14919,7 +14944,7 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
         pageState,
         level: 'error',
       });
-      throw new Error(`步骤 5：资料提交后页面返回错误：${pageState.errorText}。URL: ${pageState.url || currentUrl || 'unknown'}`);
+      throw new Error(`姝ラ 5锛氳祫鏂欐彁浜ゅ悗椤甸潰杩斿洖閿欒锛?{pageState.errorText}銆俇RL: ${pageState.url || currentUrl || 'unknown'}`);
     }
 
     if (pageState.profileVisible) {
@@ -14933,7 +14958,7 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
         }).catch(() => null);
         continue;
       }
-      await debugLog('后台复核发现页面仍停留在资料页，准备按失败结束。', {
+      await debugLog('鍚庡彴澶嶆牳鍙戠幇椤甸潰浠嶅仠鐣欏湪璧勬枡椤碉紝鍑嗗鎸夊け璐ョ粨鏉熴€?, {
         completionOutcome: String(completionPayload?.outcome || '').trim(),
         completionUrl: String(completionPayload?.url || '').trim(),
         navigationStarted: Boolean(completionPayload?.navigationStarted),
@@ -14941,11 +14966,11 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
         pageState,
         level: 'error',
       });
-      throw new Error(`步骤 5：资料提交完成信号已收到，但页面仍停留在资料页，当前流程将直接报错。URL: ${pageState.url || currentUrl || 'unknown'}`);
+      throw new Error(`姝ラ 5锛氳祫鏂欐彁浜ゅ畬鎴愪俊鍙峰凡鏀跺埌锛屼絾椤甸潰浠嶅仠鐣欏湪璧勬枡椤碉紝褰撳墠娴佺▼灏嗙洿鎺ユ姤閿欍€俇RL: ${pageState.url || currentUrl || 'unknown'}`);
     }
 
     if (pageState.unknownAuthPage) {
-      await debugLog('后台复核进入未知认证页，无法确认成功。', {
+      await debugLog('鍚庡彴澶嶆牳杩涘叆鏈煡璁よ瘉椤碉紝鏃犳硶纭鎴愬姛銆?, {
         completionOutcome: String(completionPayload?.outcome || '').trim(),
         completionUrl: String(completionPayload?.url || '').trim(),
         navigationStarted: Boolean(completionPayload?.navigationStarted),
@@ -14953,10 +14978,10 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
         pageState,
         level: 'error',
       });
-      throw new Error(`步骤 5：资料提交后进入未识别的认证页，无法确认成功。URL: ${pageState.url || currentUrl || 'unknown'}`);
+      throw new Error(`姝ラ 5锛氳祫鏂欐彁浜ゅ悗杩涘叆鏈瘑鍒殑璁よ瘉椤碉紝鏃犳硶纭鎴愬姛銆俇RL: ${pageState.url || currentUrl || 'unknown'}`);
     }
 
-    await debugLog('后台复核未识别到成功或明确失败状态，准备按失败结束。', {
+    await debugLog('鍚庡彴澶嶆牳鏈瘑鍒埌鎴愬姛鎴栨槑纭け璐ョ姸鎬侊紝鍑嗗鎸夊け璐ョ粨鏉熴€?, {
       completionOutcome: String(completionPayload?.outcome || '').trim(),
       completionUrl: String(completionPayload?.url || '').trim(),
       navigationStarted: Boolean(completionPayload?.navigationStarted),
@@ -14964,7 +14989,7 @@ async function validateStep5PostCompletion(tabId, completionPayload = {}) {
       pageState,
       level: 'error',
     });
-    throw new Error(`步骤 5：资料提交后未能确认最终状态。URL: ${pageState.url || currentUrl || 'unknown'}`);
+    throw new Error(`姝ラ 5锛氳祫鏂欐彁浜ゅ悗鏈兘纭鏈€缁堢姸鎬併€俇RL: ${pageState.url || currentUrl || 'unknown'}`);
   }
 }
 
@@ -14995,7 +15020,7 @@ async function ensureStep8VerificationPageReady(options = {}) {
     try {
       const recoverPayload = {
         flow: 'login',
-        logLabel: `步骤 ${visibleStep}：检测到登录超时报错，正在点击“重试”恢复当前页面`,
+        logLabel: `姝ラ ${visibleStep}锛氭娴嬪埌鐧诲綍瓒呮椂鎶ラ敊锛屾鍦ㄧ偣鍑烩€滈噸璇曗€濇仮澶嶅綋鍓嶉〉闈,
         step: visibleStep,
         timeoutMs: 12000,
       };
@@ -15014,7 +15039,7 @@ async function ensureStep8VerificationPageReady(options = {}) {
             timeoutMs: recoverTimeoutMs,
             responseTimeoutMs: recoverTimeoutMs,
             retryDelayMs: 700,
-            logMessage: '认证页进入重试/超时报错状态，正在尝试点击“重试”恢复...',
+            logMessage: '璁よ瘉椤佃繘鍏ラ噸璇?瓒呮椂鎶ラ敊鐘舵€侊紝姝ｅ湪灏濊瘯鐐瑰嚮鈥滈噸璇曗€濇仮澶?..',
             logStep: visibleStep,
             logStepKey: 'fetch-login-code',
           }
@@ -15030,7 +15055,7 @@ async function ensureStep8VerificationPageReady(options = {}) {
       }
       recovered = Boolean(recoverResult?.recovered || Number(recoverResult?.clickCount) > 0);
       if (recovered && typeof addLog === 'function') {
-        await addLog('认证页已点击“重试”，正在重新确认验证码页状态...', 'warn', {
+        await addLog('璁よ瘉椤靛凡鐐瑰嚮鈥滈噸璇曗€濓紝姝ｅ湪閲嶆柊纭楠岃瘉鐮侀〉鐘舵€?..', 'warn', {
           step: visibleStep,
           stepKey: 'fetch-login-code',
         });
@@ -15041,7 +15066,7 @@ async function ensureStep8VerificationPageReady(options = {}) {
         throw recoverError;
       }
       if (typeof addLog === 'function') {
-        await addLog(`认证页“重试”恢复失败：${recoverMessage}`, 'warn', {
+        await addLog(`璁よ瘉椤碘€滈噸璇曗€濇仮澶嶅け璐ワ細${recoverMessage}`, 'warn', {
           step: visibleStep,
           stepKey: 'fetch-login-code',
         });
@@ -15053,7 +15078,7 @@ async function ensureStep8VerificationPageReady(options = {}) {
         timeoutMs: 10000,
         responseTimeoutMs: 10000,
         retryDelayMs: 500,
-        logMessage: '认证页恢复后，正在确认验证码页是否可继续...',
+        logMessage: '璁よ瘉椤垫仮澶嶅悗锛屾鍦ㄧ‘璁ら獙璇佺爜椤垫槸鍚﹀彲缁х画...',
         logStepKey: 'fetch-login-code',
       });
       if (
@@ -15071,17 +15096,17 @@ async function ensureStep8VerificationPageReady(options = {}) {
     }
 
     const urlPart = pageState.url ? ` URL: ${pageState.url}` : '';
-    throw new Error(`STEP8_RESTART_STEP7::步骤 ${visibleStep}：当前认证页进入登录超时报错页，请回到步骤 ${authLoginStep} 重新开始。${urlPart}`.trim());
+    throw new Error(`STEP8_RESTART_STEP7::姝ラ ${visibleStep}锛氬綋鍓嶈璇侀〉杩涘叆鐧诲綍瓒呮椂鎶ラ敊椤碉紝璇峰洖鍒版楠?${authLoginStep} 閲嶆柊寮€濮嬨€?{urlPart}`.trim());
   }
 
   const stateLabel = getLoginAuthStateLabel(pageState.state);
   const urlPart = pageState.url ? ` URL: ${pageState.url}` : '';
-  throw new Error(`当前未进入登录验证码页面，请先重新完成步骤 ${authLoginStep}。当前状态：${stateLabel}.${urlPart}`.trim());
+  throw new Error(`褰撳墠鏈繘鍏ョ櫥褰曢獙璇佺爜椤甸潰锛岃鍏堥噸鏂板畬鎴愭楠?${authLoginStep}銆傚綋鍓嶇姸鎬侊細${stateLabel}.${urlPart}`.trim());
 }
 
 async function rerunStep7ForStep8Recovery(options = {}) {
   const {
-    logMessage = '正在回到授权登录步骤，重新发起登录验证码流程...',
+    logMessage = '姝ｅ湪鍥炲埌鎺堟潈鐧诲綍姝ラ锛岄噸鏂板彂璧风櫥褰曢獙璇佺爜娴佺▼...',
     logStep = null,
     logStepKey = 'fetch-login-code',
     postStepDelayMs = 3000,
@@ -15099,7 +15124,7 @@ async function rerunStep7ForStep8Recovery(options = {}) {
     stepKey: logStepKey,
   });
   await setNodeStatus(authLoginNodeId, 'running');
-  await addLog('开始执行', 'info', { nodeId: authLoginNodeId });
+  await addLog('寮€濮嬫墽琛?, 'info', { nodeId: authLoginNodeId });
 
   try {
     await step7Executor.executeStep7({
@@ -15111,7 +15136,7 @@ async function rerunStep7ForStep8Recovery(options = {}) {
     const latestState = await getState();
     if (isStopError(err)) {
       await setNodeStatus(authLoginNodeId, 'stopped');
-      await addLog('已被用户停止', 'warn', { nodeId: authLoginNodeId });
+      await addLog('宸茶鐢ㄦ埛鍋滄', 'warn', { nodeId: authLoginNodeId });
       await appendManualAccountRunRecordIfNeeded(`node:${authLoginNodeId}:stopped`, latestState, getErrorMessage(err));
       throw err;
     }
@@ -15120,7 +15145,7 @@ async function rerunStep7ForStep8Recovery(options = {}) {
       throw new Error(STOP_ERROR_MESSAGE);
     }
     await setNodeStatus(authLoginNodeId, 'failed');
-    await addLog(`失败：${getErrorMessage(err)}`, 'error', { nodeId: authLoginNodeId });
+    await addLog(`澶辫触锛?{getErrorMessage(err)}`, 'error', { nodeId: authLoginNodeId });
     await appendManualAccountRunRecordIfNeeded(`node:${authLoginNodeId}:failed`, latestState, getErrorMessage(err));
     throw err;
   }
@@ -15151,7 +15176,7 @@ async function executeStep8(state) {
 }
 
 // ============================================================
-// Step 9: 完成 OAuth（自动点击 + localhost 回调监听）
+// Step 9: 瀹屾垚 OAuth锛堣嚜鍔ㄧ偣鍑?+ localhost 鍥炶皟鐩戝惉锛?
 // ============================================================
 
 let webNavListener = null;
@@ -15331,7 +15356,7 @@ async function waitForStep8Ready(tabId, timeoutMs = STEP8_READY_WAIT_TIMEOUT_MS,
         || /\/sign-in-with-chatgpt\/[^/?#]+\/consent(?:[/?#]|$)/i.test(retryUrl)
       );
       if (!consentLikeRetry) {
-        throw new Error(`步骤 ${visibleStep}：当前认证页已进入重试页，当前流程将直接报错。URL: ${pageState.url || 'unknown'}`);
+        throw new Error(`姝ラ ${visibleStep}锛氬綋鍓嶈璇侀〉宸茶繘鍏ラ噸璇曢〉锛屽綋鍓嶆祦绋嬪皢鐩存帴鎶ラ敊銆俇RL: ${pageState.url || 'unknown'}`);
       }
     }
     if (pageState?.consentReady) {
@@ -15343,7 +15368,7 @@ async function waitForStep8Ready(tabId, timeoutMs = STEP8_READY_WAIT_TIMEOUT_MS,
         timeoutMs: Math.min(10000, timeoutMs),
         visibleStep,
         logStepKey: 'confirm-oauth',
-        logMessage: '认证页内容脚本已失联，正在等待页面重新就绪...',
+        logMessage: '璁よ瘉椤靛唴瀹硅剼鏈凡澶辫仈锛屾鍦ㄧ瓑寰呴〉闈㈤噸鏂板氨缁?..',
       });
       continue;
     }
@@ -15351,7 +15376,7 @@ async function waitForStep8Ready(tabId, timeoutMs = STEP8_READY_WAIT_TIMEOUT_MS,
     await sleepWithStop(250);
   }
 
-  throw new Error(`步骤 ${visibleStep}：长时间未进入 OAuth 同意页，无法定位“继续”按钮。`);
+  throw new Error(`姝ラ ${visibleStep}锛氶暱鏃堕棿鏈繘鍏?OAuth 鍚屾剰椤碉紝鏃犳硶瀹氫綅鈥滅户缁€濇寜閽€俙);
 }
 
 async function prepareStep8DebuggerClick(tabId, options = {}) {
@@ -15362,7 +15387,7 @@ async function prepareStep8DebuggerClick(tabId, options = {}) {
     timeoutMs,
     visibleStep,
     logStepKey: 'confirm-oauth',
-    logMessage: '认证页内容脚本已失联，正在恢复后继续定位按钮...',
+    logMessage: '璁よ瘉椤靛唴瀹硅剼鏈凡澶辫仈锛屾鍦ㄦ仮澶嶅悗缁х画瀹氫綅鎸夐挳...',
   });
   const result = await sendToContentScriptResilient('openai-auth', {
     type: 'STEP8_FIND_AND_CLICK',
@@ -15372,7 +15397,7 @@ async function prepareStep8DebuggerClick(tabId, options = {}) {
     timeoutMs,
     responseTimeoutMs,
     retryDelayMs: 600,
-    logMessage: '认证页正在切换，等待 OAuth 同意页按钮重新就绪...',
+    logMessage: '璁よ瘉椤垫鍦ㄥ垏鎹紝绛夊緟 OAuth 鍚屾剰椤垫寜閽噸鏂板氨缁?..',
     logStep: visibleStep,
     logStepKey: 'confirm-oauth',
   });
@@ -15392,7 +15417,7 @@ async function triggerStep8ContentStrategy(tabId, strategy, options = {}) {
     timeoutMs,
     visibleStep,
     logStepKey: 'confirm-oauth',
-    logMessage: '认证页内容脚本已失联，正在恢复后继续点击“继续”按钮...',
+    logMessage: '璁よ瘉椤靛唴瀹硅剼鏈凡澶辫仈锛屾鍦ㄦ仮澶嶅悗缁х画鐐瑰嚮鈥滅户缁€濇寜閽?..',
   });
   const result = await sendToContentScriptResilient('openai-auth', {
     type: 'STEP8_TRIGGER_CONTINUE',
@@ -15408,7 +15433,7 @@ async function triggerStep8ContentStrategy(tabId, strategy, options = {}) {
     timeoutMs,
     responseTimeoutMs,
     retryDelayMs: 600,
-    logMessage: '认证页正在切换，等待“继续”按钮重新就绪...',
+    logMessage: '璁よ瘉椤垫鍦ㄥ垏鎹紝绛夊緟鈥滅户缁€濇寜閽噸鏂板氨缁?..',
     logStep: visibleStep,
     logStepKey: 'confirm-oauth',
   });
@@ -15430,7 +15455,7 @@ async function recoverAuthRetryPageOnTab(tabId, payload = {}, options = {}) {
     retryDelayMs: options.retryDelayMs ?? 600,
     visibleStep,
     logStepKey: 'confirm-oauth',
-    logMessage: options.readyLogMessage || '认证页内容脚本已失联，正在恢复后继续处理重试页...',
+    logMessage: options.readyLogMessage || '璁よ瘉椤靛唴瀹硅剼鏈凡澶辫仈锛屾鍦ㄦ仮澶嶅悗缁х画澶勭悊閲嶈瘯椤?..',
   });
   const result = await sendToContentScriptResilient('openai-auth', {
     type: 'RECOVER_AUTH_RETRY_PAGE',
@@ -15440,7 +15465,7 @@ async function recoverAuthRetryPageOnTab(tabId, payload = {}, options = {}) {
     timeoutMs,
     responseTimeoutMs,
     retryDelayMs: options.retryDelayMs ?? 600,
-    logMessage: options.logMessage || '认证页正在切换，等待“重试”按钮重新就绪...',
+    logMessage: options.logMessage || '璁よ瘉椤垫鍦ㄥ垏鎹紝绛夊緟鈥滈噸璇曗€濇寜閽噸鏂板氨缁?..',
     logStep: visibleStep,
     logStepKey: 'confirm-oauth',
   });
@@ -15455,7 +15480,7 @@ async function recoverAuthRetryPageOnTab(tabId, payload = {}, options = {}) {
 async function reloadStep8ConsentPage(tabId, timeoutMs = 30000, options = {}) {
   const visibleStep = Math.floor(Number(options.visibleStep) || 0) || 9;
   if (!Number.isInteger(tabId)) {
-    throw new Error(`步骤 ${visibleStep}：缺少有效的认证页标签页，无法刷新后重试。`);
+    throw new Error(`姝ラ ${visibleStep}锛氱己灏戞湁鏁堢殑璁よ瘉椤垫爣绛鹃〉锛屾棤娉曞埛鏂板悗閲嶈瘯銆俙);
   }
 
   await chrome.tabs.update(tabId, { active: true }).catch(() => { });
@@ -15466,7 +15491,7 @@ async function reloadStep8ConsentPage(tabId, timeoutMs = 30000, options = {}) {
       if (settled) return;
       settled = true;
       chrome.tabs.onUpdated.removeListener(listener);
-      reject(new Error(`步骤 ${visibleStep}：刷新认证页后等待页面完成加载超时。`));
+      reject(new Error(`姝ラ ${visibleStep}锛氬埛鏂拌璇侀〉鍚庣瓑寰呴〉闈㈠畬鎴愬姞杞借秴鏃躲€俙));
     }, timeoutMs);
 
     const listener = (updatedTabId, changeInfo) => {
@@ -15493,7 +15518,7 @@ async function reloadStep8ConsentPage(tabId, timeoutMs = 30000, options = {}) {
     timeoutMs: Math.min(15000, timeoutMs),
     visibleStep,
     logStepKey: 'confirm-oauth',
-    logMessage: '认证页刷新后内容脚本尚未就绪，正在等待页面恢复...',
+    logMessage: '璁よ瘉椤靛埛鏂板悗鍐呭鑴氭湰灏氭湭灏辩华锛屾鍦ㄧ瓑寰呴〉闈㈡仮澶?..',
   });
 }
 
@@ -15507,7 +15532,7 @@ async function waitForStep8ClickEffect(tabId, baselineUrl, timeoutMs = STEP8_CLI
 
     const tab = await chrome.tabs.get(tabId).catch(() => null);
     if (!tab) {
-      throw new Error(`步骤 ${visibleStep}：认证页面标签页已关闭，无法继续自动授权。`);
+      throw new Error(`姝ラ ${visibleStep}锛氳璇侀〉闈㈡爣绛鹃〉宸插叧闂紝鏃犳硶缁х画鑷姩鎺堟潈銆俙);
     }
 
     if (baselineUrl && typeof tab.url === 'string' && tab.url !== baselineUrl) {
@@ -15526,7 +15551,7 @@ async function waitForStep8ClickEffect(tabId, baselineUrl, timeoutMs = STEP8_CLI
         || /\/sign-in-with-chatgpt\/[^/?#]+\/consent(?:[/?#]|$)/i.test(retryUrl)
       );
       if (!consentLikeRetry) {
-        throw new Error(`步骤 ${visibleStep}：点击“继续”后页面进入认证页重试页，当前流程将直接报错。URL: ${pageState.url || baselineUrl || 'unknown'}`);
+        throw new Error(`姝ラ ${visibleStep}锛氱偣鍑烩€滅户缁€濆悗椤甸潰杩涘叆璁よ瘉椤甸噸璇曢〉锛屽綋鍓嶆祦绋嬪皢鐩存帴鎶ラ敊銆俇RL: ${pageState.url || baselineUrl || 'unknown'}`);
       }
     }
     if (pageState === null) {
@@ -15536,7 +15561,7 @@ async function waitForStep8ClickEffect(tabId, baselineUrl, timeoutMs = STEP8_CLI
           timeoutMs: Math.max(1000, Math.min(8000, timeoutMs)),
           visibleStep,
           logStepKey: 'confirm-oauth',
-          logMessage: '点击后认证页正在重载，正在等待内容脚本重新就绪...',
+          logMessage: '鐐瑰嚮鍚庤璇侀〉姝ｅ湪閲嶈浇锛屾鍦ㄧ瓑寰呭唴瀹硅剼鏈噸鏂板氨缁?..',
         }).catch(() => null);
         continue;
       }
@@ -15562,13 +15587,13 @@ async function waitForStep8ClickEffect(tabId, baselineUrl, timeoutMs = STEP8_CLI
 function getStep8EffectLabel(effect) {
   switch (effect?.reason) {
     case 'url_changed':
-      return `URL 已变化：${effect.url}`;
+      return `URL 宸插彉鍖栵細${effect.url}`;
     case 'page_reloading':
-      return '页面正在跳转或重载';
+      return '椤甸潰姝ｅ湪璺宠浆鎴栭噸杞?;
     case 'left_consent_page':
-      return `页面已离开 OAuth 同意页：${effect.url || 'unknown'}`;
+      return `椤甸潰宸茬寮€ OAuth 鍚屾剰椤碉細${effect.url || 'unknown'}`;
     default:
-      return '页面仍停留在 OAuth 同意页';
+      return '椤甸潰浠嶅仠鐣欏湪 OAuth 鍚屾剰椤?;
   }
 }
 
@@ -15577,15 +15602,15 @@ function isStep9OAuthLocalhostTimeoutError(error, visibleStep = 9) {
   if (!message) {
     return false;
   }
-  if (!/从拿到 OAuth 登录地址开始/.test(message)) {
+  if (!/浠庢嬁鍒?OAuth 鐧诲綍鍦板潃寮€濮?.test(message)) {
     return false;
   }
-  if (!/localhost 回调|OAuth localhost 回调/i.test(message)) {
+  if (!/localhost 鍥炶皟|OAuth localhost 鍥炶皟/i.test(message)) {
     return false;
   }
   const normalizedStep = Number(visibleStep);
   if (Number.isFinite(normalizedStep) && normalizedStep > 0) {
-    const stepPrefix = new RegExp(`步骤\\s*${normalizedStep}\\s*：`);
+    const stepPrefix = new RegExp(`姝ラ\\s*${normalizedStep}\\s*锛歚);
     if (!stepPrefix.test(message)) {
       return false;
     }
@@ -15619,7 +15644,7 @@ async function recoverOAuthLocalhostTimeout(details = {}) {
   const confirmNodeId = String(getNodeIdByStepForState(visibleStep, state || {}) || 'confirm-oauth').trim();
 
   await addLog(
-    `检测到 OAuth localhost 回调等待窗口已过期，正在复核认证页并回到步骤 ${authLoginStep} 重拉授权链路。`,
+    `妫€娴嬪埌 OAuth localhost 鍥炶皟绛夊緟绐楀彛宸茶繃鏈燂紝姝ｅ湪澶嶆牳璁よ瘉椤靛苟鍥炲埌姝ラ ${authLoginStep} 閲嶆媺鎺堟潈閾捐矾銆俙,
     'warn',
     { step: visibleStep, stepKey: 'confirm-oauth' }
   );
@@ -15630,12 +15655,12 @@ async function recoverOAuthLocalhostTimeout(details = {}) {
       timeoutMs: 10000,
       responseTimeoutMs: 10000,
       visibleStep,
-      logMessage: '正在复核认证页状态，确认是否可自动恢复 localhost 回调链路...',
+      logMessage: '姝ｅ湪澶嶆牳璁よ瘉椤电姸鎬侊紝纭鏄惁鍙嚜鍔ㄦ仮澶?localhost 鍥炶皟閾捐矾...',
       logStepKey: 'confirm-oauth',
     });
   } catch (inspectError) {
     await addLog(
-      `复核认证页状态失败（${getErrorMessage(inspectError)}），将按当前 OAuth 流程图重新执行授权前置节点。`,
+      `澶嶆牳璁よ瘉椤电姸鎬佸け璐ワ紙${getErrorMessage(inspectError)}锛夛紝灏嗘寜褰撳墠 OAuth 娴佺▼鍥鹃噸鏂版墽琛屾巿鏉冨墠缃妭鐐广€俙,
       'warn',
       { step: visibleStep, stepKey: 'confirm-oauth' }
     );
@@ -15644,14 +15669,14 @@ async function recoverOAuthLocalhostTimeout(details = {}) {
   if (isAddPhoneAuthState(authState)) {
     const stateLabel = getLoginAuthStateLabel(authState.state);
     await addLog(
-      `当前认证页为 ${stateLabel}，将直接回到步骤 ${authLoginStep} 重新拉起授权链路，避免验证码/OAuth 恢复冲突。`,
+      `褰撳墠璁よ瘉椤典负 ${stateLabel}锛屽皢鐩存帴鍥炲埌姝ラ ${authLoginStep} 閲嶆柊鎷夎捣鎺堟潈閾捐矾锛岄伩鍏嶉獙璇佺爜/OAuth 鎭㈠鍐茬獊銆俙,
       'warn',
       { step: visibleStep, stepKey: 'confirm-oauth' }
     );
   } else if (authState && authState.state && !['verification_page', 'oauth_consent_page'].includes(authState.state)) {
     const stateLabel = getLoginAuthStateLabel(authState.state);
     await addLog(
-      `当前认证页为 ${stateLabel}，不满足快速恢复条件，将回到步骤 ${authLoginStep} 重开授权链路。`,
+      `褰撳墠璁よ瘉椤典负 ${stateLabel}锛屼笉婊¤冻蹇€熸仮澶嶆潯浠讹紝灏嗗洖鍒版楠?${authLoginStep} 閲嶅紑鎺堟潈閾捐矾銆俙,
       'warn',
       { step: visibleStep, stepKey: 'confirm-oauth' }
     );
@@ -15694,12 +15719,12 @@ async function recoverOAuthLocalhostTimeout(details = {}) {
       case 'post-bound-email-phone-verification':
         return step8Executor.executeBoundEmailPostLoginPhoneVerification(payload);
       default:
-        throw new Error(`OAuth localhost 恢复不支持节点 ${nodeId}。`);
+        throw new Error(`OAuth localhost 鎭㈠涓嶆敮鎸佽妭鐐?${nodeId}銆俙);
     }
   };
 
   await addLog(
-    `正在自动重开 OAuth 前置节点：${recoveryNodeIds.join(' -> ')}。`,
+    `姝ｅ湪鑷姩閲嶅紑 OAuth 鍓嶇疆鑺傜偣锛?{recoveryNodeIds.join(' -> ')}銆俙,
     'warn',
     { step: visibleStep, stepKey: 'confirm-oauth' }
   );
@@ -15721,7 +15746,7 @@ async function recoverOAuthLocalhostTimeout(details = {}) {
   });
 
   await addLog(
-    `已恢复到自动确认 OAuth 前置状态，并刷新 OAuth localhost 回调等待窗口，准备重试当前步骤。`,
+    `宸叉仮澶嶅埌鑷姩纭 OAuth 鍓嶇疆鐘舵€侊紝骞跺埛鏂?OAuth localhost 鍥炶皟绛夊緟绐楀彛锛屽噯澶囬噸璇曞綋鍓嶆楠ゃ€俙,
     'warn',
     { step: visibleStep, stepKey: 'confirm-oauth' }
   );
