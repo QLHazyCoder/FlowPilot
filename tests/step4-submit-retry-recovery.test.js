@@ -323,3 +323,90 @@ return {
   await assert.rejects(api.run(), /SIGNUP_ACCOUNT_DEACTIVATED::/);
   assert.equal(api.snapshot().recoverCalls, 0);
 });
+
+
+test('waitForVerificationSubmitOutcome detects account_deactivated after the previous 12-second window', async () => {
+  const api = new Function(`
+let fakeNow = 0;
+const originalDateNow = Date.now;
+Date.now = () => fakeNow;
+const location = { href: 'https://auth.openai.com/email-verification' };
+
+function throwIfStopped() {}
+function log() {}
+function getVerificationErrorText() { return ''; }
+function isEmailVerificationPage() { return false; }
+function isStep5Ready() { return false; }
+function isStep8Ready() { return false; }
+function isAddPhonePageReady() { return false; }
+function isVerificationPageStillVisible() { return false; }
+function getStep4PostVerificationState() { return null; }
+function createSignupUserAlreadyExistsError() {
+  return new Error('SIGNUP_USER_ALREADY_EXISTS::步骤 4：检测到 user_already_exists');
+}
+function createSignupAccountDeactivatedError() {
+  return new Error('SIGNUP_ACCOUNT_DEACTIVATED::步骤 4：检测到 account_deactivated');
+}
+function createStep8EmailInUseError() { return new Error('STEP8_EMAIL_IN_USE::'); }
+function createAuthMaxCheckAttemptsError() { return new Error('AUTH_MAX_CHECK_ATTEMPTS::'); }
+function getCurrentAuthRetryPageState(flow) {
+  if (flow === 'signup' && fakeNow >= 13000) {
+    return { accountDeactivatedBlocked: true };
+  }
+  return null;
+}
+async function recoverCurrentAuthRetryPage() {
+  throw new Error('should not recover');
+}
+async function sleep() { fakeNow += 500; }
+
+${extractFunction('waitForVerificationSubmitOutcome')}
+
+return {
+  run() {
+    return waitForVerificationSubmitOutcome(4, undefined);
+  },
+  restore() {
+    Date.now = originalDateNow;
+  },
+};
+`)();
+
+  try {
+    await assert.rejects(api.run(), /SIGNUP_ACCOUNT_DEACTIVATED::/);
+  } finally {
+    api.restore();
+  }
+});
+
+test('waitForVerificationSubmitOutcome does not assume success on an unknown auth page', async () => {
+  const api = new Function(`
+const location = { href: 'https://auth.openai.com/email-verification' };
+function throwIfStopped() {}
+function log() {}
+function getVerificationErrorText() { return ''; }
+function isEmailVerificationPage() { return false; }
+function isStep5Ready() { return false; }
+function isStep8Ready() { return false; }
+function isAddPhonePageReady() { return false; }
+function isVerificationPageStillVisible() { return false; }
+function getStep4PostVerificationState() { return null; }
+function createSignupUserAlreadyExistsError() { return new Error('SIGNUP_USER_ALREADY_EXISTS::'); }
+function createSignupAccountDeactivatedError() { return new Error('SIGNUP_ACCOUNT_DEACTIVATED::'); }
+function createStep8EmailInUseError() { return new Error('STEP8_EMAIL_IN_USE::'); }
+function createAuthMaxCheckAttemptsError() { return new Error('AUTH_MAX_CHECK_ATTEMPTS::'); }
+function getCurrentAuthRetryPageState() { return null; }
+async function recoverCurrentAuthRetryPage() {}
+async function sleep() {}
+
+${extractFunction('waitForVerificationSubmitOutcome')}
+
+return {
+  run() {
+    return waitForVerificationSubmitOutcome(4, 100);
+  },
+};
+`)();
+
+  await assert.rejects(api.run(), /STEP4_POST_SUBMIT_UNKNOWN_STATE::/);
+});

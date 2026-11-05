@@ -5383,8 +5383,16 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
 
 
 async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
-  const resolvedTimeout = timeout ?? (step === 8 ? 30000 : 12000);
+  const resolvedTimeout = timeout ?? 30000;
   const purpose = options?.purpose || '';
+  const isOpenAiAuthPage = (() => {
+    try {
+      const host = String(new URL(location.href).hostname || '').toLowerCase();
+      return ['auth.openai.com', 'auth0.openai.com', 'accounts.openai.com'].includes(host);
+    } catch {
+      return false;
+    }
+  })();
   const start = Date.now();
   let recoveryCount = 0;
   const maxRecoveryCount = 2;
@@ -5512,6 +5520,12 @@ async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
       invalidCode: true,
       errorText: getVerificationErrorText() || '提交后仍停留在验证码页面，准备重新发送验证码。',
     };
+  }
+
+  if (step === 4 && isOpenAiAuthPage) {
+    throw new Error(
+      `STEP4_POST_SUBMIT_UNKNOWN_STATE::步骤 4：验证码提交后停留在未识别的认证页，已停止按成功推定。URL: ${location.href}`
+    );
   }
 
   return { success: true, assumed: true };
