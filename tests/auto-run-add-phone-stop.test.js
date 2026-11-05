@@ -1599,3 +1599,166 @@ test('auto-run controller stops all rounds on DuckDuckGo daily limit even when s
   assert.equal(runtime.state.autoRunActive, false);
   assert.equal(runtime.state.autoRunSessionId, 0);
 });
+
+
+test('auto-run skips account_deactivated to the next round even when auto retry is disabled', async () => {
+  const events = {
+    logs: [],
+    broadcasts: [],
+    accountRecords: [],
+    runCalls: 0,
+  };
+
+  let currentState = {
+    stepStatuses: {},
+    vpsUrl: 'https://example.com/vps',
+    vpsPassword: 'secret',
+    customPassword: '',
+    autoRunSkipFailures: false,
+    autoRunFallbackThreadIntervalMinutes: 0,
+    autoStepDelaySeconds: null,
+    mailProvider: '163',
+    emailGenerator: 'duck',
+    gmailBaseEmail: '',
+    mail2925BaseEmail: '',
+    emailPrefix: 'demo',
+    inbucketHost: '',
+    inbucketMailbox: '',
+    cloudflareDomain: '',
+    cloudflareDomains: [],
+    tabRegistry: {},
+    sourceLastUrls: {},
+    autoRunRoundSummaries: [],
+  };
+
+  const runtime = {
+    state: {
+      autoRunActive: false,
+      autoRunCurrentRun: 0,
+      autoRunTotalRuns: 2,
+      autoRunAttemptRun: 0,
+      autoRunSessionId: 0,
+    },
+    get() {
+      return { ...this.state };
+    },
+    set(updates = {}) {
+      this.state = { ...this.state, ...updates };
+    },
+  };
+
+  let sessionSeed = 0;
+  const controller = api.createAutoRunController({
+    addLog: async (message, level = 'info') => {
+      events.logs.push({ message, level });
+    },
+    appendAccountRunRecord: async (status, _state, reason) => {
+      events.accountRecords.push({ status, reason });
+      return { status, reason };
+    },
+    AUTO_RUN_MAX_RETRIES_PER_ROUND: 3,
+    AUTO_RUN_RETRY_DELAY_MS: 3000,
+    AUTO_RUN_TIMER_KIND_BEFORE_RETRY: 'before_retry',
+    AUTO_RUN_TIMER_KIND_BETWEEN_ROUNDS: 'between_rounds',
+    broadcastAutoRunStatus: async (phase, payload = {}) => {
+      events.broadcasts.push({ phase, ...payload });
+      currentState = {
+        ...currentState,
+        autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+        autoRunPhase: phase,
+        autoRunCurrentRun: payload.currentRun ?? runtime.state.autoRunCurrentRun,
+        autoRunTotalRuns: payload.totalRuns ?? runtime.state.autoRunTotalRuns,
+        autoRunAttemptRun: payload.attemptRun ?? runtime.state.autoRunAttemptRun,
+        autoRunSessionId: payload.sessionId ?? runtime.state.autoRunSessionId,
+      };
+    },
+    broadcastStopToContentScripts: async () => {},
+    cancelPendingCommands: () => {},
+    clearStopRequest: () => {},
+    createAutoRunSessionId: () => {
+      sessionSeed += 1;
+      return sessionSeed;
+    },
+    getAutoRunStatusPayload: (phase, payload = {}) => ({
+      autoRunning: ['running', 'waiting_step', 'waiting_email', 'retrying', 'waiting_interval'].includes(phase),
+      autoRunPhase: phase,
+      autoRunCurrentRun: payload.currentRun ?? 0,
+      autoRunTotalRuns: payload.totalRuns ?? 2,
+      autoRunAttemptRun: payload.attemptRun ?? 0,
+      autoRunSessionId: payload.sessionId ?? 0,
+    }),
+    getErrorMessage: (error) => error?.message || String(error || ''),
+    getFirstUnfinishedStep: () => 1,
+    getPendingAutoRunTimerPlan: () => null,
+    getRunningSteps: () => [],
+    getState: async () => ({
+      ...currentState,
+      stepStatuses: { ...(currentState.stepStatuses || {}) },
+      tabRegistry: { ...(currentState.tabRegistry || {}) },
+      sourceLastUrls: { ...(currentState.sourceLastUrls || {}) },
+    }),
+    getStopRequested: () => false,
+    hasSavedProgress: () => false,
+    isAddPhoneAuthFailure: () => false,
+    isRestartCurrentAttemptError: () => false,
+    isSignupUserAlreadyExistsFailure: () => false,
+    isSignupAccountDeactivatedFailure: (error) => /SIGNUP_ACCOUNT_DEACTIVATED::|account_deactivated/i.test(error?.message || String(error || '')),
+    isStopError: (error) => (error?.message || String(error || '')) === '流程已被用户停止。',
+    launchAutoRunTimerPlan: async () => false,
+    normalizeAutoRunFallbackThreadIntervalMinutes: (value) => Math.max(0, Math.floor(Number(value) || 0)),
+    persistAutoRunTimerPlan: async () => ({}),
+    resetState: async () => {
+      currentState = {
+        ...currentState,
+        stepStatuses: {},
+        tabRegistry: {},
+        sourceLastUrls: {},
+      };
+    },
+    runAutoSequenceFromStep: async () => {
+      events.runCalls += 1;
+      if (events.runCalls === 1) {
+        throw new Error('SIGNUP_ACCOUNT_DEACTIVATED::步骤 4：检测到 account_deactivated，当前邮箱对应账号已被删除或停用。');
+      }
+    },
+    runtime,
+    setState: async (updates = {}) => {
+      currentState = {
+        ...currentState,
+        ...updates,
+        stepStatuses: updates.stepStatuses ? { ...updates.stepStatuses } : currentState.stepStatuses,
+        tabRegistry: updates.tabRegistry ? { ...updates.tabRegistry } : currentState.tabRegistry,
+        sourceLastUrls: updates.sourceLastUrls ? { ...updates.sourceLastUrls } : currentState.sourceLastUrls,
+      };
+    },
+    sleepWithStop: async () => {},
+    throwIfAutoRunSessionStopped: (sessionId) => {
+      if (sessionId && sessionId !== runtime.state.autoRunSessionId) {
+        throw new Error('流程已被用户停止。');
+      }
+    },
+    waitForRunningStepsToFinish: async () => currentState,
+    chrome: {
+      runtime: {
+        sendMessage() {
+          return Promise.resolve();
+        },
+      },
+    },
+  });
+
+  await controller.autoRunLoop(2, {
+    autoRunSkipFailures: false,
+    mode: 'restart',
+  });
+
+  assert.equal(events.runCalls, 2, 'account_deactivated should skip the current round and continue');
+  assert.equal(events.broadcasts.some(({ phase }) => phase === 'retrying'), false);
+  assert.equal(events.accountRecords.length, 1);
+  assert.equal(events.accountRecords[0].status, 'failed');
+  assert.match(events.accountRecords[0].reason, /SIGNUP_ACCOUNT_DEACTIVATED::/);
+  assert.ok(events.logs.some(({ message }) => /account_deactivated.*继续下一轮/.test(message)));
+  assert.equal(events.broadcasts.some(({ phase }) => phase === 'complete'), true);
+  assert.equal(runtime.state.autoRunActive, false);
+  assert.equal(runtime.state.autoRunSessionId, 0);
+});

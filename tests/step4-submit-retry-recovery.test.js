@@ -270,3 +270,56 @@ return {
     success: true,
   });
 });
+
+
+test('waitForVerificationSubmitOutcome throws account_deactivated without retrying', async () => {
+  const api = new Function(`
+let recoverCalls = 0;
+const location = { href: 'https://auth.openai.com/email-verification' };
+
+function throwIfStopped() {}
+function log() {}
+function getVerificationErrorText() { return ''; }
+function isStep5Ready() { return false; }
+function isStep8Ready() { return false; }
+function isAddPhonePageReady() { return false; }
+function isVerificationPageStillVisible() { return false; }
+function createSignupUserAlreadyExistsError() {
+  return new Error('SIGNUP_USER_ALREADY_EXISTS::步骤 4：检测到 user_already_exists');
+}
+function createSignupAccountDeactivatedError() {
+  return new Error('SIGNUP_ACCOUNT_DEACTIVATED::步骤 4：检测到 account_deactivated');
+}
+function getCurrentAuthRetryPageState(flow) {
+  if (flow === 'signup') {
+    return {
+      retryEnabled: true,
+      userAlreadyExistsBlocked: false,
+      accountDeactivatedBlocked: true,
+    };
+  }
+  return null;
+}
+async function recoverCurrentAuthRetryPage() {
+  recoverCalls += 1;
+}
+async function sleep() {}
+
+${extractFunction('isSignupProfilePageUrl')}
+${extractFunction('isLikelyLoggedInChatgptHomeUrl')}
+${extractFunction('getStep4PostVerificationState')}
+${extractFunction('waitForVerificationSubmitOutcome')}
+
+return {
+  run() {
+    return waitForVerificationSubmitOutcome(4, 1000);
+  },
+  snapshot() {
+    return { recoverCalls };
+  },
+};
+`)();
+
+  await assert.rejects(api.run(), /SIGNUP_ACCOUNT_DEACTIVATED::/);
+  assert.equal(api.snapshot().recoverCalls, 0);
+});

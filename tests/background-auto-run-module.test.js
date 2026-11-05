@@ -44,3 +44,13 @@ test('auto-run account record status preserves the real failed node instead of p
     'node:platform-verify:failed'
   );
 });
+
+
+test('background treats account_deactivated as terminal for fetch-signup-code', () => {
+  const source = fs.readFileSync('background.js', 'utf8');
+  const blockStart = source.indexOf("if (nodeId === 'fetch-signup-code') {");
+  assert.notEqual(blockStart, -1);
+  const block = source.slice(blockStart, blockStart + 600);
+  assert.match(block, /isSignupAccountDeactivatedFailure\(err\)/);
+  assert.match(block, /throw err;/);
+});

@@ -2834,6 +2834,7 @@ const AUTH_ROUTE_ERROR_PATTERN = /405\s+method\s+not\s+allowed|route\s+error.*40
 const STEP4_405_RECOVERY_ERROR_PREFIX = 'STEP4_405_RECOVERY_LIMIT::';
 const STEP4_405_RECOVERY_LIMIT = 3;
 const SIGNUP_USER_ALREADY_EXISTS_ERROR_PREFIX = 'SIGNUP_USER_ALREADY_EXISTS::';
+const SIGNUP_ACCOUNT_DEACTIVATED_ERROR_PREFIX = 'SIGNUP_ACCOUNT_DEACTIVATED::';
 const SIGNUP_PHONE_PASSWORD_MISMATCH_ERROR_PREFIX = 'SIGNUP_PHONE_PASSWORD_MISMATCH::';
 const AUTH_MAX_CHECK_ATTEMPTS_ERROR_PREFIX = 'AUTH_MAX_CHECK_ATTEMPTS::';
 const STEP8_EMAIL_IN_USE_ERROR_PREFIX = 'STEP8_EMAIL_IN_USE::';
@@ -2841,6 +2842,7 @@ const SIGNUP_EMAIL_EXISTS_PATTERN = /与此电子邮件地址相关联的帐户�
 const SIGNUP_PHONE_PASSWORD_MISMATCH_PATTERN = /incorrect\s+phone\s+number\s+or\s+password|phone\s+number\s+or\s+password|電話番号またはパスワード|電話番号.*アカウントは(?:既に|すでに)存在|与此(?:电话|手机)号码相关联的帐户已存在|account\s+associated\s+with\s+this\s+phone\s+number\s+already\s+exists/i;
 
 const authPageRecovery = self.MultiPageAuthPageRecovery?.createAuthPageRecovery?.({
+  createSignupAccountDeactivatedError,
   detailPattern: AUTH_TIMEOUT_ERROR_DETAIL_PATTERN,
   getActionText,
   getPageTextSnapshot,
@@ -2892,6 +2894,12 @@ function getVerificationErrorText() {
 function createSignupUserAlreadyExistsError() {
   return new Error(
     `${SIGNUP_USER_ALREADY_EXISTS_ERROR_PREFIX}步骤 4：检测到 user_already_exists，说明当前用户已存在，当前轮将直接停止。`
+  );
+}
+
+function createSignupAccountDeactivatedError() {
+  return new Error(
+    `${SIGNUP_ACCOUNT_DEACTIVATED_ERROR_PREFIX}步骤 4：检测到 account_deactivated，当前邮箱对应账号已被删除或停用，本轮将直接终止并切换下一个邮箱。`
   );
 }
 
@@ -3827,12 +3835,13 @@ function getAuthTimeoutErrorPageState(options = {}) {
     return null;
   }
 
+  const text = getPageTextSnapshot();
+  const accountDeactivatedBlocked = /account_deactivated/i.test(text);
   const retryButton = getAuthRetryButton({ allowDisabled: true });
-  if (!retryButton) {
+  if (!retryButton && !accountDeactivatedBlocked) {
     return null;
   }
 
-  const text = getPageTextSnapshot();
   const titleMatched = AUTH_TIMEOUT_ERROR_TITLE_PATTERN.test(text)
     || AUTH_TIMEOUT_ERROR_TITLE_PATTERN.test(document.title || '');
   const detailMatched = AUTH_TIMEOUT_ERROR_DETAIL_PATTERN.test(text);
@@ -3842,7 +3851,7 @@ function getAuthTimeoutErrorPageState(options = {}) {
   const emailInUseBlocked = /email_in_use/i.test(text);
   const userAlreadyExistsBlocked = /user_already_exists/i.test(text);
 
-  if (!titleMatched && !detailMatched && !routeErrorMatched && !fetchFailedMatched && !maxCheckAttemptsBlocked && !emailInUseBlocked && !userAlreadyExistsBlocked) {
+  if (!titleMatched && !detailMatched && !routeErrorMatched && !fetchFailedMatched && !maxCheckAttemptsBlocked && !emailInUseBlocked && !userAlreadyExistsBlocked && !accountDeactivatedBlocked) {
     return null;
   }
 
@@ -3858,6 +3867,7 @@ function getAuthTimeoutErrorPageState(options = {}) {
     maxCheckAttemptsBlocked,
     emailInUseBlocked,
     userAlreadyExistsBlocked,
+    ...(accountDeactivatedBlocked ? { accountDeactivatedBlocked: true } : {}),
   };
 }
 
@@ -3944,6 +3954,9 @@ async function recoverCurrentAuthRetryPage(payload = {}) {
     if (retryState.maxCheckAttemptsBlocked) {
       throw new Error('CF_SECURITY_BLOCKED::您已触发Cloudflare 安全防护系统，已完全停止流程，请不要短时间内多次进行重新发送验证码，连续刷新、反复点击重试会加重风控；请先关闭页面等待 15-30 分钟，让系统的临时限制自动解除。或者更换浏览器');
     }
+    if (step === 4 && retryState.accountDeactivatedBlocked) {
+      throw createSignupAccountDeactivatedError();
+    }
     if (retryState.userAlreadyExistsBlocked) {
       throw createSignupUserAlreadyExistsError();
     }
@@ -3988,6 +4001,9 @@ async function recoverCurrentAuthRetryPage(payload = {}) {
   }
   if (finalRetryState.maxCheckAttemptsBlocked) {
     throw new Error('CF_SECURITY_BLOCKED::您已触发Cloudflare 安全防护系统，已完全停止流程，请不要短时间内多次进行重新发送验证码，连续刷新、反复点击重试会加重风控；请先关闭页面等待 15-30 分钟，让系统的临时限制自动解除。或者更换浏览器');
+  }
+  if (step === 4 && finalRetryState.accountDeactivatedBlocked) {
+    throw createSignupAccountDeactivatedError();
   }
   if (finalRetryState.userAlreadyExistsBlocked) {
     throw createSignupUserAlreadyExistsError();
@@ -5105,6 +5121,7 @@ function inspectSignupVerificationState() {
       state: 'error',
       retryButton: timeoutPage?.retryButton || null,
       userAlreadyExistsBlocked: Boolean(timeoutPage?.userAlreadyExistsBlocked),
+      ...(timeoutPage?.accountDeactivatedBlocked ? { accountDeactivatedBlocked: true } : {}),
     };
   }
 
@@ -5306,6 +5323,9 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
     }
 
     if (snapshot.state === 'error') {
+      if (snapshot.accountDeactivatedBlocked) {
+        throw createSignupAccountDeactivatedError();
+      }
       if (snapshot.userAlreadyExistsBlocked) {
         throw createSignupUserAlreadyExistsError();
       }
@@ -5374,6 +5394,9 @@ async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
 
     const retryFlow = step === 4 ? 'signup' : 'login';
     const retryState = getCurrentAuthRetryPageState(retryFlow);
+    if (step === 4 && retryState?.accountDeactivatedBlocked) {
+      throw createSignupAccountDeactivatedError();
+    }
     if (retryState?.userAlreadyExistsBlocked) {
       throw createSignupUserAlreadyExistsError();
     }
@@ -5447,6 +5470,9 @@ async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
 
   if (step === 4) {
     const signupRetryState = getCurrentAuthRetryPageState('signup');
+    if (signupRetryState?.accountDeactivatedBlocked) {
+      throw createSignupAccountDeactivatedError();
+    }
     if (signupRetryState?.userAlreadyExistsBlocked) {
       throw createSignupUserAlreadyExistsError();
     }

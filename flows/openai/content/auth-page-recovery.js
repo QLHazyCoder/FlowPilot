@@ -8,6 +8,9 @@
 })(typeof self !== 'undefined' ? self : globalThis, function createAuthPageRecoveryModule() {
   function createAuthPageRecovery(deps = {}) {
     const {
+      createSignupAccountDeactivatedError = () => new Error(
+        'SIGNUP_ACCOUNT_DEACTIVATED::步骤 4：检测到 account_deactivated，当前邮箱对应账号已被删除或停用，本轮将直接终止并切换下一个邮箱。'
+      ),
       detailPattern = null,
       getActionText,
       getPageTextSnapshot,
@@ -54,12 +57,13 @@
         return null;
       }
 
+      const text = typeof getPageTextSnapshot === 'function' ? getPageTextSnapshot() : '';
+      const accountDeactivatedBlocked = /account_deactivated/i.test(text);
       const retryButton = getAuthRetryButton({ allowDisabled: true });
-      if (!retryButton) {
+      if (!retryButton && !accountDeactivatedBlocked) {
         return null;
       }
 
-      const text = typeof getPageTextSnapshot === 'function' ? getPageTextSnapshot() : '';
       const title = typeof document !== 'undefined' ? String(document.title || '') : '';
       const titleMatched = titlePattern instanceof RegExp
         ? titlePattern.test(text) || titlePattern.test(title)
@@ -74,7 +78,7 @@
       const userAlreadyExistsBlocked = /user_already_exists/i.test(text);
       const fetchFailedMatched = /failed\s+to\s+fetch|network\s+error|fetch\s+failed/i.test(text);
 
-      if (!titleMatched && !detailMatched && !routeErrorMatched && !fetchFailedMatched && !maxCheckAttemptsBlocked && !userAlreadyExistsBlocked) {
+      if (!titleMatched && !detailMatched && !routeErrorMatched && !fetchFailedMatched && !maxCheckAttemptsBlocked && !userAlreadyExistsBlocked && !accountDeactivatedBlocked) {
         return null;
       }
 
@@ -89,6 +93,7 @@
         fetchFailedMatched,
         maxCheckAttemptsBlocked,
         userAlreadyExistsBlocked,
+        ...(accountDeactivatedBlocked ? { accountDeactivatedBlocked: true } : {}),
       };
     }
 
@@ -162,6 +167,10 @@
           );
         }
 
+        if (step === 4 && retryState.accountDeactivatedBlocked) {
+          throw createSignupAccountDeactivatedError();
+        }
+
         if (retryState.userAlreadyExistsBlocked) {
           throw new Error(
             'SIGNUP_USER_ALREADY_EXISTS::步骤 4：检测到 user_already_exists，说明当前用户已存在，当前轮将直接停止。'
@@ -219,6 +228,10 @@
         throw new Error(
           'CF_SECURITY_BLOCKED::您已触发Cloudflare 安全防护系统，已完全停止流程，请不要短时间内多次进行重新发送验证码，连续刷新、反复点击重试会加重风控；请先关闭页面等待 15-30 分钟，让系统的临时限制自动解除。或者更换浏览器'
         );
+      }
+
+      if (step === 4 && finalRetryState.accountDeactivatedBlocked) {
+        throw createSignupAccountDeactivatedError();
       }
 
       if (finalRetryState.userAlreadyExistsBlocked) {

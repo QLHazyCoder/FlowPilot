@@ -154,6 +154,7 @@ const bundle = [
   extractFunction('isSignupPhonePasswordMismatchFailure'),
   extractFunction('getSignupPhonePasswordMismatchRestartPayload'),
   extractFunction('restartSignupPhonePasswordMismatchAttemptFromNode'),
+  extractFunction('isSignupAccountDeactivatedFailure'),
   extractFunction('isSignupUserAlreadyExistsFailure'),
   extractFunction('isPlusCheckoutNonFreeTrialFailure'),
   extractFunction('isPlusCheckoutRestartStep'),

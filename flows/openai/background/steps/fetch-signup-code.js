@@ -26,6 +26,8 @@
       sendToContentScript,
       sendToContentScriptResilient,
       isRetryableContentScriptTransportError = () => false,
+      isSignupAccountDeactivatedFailure = () => false,
+      markCurrentRegistrationAccountUsed = null,
       shouldUseCustomRegistrationEmail,
       shouldUseCustomMailHelper = () => false,
       STANDARD_MAIL_VERIFICATION_RESEND_INTERVAL_MS,
@@ -190,6 +192,27 @@
     }
 
     async function executeStep4(state) {
+      try {
+        return await executeStep4Core(state);
+      } catch (error) {
+        if (isSignupAccountDeactivatedFailure(error) && typeof markCurrentRegistrationAccountUsed === 'function') {
+          try {
+            await markCurrentRegistrationAccountUsed(state, {
+              logPrefix: '步骤 4：account_deactivated，当前账号',
+              level: 'warn',
+            });
+          } catch (markError) {
+            await addLog(
+              `步骤 4：检测到 account_deactivated，但当前邮箱标记已用失败：${markError?.message || markError || '未知错误'}`,
+              'warn'
+            );
+          }
+        }
+        throw error;
+      }
+    }
+
+    async function executeStep4Core(state) {
       const stepStartedAt = Date.now();
       const verificationSessionKey = `4:${stepStartedAt}`;
       const signupTabId = await getTabId('openai-auth');

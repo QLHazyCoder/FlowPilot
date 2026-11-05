@@ -142,6 +142,11 @@
       return /SIGNUP_USER_ALREADY_EXISTS::|user_already_exists/i.test(message);
     }
 
+    function isSignupAccountDeactivatedFailure(error) {
+      const message = getErrorMessage(error);
+      return /SIGNUP_ACCOUNT_DEACTIVATED::|account_deactivated/i.test(message);
+    }
+
     function isKiroProxyFailure(error) {
       const message = getErrorMessage(error);
       return /Kiro\s*(?:注册页|桌面授权页).*(?:CloudFront\s*拒绝请求|AWS\s*请求异常)|(?:当前代理\s*IP|出口区域异常).*(?:切换代理|更换代理)|AWS\s*风控.*(?:切换代理|更换代理)/i.test(message);
@@ -241,6 +246,7 @@
       isKiroProxyFailure,
       isLegacyStep9RecoverableAuthError,
       isRestartCurrentAttemptError,
+      isSignupAccountDeactivatedFailure,
       isSignupUserAlreadyExistsFailure,
       isStep9RecoverableAuthError,
       isStepDoneStatus,

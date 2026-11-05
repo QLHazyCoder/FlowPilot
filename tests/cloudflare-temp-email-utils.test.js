@@ -16,8 +16,8 @@ const {
   pickVerificationMessageWithTimeFallback,
 } = require('../hotmail-utils.js');
 
-test('Cloudflare Temp Email uses a five-message default page', () => {
-  assert.equal(DEFAULT_MAIL_PAGE_SIZE, 5);
+test('Cloudflare Temp Email uses a one-message default page', () => {
+  assert.equal(DEFAULT_MAIL_PAGE_SIZE, 1);
 });
 
 test('normalizeCloudflareTempEmailBaseUrl normalizes host and preserves path', () => {

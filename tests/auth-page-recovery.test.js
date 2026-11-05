@@ -327,3 +327,46 @@ test('auth page recovery throws signup user already exists error without clickin
 
   assert.equal(state.clickCount, 0);
 });
+
+
+test('auth page recovery detects account_deactivated even without a retry button', () => {
+  const state = {
+    clickCount: 0,
+    pageText: '身份验证错误 error_code: account_deactivated',
+    pathname: '/email-verification',
+    retryVisible: false,
+    title: '身份验证错误',
+  };
+  const api = createRecoveryApi(state);
+
+  const snapshot = api.getAuthTimeoutErrorPageState({
+    pathPatterns: [/\/email-verification(?:[/?#]|$)/i],
+  });
+
+  assert.equal(Boolean(snapshot), true);
+  assert.equal(snapshot.accountDeactivatedBlocked, true);
+  assert.equal(snapshot.retryButton, null);
+});
+
+test('auth page recovery throws account_deactivated without clicking retry', async () => {
+  const state = {
+    clickCount: 0,
+    pageText: '身份验证错误 error_code: account_deactivated',
+    pathname: '/email-verification',
+    retryVisible: true,
+    title: '身份验证错误',
+  };
+  const api = createRecoveryApi(state);
+
+  await assert.rejects(
+    () => api.recoverAuthRetryPage({
+      logLabel: '步骤 4：检测到注册认证重试页，正在点击“重试”恢复',
+      pathPatterns: [/\/email-verification(?:[/?#]|$)/i],
+      step: 4,
+      timeoutMs: 1000,
+    }),
+    /SIGNUP_ACCOUNT_DEACTIVATED::/
+  );
+
+  assert.equal(state.clickCount, 0);
+});

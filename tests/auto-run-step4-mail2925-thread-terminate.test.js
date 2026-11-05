@@ -151,6 +151,7 @@ const bundle = [
   extractFunction('isAddPhoneAuthUrl'),
   extractFunction('isAddPhoneAuthState'),
   extractFunction('isMail2925ThreadTerminatedError'),
+  extractFunction('isSignupAccountDeactivatedFailure'),
   extractFunction('isSignupUserAlreadyExistsFailure'),
   extractFunction('isPlusCheckoutNonFreeTrialFailure'),
   extractFunction('isPlusCheckoutRestartStep'),

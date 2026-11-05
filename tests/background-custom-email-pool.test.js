@@ -56,8 +56,25 @@ const bundle = [
   extractFunction('normalizeCustomEmailPoolEntryObjects'),
   extractFunction('getCustomEmailPool'),
   extractFunction('getCustomEmailPoolEmailForRun'),
+  extractFunction('getNextCustomEmailPoolEmail'),
   extractFunction('getEmailGeneratorLabel'),
 ].join('\n');
+
+const poolBundle = [
+  extractFunction('normalizeCustomEmailPoolEntryObjects'),
+  extractFunction('getCustomEmailPool'),
+  extractFunction('getNextCustomEmailPoolEmail'),
+].join('\n');
+
+function createPoolApi() {
+  return new Function(`
+${poolBundle}
+
+return {
+  getNextCustomEmailPoolEmail,
+};
+`)();
+}
 
 function createApi() {
   return new Function(`
@@ -70,6 +87,7 @@ return {
   normalizeEmailGenerator,
   getCustomEmailPool,
   getCustomEmailPoolEmailForRun,
+  getNextCustomEmailPoolEmail,
   getEmailGeneratorLabel,
 };
 `)();
@@ -110,4 +128,24 @@ test('background derives active custom email pool from structured entries', () =
   assert.deepEqual(api.getCustomEmailPool(state), ['one@example.com']);
   assert.equal(api.getCustomEmailPoolEmailForRun(state, 1), 'one@example.com');
   assert.equal(api.getCustomEmailPoolEmailForRun(state, 2), '');
+});
+
+
+test('background selects the first enabled unused email after previous entries become used', () => {
+  const api = createPoolApi();
+  const state = {
+    customEmailPoolEntries: [
+      { id: 'a', email: 'first@example.com', enabled: true, used: true },
+      { id: 'b', email: 'second@example.com', enabled: true, used: false },
+      { id: 'c', email: 'third@example.com', enabled: true, used: false },
+    ],
+  };
+
+  assert.equal(api.getNextCustomEmailPoolEmail(state), 'second@example.com');
+
+  state.customEmailPoolEntries[1].used = true;
+  assert.equal(api.getNextCustomEmailPoolEmail(state), 'third@example.com');
+
+  state.customEmailPoolEntries[2].used = true;
+  assert.equal(api.getNextCustomEmailPoolEmail(state), '');
 });

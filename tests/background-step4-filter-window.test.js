@@ -529,3 +529,102 @@ test('step 4 confirms a completed ChatGPT page after prepare transport failure w
     skipRegistrationWaitStep: true,
   }]);
 });
+
+
+test('step 4 marks the current account used before rethrowing account_deactivated', async () => {
+  const markCalls = [];
+  const executor = api.createStep4Executor({
+    addLog: async () => {},
+    chrome: {
+      tabs: {
+        update: async () => {},
+      },
+    },
+    completeNodeFromBackground: async () => {},
+    confirmCustomVerificationStepBypass: async () => {},
+    getMailConfig: () => ({
+      provider: '163',
+      label: '163 邮箱',
+      source: 'mail-163',
+      url: 'https://mail.163.com',
+    }),
+    getTabId: async () => 1,
+    HOTMAIL_PROVIDER: 'hotmail-api',
+    isTabAlive: async () => true,
+    LUCKMAIL_PROVIDER: 'luckmail-api',
+    CLOUDFLARE_TEMP_EMAIL_PROVIDER: 'cloudflare-temp-email',
+    resolveVerificationStep: async () => {
+      throw new Error('SIGNUP_ACCOUNT_DEACTIVATED::步骤 4：检测到 account_deactivated');
+    },
+    reuseOrCreateTab: async () => {},
+    sendToContentScript: async () => ({}),
+    sendToContentScriptResilient: async () => ({ ready: true }),
+    isRetryableContentScriptTransportError: () => false,
+    isSignupAccountDeactivatedFailure: (error) => /SIGNUP_ACCOUNT_DEACTIVATED::/.test(error?.message || ''),
+    markCurrentRegistrationAccountUsed: async (state, options) => {
+      markCalls.push({ state, options });
+    },
+    shouldUseCustomRegistrationEmail: () => false,
+    shouldUseCustomMailHelper: () => false,
+    STANDARD_MAIL_VERIFICATION_RESEND_INTERVAL_MS: 25000,
+    throwIfStopped: () => {},
+  });
+  const state = { email: 'banned@example.com', password: 'secret' };
+
+  await assert.rejects(
+    () => executor.executeStep4(state),
+    /SIGNUP_ACCOUNT_DEACTIVATED::/
+  );
+
+  assert.equal(markCalls.length, 1);
+  assert.equal(markCalls[0].state.email, 'banned@example.com');
+  assert.match(markCalls[0].options.logPrefix, /account_deactivated/);
+});
+
+test('step 4 preserves account_deactivated when marking the account used fails', async () => {
+  const logs = [];
+  const executor = api.createStep4Executor({
+    addLog: async (message, level = 'info') => {
+      logs.push({ message, level });
+    },
+    chrome: {
+      tabs: {
+        update: async () => {},
+      },
+    },
+    completeNodeFromBackground: async () => {},
+    confirmCustomVerificationStepBypass: async () => {},
+    getMailConfig: () => ({
+      provider: '163',
+      label: '163 邮箱',
+      source: 'mail-163',
+      url: 'https://mail.163.com',
+    }),
+    getTabId: async () => 1,
+    HOTMAIL_PROVIDER: 'hotmail-api',
+    isTabAlive: async () => true,
+    LUCKMAIL_PROVIDER: 'luckmail-api',
+    CLOUDFLARE_TEMP_EMAIL_PROVIDER: 'cloudflare-temp-email',
+    resolveVerificationStep: async () => {
+      throw new Error('SIGNUP_ACCOUNT_DEACTIVATED::步骤 4：检测到 account_deactivated');
+    },
+    reuseOrCreateTab: async () => {},
+    sendToContentScript: async () => ({}),
+    sendToContentScriptResilient: async () => ({ ready: true }),
+    isRetryableContentScriptTransportError: () => false,
+    isSignupAccountDeactivatedFailure: (error) => /SIGNUP_ACCOUNT_DEACTIVATED::/.test(error?.message || ''),
+    markCurrentRegistrationAccountUsed: async () => {
+      throw new Error('storage unavailable');
+    },
+    shouldUseCustomRegistrationEmail: () => false,
+    shouldUseCustomMailHelper: () => false,
+    STANDARD_MAIL_VERIFICATION_RESEND_INTERVAL_MS: 25000,
+    throwIfStopped: () => {},
+  });
+
+  await assert.rejects(
+    () => executor.executeStep4({ email: 'banned@example.com', password: 'secret' }),
+    /SIGNUP_ACCOUNT_DEACTIVATED::/
+  );
+  assert.equal(logs.some(({ message }) => /标记已用失败：storage unavailable/.test(message)), true);
+});

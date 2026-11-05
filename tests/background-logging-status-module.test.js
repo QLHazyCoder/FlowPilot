@@ -52,6 +52,12 @@ test('logging/status add-phone detection ignores step 2 phone-entry switch failu
   assert.equal(loggingStatus.getLoginAuthStateLabel('oauth_consent_page'), 'OAuth 授权页');
   assert.equal(loggingStatus.getLoginAuthStateLabel('choose_account_page'), 'OpenAI choose account page');
   assert.equal(
+    loggingStatus.isSignupAccountDeactivatedFailure('SIGNUP_ACCOUNT_DEACTIVATED::步骤 4：检测到 account_deactivated'),
+    true
+  );
+  assert.equal(loggingStatus.isSignupAccountDeactivatedFailure('error_code: account_deactivated'), true);
+  assert.equal(loggingStatus.isSignupAccountDeactivatedFailure('验证码错误'), false);
+  assert.equal(
     loggingStatus.isKiroProxyFailure('Kiro 注册页出现 AWS 请求异常，通常是当前代理 IP 或出口区域异常，请先切换代理后再重试。'),
     true
   );

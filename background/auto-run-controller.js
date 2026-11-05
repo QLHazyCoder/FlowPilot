@@ -33,6 +33,7 @@
       isPlusCheckoutNonFreeTrialFailure,
       isRestartCurrentAttemptError,
       isStep4Route405RecoveryLimitFailure,
+      isSignupAccountDeactivatedFailure,
       isSignupUserAlreadyExistsFailure,
       isStopError,
       launchAutoRunTimerPlan,
@@ -835,6 +836,8 @@
               && (isAddPhoneAuthFailure(err) || isAddPhoneAuthUrl(reason));
             const blockedByPlusNonFreeTrial = typeof isPlusCheckoutNonFreeTrialFailure === 'function'
               && isPlusCheckoutNonFreeTrialFailure(err);
+            const blockedBySignupAccountDeactivated = typeof isSignupAccountDeactivatedFailure === 'function'
+              && isSignupAccountDeactivatedFailure(err);
             const blockedBySignupUserAlreadyExists = typeof isSignupUserAlreadyExistsFailure === 'function'
               && !keepSameEmailUntilAddPhone
               && isSignupUserAlreadyExistsFailure(err);
@@ -847,6 +850,7 @@
             const canRetry = !blockedByAddPhone
               && !blockedByPhoneNoSupply
               && !blockedByPlusNonFreeTrial
+              && !blockedBySignupAccountDeactivated
               && !blockedBySignupUserAlreadyExists
               && !blockedByStep4Route405
               && !blockedByKiroProxy
@@ -957,6 +961,29 @@
                 targetRun < totalRuns
                   ? `第 ${targetRun}/${totalRuns} 轮因 Plus 今日应付金额非 0 提前结束，自动流程将继续下一轮。`
                   : `第 ${targetRun}/${totalRuns} 轮因 Plus 今日应付金额非 0 提前结束，已无后续轮次，本次自动运行结束。`,
+                'warn'
+              );
+              forceFreshTabsNextRun = true;
+              break;
+            }
+
+            if (blockedBySignupAccountDeactivated) {
+              roundSummary.status = 'failed';
+              roundSummary.finalFailureReason = reason;
+              await setState({
+                autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
+              });
+              await appendRoundRecord('failed', reason, err);
+              cancelPendingCommands('当前轮因 account_deactivated 已终止。');
+              await broadcastStopToContentScripts();
+              await addLog(
+                `第 ${targetRun}/${totalRuns} 轮检测到 account_deactivated/账号已停用，本轮将直接失败并跳过剩余重试。`,
+                'warn'
+              );
+              await addLog(
+                targetRun < totalRuns
+                  ? `第 ${targetRun}/${totalRuns} 轮因 account_deactivated 提前结束，自动流程将继续下一轮。`
+                  : `第 ${targetRun}/${totalRuns} 轮因 account_deactivated 提前结束，已无后续轮次，本次自动运行结束。`,
                 'warn'
               );
               forceFreshTabsNextRun = true;
