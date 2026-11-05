@@ -295,6 +295,7 @@ function getActionText(el) { return el?.textContent || ''; }
 async function humanPause() {}
 function simulateClick(el) { el.click(); clicks.push(el.textContent); }
 function getVerificationErrorText() { return ''; }
+function inspectSignupVerificationState() { return { state: 'unknown' }; }
 function getCurrentAuthRetryPageState() { return null; }
 async function recoverCurrentAuthRetryPage() { throw new Error('should not recover retry page'); }
 function createSignupUserAlreadyExistsError() { return new Error('user already exists'); }

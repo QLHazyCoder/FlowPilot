@@ -2118,9 +2118,37 @@ test('verification flow treats retryable submit transport failure as success whe
   assert.equal(result.success, true);
   assert.equal(result.skipProfileStep, true);
   assert.equal(result.skipRegistrationWaitStep, true);
-  assert.equal(result.assumed, true);
+  assert.equal(result.assumed, undefined);
   assert.equal(result.transportRecovered, true);
   assert.equal(logs.some(({ message }) => /验证码提交后页面已切换到ChatGPT 已登录首页/.test(message)), true);
+});
+
+test('verification flow throws account_deactivated when submit transport breaks and the error page is visible', async () => {
+  const helpers = createVerificationFlowTestHelpers({
+    chrome: {
+      tabs: {
+        update: async () => {},
+        get: async () => ({ url: 'https://auth.openai.com/email-verification' }),
+      },
+      scripting: {
+        executeScript: async () => [{
+          result: {
+            accountDeactivatedBlocked: true,
+            userAlreadyExistsBlocked: false,
+          },
+        }],
+      },
+    },
+    isRetryableContentScriptTransportError: (error) => /message channel is closed/i.test(String(error?.message || error || '')),
+    sendToContentScriptResilient: async () => {
+      throw new Error('The page keeping the extension port is moved into back/forward cache, so the message channel is closed.');
+    },
+  });
+
+  await assert.rejects(
+    () => helpers.submitVerificationCode(4, '654321'),
+    /SIGNUP_ACCOUNT_DEACTIVATED::/
+  );
 });
 
 test('verification flow waits for logged-in home DOM signal before skipping registration wait', async () => {
@@ -2229,7 +2257,7 @@ test('verification flow keeps registration wait when fallback reaches registrati
   assert.equal(result.skipProfileStep, true);
   assert.equal(result.skipProfileStepReason, 'registration_success_page');
   assert.equal(result.skipRegistrationWaitStep, false);
-  assert.equal(result.assumed, true);
+  assert.equal(result.assumed, undefined);
 });
 
 test('verification flow avoids resend storms when iCloud polling keeps hitting transport errors', async () => {

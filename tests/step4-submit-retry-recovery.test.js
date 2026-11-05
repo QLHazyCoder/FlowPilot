@@ -71,6 +71,8 @@ function isVerificationPageStillVisible() { return false; }
 function createSignupUserAlreadyExistsError() {
   return new Error('SIGNUP_USER_ALREADY_EXISTS::步骤 4：检测到 user_already_exists，说明当前用户已存在，当前轮将直接停止。');
 }
+function inspectSignupVerificationState() { return getStep4PostVerificationState(); }
+function inspectSignupVerificationState() { return getStep4PostVerificationState(); }
 function getCurrentAuthRetryPageState(flow) {
   if (flow === 'signup' && retryVisible) {
     return {
@@ -123,6 +125,7 @@ function isVerificationPageStillVisible() { return false; }
 function createSignupUserAlreadyExistsError() {
   return new Error('SIGNUP_USER_ALREADY_EXISTS::步骤 4：检测到 user_already_exists，说明当前用户已存在，当前轮将直接停止。');
 }
+function inspectSignupVerificationState() { return { state: 'error' }; }
 function getCurrentAuthRetryPageState(flow) {
   if (flow === 'signup') {
     return {
@@ -176,6 +179,7 @@ function createSignupUserAlreadyExistsError() {
 function getCurrentAuthRetryPageState() {
   return null;
 }
+function inspectSignupVerificationState() { return getStep4PostVerificationState(); }
 async function recoverCurrentAuthRetryPage() {
   throw new Error('should not recover retry page');
 }
@@ -244,6 +248,7 @@ function isVerificationPageStillVisible() { return true; }
 function createSignupUserAlreadyExistsError() {
   return new Error('SIGNUP_USER_ALREADY_EXISTS::步骤 4：检测到 user_already_exists，说明当前用户已存在，当前轮将直接停止。');
 }
+function inspectSignupVerificationState() { return getStep4PostVerificationState(); }
 function getCurrentAuthRetryPageState() {
   return null;
 }
@@ -300,6 +305,9 @@ function getCurrentAuthRetryPageState(flow) {
   }
   return null;
 }
+function inspectSignupVerificationState() {
+  return { state: 'error', accountDeactivatedBlocked: true };
+}
 async function recoverCurrentAuthRetryPage() {
   recoverCalls += 1;
 }
@@ -355,6 +363,12 @@ function getCurrentAuthRetryPageState(flow) {
   }
   return null;
 }
+function inspectSignupVerificationState() {
+  const retryState = getCurrentAuthRetryPageState('signup');
+  return retryState?.accountDeactivatedBlocked
+    ? { state: 'error', accountDeactivatedBlocked: true }
+    : { state: 'unknown' };
+}
 async function recoverCurrentAuthRetryPage() {
   throw new Error('should not recover');
 }
@@ -392,6 +406,7 @@ function isAddPhonePageReady() { return false; }
 function isVerificationPageStillVisible() { return false; }
 function getStep4PostVerificationState() { return null; }
 function createSignupUserAlreadyExistsError() { return new Error('SIGNUP_USER_ALREADY_EXISTS::'); }
+function inspectSignupVerificationState() { return { state: 'unknown' }; }
 function createSignupAccountDeactivatedError() { return new Error('SIGNUP_ACCOUNT_DEACTIVATED::'); }
 function createStep8EmailInUseError() { return new Error('STEP8_EMAIL_IN_USE::'); }
 function createAuthMaxCheckAttemptsError() { return new Error('AUTH_MAX_CHECK_ATTEMPTS::'); }
@@ -409,4 +424,41 @@ return {
 `)();
 
   await assert.rejects(api.run(), /STEP4_POST_SUBMIT_UNKNOWN_STATE::/);
+});
+
+
+test('waitForVerificationSubmitOutcome inspects the page immediately after submit and before sleeping', async () => {
+  const api = new Function(`
+const events = [];
+const location = { href: 'https://auth.openai.com/email-verification' };
+function throwIfStopped() {}
+function log() {}
+function getVerificationErrorText() { return ''; }
+function isEmailVerificationPage() { return false; }
+function isStep8Ready() { return false; }
+function isAddPhonePageReady() { return false; }
+function isVerificationPageStillVisible() { return false; }
+function getCurrentAuthRetryPageState() { return null; }
+function createSignupUserAlreadyExistsError() { return new Error('SIGNUP_USER_ALREADY_EXISTS::'); }
+function createSignupAccountDeactivatedError() { return new Error('SIGNUP_ACCOUNT_DEACTIVATED::'); }
+function inspectSignupVerificationState() {
+  events.push('inspect');
+  return { state: 'error', accountDeactivatedBlocked: true };
+}
+async function sleep() { events.push('sleep'); }
+
+${extractFunction('waitForVerificationSubmitOutcome')}
+
+return {
+  run() {
+    return waitForVerificationSubmitOutcome(4, 1000);
+  },
+  events() {
+    return events;
+  },
+};
+`)();
+
+  await assert.rejects(api.run(), /SIGNUP_ACCOUNT_DEACTIVATED::/);
+  assert.deepStrictEqual(api.events(), ['inspect']);
 });

@@ -5385,20 +5385,70 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
 async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
   const resolvedTimeout = timeout ?? 30000;
   const purpose = options?.purpose || '';
-  const isOpenAiAuthPage = (() => {
-    try {
-      const host = String(new URL(location.href).hostname || '').toLowerCase();
-      return ['auth.openai.com', 'auth0.openai.com', 'accounts.openai.com'].includes(host);
-    } catch {
-      return false;
-    }
-  })();
   const start = Date.now();
   let recoveryCount = 0;
   const maxRecoveryCount = 2;
 
+  function getStep4SuccessOutcome(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return null;
+    switch (snapshot.state) {
+      case 'step5':
+        return { success: true };
+      case 'logged_in_home':
+        return {
+          success: true,
+          skipProfileStep: true,
+          skipRegistrationWaitStep: true,
+          url: snapshot.url || location.href,
+        };
+      case 'registration_success_page':
+        return {
+          success: true,
+          skipProfileStep: true,
+          skipProfileStepReason: 'registration_success_page',
+          url: snapshot.url || location.href,
+        };
+      case 'oauth_consent_page':
+        return {
+          success: true,
+          url: snapshot.url || location.href,
+        };
+      default:
+        return null;
+    }
+  }
+
+  function throwStep4TerminalError(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+    if (snapshot.state === 'error') {
+      if (snapshot.accountDeactivatedBlocked) {
+        throw createSignupAccountDeactivatedError();
+      }
+      if (snapshot.userAlreadyExistsBlocked) {
+        throw createSignupUserAlreadyExistsError();
+      }
+    }
+    if (snapshot.state === 'email_exists') {
+      throw createSignupUserAlreadyExistsError();
+    }
+  }
+
   while (Date.now() - start < resolvedTimeout) {
     throwIfStopped();
+
+    const snapshot = step === 4 ? inspectSignupVerificationState() : null;
+    if (step === 4) {
+      throwStep4TerminalError(snapshot);
+      const successOutcome = getStep4SuccessOutcome(snapshot);
+      if (successOutcome) {
+        return successOutcome;
+      }
+      const postVerificationState = getStep4PostVerificationState({ ignoreVerificationVisibility: true });
+      const postVerificationOutcome = getStep4SuccessOutcome(postVerificationState);
+      if (postVerificationOutcome) {
+        return postVerificationOutcome;
+      }
+    }
 
     const retryFlow = step === 4 ? 'signup' : 'login';
     const retryState = getCurrentAuthRetryPageState(retryFlow);
@@ -5429,35 +5479,13 @@ async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
       continue;
     }
 
-    if (step === 4) {
-      const postVerificationState = getStep4PostVerificationState({ ignoreVerificationVisibility: true });
-      if (postVerificationState?.state === 'logged_in_home') {
-        return {
-          success: true,
-          skipProfileStep: true,
-          skipRegistrationWaitStep: true,
-          url: postVerificationState.url || location.href,
-        };
-      }
-      if (postVerificationState?.state === 'registration_success_page') {
-        return {
-          success: true,
-          skipProfileStep: true,
-          skipProfileStepReason: 'registration_success_page',
-          url: postVerificationState.url || location.href,
-        };
-      }
-      if (postVerificationState?.state === 'step5') {
-        return { success: true };
-      }
-      if (purpose === 'signup' && isEmailVerificationPage()) {
-        return {
-          success: true,
-          emailVerificationRequired: true,
-          emailVerificationPage: true,
-          url: location.href,
-        };
-      }
+    if (step === 4 && purpose === 'signup' && isEmailVerificationPage()) {
+      return {
+        success: true,
+        emailVerificationRequired: true,
+        emailVerificationPage: true,
+        url: location.href,
+      };
     }
 
     const errorText = getVerificationErrorText();
@@ -5477,33 +5505,16 @@ async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
   }
 
   if (step === 4) {
-    const signupRetryState = getCurrentAuthRetryPageState('signup');
-    if (signupRetryState?.accountDeactivatedBlocked) {
-      throw createSignupAccountDeactivatedError();
+    const snapshot = inspectSignupVerificationState();
+    throwStep4TerminalError(snapshot);
+    const successOutcome = getStep4SuccessOutcome(snapshot);
+    if (successOutcome) {
+      return successOutcome;
     }
-    if (signupRetryState?.userAlreadyExistsBlocked) {
-      throw createSignupUserAlreadyExistsError();
-    }
-
     const postVerificationState = getStep4PostVerificationState({ ignoreVerificationVisibility: true });
-    if (postVerificationState?.state === 'logged_in_home') {
-      return {
-        success: true,
-        skipProfileStep: true,
-        skipRegistrationWaitStep: true,
-        url: postVerificationState.url || location.href,
-      };
-    }
-    if (postVerificationState?.state === 'registration_success_page') {
-      return {
-        success: true,
-        skipProfileStep: true,
-        skipProfileStepReason: 'registration_success_page',
-        url: postVerificationState.url || location.href,
-      };
-    }
-    if (postVerificationState?.state === 'step5') {
-      return { success: true };
+    const postVerificationOutcome = getStep4SuccessOutcome(postVerificationState);
+    if (postVerificationOutcome) {
+      return postVerificationOutcome;
     }
     if (purpose === 'signup' && isEmailVerificationPage()) {
       return {
@@ -5522,7 +5533,7 @@ async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
     };
   }
 
-  if (step === 4 && isOpenAiAuthPage) {
+  if (step === 4) {
     throw new Error(
       `STEP4_POST_SUBMIT_UNKNOWN_STATE::步骤 4：验证码提交后停留在未识别的认证页，已停止按成功推定。URL: ${location.href}`
     );
