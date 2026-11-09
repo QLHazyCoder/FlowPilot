@@ -6842,6 +6842,14 @@ function summarizeCloudflareTempEmailMessagesForLog(messages) {
     .join(' || ');
 }
 
+function shouldReportMissingCloudflareTempEmailOriginalRecipient({
+  useRegistrationLookup = false,
+  hasAnyMessages = false,
+  hasOriginalRecipient = false,
+} = {}) {
+  return Boolean(useRegistrationLookup && hasAnyMessages && !hasOriginalRecipient);
+}
+
 function buildCloudflareTempEmailMailSearchParams(options = {}) {
   const {
     address = '',
@@ -6886,6 +6894,7 @@ async function listCloudflareTempEmailMessages(state, options = {}) {
   const allMessages = [];
   const requestLimit = Number(options.limit) || CLOUDFLARE_TEMP_EMAIL_DEFAULT_PAGE_SIZE;
   const maxPages = options.maxPages || MAX_CLOUDFLARE_TEMP_EMAIL_SCAN_PAGES;
+  let hasAnyMessages = false;
   let hasOriginalRecipient = false;
 
   for (let page = 0; page < maxPages; page += 1) {
@@ -6903,6 +6912,7 @@ async function listCloudflareTempEmailMessages(state, options = {}) {
     });
     const normalizedMessages = normalizeCloudflareTempEmailMailApiMessages(payload);
     if (normalizedMessages.length === 0) break;
+    hasAnyMessages = true;
 
     if (!hasOriginalRecipient) {
       hasOriginalRecipient = normalizedMessages.some((message) => (
@@ -6929,7 +6939,11 @@ async function listCloudflareTempEmailMessages(state, options = {}) {
     messages: allMessages,
     lookupMode,
     originalRecipient,
-    missingOriginalRecipient: useRegistrationLookup && allMessages.length === 0 && hasOriginalRecipient === false,
+    missingOriginalRecipient: shouldReportMissingCloudflareTempEmailOriginalRecipient({
+      useRegistrationLookup,
+      hasAnyMessages,
+      hasOriginalRecipient,
+    }),
   };
 }
 

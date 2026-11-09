@@ -73,7 +73,9 @@ function createProviderApi(options = {}) {
     extractFunction('resolveCloudflareTempEmailEffectiveLookupMode'),
     extractFunction('resolveCloudflareTempEmailPollTargetEmail'),
     extractFunction('summarizeCloudflareTempEmailMessagesForLog'),
+    extractFunction('shouldReportMissingCloudflareTempEmailOriginalRecipient'),
     extractFunction('buildCloudflareTempEmailMailSearchParams'),
+    extractFunction('listCloudflareTempEmailMessages'),
     extractFunction('pollCloudflareTempEmailVerificationCode'),
   ].join('\n');
 
@@ -86,6 +88,7 @@ const CLOUDFLARE_TEMP_EMAIL_LOOKUP_MODE_REGISTRATION_EMAIL = 'registration-email
 const DEFAULT_CLOUDFLARE_TEMP_EMAIL_LOOKUP_MODE = CLOUDFLARE_TEMP_EMAIL_LOOKUP_MODE_RECEIVE_MAILBOX;
 const CLOUDFLARE_TEMP_EMAIL_PROVIDER = 'cloudflare-temp-email';
 const CLOUDFLARE_TEMP_EMAIL_GENERATOR = 'cloudflare-temp-email';
+const MAX_CLOUDFLARE_TEMP_EMAIL_SCAN_PAGES = 5;
 const logs = [];
 const listCalls = [];
 const messages = options.messages;
@@ -102,25 +105,40 @@ function ensureCloudflareTempEmailConfig() {
     lookupMode: options.lookupMode || 'receive-mailbox',
   };
 }
-async function listCloudflareTempEmailMessages(_state, config) {
+async function requestCloudflareTempEmailJson(_config, _path, options = {}) {
+  const searchParams = options.searchParams || {};
+  const originalRecipient = normalizeCloudflareTempEmailReceiveMailbox(searchParams.original_recipient);
+  const address = normalizeCloudflareTempEmailAddress(searchParams.address);
   listCalls.push({
-    address: config.address,
-    lookupMode: config.lookupMode,
-    originalRecipient: config.originalRecipient,
+    address: searchParams.address || '',
+    lookupMode: originalRecipient ? 'registration-email' : 'receive-mailbox',
+    originalRecipient,
   });
-  if (config.lookupMode === 'registration-email' && config.originalRecipient) {
-    const hasOriginalRecipient = messages.some((message) => normalizeCloudflareTempEmailReceiveMailbox(message.originalRecipient));
-    return {
-      config: {},
-      messages: messages.filter((message) => normalizeCloudflareTempEmailReceiveMailbox(message.originalRecipient) === normalizeCloudflareTempEmailReceiveMailbox(config.originalRecipient)),
-      missingOriginalRecipient: messages.length > 0 && !hasOriginalRecipient,
-    };
+
+  const hasOriginalRecipient = messages.some((message) => (
+    normalizeCloudflareTempEmailReceiveMailbox(message.originalRecipient)
+  ));
+  let filteredMessages = messages;
+  if (originalRecipient && hasOriginalRecipient) {
+    filteredMessages = messages.filter((message) => (
+      normalizeCloudflareTempEmailReceiveMailbox(message.originalRecipient) === originalRecipient
+    ));
   }
+  if (address) {
+    filteredMessages = filteredMessages.filter((message) => (
+      !message.address || normalizeCloudflareTempEmailAddress(message.address) === address
+    ));
+  }
+
+  const offset = Math.max(0, Number(searchParams.offset) || 0);
+  const limit = Math.max(0, Number(searchParams.limit) || 0);
   return {
-    config: {},
-    messages,
-    missingOriginalRecipient: false,
+    results: filteredMessages.slice(offset, offset + limit),
+    count: filteredMessages.length,
   };
+}
+function normalizeCloudflareTempEmailMailApiMessages(payload) {
+  return Array.isArray(payload?.results) ? payload.results : [];
 }
 function pickVerificationMessageWithTimeFallback(currentMessages) {
   return {
@@ -185,6 +203,93 @@ test('registration lookup adds original_recipient while receive lookup keeps add
       address: 'forward-box@email.example.com',
     },
   );
+});
+
+test('registration lookup treats an empty page as no match instead of unsupported field', async () => {
+  const api = createProviderApi({
+    lookupMode: 'registration-email',
+    messages: [],
+  });
+
+  await assert.rejects(
+    api.pollCloudflareTempEmailVerificationCode(4, {
+      email: 'target@duck.com',
+      mailProvider: 'cloudflare-temp-email',
+      emailGenerator: 'custom-pool',
+      cloudflareTempEmailLookupMode: 'registration-email',
+    }, {
+      targetEmail: 'target@duck.com',
+      maxAttempts: 1,
+      intervalMs: 1,
+    }),
+    (error) => {
+      assert.match(error.message, /暂未在 Cloudflare Temp Email 中找到匹配验证码/);
+      assert.doesNotMatch(error.message, /未返回 original_recipient/);
+      return true;
+    }
+  );
+});
+
+test('registration lookup reports unsupported field only when non-empty mail rows lack it', async () => {
+  const api = createProviderApi({
+    lookupMode: 'registration-email',
+    messages: [{
+      id: 'mail-legacy',
+      address: 'forward-box@email.20021108.xyz',
+      receivedDateTime: '2026-04-13T09:30:00.000Z',
+      subject: 'Legacy mail',
+      from: { emailAddress: { address: 'noreply@tm.openai.com' } },
+      bodyPreview: 'Your verification code is 333333.',
+    }],
+  });
+
+  await assert.rejects(
+    api.pollCloudflareTempEmailVerificationCode(4, {
+      email: 'target@duck.com',
+      mailProvider: 'cloudflare-temp-email',
+      emailGenerator: 'custom-pool',
+      cloudflareTempEmailLookupMode: 'registration-email',
+    }, {
+      targetEmail: 'target@duck.com',
+      maxAttempts: 1,
+      intervalMs: 1,
+    }),
+    /未返回 original_recipient/
+  );
+});
+
+test('custom pool registration lookup accepts a direct Cloudflare Temp Email address', async () => {
+  const directEmail = 'tmpdirect@email.20021108.xyz';
+  const api = createProviderApi({
+    lookupMode: 'registration-email',
+    messages: [{
+      id: 'mail-direct',
+      address: directEmail,
+      originalRecipient: directEmail,
+      receivedDateTime: '2026-04-13T09:40:00.000Z',
+      subject: 'Direct registration code',
+      from: { emailAddress: { address: 'noreply@tm.openai.com' } },
+      bodyPreview: 'Your verification code is 444444.',
+    }],
+  });
+
+  const result = await api.pollCloudflareTempEmailVerificationCode(4, {
+    email: directEmail,
+    mailProvider: 'cloudflare-temp-email',
+    emailGenerator: 'custom-pool',
+    cloudflareTempEmailLookupMode: 'registration-email',
+  }, {
+    targetEmail: directEmail,
+    maxAttempts: 1,
+    intervalMs: 1,
+  });
+
+  assert.equal(result.code, '444444');
+  assert.deepEqual(api.snapshot().listCalls, [{
+    address: '',
+    lookupMode: 'registration-email',
+    originalRecipient: directEmail,
+  }]);
 });
 
 test('pollCloudflareTempEmailVerificationCode returns code even if delete fails', async () => {
@@ -298,7 +403,7 @@ test('pollCloudflareTempEmailVerificationCode ignores stale registration lookup 
   assert.deepEqual(api.snapshot().listCalls, [{
     address: 'generated@email.20021108.xyz',
     lookupMode: 'receive-mailbox',
-    originalRecipient: 'generated@email.20021108.xyz',
+    originalRecipient: '',
   }]);
 });
 
