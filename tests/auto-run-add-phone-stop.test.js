@@ -606,6 +606,7 @@ test('auto-run controller skips user_already_exists failures to the next round i
     broadcasts: [],
     accountRecords: [],
     runCalls: 0,
+    markedEmails: [],
   };
 
   let currentState = {
@@ -616,7 +617,12 @@ test('auto-run controller skips user_already_exists failures to the next round i
     autoRunSkipFailures: true,
     autoRunFallbackThreadIntervalMinutes: 0,
     autoStepDelaySeconds: null,
-    mailProvider: '163',
+    mailProvider: 'custom',
+    email: 'existing@example.com',
+    customEmailPoolEntries: [
+      { id: '1', email: 'existing@example.com', enabled: true, used: false },
+      { id: '2', email: 'next@example.com', enabled: true, used: false },
+    ],
     emailGenerator: 'duck',
     gmailBaseEmail: '',
     mail2925BaseEmail: '',
@@ -704,6 +710,10 @@ test('auto-run controller skips user_already_exists failures to the next round i
     isSignupUserAlreadyExistsFailure: (error) => /SIGNUP_USER_ALREADY_EXISTS::|user_already_exists/i.test(error?.message || String(error || '')),
     isStopError: (error) => (error?.message || String(error || '')) === '流程已被用户停止。',
     launchAutoRunTimerPlan: async () => false,
+    markCurrentCustomEmailPoolEntryUsed: async (state, options = {}) => {
+      events.markedEmails.push({ email: state.email, logPrefix: options.logPrefix });
+      return { updated: true };
+    },
     normalizeAutoRunFallbackThreadIntervalMinutes: (value) => Math.max(0, Math.floor(Number(value) || 0)),
     persistAutoRunTimerPlan: async () => ({}),
     resetState: async () => {
@@ -717,6 +727,7 @@ test('auto-run controller skips user_already_exists failures to the next round i
     runAutoSequenceFromStep: async () => {
       events.runCalls += 1;
       if (events.runCalls === 1) {
+        currentState.email = 'existing@example.com';
         throw new Error('SIGNUP_USER_ALREADY_EXISTS::步骤 4：检测到 user_already_exists，说明当前用户已存在，当前轮将直接停止。');
       }
     },
@@ -756,6 +767,10 @@ test('auto-run controller skips user_already_exists failures to the next round i
   assert.equal(events.accountRecords.length, 1, 'user_already_exists should still persist a failed round record');
   assert.equal(events.accountRecords[0].status, 'failed');
   assert.match(events.accountRecords[0].reason, /SIGNUP_USER_ALREADY_EXISTS::/);
+  assert.deepStrictEqual(events.markedEmails, [{
+    email: 'existing@example.com',
+    logPrefix: '第 1/2 轮检测到 user_already_exists，自定义邮箱池',
+  }]);
   assert.ok(events.logs.some(({ message }) => /继续下一轮/.test(message)));
   assert.equal(runtime.state.autoRunActive, false);
   assert.equal(runtime.state.autoRunSessionId, 0);
@@ -1607,6 +1622,7 @@ test('auto-run skips account_deactivated to the next round even when auto retry 
     broadcasts: [],
     accountRecords: [],
     runCalls: 0,
+    markedEmails: [],
   };
 
   let currentState = {
@@ -1617,7 +1633,12 @@ test('auto-run skips account_deactivated to the next round even when auto retry 
     autoRunSkipFailures: false,
     autoRunFallbackThreadIntervalMinutes: 0,
     autoStepDelaySeconds: null,
-    mailProvider: '163',
+    mailProvider: 'custom',
+    email: 'deactivated@example.com',
+    customEmailPoolEntries: [
+      { id: '1', email: 'deactivated@example.com', enabled: true, used: false },
+      { id: '2', email: 'next@example.com', enabled: true, used: false },
+    ],
     emailGenerator: 'duck',
     gmailBaseEmail: '',
     mail2925BaseEmail: '',
@@ -1705,6 +1726,10 @@ test('auto-run skips account_deactivated to the next round even when auto retry 
     isSignupAccountDeactivatedFailure: (error) => /SIGNUP_ACCOUNT_DEACTIVATED::|account_deactivated/i.test(error?.message || String(error || '')),
     isStopError: (error) => (error?.message || String(error || '')) === '流程已被用户停止。',
     launchAutoRunTimerPlan: async () => false,
+    markCurrentCustomEmailPoolEntryUsed: async (state, options = {}) => {
+      events.markedEmails.push({ email: state.email, logPrefix: options.logPrefix });
+      return { updated: true };
+    },
     normalizeAutoRunFallbackThreadIntervalMinutes: (value) => Math.max(0, Math.floor(Number(value) || 0)),
     persistAutoRunTimerPlan: async () => ({}),
     resetState: async () => {
@@ -1718,6 +1743,7 @@ test('auto-run skips account_deactivated to the next round even when auto retry 
     runAutoSequenceFromStep: async () => {
       events.runCalls += 1;
       if (events.runCalls === 1) {
+        currentState.email = 'deactivated@example.com';
         throw new Error('SIGNUP_ACCOUNT_DEACTIVATED::步骤 4：检测到 account_deactivated，当前邮箱对应账号已被删除或停用。');
       }
     },
@@ -1757,6 +1783,10 @@ test('auto-run skips account_deactivated to the next round even when auto retry 
   assert.equal(events.accountRecords.length, 1);
   assert.equal(events.accountRecords[0].status, 'failed');
   assert.match(events.accountRecords[0].reason, /SIGNUP_ACCOUNT_DEACTIVATED::/);
+  assert.deepStrictEqual(events.markedEmails, [{
+    email: 'deactivated@example.com',
+    logPrefix: '第 1/2 轮检测到 account_deactivated，自定义邮箱池',
+  }]);
   assert.ok(events.logs.some(({ message }) => /account_deactivated.*继续下一轮/.test(message)));
   assert.equal(events.broadcasts.some(({ phase }) => phase === 'complete'), true);
   assert.equal(runtime.state.autoRunActive, false);

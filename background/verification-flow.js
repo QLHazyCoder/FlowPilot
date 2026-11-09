@@ -262,9 +262,16 @@
 
     async function inspectOpenAiAuthErrorState(tabId) {
       const results = await chrome.scripting.executeScript({
-        target: { tabId },
+        target: { tabId, allFrames: true },
         func: () => {
-          const pageText = String(document.body?.innerText || document.body?.textContent || '')
+          const pageText = [
+            document.documentElement?.innerText,
+            document.documentElement?.textContent,
+            document.body?.innerText,
+            document.body?.textContent,
+          ]
+            .filter(Boolean)
+            .join(' ')
             .replace(/\s+/g, ' ')
             .trim();
           return {
@@ -273,7 +280,38 @@
           };
         },
       });
-      return results?.[0]?.result || null;
+      const states = (Array.isArray(results) ? results : [])
+        .map((entry) => entry?.result)
+        .filter(Boolean);
+      if (!states.length) return null;
+      return {
+        accountDeactivatedBlocked: states.some((state) => state.accountDeactivatedBlocked),
+        userAlreadyExistsBlocked: states.some((state) => state.userAlreadyExistsBlocked),
+      };
+    }
+
+    async function inspectSignupVerificationStateViaContentScript() {
+      if (typeof sendToContentScript !== 'function') {
+        return null;
+      }
+      try {
+        const result = await sendToContentScript('openai-auth', {
+          type: 'GET_SIGNUP_VERIFICATION_STATE',
+          source: 'background',
+          payload: {},
+        }, {
+          responseTimeoutMs: 2500,
+        });
+        if (!result || result.error || result.ok === false) {
+          return null;
+        }
+        return result;
+      } catch (error) {
+        if (typeof isStopError === 'function' && isStopError(error)) {
+          throw error;
+        }
+        return null;
+      }
     }
 
     async function confirmStep4PostSubmitState(tabId, options = {}) {
@@ -282,6 +320,65 @@
       const startedAt = Date.now();
       let lastUrl = '';
       let pendingRegistrationSuccessUrl = '';
+
+      const isOpenAiAuthUrl = (url) => {
+        try {
+          const host = String(new URL(String(url || '')).hostname || '').toLowerCase();
+          return ['auth.openai.com', 'auth0.openai.com', 'accounts.openai.com'].includes(host);
+        } catch {
+          return false;
+        }
+      };
+      const getSnapshotOutcome = (snapshot) => {
+        if (!snapshot || typeof snapshot !== 'object') {
+          return null;
+        }
+        switch (snapshot.state) {
+          case 'step5':
+            return {
+              success: true,
+              reason: 'signup_profile',
+              skipProfileStep: false,
+              url: snapshot.url || lastUrl,
+            };
+          case 'logged_in_home':
+            return {
+              success: true,
+              reason: 'logged_in_home',
+              skipProfileStep: true,
+              skipRegistrationWaitStep: true,
+              url: snapshot.url || lastUrl,
+            };
+          case 'registration_success_page':
+            return {
+              success: true,
+              reason: 'registration_success_page',
+              skipProfileStep: true,
+              skipProfileStepReason: 'registration_success_page',
+              url: snapshot.url || lastUrl,
+            };
+          case 'oauth_consent_page':
+            return {
+              success: true,
+              reason: 'oauth_consent_page',
+              skipProfileStep: false,
+              url: snapshot.url || lastUrl,
+            };
+          default:
+            return null;
+        }
+      };
+      const throwSnapshotTerminalError = (snapshot) => {
+        if (!snapshot || typeof snapshot !== 'object') {
+          return;
+        }
+        if (snapshot.accountDeactivatedBlocked) {
+          throw new Error('SIGNUP_ACCOUNT_DEACTIVATED::步骤 4：检测到 account_deactivated，当前邮箱对应账号已被删除或停用，本轮将直接终止并切换下一个邮箱。');
+        }
+        if (snapshot.userAlreadyExistsBlocked) {
+          throw new Error('SIGNUP_USER_ALREADY_EXISTS::步骤 4：检测到 user_already_exists，说明当前用户已存在，当前轮将直接停止。');
+        }
+      };
 
       while (Date.now() - startedAt < timeoutMs) {
         throwIfStopped();
@@ -292,14 +389,18 @@
             lastUrl = currentUrl;
           }
 
-          if (/^https:\/\/(?:auth|auth0|accounts)\.openai\.com\//i.test(currentUrl)) {
+          if (isOpenAiAuthUrl(currentUrl) || (!currentUrl && isOpenAiAuthUrl(lastUrl))) {
+            const contentState = await inspectSignupVerificationStateViaContentScript();
+            if (contentState) {
+              throwSnapshotTerminalError(contentState);
+              const contentOutcome = getSnapshotOutcome(contentState);
+              if (contentOutcome) {
+                return contentOutcome;
+              }
+            }
+
             const errorState = await inspectOpenAiAuthErrorState(tabId);
-            if (errorState?.accountDeactivatedBlocked) {
-              throw new Error('SIGNUP_ACCOUNT_DEACTIVATED::步骤 4：检测到 account_deactivated，当前邮箱对应账号已被删除或停用，本轮将直接终止并切换下一个邮箱。');
-            }
-            if (errorState?.userAlreadyExistsBlocked) {
-              throw new Error('SIGNUP_USER_ALREADY_EXISTS::步骤 4：检测到 user_already_exists，说明当前用户已存在，当前轮将直接停止。');
-            }
+            throwSnapshotTerminalError(errorState);
           }
 
           if (isRegistrationCompletionChatgptUrl(currentUrl)) {

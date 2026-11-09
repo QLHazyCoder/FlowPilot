@@ -164,6 +164,8 @@ const PERSISTED_SETTING_DEFAULTS = {
   openaiChatgpt2ApiUploadMessage: '',
   openaiChatgpt2ApiTargetUrl: '',
   duckDdgToken: '',
+  customEmailPoolEntries: [],
+  customEmailPool: [],
   phoneSmsProvider: 'hero-sms',
   madaoBaseUrl: DEFAULT_MADAO_BASE_URL,
   madaoHttpSecret: '',
@@ -324,6 +326,31 @@ function resolveSignupMethod(state = {}) {
   return String(state?.signupMethod || '').trim().toLowerCase() === 'phone' ? 'phone' : 'email';
 }
 function resolveLegacyAutoStepDelaySeconds() { return undefined; }
+function normalizeCustomEmailPoolEntryObjects(value = []) {
+  const source = Array.isArray(value) ? value : [];
+  const seenEmails = new Set();
+  const entries = [];
+  for (const rawEntry of source) {
+    const asObject = rawEntry && typeof rawEntry === 'object'
+      ? rawEntry
+      : { email: rawEntry };
+    const email = String(asObject.email || '').trim().toLowerCase();
+    if (!email || !email.includes('@') || !email.includes('.') || seenEmails.has(email)) continue;
+    seenEmails.add(email);
+    entries.push({
+      id: String(asObject.id || ('legacy-' + entries.length)),
+      email,
+      enabled: asObject.enabled !== undefined ? Boolean(asObject.enabled) : true,
+      used: Boolean(asObject.used),
+      note: String(asObject.note || '').trim(),
+      lastUsedAt: Number(asObject.lastUsedAt) || 0,
+    });
+  }
+  return entries;
+}
+${extractFunction('normalizeCustomEmailPool')}
+${extractFunction('getCustomEmailPool')}
+${extractFunction('getCustomEmailPoolEntries')}
 ${extractFunction('normalizePersistentSettingValue')}
 ${extractFunction('getSettingsSchemaApi')}
 ${extractFunction('getSettingsSchemaLegacyMigrationStorageKeys')}
@@ -340,6 +367,8 @@ return {
   buildPersistentSettingsPayload,
   getPersistedSettings,
   setPersistentSettings,
+  getCustomEmailPool,
+  getCustomEmailPoolEntries,
   getRequestedKeys: typeof getRequestedKeys === 'function' ? getRequestedKeys : () => [],
   getPersistedWrites: typeof getPersistedWrites === 'function' ? getPersistedWrites : () => [],
   getRemovedKeys: typeof getRemovedKeys === 'function' ? getRemovedKeys : () => [],
@@ -408,6 +437,73 @@ test('buildPersistentSettingsPayload lets explicit flat language override existi
 
   assert.equal(payload.uiLanguage, 'en-US');
   assert.equal(payload.settingsState.ui.language, 'en-US');
+});
+
+test('buildPersistentSettingsPayload recovers CPA credentials from legacy integrationTargets', () => {
+  const api = buildHarness();
+
+  const payload = api.buildPersistentSettingsPayload({
+    settingsState: {
+      activeFlowId: 'openai',
+      flows: {
+        openai: {
+          selectedTargetId: 'cpa',
+          targets: {
+            cpa: {
+              vpsUrl: '',
+              vpsPassword: '',
+              localCpaStep9Mode: 'submit',
+            },
+          },
+          integrationTargets: {
+            cpa: {
+              vpsUrl: 'https://legacy-cpa.example.com/management.html',
+              vpsPassword: 'legacy-password',
+            },
+          },
+        },
+      },
+    },
+  }, { fillDefaults: true });
+
+  assert.equal(payload.vpsUrl, 'https://legacy-cpa.example.com/management.html');
+  assert.equal(payload.vpsPassword, 'legacy-password');
+  assert.equal(payload.settingsState.flows.openai.targets.cpa.vpsUrl, 'https://legacy-cpa.example.com/management.html');
+  assert.equal(payload.settingsState.flows.openai.targets.cpa.vpsPassword, 'legacy-password');
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(payload.settingsState.flows.openai.integrationTargets || {}, 'cpa'),
+    false
+  );
+});
+
+test('background custom email pool reads legacy addresses when entry state is empty', () => {
+  const api = buildHarness();
+  const state = { customEmailPool: ['Legacy@Example.com', 'second@example.com'] };
+
+  assert.deepEqual(api.getCustomEmailPool(state), ['legacy@example.com', 'second@example.com']);
+  const entries = api.getCustomEmailPoolEntries(state);
+  assert.equal(entries.length, 2);
+  assert.equal(entries[0].email, 'legacy@example.com');
+  assert.equal(entries[0].enabled, true);
+  assert.equal(entries[0].used, false);
+});
+
+test('getPersistedSettings keeps legacy customEmailPool available for migration', async () => {
+  const api = buildHarness(`
+const chrome = {
+  storage: {
+    local: {
+      async get() {
+        return { customEmailPool: ['legacy@example.com'] };
+      },
+    },
+  },
+};
+`);
+
+  const state = await api.getPersistedSettings();
+
+  assert.deepEqual(state.customEmailPool, ['legacy@example.com']);
 });
 
 test('buildPersistentSettingsPayload accepts schema-only input when requireKnownKeys is enabled', () => {

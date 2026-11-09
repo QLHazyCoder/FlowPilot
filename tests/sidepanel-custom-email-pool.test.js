@@ -51,6 +51,37 @@ function extractFunction(name) {
   return source.slice(start, end);
 }
 
+test('sidepanel restores legacy custom email pool addresses when new entries are empty', () => {
+  const bundle = [
+    extractFunction('normalizeCustomEmailPoolEntryEmail'),
+    extractFunction('createCustomEmailPoolEntryId'),
+    extractFunction('normalizeCustomEmailPoolEntryObjects'),
+    extractFunction('restoreCustomEmailPoolEntriesFromState'),
+  ].join('\n');
+
+  const api = new Function(`
+const crypto = { randomUUID: () => 'legacy-entry-id' };
+${bundle}
+return { restoreCustomEmailPoolEntriesFromState };
+`)();
+
+  const legacyEntries = api.restoreCustomEmailPoolEntriesFromState({
+    customEmailPool: ['Legacy@Example.com', 'legacy@example.com'],
+  });
+  assert.equal(legacyEntries.length, 1);
+  assert.equal(legacyEntries[0].email, 'legacy@example.com');
+  assert.equal(legacyEntries[0].enabled, true);
+  assert.equal(legacyEntries[0].used, false);
+
+  const currentEntries = api.restoreCustomEmailPoolEntriesFromState({
+    customEmailPoolEntries: [{ id: 'current', email: 'current@example.com', used: true }],
+    customEmailPool: ['legacy@example.com'],
+  });
+  assert.equal(currentEntries.length, 1);
+  assert.equal(currentEntries[0].id, 'current');
+  assert.equal(currentEntries[0].email, 'current@example.com');
+});
+
 test('sidepanel html exposes the unified custom email pool controls', () => {
   const html = fs.readFileSync('sidepanel/sidepanel.html', 'utf8');
 

@@ -1689,6 +1689,7 @@ let pendingAutoRunStartTotalRuns = 0;
 let pendingAutoRunStartExpiresAt = 0;
 let settingsDirty = false;
 let settingsSaveInFlight = false;
+let sidepanelStateReady = false;
 let settingsAutoSaveTimer = null;
 let settingsSaveRevision = 0;
 let signupPhoneInputDirty = false;
@@ -4115,9 +4116,12 @@ function setCustomEmailPoolEntriesState(entries = [], options = {}) {
 }
 
 function restoreCustomEmailPoolEntriesFromState(state = {}) {
-  const rawEntries = Array.isArray(state?.customEmailPoolEntries)
+  const newEntries = Array.isArray(state?.customEmailPoolEntries)
     ? state.customEmailPoolEntries
     : [];
+  const rawEntries = newEntries.length > 0
+    ? newEntries
+    : (Array.isArray(state?.customEmailPool) ? state.customEmailPool : []);
   return normalizeCustomEmailPoolEntryObjects(rawEntries);
 }
 
@@ -4269,7 +4273,7 @@ function syncAutoRunCountdownTicker() {
 }
 
 function setDefaultAutoRunButton() {
-  btnAutoRun.disabled = false;
+  btnAutoRun.disabled = typeof sidepanelStateReady !== 'undefined' && !sidepanelStateReady;
   inputRunCount.disabled = shouldLockRunCountToEmailPool();
   btnAutoRun.textContent = '自动';
 }
@@ -5437,6 +5441,11 @@ function collectSettingsPayload() {
     duckDdgToken: typeof inputDuckDdgToken !== 'undefined' && inputDuckDdgToken
       ? String(inputDuckDdgToken.value || '').trim()
       : '',
+    customEmailPool: typeof getActiveCustomEmailPoolEmails === 'function'
+      ? getActiveCustomEmailPoolEmails(normalizedCustomEmailPoolEntries)
+      : normalizedCustomEmailPoolEntries
+        .filter((entry) => entry.enabled && !entry.used)
+        .map((entry) => entry.email),
     customEmailPoolEntries: normalizedCustomEmailPoolEntries,
     autoDeleteUsedIcloudAlias: checkboxAutoDeleteIcloud?.checked,
     icloudHostPreference: selectIcloudHostPreference?.value || 'auto',
@@ -11441,7 +11450,8 @@ function applyAutoRunStatus(payload = currentAutoRun) {
       ? shouldLockRunCountToEmailPool()
       : getLockedRunCountFromEmailPool() > 0
   );
-  btnAutoRun.disabled = currentAutoRun.autoRunning;
+  btnAutoRun.disabled = (typeof sidepanelStateReady !== 'undefined' && !sidepanelStateReady)
+    || currentAutoRun.autoRunning;
   btnFetchEmail.disabled = locked
     || isCustomMailProvider()
     || usesCustomEmailPoolGenerator();
@@ -12412,10 +12422,16 @@ async function restoreState() {
     updateStatusDisplay(latestState);
     updateProgressCounter();
     renderPortalUpdateHint();
+    sidepanelStateReady = true;
+    applyAutoRunStatus(currentAutoRun);
   } catch (err) {
+    sidepanelStateReady = false;
     console.error('Failed to restore state:', err);
     if (typeof applyOperationDelayState === 'function') {
       applyOperationDelayState(undefined, { restoreFailed: true });
+    }
+    if (typeof showToast === 'function') {
+      showToast('配置加载失败，请关闭并重新打开侧栏。', 'error', 3000);
     }
   }
 }
@@ -15821,6 +15837,9 @@ autoRunAdBar?.addEventListener('click', (event) => {
 btnAutoStartClose?.addEventListener('click', () => resolveModalChoice(null));
 
 async function startAutoRunFromCurrentSettings() {
+  if (typeof sidepanelStateReady !== 'undefined' && !sidepanelStateReady) {
+    throw new Error('配置正在加载，请稍后再启动。');
+  }
   const initialLockedRunCount = typeof getLockedRunCountFromEmailPool === 'function'
     ? getLockedRunCountFromEmailPool()
     : 0;
@@ -19543,6 +19562,7 @@ document.addEventListener('scroll', () => {
 // Init
 // ============================================================
 
+btnAutoRun.disabled = true;
 initializeManualStepActions();
 initTheme();
 initHotmailListExpandedState();
@@ -19580,6 +19600,7 @@ Promise.allSettled([
     console.debug('NexSMS country list startup load skipped:', nexSmsResult.reason);
   }
   return restoreState().then(() => {
+    applyAutoRunStatus(currentAutoRun);
     syncPasswordToggleLabel();
     syncVpsUrlToggleLabel();
     syncVpsPasswordToggleLabel();

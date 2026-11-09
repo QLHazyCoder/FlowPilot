@@ -366,6 +366,126 @@ return {
   });
 });
 
+test('serializeSignupVerificationState exposes terminal auth codes from page text', () => {
+  const api = new Function(`
+const location = {
+  href: 'https://auth.openai.com/email-verification',
+  pathname: '/email-verification',
+};
+
+function getPageTextSnapshot() {
+  return '身份验证错误 error_code: account_deactivated';
+}
+
+${extractFunction('serializeSignupVerificationState')}
+
+return {
+  run() {
+    return serializeSignupVerificationState({ state: 'unknown' });
+  },
+};
+`)();
+
+  assert.deepStrictEqual(api.run(), {
+    state: 'unknown',
+    url: 'https://auth.openai.com/email-verification',
+    path: '/email-verification',
+    skipProfileStep: false,
+    skipRegistrationWaitStep: false,
+    skipProfileStepReason: '',
+    accountDeactivatedBlocked: true,
+    userAlreadyExistsBlocked: false,
+    emailInUseBlocked: false,
+    maxCheckAttemptsBlocked: false,
+  });
+});
+
+test('waitForVerificationSubmitOutcome rejects account_deactivated before email verification success fallback', async () => {
+  const api = new Function(`
+const location = {
+  href: 'https://auth.openai.com/email-verification',
+  pathname: '/email-verification',
+};
+
+function throwIfStopped() {}
+function log() {}
+function getVerificationErrorText() { return ''; }
+function isStep5Ready() { return false; }
+function isStep8Ready() { return false; }
+function isAddPhonePageReady() { return false; }
+function isVerificationPageStillVisible() { return false; }
+function inspectSignupVerificationState() { return { state: 'verification' }; }
+function getStep4PostVerificationState() { return null; }
+function getCurrentAuthRetryPageState() { return null; }
+function isEmailVerificationPage() { return true; }
+function getPageTextSnapshot() { return '身份验证错误 error_code: account_deactivated'; }
+function createSignupAccountDeactivatedError() {
+  return new Error('SIGNUP_ACCOUNT_DEACTIVATED::步骤 4：检测到 account_deactivated');
+}
+function createSignupUserAlreadyExistsError() {
+  return new Error('SIGNUP_USER_ALREADY_EXISTS::步骤 4：检测到 user_already_exists');
+}
+async function recoverCurrentAuthRetryPage() {}
+async function sleep() {}
+
+${extractFunction('waitForVerificationSubmitOutcome')}
+
+return {
+  run() {
+    return waitForVerificationSubmitOutcome(4, 1000, { purpose: 'signup' });
+  },
+};
+`)();
+
+  await assert.rejects(api.run(), /SIGNUP_ACCOUNT_DEACTIVATED::/);
+});
+
+test('waitForVerificationSubmitOutcome does not treat account_deactivated text as signup failure on login step 8', async () => {
+  const api = new Function(`
+const location = {
+  href: 'https://auth.openai.com/email-verification',
+  pathname: '/email-verification',
+};
+let accountErrorCalls = 0;
+
+function throwIfStopped() {}
+function log() {}
+function getVerificationErrorText() { return ''; }
+function isStep5Ready() { return false; }
+function isStep8Ready() { return true; }
+function isAddPhonePageReady() { return false; }
+function isVerificationPageStillVisible() { return false; }
+function inspectSignupVerificationState() { return { state: 'unknown' }; }
+function getStep4PostVerificationState() { return null; }
+function getCurrentAuthRetryPageState() { return null; }
+function isEmailVerificationPage() { return true; }
+function getPageTextSnapshot() { return 'error_code: account_deactivated'; }
+function createSignupAccountDeactivatedError() {
+  accountErrorCalls += 1;
+  return new Error('SIGNUP_ACCOUNT_DEACTIVATED::步骤 4：检测到 account_deactivated');
+}
+function createSignupUserAlreadyExistsError() {
+  return new Error('SIGNUP_USER_ALREADY_EXISTS::步骤 4：检测到 user_already_exists');
+}
+async function recoverCurrentAuthRetryPage() {}
+async function sleep() {}
+
+${extractFunction('waitForVerificationSubmitOutcome')}
+
+return {
+  run() {
+    return waitForVerificationSubmitOutcome(8, 1000);
+  },
+  accountErrorCalls() {
+    return accountErrorCalls;
+  },
+};
+`)();
+
+  assert.deepStrictEqual(await api.run(), { success: true });
+  assert.equal(api.accountErrorCalls(), 0);
+});
+
 test('logged-out chatgpt homepage with signup and login actions is not treated as logged-in home', () => {
   const api = new Function(`
 const location = {

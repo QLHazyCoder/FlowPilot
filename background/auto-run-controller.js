@@ -37,6 +37,7 @@
       isSignupUserAlreadyExistsFailure,
       isStopError,
       launchAutoRunTimerPlan,
+      markCurrentCustomEmailPoolEntryUsed,
       normalizeAutoRunFallbackThreadIntervalMinutes,
       persistAutoRunTimerPlan,
       resetState,
@@ -441,6 +442,25 @@
       return isCustomProvider && hasEmailPoolEntries;
     }
 
+    async function markCurrentCustomEmailPoolEmailUsedForTerminalSignupError(state, targetRun, totalRuns, reason) {
+      if (typeof markCurrentCustomEmailPoolEntryUsed !== 'function') {
+        return false;
+      }
+      try {
+        const result = await markCurrentCustomEmailPoolEntryUsed(state, {
+          logPrefix: `第 ${targetRun}/${totalRuns} 轮检测到 ${reason}，自定义邮箱池`,
+          level: 'warn',
+        });
+        return Boolean(result?.updated);
+      } catch (error) {
+        await addLog(
+          `第 ${targetRun}/${totalRuns} 轮检测到 ${reason} 后标记自定义邮箱池失败：${getErrorMessage(error)}`,
+          'warn'
+        );
+        return false;
+      }
+    }
+
     function isPhoneNumberSupplyExhaustedFailure(error) {
       const text = String(
         typeof getErrorMessage === 'function'
@@ -839,7 +859,6 @@
             const blockedBySignupAccountDeactivated = typeof isSignupAccountDeactivatedFailure === 'function'
               && isSignupAccountDeactivatedFailure(err);
             const blockedBySignupUserAlreadyExists = typeof isSignupUserAlreadyExistsFailure === 'function'
-              && !keepSameEmailUntilAddPhone
               && isSignupUserAlreadyExistsFailure(err);
             const blockedByStep4Route405 = typeof isStep4Route405RecoveryLimitFailure === 'function'
               && isStep4Route405RecoveryLimitFailure(err);
@@ -968,6 +987,12 @@
             }
 
             if (blockedBySignupAccountDeactivated) {
+              await markCurrentCustomEmailPoolEmailUsedForTerminalSignupError(
+                errorState,
+                targetRun,
+                totalRuns,
+                'account_deactivated'
+              );
               roundSummary.status = 'failed';
               roundSummary.finalFailureReason = reason;
               await setState({
@@ -991,6 +1016,12 @@
             }
 
             if (blockedBySignupUserAlreadyExists) {
+              await markCurrentCustomEmailPoolEmailUsedForTerminalSignupError(
+                errorState,
+                targetRun,
+                totalRuns,
+                'user_already_exists'
+              );
               roundSummary.status = 'failed';
               roundSummary.finalFailureReason = reason;
               await setState({

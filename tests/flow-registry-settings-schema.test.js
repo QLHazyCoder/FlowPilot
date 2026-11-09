@@ -98,7 +98,7 @@ test('flow registry exposes canonical flow and target metadata', () => {
   );
   assert.deepEqual(
     flowRegistry.getTargetOptions('openai').map((entry) => entry.id),
-    ['cpa', 'sub2api', 'codex2api', 'webchat', 'chatgpt2api']
+    ['sub2api', 'cpa', 'codex2api', 'webchat', 'chatgpt2api']
   );
   assert.deepEqual(
     flowRegistry.getTargetOptions('grok').map((entry) => entry.id),

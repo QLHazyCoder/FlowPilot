@@ -2124,6 +2124,7 @@ test('verification flow treats retryable submit transport failure as success whe
 });
 
 test('verification flow throws account_deactivated when submit transport breaks and the error page is visible', async () => {
+  let executeScriptOptions = null;
   const helpers = createVerificationFlowTestHelpers({
     chrome: {
       tabs: {
@@ -2131,12 +2132,13 @@ test('verification flow throws account_deactivated when submit transport breaks 
         get: async () => ({ url: 'https://auth.openai.com/email-verification' }),
       },
       scripting: {
-        executeScript: async () => [{
-          result: {
-            accountDeactivatedBlocked: true,
-            userAlreadyExistsBlocked: false,
-          },
-        }],
+        executeScript: async (options) => {
+          executeScriptOptions = options;
+          return [
+            { result: { accountDeactivatedBlocked: false, userAlreadyExistsBlocked: false } },
+            { result: { accountDeactivatedBlocked: true, userAlreadyExistsBlocked: false } },
+          ];
+        },
       },
     },
     isRetryableContentScriptTransportError: (error) => /message channel is closed/i.test(String(error?.message || error || '')),
@@ -2152,6 +2154,54 @@ test('verification flow throws account_deactivated when submit transport breaks 
     () => helpers.submitVerificationCode(4, '654321'),
     /SIGNUP_ACCOUNT_DEACTIVATED::/
   );
+  assert.equal(executeScriptOptions?.target?.allFrames, true);
+});
+
+test('verification flow reads account_deactivated from content-script state before DOM fallback', async () => {
+  const messageTypes = [];
+  let executeScriptCalls = 0;
+
+  const helpers = createVerificationFlowTestHelpers({
+    chrome: {
+      tabs: {
+        update: async () => {},
+        get: async () => ({ url: 'https://auth.openai.com/email-verification' }),
+      },
+      scripting: {
+        executeScript: async () => {
+          executeScriptCalls += 1;
+          throw new Error('DOM fallback should not be needed');
+        },
+      },
+    },
+    isRetryableContentScriptTransportError: (error) => /message channel is closed/i.test(String(error?.message || error || '')),
+    sendToContentScript: async (_source, message) => {
+      messageTypes.push(message.type);
+      if (message.type === 'FILL_CODE') {
+        throw new Error('The page keeping the extension port is moved into back/forward cache, so the message channel is closed.');
+      }
+      if (message.type === 'GET_SIGNUP_VERIFICATION_STATE') {
+        return {
+          ok: true,
+          state: 'unknown',
+          url: 'https://auth.openai.com/email-verification',
+          accountDeactivatedBlocked: true,
+          userAlreadyExistsBlocked: false,
+        };
+      }
+      throw new Error(`unexpected message type: ${message.type}`);
+    },
+    sendToContentScriptResilient: async () => {
+      throw new Error('should not use resilient channel');
+    },
+  });
+
+  await assert.rejects(
+    () => helpers.submitVerificationCode(4, '654321'),
+    /SIGNUP_ACCOUNT_DEACTIVATED::/
+  );
+  assert.deepStrictEqual(messageTypes, ['FILL_CODE', 'GET_SIGNUP_VERIFICATION_STATE']);
+  assert.equal(executeScriptCalls, 0);
 });
 
 test('verification flow waits for logged-in home DOM signal before skipping registration wait', async () => {

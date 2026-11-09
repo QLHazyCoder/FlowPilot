@@ -1034,6 +1034,7 @@ const PERSISTED_SETTING_DEFAULTS = {
   emailGenerator: 'duck',
   duckDdgToken: '',
   customEmailPoolEntries: [],
+  customEmailPool: [],
   autoDeleteUsedIcloudAlias: false,
   icloudHostPreference: 'auto',
   icloudTargetMailboxType: 'icloud-inbox',
@@ -2255,6 +2256,12 @@ function normalizeCustomEmailPoolEntryObjects(value = []) {
   return entries;
 }
 
+function normalizeCustomEmailPool(value = []) {
+  return normalizeCustomEmailPoolEntryObjects(value)
+    .filter((entry) => entry.enabled && !entry.used)
+    .map((entry) => entry.email);
+}
+
 function isCustomEmailPoolGenerator(stateOrValue = {}) {
   const generator = typeof stateOrValue === 'string'
     ? stateOrValue
@@ -2266,13 +2273,21 @@ function isCustomEmailPoolGenerator(stateOrValue = {}) {
 }
 
 function getCustomEmailPool(state = {}) {
-  return normalizeCustomEmailPoolEntryObjects(state?.customEmailPoolEntries)
+  const entries = normalizeCustomEmailPoolEntryObjects(state?.customEmailPoolEntries);
+  const resolvedEntries = entries.length > 0
+    ? entries
+    : normalizeCustomEmailPoolEntryObjects(state?.customEmailPool);
+  return resolvedEntries
     .filter((entry) => entry.enabled && !entry.used)
     .map((entry) => entry.email);
 }
 
 function getCustomEmailPoolEntries(state = {}) {
-  return normalizeCustomEmailPoolEntryObjects(state?.customEmailPoolEntries);
+  const entries = normalizeCustomEmailPoolEntryObjects(state?.customEmailPoolEntries);
+  if (entries.length > 0) {
+    return entries;
+  }
+  return normalizeCustomEmailPoolEntryObjects(state?.customEmailPool);
 }
 
 async function markCurrentCustomEmailPoolEntryUsed(state = {}, options = {}) {
@@ -2311,20 +2326,27 @@ async function markCurrentCustomEmailPoolEntryUsed(state = {}, options = {}) {
     return { updated: false };
   }
 
+  const nextLegacyPool = nextEntries
+    .filter((entry) => entry.enabled && !entry.used)
+    .map((entry) => entry.email);
   await setPersistentSettings({
     customEmailPoolEntries: nextEntries,
+    customEmailPool: nextLegacyPool,
   });
   await setState({
     customEmailPoolEntries: nextEntries,
+    customEmailPool: nextLegacyPool,
   });
   broadcastDataUpdate({
     customEmailPoolEntries: nextEntries,
+    customEmailPool: nextLegacyPool,
   });
   const logPrefix = String(options.logPrefix || '').trim() || '自定义邮箱池：流程成功后';
   await addLog(`${logPrefix}已将 ${currentEmail} 标记为已用。`, options.level || 'ok');
   return {
     updated: true,
     customEmailPoolEntries: nextEntries,
+    customEmailPool: nextLegacyPool,
   };
 }
 
@@ -3057,6 +3079,8 @@ function normalizePersistentSettingValue(key, value) {
       return normalizeDuckDdgToken(value);
     case 'customEmailPoolEntries':
       return normalizeCustomEmailPoolEntryObjects(value);
+    case 'customEmailPool':
+      return normalizeCustomEmailPool(value);
     case 'autoDeleteUsedIcloudAlias':
     case 'accountRunHistoryTextEnabled':
     case 'cloudflareTempEmailUseRandomSubdomain':
@@ -12205,6 +12229,7 @@ const autoRunController = self.MultiPageBackgroundAutoRunController?.createAutoR
   isSignupUserAlreadyExistsFailure,
   isStopError,
   launchAutoRunTimerPlan,
+  markCurrentCustomEmailPoolEntryUsed,
   normalizeAutoRunFallbackThreadIntervalMinutes,
   onAutoRunRoundSuccess: (payload = {}) => maybeSwitchIpProxyAfterAutoRunRoundSuccess(payload),
   persistAutoRunTimerPlan,

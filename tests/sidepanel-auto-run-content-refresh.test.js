@@ -52,6 +52,7 @@ function createApi({
   refreshImpl,
   runCount = 3,
   persistImpl,
+  stateReady = true,
 } = {}) {
   const bundle = [
     extractFunction('normalizePendingAutoRunStartRunCount'),
@@ -72,6 +73,7 @@ const inputAutoSkipFailures = { checked: false };
 const inputAutoSkipFailuresThreadIntervalMinutes = { value: '5' };
 const btnAutoRun = { disabled: false, innerHTML: '' };
 const inputRunCount = { disabled: false };
+const sidepanelStateReady = ${Boolean(stateReady)};
 const selectFlow = { value: latestState.activeFlowId };
 const selectPanelMode = { value: latestState.targetId };
 let runCountValue = ${Math.max(1, Number(runCount) || 1)};
@@ -152,6 +154,16 @@ test('startAutoRunFromCurrentSettings kicks off portal content refresh without b
     ['refresh', 'sync-settings', 'send']
   );
   assert.equal(api.getEvents()[2].message.type, 'AUTO_RUN');
+});
+
+test('startAutoRunFromCurrentSettings blocks before initial state restore completes', async () => {
+  const api = createApi({ stateReady: false });
+
+  await assert.rejects(
+    () => api.startAutoRunFromCurrentSettings(),
+    /配置正在加载，请稍后再启动。/
+  );
+  assert.deepEqual(api.getEvents(), []);
 });
 
 test('startAutoRunFromCurrentSettings continues auto run when portal content refresh fails', async () => {

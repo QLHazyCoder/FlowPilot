@@ -44,19 +44,6 @@
     "openai-step6"
   ],
   "targets": {
-    "cpa": {
-      "id": "cpa",
-      "label": "CPA 面板",
-      "defaultState": {
-        "vpsUrl": "",
-        "vpsPassword": "",
-        "localCpaStep9Mode": "submit"
-      },
-      "groups": [
-        "openai-phone",
-        "openai-target-cpa"
-      ]
-    },
     "sub2api": {
       "id": "sub2api",
       "label": "SUB2API",
@@ -75,6 +62,19 @@
       "groups": [
         "openai-phone",
         "openai-target-sub2api"
+      ]
+    },
+    "cpa": {
+      "id": "cpa",
+      "label": "CPA 面板",
+      "defaultState": {
+        "vpsUrl": "",
+        "vpsPassword": "",
+        "localCpaStep9Mode": "submit"
+      },
+      "groups": [
+        "openai-phone",
+        "openai-target-cpa"
       ]
     },
     "codex2api": {

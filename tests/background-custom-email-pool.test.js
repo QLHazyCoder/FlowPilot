@@ -149,3 +149,58 @@ test('background selects the first enabled unused email after previous entries b
   state.customEmailPoolEntries[2].used = true;
   assert.equal(api.getNextCustomEmailPoolEmail(state), '');
 });
+
+test('background marks the current custom email pool entry as used', async () => {
+  const bundle = [
+    extractFunction('normalizeCustomEmailPoolEntryObjects'),
+    extractFunction('getCustomEmailPoolEntries'),
+    extractFunction('isCustomEmailPoolGenerator'),
+    extractFunction('markCurrentCustomEmailPoolEntryUsed'),
+  ].join('\n');
+
+  const api = new Function(`
+const CUSTOM_EMAIL_POOL_GENERATOR = 'custom-pool';
+const writes = [];
+function normalizeEmailGenerator(value) {
+  return String(value || '').trim().toLowerCase();
+}
+function isCustomMailProvider(state) {
+  return String(state?.mailProvider || '').trim().toLowerCase() === 'custom';
+}
+async function setPersistentSettings(payload) {
+  writes.push({ type: 'persistent', payload });
+}
+async function setState(payload) {
+  writes.push({ type: 'state', payload });
+}
+function broadcastDataUpdate(payload) {
+  writes.push({ type: 'broadcast', payload });
+}
+async function addLog() {}
+
+${bundle}
+
+return {
+  markCurrentCustomEmailPoolEntryUsed,
+  writes,
+};
+`)();
+
+  const result = await api.markCurrentCustomEmailPoolEntryUsed({
+    mailProvider: 'custom',
+    email: 'first@example.com',
+    customEmailPoolEntries: [
+      { id: 'a', email: 'first@example.com', enabled: true, used: false },
+      { id: 'b', email: 'second@example.com', enabled: true, used: false },
+    ],
+  }, {
+    logPrefix: '第 1/2 轮检测到 account_deactivated，自定义邮箱池',
+    level: 'warn',
+  });
+
+  assert.equal(result.updated, true);
+  assert.equal(result.customEmailPoolEntries[0].used, true);
+  assert.ok(result.customEmailPoolEntries[0].lastUsedAt > 0);
+  assert.equal(result.customEmailPoolEntries[1].used, false);
+  assert.deepEqual(api.writes.map((entry) => entry.type), ['persistent', 'state', 'broadcast']);
+});

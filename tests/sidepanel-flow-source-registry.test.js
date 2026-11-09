@@ -517,7 +517,7 @@ function getDefaultTargetIdForFlow(flowId) {
 }
 function normalizeTargetIdForFlow(flowId, targetId, fallback) {
   const targets = {
-    openai: ['cpa', 'sub2api', 'codex2api', 'webchat', 'chatgpt2api'],
+    openai: ['sub2api', 'cpa', 'codex2api', 'webchat', 'chatgpt2api'],
     kiro: ['kiro-rs'],
     grok: ['webchat2api', 'sub2api'],
   }[flowId] || [];

@@ -2,7 +2,7 @@
  * @Author: QLHazycoder
  * @Date: 2026-07-22 00:00:00
  * @LastEditors: QLHazycoder
- * @LastEditTime: 2026-09-10 18:50:11
+ * @LastEditTime: 2026-11-09 10:48:40
  * @Description: Normalize persisted FlowPilot settings and legacy view state.
  */
 (function attachMultiPageSettingsSchema(root, factory) {
@@ -597,17 +597,29 @@
         ? defaultOpenAiFlow.plus
         : {};
       const sharedSub2ApiCredentials = resolveSharedSub2ApiCredentials(input, nested, currentFlow, grokFlow);
+      const legacyCpaSource = getTargetValue(
+        nested,
+        (state) => state.flows?.openai?.integrationTargets?.cpa,
+        null,
+        {}
+      );
+      const resolveCpaField = (field, fallback = '') => {
+        const currentValue = currentFlow.targets.cpa?.[field];
+        if (currentValue !== undefined && currentValue !== null && String(currentValue).trim() !== '') {
+          return currentValue;
+        }
+        const legacyValue = legacyCpaSource?.[field];
+        if (legacyValue !== undefined && legacyValue !== null && String(legacyValue).trim() !== '') {
+          return legacyValue;
+        }
+        return currentValue ?? legacyValue ?? fallback;
+      };
       const cpaSource = {
         ...currentFlow.targets.cpa,
-        ...getTargetValue(
-          nested,
-          (state) => state.flows?.openai?.integrationTargets?.cpa,
-          null,
-          {}
-        ),
-        vpsUrl: input?.vpsUrl ?? currentFlow.targets.cpa.vpsUrl,
-        vpsPassword: input?.vpsPassword ?? currentFlow.targets.cpa.vpsPassword,
-        localCpaStep9Mode: input?.localCpaStep9Mode ?? currentFlow.targets.cpa.localCpaStep9Mode,
+        ...(isPlainObject(legacyCpaSource) ? legacyCpaSource : {}),
+        vpsUrl: input?.vpsUrl ?? resolveCpaField('vpsUrl'),
+        vpsPassword: input?.vpsPassword ?? resolveCpaField('vpsPassword'),
+        localCpaStep9Mode: input?.localCpaStep9Mode ?? resolveCpaField('localCpaStep9Mode', 'submit'),
       };
       const sub2apiSource = {
         ...currentFlow.targets.sub2api,
@@ -686,7 +698,7 @@
           ),
         };
       });
-      return {
+      const normalizedFlow = {
         ...currentFlow,
         targets,
         signup: {
@@ -738,6 +750,12 @@
           enabled: false,
         },
       };
+      if (isPlainObject(normalizedFlow.integrationTargets)) {
+        const nextIntegrationTargets = { ...normalizedFlow.integrationTargets };
+        delete nextIntegrationTargets.cpa;
+        normalizedFlow.integrationTargets = nextIntegrationTargets;
+      }
+      return normalizedFlow;
     }
 
     function normalizeKiroSettings(input = {}, defaults = {}, currentFlow = {}) {

@@ -26,6 +26,7 @@ if (document.documentElement.getAttribute(OPENAI_AUTH_LISTENER_SENTINEL) !== '1'
       || message.type === 'STEP8_GET_STATE'
       || message.type === 'STEP8_TRIGGER_CONTINUE'
       || message.type === 'GET_LOGIN_AUTH_STATE'
+      || message.type === 'GET_SIGNUP_VERIFICATION_STATE'
       || message.type === 'SUBMIT_ADD_EMAIL'
       || message.type === 'GET_STEP5_SUBMIT_STATE'
       || message.type === 'PREPARE_SIGNUP_VERIFICATION'
@@ -130,6 +131,8 @@ async function handleCommand(message) {
       return await fillVerificationCode(message.step, message.payload);
     case 'GET_LOGIN_AUTH_STATE':
       return serializeLoginAuthState(inspectLoginAuthState());
+    case 'GET_SIGNUP_VERIFICATION_STATE':
+      return serializeSignupVerificationState(inspectSignupVerificationState());
     case 'SUBMIT_ADD_EMAIL':
       return await submitAddEmailAndContinue(message.payload);
     case 'GET_STEP5_SUBMIT_STATE':
@@ -5084,7 +5087,39 @@ function isSignupEmailAlreadyExistsPage() {
   return isSignupPasswordPage() && SIGNUP_EMAIL_EXISTS_PATTERN.test(getPageTextSnapshot());
 }
 
+function serializeSignupVerificationState(snapshot) {
+  const pageText = typeof getPageTextSnapshot === 'function' ? getPageTextSnapshot() : '';
+  return {
+    state: snapshot?.state || 'unknown',
+    url: snapshot?.url || location.href,
+    path: snapshot?.path || location.pathname || '',
+    skipProfileStep: Boolean(snapshot?.skipProfileStep),
+    skipRegistrationWaitStep: Boolean(snapshot?.skipRegistrationWaitStep),
+    skipProfileStepReason: String(snapshot?.skipProfileStepReason || ''),
+    accountDeactivatedBlocked: Boolean(snapshot?.accountDeactivatedBlocked) || /account_deactivated/i.test(pageText),
+    userAlreadyExistsBlocked: Boolean(snapshot?.userAlreadyExistsBlocked) || /user_already_exists/i.test(pageText),
+    emailInUseBlocked: Boolean(snapshot?.emailInUseBlocked) || /email_in_use/i.test(pageText),
+    maxCheckAttemptsBlocked: Boolean(snapshot?.maxCheckAttemptsBlocked) || /max_check_attempts/i.test(pageText),
+  };
+}
+
 function inspectSignupVerificationState() {
+  const pageText = typeof getPageTextSnapshot === 'function' ? getPageTextSnapshot() : '';
+  if (/account_deactivated/i.test(pageText)) {
+    return {
+      state: 'error',
+      accountDeactivatedBlocked: true,
+      url: location.href,
+    };
+  }
+  if (/user_already_exists/i.test(pageText)) {
+    return {
+      state: 'error',
+      userAlreadyExistsBlocked: true,
+      url: location.href,
+    };
+  }
+
   const postVerificationState = getStep4PostVerificationState();
   if (postVerificationState?.state === 'step5') {
     return { state: 'step5' };
@@ -5389,6 +5424,23 @@ async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
   let recoveryCount = 0;
   const maxRecoveryCount = 2;
 
+  function throwPageTextTerminalError() {
+    if (step !== 4) {
+      return;
+    }
+    const pageText = typeof getPageTextSnapshot === 'function' ? getPageTextSnapshot() : '';
+    if (/account_deactivated/i.test(pageText)) {
+      throw typeof createSignupAccountDeactivatedError === 'function'
+        ? createSignupAccountDeactivatedError()
+        : new Error('SIGNUP_ACCOUNT_DEACTIVATED::步骤 4：检测到 account_deactivated，当前邮箱对应账号已被删除或停用。');
+    }
+    if (/user_already_exists/i.test(pageText)) {
+      throw typeof createSignupUserAlreadyExistsError === 'function'
+        ? createSignupUserAlreadyExistsError()
+        : new Error('SIGNUP_USER_ALREADY_EXISTS::步骤 4：检测到 user_already_exists，说明当前用户已存在。');
+    }
+  }
+
   function getStep4SuccessOutcome(snapshot) {
     if (!snapshot || typeof snapshot !== 'object') return null;
     switch (snapshot.state) {
@@ -5435,6 +5487,7 @@ async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
 
   while (Date.now() - start < resolvedTimeout) {
     throwIfStopped();
+    throwPageTextTerminalError();
 
     const snapshot = step === 4 ? inspectSignupVerificationState() : null;
     if (step === 4) {
@@ -5505,6 +5558,7 @@ async function waitForVerificationSubmitOutcome(step, timeout, options = {}) {
   }
 
   if (step === 4) {
+    throwPageTextTerminalError();
     const snapshot = inspectSignupVerificationState();
     throwStep4TerminalError(snapshot);
     const successOutcome = getStep4SuccessOutcome(snapshot);
