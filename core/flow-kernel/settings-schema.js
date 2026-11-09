@@ -60,7 +60,7 @@
     const defaultFlowId = String(
       deps.defaultFlowId || flowRegistry.DEFAULT_FLOW_ID || 'openai'
     ).trim().toLowerCase() || 'openai';
-    const defaultOpenAiTargetId = flowRegistry.DEFAULT_OPENAI_TARGET_ID || 'cpa';
+    const defaultOpenAiTargetId = flowRegistry.DEFAULT_OPENAI_TARGET_ID || 'sub2api';
     const defaultKiroTargetId = flowRegistry.DEFAULT_KIRO_TARGET_ID || 'kiro-rs';
     const defaultKiroRsUrl = String(flowRegistry.DEFAULT_KIRO_RS_URL || '').trim();
     const normalizeFlowId = typeof flowRegistry.normalizeFlowId === 'function'

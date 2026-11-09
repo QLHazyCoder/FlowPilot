@@ -134,7 +134,7 @@ const DEFAULT_MADAO_MODE = 'routing_plan';
 const PERSISTED_SETTING_DEFAULTS = {
   uiLanguage: 'auto',
   activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  targetId: 'cpa',
+  targetId: 'sub2api',
   signupMethod: 'email',
   plusModeEnabled: false,
   plusPaymentMethod: 'paypal',

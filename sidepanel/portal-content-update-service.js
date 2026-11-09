@@ -10,7 +10,7 @@
 
   function normalizeScope(options = {}) {
     const flowId = normalizeScopeId(options.flowId || options.flow || options.activeFlowId, 'openai');
-    const targetFallback = flowId === 'kiro' ? 'kiro-rs' : 'cpa';
+    const targetFallback = flowId === 'kiro' ? 'kiro-rs' : 'sub2api';
     const targetId = normalizeScopeId(options.targetId || options.target || options.activeTargetId, targetFallback);
     return { flowId, targetId };
   }

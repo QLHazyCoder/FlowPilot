@@ -2474,7 +2474,7 @@ async function maybeShowNewUserGuidePrompt() {
 function getPortalContentPromptScope(snapshot = currentPortalContentSnapshot) {
   return {
     flowId: String(snapshot?.flowId || getPortalContentFlowId()).trim().toLowerCase() || DEFAULT_ACTIVE_FLOW_ID,
-    targetId: String(snapshot?.targetId || getPortalContentTargetId()).trim().toLowerCase() || 'cpa',
+    targetId: String(snapshot?.targetId || getPortalContentTargetId()).trim().toLowerCase() || 'sub2api',
   };
 }
 
@@ -2568,7 +2568,7 @@ function shouldWarnCpaPhoneSignup(signupMethod = null, targetId = null) {
     ),
     typeof getDefaultTargetIdForFlow === 'function'
       ? getDefaultTargetIdForFlow(activeFlowId)
-      : (activeFlowId === defaultFlowId ? 'cpa' : 'kiro-rs')
+      : (activeFlowId === defaultFlowId ? 'sub2api' : 'kiro-rs')
   );
 
   const capabilityState = typeof resolveCurrentSidepanelCapabilities === 'function'
@@ -3547,7 +3547,7 @@ function syncLatestState(nextState) {
   const selectedTargetId = schema?.getSelectedTargetId
     ? schema.getSelectedTargetId(latestState, activeFlowId)
     : (String(latestState?.targetId || '').trim().toLowerCase()
-      || (activeFlowId === 'kiro' ? 'kiro-rs' : 'cpa'));
+      || (activeFlowId === 'kiro' ? 'kiro-rs' : 'sub2api'));
   latestState.targetId = typeof normalizeTargetIdForFlow === 'function'
     ? normalizeTargetIdForFlow(activeFlowId, selectedTargetId)
     : selectedTargetId;
@@ -3785,7 +3785,7 @@ function reconcileAccountDeliveryDataUpdate(
 }
 
 async function saveAccountDeliveryModeSelection(selection = {}) {
-  const targetId = normalizeTargetIdForFlow('openai', selection?.targetId, 'cpa');
+  const targetId = normalizeTargetIdForFlow('openai', selection?.targetId, 'sub2api');
   const requestedMode = normalizeAccountDeliveryMode(selection?.accountDeliveryMode, 'oauth');
   const capabilityState = resolveCurrentSidepanelCapabilities({
     activeFlowId: 'openai',
@@ -5107,7 +5107,7 @@ function collectSettingsPayload() {
     ? normalizePanelMode
     : ((value = '') => {
       const normalized = String(value || '').trim().toLowerCase();
-      return ['cpa', 'sub2api', 'codex2api', 'webchat', 'chatgpt2api'].includes(normalized) ? normalized : 'cpa';
+      return ['cpa', 'sub2api', 'codex2api', 'webchat', 'chatgpt2api'].includes(normalized) ? normalized : 'sub2api';
     });
   const normalizeTargetIdForFlowSafe = typeof normalizeTargetIdForFlow === 'function'
     ? normalizeTargetIdForFlow
@@ -5126,7 +5126,7 @@ function collectSettingsPayload() {
       selectPanelMode?.value || latestState?.targetId || '',
       typeof getDefaultTargetIdForFlow === 'function'
         ? getDefaultTargetIdForFlow(activeFlowId)
-        : (activeFlowId === defaultFlowId ? 'cpa' : 'kiro-rs')
+        : (activeFlowId === defaultFlowId ? 'sub2api' : 'kiro-rs')
     );
   const rawPlusModeEnabled = typeof inputPlusModeEnabled !== 'undefined' && inputPlusModeEnabled
     ? Boolean(inputPlusModeEnabled.checked)
@@ -10198,7 +10198,7 @@ function normalizePanelMode(value = '') {
   if (['cpa', 'sub2api', 'codex2api', 'webchat', 'chatgpt2api'].includes(normalized)) {
     return normalized;
   }
-  return 'cpa';
+  return 'sub2api';
 }
 
 let flowRegistry = null;
@@ -10245,7 +10245,7 @@ function getDefaultTargetIdForFlow(flowId = DEFAULT_ACTIVE_FLOW_ID) {
   if (registry?.getDefaultTargetId) {
     return registry.getDefaultTargetId(normalizeFlowId(flowId));
   }
-  return normalizeFlowId(flowId) === 'kiro' ? 'kiro-rs' : 'cpa';
+  return normalizeFlowId(flowId) === 'kiro' ? 'kiro-rs' : 'sub2api';
 }
 
 function normalizeTargetIdForFlow(flowId = DEFAULT_ACTIVE_FLOW_ID, targetId = '', fallback = '') {
@@ -11795,7 +11795,7 @@ function applySettingsState(state) {
     ? syncFlowSelectorsFromState(state)
     : {
       activeFlowId: String(state?.activeFlowId || state?.flowId || defaultActiveFlowId).trim().toLowerCase() || defaultActiveFlowId,
-      targetId: String(state?.targetId || 'cpa').trim().toLowerCase() || 'cpa',
+      targetId: String(state?.targetId || 'sub2api').trim().toLowerCase() || 'sub2api',
     };
   if (typeof applyOperationDelayState === 'function') {
     applyOperationDelayState(state);
@@ -16545,7 +16545,7 @@ selectPanelMode.addEventListener('change', async () => {
     : normalizeFlowId(latestState?.activeFlowId || latestState?.flowId || DEFAULT_ACTIVE_FLOW_ID);
   const defaultTargetId = typeof getDefaultTargetIdForFlow === 'function'
     ? getDefaultTargetIdForFlow(activeFlowId)
-    : (activeFlowId === DEFAULT_ACTIVE_FLOW_ID ? 'cpa' : 'kiro-rs');
+    : (activeFlowId === DEFAULT_ACTIVE_FLOW_ID ? 'sub2api' : 'kiro-rs');
   const previousTargetId = typeof getSelectedTargetIdForState === 'function'
     ? getSelectedTargetIdForState(latestState, activeFlowId)
     : normalizeTargetIdForFlow(activeFlowId, latestState?.targetId || '', defaultTargetId);
@@ -17534,7 +17534,7 @@ selectFlow?.addEventListener('change', () => {
   };
   const defaultTargetId = typeof getDefaultTargetIdForFlow === 'function'
     ? getDefaultTargetIdForFlow(nextActiveFlowId)
-    : (nextActiveFlowId === DEFAULT_ACTIVE_FLOW_ID ? 'cpa' : 'kiro-rs');
+    : (nextActiveFlowId === DEFAULT_ACTIVE_FLOW_ID ? 'sub2api' : 'kiro-rs');
   const nextTargetId = typeof getSelectedTargetIdForState === 'function'
     ? getSelectedTargetIdForState(nextStateBase, nextActiveFlowId)
     : normalizeTargetIdForFlow(nextActiveFlowId, nextStateBase?.targetId || '', defaultTargetId);

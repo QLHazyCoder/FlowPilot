@@ -24,7 +24,7 @@ function createPortalContentService(options = {}) {
 
   if (options.cachedSnapshot) {
     cache.set(
-      options.cacheKey || 'multipage-portal-content-summary-v2:openai:cpa',
+      options.cacheKey || 'multipage-portal-content-summary-v2:openai:sub2api',
       JSON.stringify(options.cachedSnapshot)
     );
   }
@@ -140,7 +140,7 @@ test('getContentUpdateSnapshot falls back to cached snapshot when the live reque
       },
     ],
     portalUrl: 'https://flowpilot.qlhazycoder.top',
-    apiUrl: 'https://flowpilot.qlhazycoder.top/api/content-summary?flow=openai&target=cpa',
+    apiUrl: 'https://flowpilot.qlhazycoder.top/api/content-summary?flow=openai&target=sub2api',
     checkedAt: Date.now() - 1000,
   };
 

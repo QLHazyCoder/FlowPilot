@@ -449,7 +449,7 @@
       ]
     }
   },
-  "defaultTargetId": "cpa",
+  "defaultTargetId": "sub2api",
   "settingsGroups": {
     "openai-account-delivery": {
       "id": "openai-account-delivery",

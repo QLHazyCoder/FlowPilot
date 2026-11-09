@@ -13,7 +13,7 @@
   const flowRegistryApi = rootScope.MultiPageFlowRegistry || {};
   const settingsSchemaApi = rootScope.MultiPageSettingsSchema || {};
   const DEFAULT_FLOW_ID = flowRegistryApi.DEFAULT_FLOW_ID || 'openai';
-  const DEFAULT_OPENAI_TARGET_ID = flowRegistryApi.DEFAULT_OPENAI_TARGET_ID || 'cpa';
+  const DEFAULT_OPENAI_TARGET_ID = flowRegistryApi.DEFAULT_OPENAI_TARGET_ID || 'sub2api';
   const SIGNUP_METHOD_EMAIL = 'email';
   const SIGNUP_METHOD_PHONE = 'phone';
   const ACCOUNT_DELIVERY_MODE_OAUTH = accountDeliveryApi.ACCOUNT_DELIVERY_MODE_OAUTH || 'oauth';
@@ -29,7 +29,7 @@
     ? Object.keys(flowRegistryApi.getTargetDefinitions('openai') || {})
     : (Array.isArray(flowRegistryApi.OPENAI_TARGET_IDS)
       ? flowRegistryApi.OPENAI_TARGET_IDS.slice()
-      : ['cpa', 'sub2api', 'codex2api', 'webchat', 'chatgpt2api']);
+      : ['sub2api', 'cpa', 'codex2api', 'webchat', 'chatgpt2api']);
   const REGISTERED_FLOW_IDS = Array.isArray(flowRegistryApi.getRegisteredFlowIds?.())
     ? flowRegistryApi.getRegisteredFlowIds().map((flowId) => String(flowId || '').trim().toLowerCase()).filter(Boolean)
     : [DEFAULT_FLOW_ID];

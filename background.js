@@ -942,7 +942,7 @@ function setupDeclarativeNetRequestRules() {
 
 const PERSISTED_SETTING_DEFAULTS = {
   uiLanguage: 'auto',
-  targetId: 'cpa',
+  targetId: 'sub2api',
   activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
   kiroRsUrl: String(self.MultiPageFlowRegistry?.DEFAULT_KIRO_RS_URL || '').trim(),
   kiroRsKey: '',
@@ -1647,7 +1647,7 @@ function canUsePhoneSignup(state = {}) {
     state?.activeFlowId
     || (typeof DEFAULT_ACTIVE_FLOW_ID === 'string' ? DEFAULT_ACTIVE_FLOW_ID : 'openai')
   ).trim().toLowerCase();
-  const targetId = String(state?.targetId || 'cpa').trim().toLowerCase();
+  const targetId = String(state?.targetId || 'sub2api').trim().toLowerCase();
   return activeFlowId === 'openai'
     && !['webchat', 'chatgpt2api'].includes(targetId)
     && !Boolean(state?.plusModeEnabled);
@@ -2429,7 +2429,7 @@ function normalizePanelMode(value = '') {
   if (normalized === 'codex2api') {
     return 'codex2api';
   }
-  return 'cpa';
+  return 'sub2api';
 }
 
 function normalizeMailProvider(value = '') {
@@ -3572,7 +3572,7 @@ function buildSettingsStatePatchFromFlatUpdates(updates = {}) {
     && hasUpdate('targetId')
     && String(updates.targetId || '').trim()
   ) {
-    const targetId = normalizePatchTargetId('openai', updates.targetId, 'cpa');
+    const targetId = normalizePatchTargetId('openai', updates.targetId, 'sub2api');
     setSettingsStatePatchValue(
       patch,
       ['flows', 'openai', 'targets', targetId, 'accountDeliveryMode'],
@@ -8699,7 +8699,7 @@ function getPanelMode(state = {}) {
   if (state.targetId === 'codex2api') {
     return 'codex2api';
   }
-  return 'cpa';
+  return 'sub2api';
 }
 
 function getPanelModeLabel(modeOrState) {

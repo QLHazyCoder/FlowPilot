@@ -257,7 +257,7 @@
   }
 
   const OPENAI_TARGET_IDS = Object.freeze(Object.keys(getTargetDefinitions('openai')));
-  const DEFAULT_OPENAI_TARGET_ID = String(getDefaultTargetId('openai') || OPENAI_TARGET_IDS[0] || 'cpa');
+  const DEFAULT_OPENAI_TARGET_ID = String(getDefaultTargetId('openai') || OPENAI_TARGET_IDS[0] || 'sub2api');
   const DEFAULT_KIRO_TARGET_ID = String(getDefaultTargetId('kiro') || 'kiro-rs');
   const DEFAULT_KIRO_PUBLICATION_TARGET_ID = String(
     getFlowDefinition('kiro')?.defaultPublicationTargetId || DEFAULT_KIRO_TARGET_ID

@@ -100,6 +100,8 @@ test('flow registry exposes canonical flow and target metadata', () => {
     flowRegistry.getTargetOptions('openai').map((entry) => entry.id),
     ['sub2api', 'cpa', 'codex2api', 'webchat', 'chatgpt2api']
   );
+  assert.equal(flowRegistry.getDefaultTargetId('openai'), 'sub2api');
+  assert.equal(flowRegistry.DEFAULT_OPENAI_TARGET_ID, 'sub2api');
   assert.deepEqual(
     flowRegistry.getTargetOptions('grok').map((entry) => entry.id),
     ['webchat2api', 'grok2api', 'sub2api']
@@ -169,7 +171,7 @@ test('settings schema normalizes view input into canonical nested namespaces', (
   assert.equal(normalized.services.email.provider, 'hotmail');
   assert.equal(normalized.services.proxy.enabled, true);
   assert.equal(normalized.services.account.customPassword, 'SharedSecret123!');
-  assert.equal(normalized.flows.openai.selectedTargetId, 'cpa');
+  assert.equal(normalized.flows.openai.selectedTargetId, 'sub2api');
   assert.equal(normalized.flows.openai.targets.cpa.accountDeliveryMode, 'oauth');
   assert.deepEqual(
     Object.keys(normalized.flows.openai.plus).sort(),
